@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BetrFood - AI Chat Active</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #22C55E;
+            --primary-light: #DCFCE7;
+            --primary-dark: #16A34A;
+            --secondary: #10B981;
+            --background: #FAFAFA;
+            --surface: #FFFFFF;
+            --text-primary: #0F172A;
+            --text-secondary: #64748B;
+            --text-muted: #94A3B8;
+            --border: #E2E8F0;
+            --danger: #EF4444;
+            --pink-light: #FCE7F3;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--background);
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+        }
+
+        .screen {
+            width: 100%;
+            height: 100vh;
+            background: var(--background);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Status Bar */
+        .status-bar {
+            height: 48px;
+            padding: 14px 24px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--surface);
+            flex-shrink: 0;
+        }
+
+        .status-time {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .status-icons {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+
+        .status-icons svg {
+            width: 18px;
+            height: 18px;
+            fill: var(--text-primary);
+        }
+
+        /* Navigation Bar */
+        .nav-bar {
+            height: 84px;
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-around;
+            align-items: flex-start;
+            padding: 12px 8px 0;
+            flex-shrink: 0;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            padding: 8px 12px;
+            border-radius: 12px;
+            cursor: pointer;
+        }
+
+        .nav-item.active {
+            background: var(--primary-light);
+        }
+
+        .nav-item svg {
+            width: 24px;
+            height: 24px;
+            stroke: var(--text-muted);
+            fill: none;
+            stroke-width: 2;
+        }
+
+        .nav-item.active svg {
+            stroke: var(--primary);
+        }
+
+        /* AI Header with Conversation */
+        .ai-header-conversation {
+            display: flex;
+            align-items: center;
+            padding: 8px 20px 12px;
+            background: var(--surface);
+            flex-shrink: 0;
+            gap: 12px;
+        }
+
+        .ai-menu-btn {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .ai-menu-btn svg {
+            width: 24px;
+            height: 24px;
+            stroke: var(--text-primary);
+            fill: none;
+            stroke-width: 2;
+        }
+
+        .ai-title {
+            flex: 1;
+            text-align: center;
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .ai-user-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .ai-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px 20px;
+            background: var(--surface);
+        }
+
+        .ai-message {
+            margin-bottom: 16px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .ai-message.user {
+            align-items: flex-end;
+        }
+
+        .ai-message.assistant {
+            align-items: flex-start;
+        }
+
+        .ai-message-bubble {
+            max-width: 85%;
+            padding: 14px 18px;
+            border-radius: 18px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .ai-message.user .ai-message-bubble {
+            background: var(--pink-light);
+            color: var(--text-primary);
+            border-bottom-right-radius: 6px;
+        }
+
+        .ai-message.assistant .ai-message-bubble {
+            background: transparent;
+            color: var(--text-secondary);
+            padding-left: 0;
+        }
+
+        .ai-prompt-notice {
+            text-align: center;
+            padding: 16px 20px;
+            background: var(--surface);
+        }
+
+        .ai-prompt-notice-text {
+            font-size: 13px;
+            color: var(--primary);
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .ai-prompt-notice-link {
+            font-size: 11px;
+            color: var(--primary);
+            text-decoration: underline;
+        }
+
+        .ai-input-area {
+            padding: 16px 20px;
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        .ai-input-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: var(--background);
+            border-radius: 12px;
+            padding: 12px 16px;
+            border: 1px solid var(--border);
+        }
+
+        .ai-input {
+            flex: 1;
+            border: none;
+            background: transparent;
+            font-size: 15px;
+            font-family: inherit;
+            color: var(--text-primary);
+            outline: none;
+        }
+
+        .ai-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .ai-send-btn {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .ai-send-btn svg {
+            width: 20px;
+            height: 20px;
+            stroke: var(--text-primary);
+            fill: none;
+            stroke-width: 2;
+        }
+
+        .ai-camera-btn {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .ai-camera-btn svg {
+            width: 22px;
+            height: 22px;
+            stroke: var(--text-primary);
+            fill: none;
+            stroke-width: 2;
+        }
+
+        /* Keyboard */
+        .keyboard {
+            background: #D1D5DB;
+            padding: 8px 4px 20px;
+            flex-shrink: 0;
+        }
+
+        .keyboard-suggestions {
+            display: flex;
+            padding: 8px 12px;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .keyboard-suggestion {
+            padding: 8px 16px;
+            background: var(--surface);
+            border-radius: 8px;
+            font-size: 14px;
+            color: var(--text-primary);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .keyboard-row {
+            display: flex;
+            justify-content: center;
+            gap: 6px;
+            margin-bottom: 10px;
+        }
+
+        .key {
+            min-width: 32px;
+            height: 42px;
+            background: var(--surface);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            font-weight: 500;
+            color: var(--text-primary);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+
+        .key.special {
+            background: #A1A1AA;
+            font-size: 14px;
+            padding: 0 12px;
+        }
+
+        .key.space {
+            flex: 1;
+            max-width: 180px;
+        }
+
+        .key.send {
+            background: var(--primary);
+            color: white;
+            padding: 0 16px;
+            font-size: 16px;
+        }
+
+        .keyboard-bottom {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            padding-top: 4px;
+        }
+
+        .keyboard-bottom-key {
+            padding: 8px 16px;
+            font-size: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="screen" style="background: var(--surface);">
+        <div class="status-bar">
+            <span class="status-time">6:07</span>
+            <div class="status-icons">
+                <svg viewBox="0 0 24 24"><path d="M12.01 21.49L23.64 7c-.45-.34-4.93-4-11.64-4C5.28 3 .81 6.66.36 7l11.63 14.49z"/></svg>
+                <svg viewBox="0 0 24 24"><path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33c.74 0 1.34-.6 1.34-1.33V5.33C17 4.6 16.4 4 15.67 4z"/></svg>
+            </div>
+        </div>
+
+        <div class="ai-header-conversation">
+            <div class="ai-menu-btn">
+                <svg viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+            </div>
+            <span class="ai-title">Popular Pho Dishes</span>
+            <div class="ai-user-avatar">👩‍🍳</div>
+        </div>
+
+        <div class="ai-messages">
+            <div class="ai-message user">
+                <div class="ai-message-bubble">whats the most popular pho dish right now?</div>
+            </div>
+            <div class="ai-message assistant">
+                <div class="ai-message-bubble">Here are today's trending dishes:</div>
+            </div>
+        </div>
+
+        <div class="ai-prompt-notice">
+            <div class="ai-prompt-notice-text">You have 3 more prompts left</div>
+            <div class="ai-prompt-notice-link">Upgrade to unlock for unlimited prompts</div>
+        </div>
+
+        <div class="ai-input-area" style="padding-bottom: 8px;">
+            <div class="ai-input-wrapper">
+                <input type="text" class="ai-input" placeholder="Type something">
+                <div class="ai-send-btn">
+                    <svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                </div>
+                <div class="ai-camera-btn">
+                    <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                </div>
+            </div>
+        </div>
+
+        <div class="keyboard">
+            <div class="keyboard-suggestions">
+                <div class="keyboard-suggestion">"The"</div>
+                <div class="keyboard-suggestion">the</div>
+                <div class="keyboard-suggestion">to</div>
+            </div>
+            <div class="keyboard-row">
+                <div class="key">q</div><div class="key">w</div><div class="key">e</div><div class="key">r</div><div class="key">t</div><div class="key">y</div><div class="key">u</div><div class="key">i</div><div class="key">o</div><div class="key">p</div>
+            </div>
+            <div class="keyboard-row">
+                <div class="key">a</div><div class="key">s</div><div class="key">d</div><div class="key">f</div><div class="key">g</div><div class="key">h</div><div class="key">j</div><div class="key">k</div><div class="key">l</div>
+            </div>
+            <div class="keyboard-row">
+                <div class="key special">⇧</div><div class="key">z</div><div class="key">x</div><div class="key">c</div><div class="key">v</div><div class="key">b</div><div class="key">n</div><div class="key">m</div><div class="key special">⌫</div>
+            </div>
+            <div class="keyboard-row">
+                <div class="key special">ABC</div><div class="key space"></div><div class="key send">↵</div>
+            </div>
+            <div class="keyboard-bottom">
+                <div class="keyboard-bottom-key">😊</div>
+                <div class="keyboard-bottom-key">🎤</div>
+            </div>
+        </div>
+
+        <div class="nav-bar">
+            <div class="nav-item">
+                <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            </div>
+            <div class="nav-item">
+                <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/></svg>
+            </div>
+            <div class="nav-item active">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>
+            </div>
+            <div class="nav-item">
+                <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            </div>
+            <div class="nav-item">
+                <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

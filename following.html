@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BetrFood - Following</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="header">
+        <div class="header-tabs">
+            <div class="header-tab" onclick="window.location.href='index.html'">Community</div>
+            <div class="header-tab active">Following</div>
+        </div>
+        <button class="icon-button">🔍</button>
+    </div>
+
+    <div class="post-detail">
+        <div class="post-header">
+            <div class="avatar">T</div>
+            <div class="post-user-info">
+                <div class="post-username">tinychef3</div>
+            </div>
+            <button class="icon-button">⋯</button>
+        </div>
+
+        <div style="position: relative;">
+            <img src="https://images.unsplash.com/photo-1591814468924-caf88d1232e1?w=800&h=800&fit=crop"
+                 alt="Pho Recipe"
+                 class="post-image">
+        </div>
+
+        <div class="post-actions">
+            <button class="action-button">
+                <span>❤️</span>
+            </button>
+            <button class="action-button" onclick="window.location.href='comments.html'">
+                <span>💬</span>
+            </button>
+            <button class="action-button" onclick="window.location.href='share.html'">
+                <span>📤</span>
+            </button>
+        </div>
+
+        <div class="post-info">
+            <div class="post-likes" onclick="window.location.href='liked-by.html'" style="cursor: pointer;">
+                Liked by <strong>joe_le-tigre</strong> and others
+            </div>
+            <div class="post-caption">
+                <span class="username">tinychef3</span>
+                <strong>Pho Recipe</strong><br>
+                Here's a new delicious Pho recipe for everyone!
+            </div>
+        </div>
+    </div>
+
+    <div class="bottom-nav">
+        <a href="index.html" class="nav-item active">
+            <span class="nav-icon">🏠</span>
+        </a>
+        <a href="search.html" class="nav-item">
+            <span class="nav-icon">📋</span>
+        </a>
+        <a href="profile.html" class="nav-item">
+            <span class="nav-icon">👤</span>
+        </a>
+    </div>
+</body>
+</html>
