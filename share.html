@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BetrFood - Share</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="header">
+        <button class="icon-button" onclick="window.history.back()">←</button>
+        <div class="header-title" style="flex: 1; text-align: center;">Community</div>
+        <button class="icon-button">🔍</button>
+    </div>
+
+    <div class="post-detail">
+        <div class="post-header">
+            <div class="avatar">T</div>
+            <div class="post-user-info">
+                <div class="post-username">tinychef3</div>
+            </div>
+            <button class="icon-button">⋯</button>
+        </div>
+
+        <div style="position: relative;">
+            <img src="https://images.unsplash.com/photo-1591814468924-caf88d1232e1?w=800&h=800&fit=crop"
+                 alt="Pho Recipe"
+                 class="post-image">
+        </div>
+
+        <div class="post-actions">
+            <button class="action-button">
+                <span>❤️</span>
+            </button>
+            <button class="action-button">
+                <span>💬</span>
+            </button>
+            <button class="action-button">
+                <span>📤</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">📤 Collaborate</div>
+                <button class="close-button" onclick="window.history.back()">✕</button>
+            </div>
+
+            <div class="share-options">
+                <div class="share-option">
+                    <div class="share-icon facebook">f</div>
+                    <div class="share-label">Facebook</div>
+                </div>
+                <div class="share-option">
+                    <div class="share-icon messenger">💬</div>
+                    <div class="share-label">Messenger</div>
+                </div>
+                <div class="share-option">
+                    <div class="share-icon mail">✉️</div>
+                    <div class="share-label">Mail</div>
+                </div>
+                <div class="share-option">
+                    <div class="share-icon notes">📝</div>
+                    <div class="share-label">Notes</div>
+                </div>
+                <div class="share-option">
+                    <div class="share-icon more">⋯</div>
+                    <div class="share-label">More</div>
+                </div>
+            </div>
+
+            <div style="padding: 16px; background: var(--surface); border-radius: 12px;">
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                    <span style="font-size: 20px;">📱</span>
+                    <input type="text" placeholder="When people can see what..."
+                           style="flex: 1; border: none; background: transparent; outline: none; font-size: 14px;">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="bottom-nav">
+        <a href="index.html" class="nav-item">
+            <span class="nav-icon">🏠</span>
+        </a>
+        <a href="search.html" class="nav-item">
+            <span class="nav-icon">📋</span>
+        </a>
+        <a href="profile.html" class="nav-item">
+            <span class="nav-icon">👤</span>
+        </a>
+    </div>
+</body>
+</html>

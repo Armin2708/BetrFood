@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BetrFood - Search</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="header">
+        <button class="icon-button" onclick="window.history.back()">✕</button>
+        <div class="header-title" style="flex: 1; text-align: center;">Community</div>
+    </div>
+
+    <div class="search-container">
+        <div class="search-bar">
+            <span class="icon">🔍</span>
+            <input type="text" placeholder="Search" id="searchInput">
+            <span class="icon">🎤</span>
+            <button class="send-button">Search</button>
+        </div>
+    </div>
+
+    <div style="height: calc(100vh - 180px); display: flex; align-items: center; justify-content: center; color: var(--text-secondary);">
+        <p>Start typing to search...</p>
+    </div>
+
+    <div class="keyboard" id="keyboard" style="display: none;">
+        <div class="keyboard-row">
+            <button class="key">q</button>
+            <button class="key">w</button>
+            <button class="key">e</button>
+            <button class="key">r</button>
+            <button class="key">t</button>
+            <button class="key">y</button>
+            <button class="key">u</button>
+            <button class="key">i</button>
+            <button class="key">o</button>
+            <button class="key">p</button>
+        </div>
+        <div class="keyboard-row">
+            <button class="key">a</button>
+            <button class="key">s</button>
+            <button class="key">d</button>
+            <button class="key">f</button>
+            <button class="key">g</button>
+            <button class="key">h</button>
+            <button class="key">j</button>
+            <button class="key">k</button>
+            <button class="key">l</button>
+        </div>
+        <div class="keyboard-row">
+            <button class="key">z</button>
+            <button class="key">x</button>
+            <button class="key">c</button>
+            <button class="key">v</button>
+            <button class="key">b</button>
+            <button class="key">n</button>
+            <button class="key">m</button>
+            <button class="key">⌫</button>
+        </div>
+        <div class="keyboard-row">
+            <button class="key">123</button>
+            <button class="key wide">space</button>
+            <button class="key action">Search</button>
+        </div>
+    </div>
+
+    <script>
+        const input = document.getElementById('searchInput');
+        const keyboard = document.getElementById('keyboard');
+
+        input.addEventListener('focus', () => {
+            keyboard.style.display = 'block';
+        });
+
+        document.querySelectorAll('.key').forEach(key => {
+            key.addEventListener('click', (e) => {
+                const value = e.target.textContent;
+                if (value === '⌫') {
+                    input.value = input.value.slice(0, -1);
+                } else if (value === 'space') {
+                    input.value += ' ';
+                } else if (value === 'Search') {
+                    keyboard.style.display = 'none';
+                    input.blur();
+                } else if (value.length === 1) {
+                    input.value += value;
+                }
+            });
+        });
+    </script>
+
+    <div class="bottom-nav">
+        <a href="index.html" class="nav-item">
+            <span class="nav-icon">🏠</span>
+        </a>
+        <a href="search.html" class="nav-item active">
+            <span class="nav-icon">📋</span>
+        </a>
+        <a href="profile.html" class="nav-item">
+            <span class="nav-icon">👤</span>
+        </a>
+    </div>
+</body>
+</html>
