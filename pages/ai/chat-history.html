@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BetrFood - Chat History</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #22C55E;
+            --primary-light: #DCFCE7;
+            --primary-dark: #16A34A;
+            --secondary: #10B981;
+            --background: #FAFAFA;
+            --surface: #FFFFFF;
+            --text-primary: #0F172A;
+            --text-secondary: #64748B;
+            --text-muted: #94A3B8;
+            --border: #E2E8F0;
+            --danger: #EF4444;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--background);
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+        }
+
+        .screen {
+            width: 100%;
+            height: 100vh;
+            background: var(--background);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Status Bar */
+        .status-bar {
+            height: 48px;
+            padding: 14px 24px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--surface);
+            flex-shrink: 0;
+        }
+
+        .status-time {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .status-icons {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+
+        .status-icons svg {
+            width: 18px;
+            height: 18px;
+            fill: var(--text-primary);
+        }
+
+        /* History Header */
+        .history-header {
+            display: flex;
+            align-items: center;
+            padding: 12px 20px;
+            background: var(--surface);
+            flex-shrink: 0;
+        }
+
+        .history-close {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .history-close svg {
+            width: 20px;
+            height: 20px;
+            stroke: var(--text-primary);
+            fill: none;
+            stroke-width: 2.5;
+        }
+
+        .history-list {
+            flex: 1;
+            overflow-y: auto;
+            background: var(--surface);
+            padding: 8px 20px;
+        }
+
+        .history-item {
+            padding: 16px 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 15px;
+            color: var(--text-primary);
+            cursor: pointer;
+        }
+
+        .history-item:first-child {
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body>
+    <div class="screen" style="background: var(--surface);">
+        <div class="status-bar">
+            <span class="status-time">6:07</span>
+            <div class="status-icons">
+                <svg viewBox="0 0 24 24"><path d="M12.01 21.49L23.64 7c-.45-.34-4.93-4-11.64-4C5.28 3 .81 6.66.36 7l11.63 14.49z"/></svg>
+                <svg viewBox="0 0 24 24"><path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33c.74 0 1.34-.6 1.34-1.33V5.33C17 4.6 16.4 4 15.67 4z"/></svg>
+            </div>
+        </div>
+
+        <div class="history-header">
+            <div class="history-close">
+                <svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </div>
+        </div>
+
+        <div class="history-list">
+            <div class="history-item">New Chat</div>
+            <div class="history-item">Previous Chat Title</div>
+            <div class="history-item">Previous Chat Title</div>
+            <div class="history-item">Previous Chat Title</div>
+            <div class="history-item">Previous Chat Title</div>
+            <div class="history-item">Previous Chat Title</div>
+            <div class="history-item">Previous Chat Title</div>
+            <div class="history-item">Previous Chat Title</div>
+        </div>
+    </div>
+</body>
+</html>

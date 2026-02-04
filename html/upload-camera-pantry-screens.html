@@ -1,0 +1,1242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BetrFood App - Upload, Camera, Recipe & Pantry Screens</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #22C55E;
+            --primary-light: #DCFCE7;
+            --primary-dark: #16A34A;
+            --secondary: #10B981;
+            --background: #FAFAFA;
+            --surface: #FFFFFF;
+            --text-primary: #0F172A;
+            --text-secondary: #64748B;
+            --text-muted: #94A3B8;
+            --border: #E2E8F0;
+            --danger: #EF4444;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .screens-wrapper {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 32px;
+            justify-content: center;
+            max-width: 2400px;
+            margin: 0 auto;
+        }
+
+        .screen-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .screen-label {
+            font-size: 14px;
+            font-weight: 700;
+            color: rgba(255,255,255,0.9);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .phone-frame {
+            width: 375px;
+            height: 812px;
+            background: var(--surface);
+            border-radius: 50px;
+            box-shadow: 0 50px 100px rgba(0,0,0,0.3), 0 15px 35px rgba(0,0,0,0.2);
+            overflow: hidden;
+            position: relative;
+            border: 10px solid #1a1a1a;
+        }
+
+        .phone-frame::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 150px;
+            height: 28px;
+            background: #1a1a1a;
+            border-radius: 0 0 20px 20px;
+            z-index: 100;
+        }
+
+        .phone-frame::after {
+            content: '';
+            position: absolute;
+            top: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 6px;
+            background: #333;
+            border-radius: 3px;
+            z-index: 101;
+        }
+
+        .screen {
+            width: 100%;
+            height: 100%;
+            background: var(--background);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Status Bar */
+        .status-bar {
+            height: 48px;
+            padding: 14px 24px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--surface);
+            flex-shrink: 0;
+        }
+
+        .status-time {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .status-icons {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+
+        .status-icons svg {
+            width: 18px;
+            height: 18px;
+            fill: var(--text-primary);
+        }
+
+        /* Navigation Bar */
+        .nav-bar {
+            height: 84px;
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-around;
+            align-items: flex-start;
+            padding: 12px 8px 0;
+            flex-shrink: 0;
+        }
+
+        .nav-bar.green {
+            background: var(--primary);
+            border-top: none;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            padding: 8px 12px;
+            border-radius: 12px;
+            cursor: pointer;
+        }
+
+        .nav-item.active { background: var(--primary-light); }
+
+        .nav-bar.green .nav-item.active { background: rgba(255,255,255,0.2); }
+
+        .nav-item svg {
+            width: 24px;
+            height: 24px;
+            stroke: var(--text-muted);
+            fill: none;
+            stroke-width: 2;
+        }
+
+        .nav-item.active svg { stroke: var(--primary); }
+
+        .nav-bar.green .nav-item svg { stroke: rgba(255,255,255,0.7); }
+        .nav-bar.green .nav-item.active svg { stroke: white; }
+
+        /* ==================== UPLOAD PAGE ==================== */
+        .upload-header {
+            display: flex;
+            align-items: center;
+            padding: 12px 20px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        .upload-close {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .upload-close svg {
+            width: 20px;
+            height: 20px;
+            stroke: var(--text-primary);
+            fill: none;
+            stroke-width: 2.5;
+        }
+
+        .upload-title {
+            flex: 1;
+            text-align: center;
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-right: 32px;
+        }
+
+        .upload-content {
+            flex: 1;
+            padding: 20px;
+            background: var(--surface);
+            overflow-y: auto;
+        }
+
+        .upload-field {
+            margin-bottom: 20px;
+        }
+
+        .upload-field-label {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
+        .upload-input {
+            width: 100%;
+            border: none;
+            font-size: 16px;
+            font-family: inherit;
+            color: var(--text-primary);
+            background: transparent;
+            outline: none;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .upload-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .upload-textarea {
+            width: 100%;
+            min-height: 80px;
+            border: none;
+            font-size: 14px;
+            font-family: inherit;
+            color: var(--text-primary);
+            background: transparent;
+            outline: none;
+            resize: none;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .upload-textarea::placeholder {
+            color: var(--text-muted);
+        }
+
+        .upload-media-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .upload-add-media {
+            width: 100px;
+            height: 100px;
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .upload-add-media:hover {
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+
+        .upload-add-media svg {
+            width: 32px;
+            height: 32px;
+            stroke: var(--text-muted);
+            fill: none;
+            stroke-width: 2;
+        }
+
+        .upload-add-media:hover svg {
+            stroke: var(--primary);
+        }
+
+        .upload-links {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 16px;
+            background: var(--background);
+            border-radius: 10px;
+            margin-bottom: 16px;
+        }
+
+        .upload-links svg {
+            width: 18px;
+            height: 18px;
+            stroke: var(--primary);
+            fill: none;
+            stroke-width: 2;
+        }
+
+        .upload-links span {
+            font-size: 14px;
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .upload-tags {
+            display: flex;
+            gap: 12px;
+        }
+
+        .upload-tag-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--background);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .upload-tag-btn svg {
+            width: 20px;
+            height: 20px;
+            stroke: var(--text-secondary);
+            fill: none;
+            stroke-width: 2;
+        }
+
+        /* ==================== CAMERA PAGE ==================== */
+        .camera-screen {
+            background: #000;
+        }
+
+        .camera-status-bar {
+            height: 48px;
+            padding: 14px 24px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .camera-status-bar .status-time { color: white; }
+        .camera-status-bar .status-icons svg { fill: white; }
+
+        .camera-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 20px;
+            flex-shrink: 0;
+        }
+
+        .camera-done {
+            padding: 8px 16px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .camera-header-icons {
+            display: flex;
+            gap: 12px;
+        }
+
+        .camera-header-icon {
+            width: 36px;
+            height: 36px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .camera-header-icon svg {
+            width: 20px;
+            height: 20px;
+            stroke: #FBBF24;
+            fill: none;
+            stroke-width: 2;
+        }
+
+        .camera-viewfinder {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .camera-frame {
+            width: 300px;
+            height: 300px;
+            position: relative;
+        }
+
+        .camera-corner {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            border-color: rgba(255,255,255,0.3);
+            border-style: solid;
+            border-width: 0;
+        }
+
+        .camera-corner.tl { top: 0; left: 0; border-top-width: 3px; border-left-width: 3px; }
+        .camera-corner.tr { top: 0; right: 0; border-top-width: 3px; border-right-width: 3px; }
+        .camera-corner.bl { bottom: 0; left: 0; border-bottom-width: 3px; border-left-width: 3px; }
+        .camera-corner.br { bottom: 0; right: 0; border-bottom-width: 3px; border-right-width: 3px; }
+
+        .camera-label {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+            font-weight: 600;
+            color: rgba(255,255,255,0.5);
+            text-align: center;
+        }
+
+        .camera-controls {
+            padding: 30px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .camera-btn {
+            width: 52px;
+            height: 52px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .camera-btn svg {
+            width: 26px;
+            height: 26px;
+            stroke: white;
+            fill: none;
+            stroke-width: 2;
+        }
+
+        .camera-capture {
+            width: 80px;
+            height: 80px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .camera-capture-inner {
+            width: 66px;
+            height: 66px;
+            border-radius: 50%;
+            border: 4px solid #000;
+        }
+
+        .camera-mode-toggle {
+            display: flex;
+            justify-content: center;
+            padding: 16px;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .camera-mode {
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            color: rgba(255,255,255,0.5);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .camera-mode.active {
+            background: rgba(255,255,255,0.2);
+            color: white;
+        }
+
+        /* ==================== RECIPE SCREEN ==================== */
+        .recipe-header {
+            background: var(--primary);
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            flex-shrink: 0;
+        }
+
+        .recipe-header-icon {
+            width: 40px;
+            height: 40px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .recipe-header-icon svg {
+            width: 22px;
+            height: 22px;
+            stroke: white;
+            fill: none;
+            stroke-width: 2;
+        }
+
+        .recipe-title-area {
+            background: var(--primary);
+            padding: 0 20px 24px;
+            flex-shrink: 0;
+        }
+
+        .recipe-title {
+            font-size: 28px;
+            font-weight: 800;
+            color: white;
+            text-align: center;
+        }
+
+        .recipe-content {
+            flex: 1;
+            background: var(--surface);
+            border-radius: 24px 24px 0 0;
+            margin-top: -16px;
+            padding: 24px 20px;
+            overflow-y: auto;
+        }
+
+        .recipe-empty {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        .recipe-empty svg {
+            width: 60px;
+            height: 60px;
+            stroke: var(--border);
+            fill: none;
+            stroke-width: 1.5;
+            margin-bottom: 16px;
+        }
+
+        /* ==================== PANTRY SCREEN ==================== */
+        .pantry-header {
+            background: var(--primary);
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .pantry-header-icon {
+            width: 40px;
+            height: 40px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .pantry-header-icon svg {
+            width: 22px;
+            height: 22px;
+            stroke: white;
+            fill: none;
+            stroke-width: 2;
+        }
+
+        .pantry-title-area {
+            background: var(--primary);
+            padding: 0 20px 24px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .pantry-title {
+            font-size: 28px;
+            font-weight: 800;
+            color: white;
+        }
+
+        .pantry-subtitle {
+            font-size: 16px;
+            color: rgba(255,255,255,0.8);
+            margin-top: 4px;
+        }
+
+        .pantry-content {
+            flex: 1;
+            background: var(--surface);
+            border-radius: 24px 24px 0 0;
+            margin-top: -16px;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .pantry-category {
+            margin-bottom: 20px;
+        }
+
+        .pantry-category-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-secondary);
+            text-align: center;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .pantry-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 16px;
+            background: var(--background);
+            border-radius: 12px;
+            margin-bottom: 8px;
+        }
+
+        .pantry-item-name {
+            font-size: 16px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .pantry-checkbox {
+            width: 24px;
+            height: 24px;
+            border: 2px solid var(--border);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .pantry-checkbox.checked {
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .pantry-checkbox svg {
+            width: 14px;
+            height: 14px;
+            stroke: white;
+            fill: none;
+            stroke-width: 3;
+            display: none;
+        }
+
+        .pantry-checkbox.checked svg {
+            display: block;
+        }
+
+        /* Keyboard */
+        .keyboard {
+            background: #D1D5DB;
+            padding: 8px 4px 30px;
+            flex-shrink: 0;
+        }
+
+        .keyboard-suggestions {
+            display: flex;
+            padding: 8px 12px;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .keyboard-suggestion {
+            padding: 8px 16px;
+            background: var(--surface);
+            border-radius: 8px;
+            font-size: 14px;
+            color: var(--text-primary);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .keyboard-row {
+            display: flex;
+            justify-content: center;
+            gap: 6px;
+            margin-bottom: 10px;
+        }
+
+        .key {
+            min-width: 32px;
+            height: 42px;
+            background: var(--surface);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            font-weight: 500;
+            color: var(--text-primary);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+
+        .key.special {
+            background: #A1A1AA;
+            font-size: 14px;
+            padding: 0 12px;
+        }
+
+        .key.space {
+            flex: 1;
+            max-width: 180px;
+        }
+
+        .key.send {
+            background: var(--primary);
+            color: white;
+            padding: 0 16px;
+        }
+
+        .keyboard-bottom {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            padding-top: 4px;
+        }
+
+        .keyboard-bottom-key {
+            padding: 8px 16px;
+            font-size: 20px;
+        }
+
+        /* Full Pantry List Styles */
+        .pantry-list-full {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: var(--surface);
+        }
+
+        .pantry-section {
+            margin-bottom: 24px;
+        }
+
+        .pantry-section-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-secondary);
+            text-align: center;
+            margin-bottom: 12px;
+            padding: 8px;
+            background: var(--background);
+            border-radius: 8px;
+        }
+
+        .pantry-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .pantry-row:last-child {
+            border-bottom: none;
+        }
+
+        .pantry-row-name {
+            font-size: 16px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .pantry-row-check {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .pantry-row-check svg {
+            width: 20px;
+            height: 20px;
+            stroke: var(--primary);
+            fill: none;
+            stroke-width: 2.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="screens-wrapper">
+
+        <!-- 1: Upload Page -->
+        <div class="screen-container">
+            <span class="screen-label">Upload Page</span>
+            <div class="phone-frame">
+                <div class="screen" style="background: var(--surface);">
+                    <div class="status-bar">
+                        <span class="status-time">9:41</span>
+                        <div class="status-icons">
+                            <svg viewBox="0 0 24 24"><path d="M12.01 21.49L23.64 7c-.45-.34-4.93-4-11.64-4C5.28 3 .81 6.66.36 7l11.63 14.49z"/></svg>
+                            <svg viewBox="0 0 24 24"><path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33c.74 0 1.34-.6 1.34-1.33V5.33C17 4.6 16.4 4 15.67 4z"/></svg>
+                        </div>
+                    </div>
+
+                    <div class="upload-header">
+                        <div class="upload-close">
+                            <svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                        </div>
+                        <span class="upload-title">Upload</span>
+                    </div>
+
+                    <div class="upload-content">
+                        <div class="upload-field">
+                            <input type="text" class="upload-input" placeholder="Title">
+                        </div>
+
+                        <div class="upload-media-row">
+                            <div style="flex: 1;">
+                                <textarea class="upload-textarea" placeholder="Write a description"></textarea>
+                            </div>
+                            <div class="upload-add-media">
+                                <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                            </div>
+                        </div>
+
+                        <div class="upload-links">
+                            <svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                            <span>Links</span>
+                        </div>
+
+                        <div class="upload-tags">
+                            <div class="upload-tag-btn">
+                                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+                            </div>
+                            <div class="upload-tag-btn">
+                                <svg viewBox="0 0 24 24"><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/></svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="nav-bar">
+                        <div class="nav-item"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
+                        <div class="nav-item"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></div>
+                        <div class="nav-item active"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg></div>
+                        <div class="nav-item"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
+                        <div class="nav-item"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2: Camera Page -->
+        <div class="screen-container">
+            <span class="screen-label">Camera Page</span>
+            <div class="phone-frame">
+                <div class="screen camera-screen">
+                    <div class="camera-status-bar">
+                        <span class="status-time">9:41</span>
+                        <div class="status-icons">
+                            <svg viewBox="0 0 24 24"><path d="M12.01 21.49L23.64 7c-.45-.34-4.93-4-11.64-4C5.28 3 .81 6.66.36 7l11.63 14.49z"/></svg>
+                            <svg viewBox="0 0 24 24"><path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33c.74 0 1.34-.6 1.34-1.33V5.33C17 4.6 16.4 4 15.67 4z"/></svg>
+                        </div>
+                    </div>
+
+                    <div class="camera-header">
+                        <span class="camera-done">Done</span>
+                        <div class="camera-header-icons">
+                            <div class="camera-header-icon">
+                                <svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                            </div>
+                            <div class="camera-header-icon">
+                                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                            </div>
+                            <div class="camera-header-icon">
+                                <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="camera-viewfinder">
+                        <div class="camera-frame">
+                            <div class="camera-corner tl"></div>
+                            <div class="camera-corner tr"></div>
+                            <div class="camera-corner bl"></div>
+                            <div class="camera-corner br"></div>
+                        </div>
+                        <div class="camera-label">Photos / Video</div>
+                    </div>
+
+                    <div class="camera-controls">
+                        <div class="camera-btn">
+                            <svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                        </div>
+                        <div class="camera-capture">
+                            <div class="camera-capture-inner"></div>
+                        </div>
+                        <div class="camera-btn">
+                            <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                        </div>
+                    </div>
+
+                    <div class="camera-mode-toggle">
+                        <span class="camera-mode">Video</span>
+                        <span class="camera-mode active">Photo</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3: Recipe Screen -->
+        <div class="screen-container">
+            <span class="screen-label">Recipe Screen</span>
+            <div class="phone-frame">
+                <div class="screen" style="background: var(--primary);">
+                    <div class="status-bar" style="background: var(--primary);">
+                        <span class="status-time" style="color: white;">9:41</span>
+                        <div class="status-icons">
+                            <svg viewBox="0 0 24 24" style="fill: white;"><path d="M12.01 21.49L23.64 7c-.45-.34-4.93-4-11.64-4C5.28 3 .81 6.66.36 7l11.63 14.49z"/></svg>
+                            <svg viewBox="0 0 24 24" style="fill: white;"><path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33c.74 0 1.34-.6 1.34-1.33V5.33C17 4.6 16.4 4 15.67 4z"/></svg>
+                        </div>
+                    </div>
+
+                    <div class="recipe-header">
+                        <div class="recipe-header-icon">
+                            <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                        </div>
+                    </div>
+
+                    <div class="recipe-title-area">
+                        <h1 class="recipe-title">Recipes</h1>
+                    </div>
+
+                    <div class="recipe-content">
+                        <div class="recipe-empty">
+                            <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                            <span>No recipes yet</span>
+                        </div>
+                    </div>
+
+                    <div class="nav-bar green">
+                        <div class="nav-item"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
+                        <div class="nav-item"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></div>
+                        <div class="nav-item"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg></div>
+                        <div class="nav-item active"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
+                        <div class="nav-item"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4: Pantry Screen (Simple) -->
+        <div class="screen-container">
+            <span class="screen-label">Pantry (Simple)</span>
+            <div class="phone-frame">
+                <div class="screen" style="background: var(--primary);">
+                    <div class="status-bar" style="background: var(--primary);">
+                        <span class="status-time" style="color: white;">9:41</span>
+                        <div class="status-icons">
+                            <svg viewBox="0 0 24 24" style="fill: white;"><path d="M12.01 21.49L23.64 7c-.45-.34-4.93-4-11.64-4C5.28 3 .81 6.66.36 7l11.63 14.49z"/></svg>
+                            <svg viewBox="0 0 24 24" style="fill: white;"><path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33c.74 0 1.34-.6 1.34-1.33V5.33C17 4.6 16.4 4 15.67 4z"/></svg>
+                        </div>
+                    </div>
+
+                    <div class="pantry-header">
+                        <div class="pantry-header-icon">
+                            <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                        </div>
+                    </div>
+
+                    <div class="pantry-title-area">
+                        <h1 class="pantry-title">Pantry</h1>
+                        <p class="pantry-subtitle">-Meat-</p>
+                    </div>
+
+                    <div class="pantry-content">
+                        <div class="pantry-item">
+                            <span class="pantry-item-name">Beef</span>
+                            <div class="pantry-checkbox">
+                                <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="nav-bar green">
+                        <div class="nav-item"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
+                        <div class="nav-item"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></div>
+                        <div class="nav-item"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg></div>
+                        <div class="nav-item active"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
+                        <div class="nav-item"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5: Pantry Screen (With Keyboard) -->
+        <div class="screen-container">
+            <span class="screen-label">Pantry (Keyboard)</span>
+            <div class="phone-frame">
+                <div class="screen" style="background: var(--primary);">
+                    <div class="status-bar" style="background: var(--primary);">
+                        <span class="status-time" style="color: white;">9:41</span>
+                        <div class="status-icons">
+                            <svg viewBox="0 0 24 24" style="fill: white;"><path d="M12.01 21.49L23.64 7c-.45-.34-4.93-4-11.64-4C5.28 3 .81 6.66.36 7l11.63 14.49z"/></svg>
+                            <svg viewBox="0 0 24 24" style="fill: white;"><path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33c.74 0 1.34-.6 1.34-1.33V5.33C17 4.6 16.4 4 15.67 4z"/></svg>
+                        </div>
+                    </div>
+
+                    <div class="pantry-header">
+                        <div class="pantry-header-icon">
+                            <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                        </div>
+                    </div>
+
+                    <div class="pantry-title-area">
+                        <h1 class="pantry-title">Pantry</h1>
+                        <p class="pantry-subtitle">-Meat-</p>
+                    </div>
+
+                    <div class="pantry-content" style="flex: 0; padding: 16px;">
+                        <div class="pantry-item">
+                            <span class="pantry-item-name">Beef</span>
+                            <div class="pantry-checkbox">
+                                <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="flex: 1; background: var(--surface);"></div>
+
+                    <div class="keyboard">
+                        <div class="keyboard-suggestions">
+                            <div class="keyboard-suggestion">"The"</div>
+                            <div class="keyboard-suggestion">the</div>
+                            <div class="keyboard-suggestion">to</div>
+                        </div>
+                        <div class="keyboard-row">
+                            <div class="key">q</div><div class="key">w</div><div class="key">e</div><div class="key">r</div><div class="key">t</div><div class="key">y</div><div class="key">u</div><div class="key">i</div><div class="key">o</div><div class="key">p</div>
+                        </div>
+                        <div class="keyboard-row">
+                            <div class="key">a</div><div class="key">s</div><div class="key">d</div><div class="key">f</div><div class="key">g</div><div class="key">h</div><div class="key">j</div><div class="key">k</div><div class="key">l</div>
+                        </div>
+                        <div class="keyboard-row">
+                            <div class="key special">⇧</div><div class="key">z</div><div class="key">x</div><div class="key">c</div><div class="key">v</div><div class="key">b</div><div class="key">n</div><div class="key">m</div><div class="key special">⌫</div>
+                        </div>
+                        <div class="keyboard-row">
+                            <div class="key special">ABC</div><div class="key space"></div><div class="key send">→</div>
+                        </div>
+                        <div class="keyboard-bottom">
+                            <div class="keyboard-bottom-key">😊</div>
+                            <div class="keyboard-bottom-key">🎤</div>
+                        </div>
+                    </div>
+
+                    <div class="nav-bar green">
+                        <div class="nav-item"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
+                        <div class="nav-item"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></div>
+                        <div class="nav-item"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg></div>
+                        <div class="nav-item active"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
+                        <div class="nav-item"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 6: Pantry Screen (Full List) -->
+        <div class="screen-container">
+            <span class="screen-label">Pantry (Full List)</span>
+            <div class="phone-frame">
+                <div class="screen" style="background: var(--primary);">
+                    <div class="status-bar" style="background: var(--primary);">
+                        <span class="status-time" style="color: white;">9:41</span>
+                        <div class="status-icons">
+                            <svg viewBox="0 0 24 24" style="fill: white;"><path d="M12.01 21.49L23.64 7c-.45-.34-4.93-4-11.64-4C5.28 3 .81 6.66.36 7l11.63 14.49z"/></svg>
+                            <svg viewBox="0 0 24 24" style="fill: white;"><path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33c.74 0 1.34-.6 1.34-1.33V5.33C17 4.6 16.4 4 15.67 4z"/></svg>
+                        </div>
+                    </div>
+
+                    <div class="pantry-header">
+                        <div class="pantry-header-icon">
+                            <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                        </div>
+                    </div>
+
+                    <div class="pantry-title-area">
+                        <h1 class="pantry-title">Pantry</h1>
+                    </div>
+
+                    <div class="pantry-list-full" style="border-radius: 24px 24px 0 0; margin-top: -16px;">
+                        <!-- Red Meat -->
+                        <div class="pantry-section">
+                            <div class="pantry-section-title">-Red Meat-</div>
+                            <div class="pantry-row">
+                                <span class="pantry-row-name">Beef</span>
+                                <div class="pantry-row-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+                            </div>
+                            <div class="pantry-row">
+                                <span class="pantry-row-name">Pork</span>
+                                <div class="pantry-row-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+                            </div>
+                            <div class="pantry-row">
+                                <span class="pantry-row-name">Lamb</span>
+                                <div class="pantry-row-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+                            </div>
+                            <div class="pantry-row">
+                                <span class="pantry-row-name">Veal</span>
+                                <div class="pantry-row-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+                            </div>
+                        </div>
+
+                        <!-- Poultry -->
+                        <div class="pantry-section">
+                            <div class="pantry-section-title">-Poultry-</div>
+                            <div class="pantry-row">
+                                <span class="pantry-row-name">Chicken</span>
+                                <div class="pantry-row-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+                            </div>
+                            <div class="pantry-row">
+                                <span class="pantry-row-name">Turkey</span>
+                                <div class="pantry-row-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+                            </div>
+                            <div class="pantry-row">
+                                <span class="pantry-row-name">Duck</span>
+                                <div class="pantry-row-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+                            </div>
+                            <div class="pantry-row">
+                                <span class="pantry-row-name">Goose</span>
+                                <div class="pantry-row-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+                            </div>
+                        </div>
+
+                        <!-- Game Meat -->
+                        <div class="pantry-section">
+                            <div class="pantry-section-title">-Game Meat-</div>
+                            <div class="pantry-row">
+                                <span class="pantry-row-name">Venison</span>
+                                <div class="pantry-row-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+                            </div>
+                            <div class="pantry-row">
+                                <span class="pantry-row-name">Bison</span>
+                                <div class="pantry-row-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+                            </div>
+                        </div>
+
+                        <!-- Seafood -->
+                        <div class="pantry-section">
+                            <div class="pantry-section-title">-Seafood-</div>
+                            <div class="pantry-row">
+                                <span class="pantry-row-name">Fish</span>
+                                <div class="pantry-row-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+                            </div>
+                            <div class="pantry-row">
+                                <span class="pantry-row-name">Shrimp</span>
+                                <div class="pantry-row-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+                            </div>
+                            <div class="pantry-row">
+                                <span class="pantry-row-name">Crab</span>
+                                <div class="pantry-row-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+                            </div>
+                            <div class="pantry-row">
+                                <span class="pantry-row-name">Lobster</span>
+                                <div class="pantry-row-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+                            </div>
+                            <div class="pantry-row">
+                                <span class="pantry-row-name">Scallops</span>
+                                <div class="pantry-row-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+                            </div>
+                        </div>
+
+                        <!-- Other Meats -->
+                        <div class="pantry-section">
+                            <div class="pantry-section-title">-Other Meats-</div>
+                            <div class="pantry-row">
+                                <span class="pantry-row-name">Bacon</span>
+                                <div class="pantry-row-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+                            </div>
+                            <div class="pantry-row">
+                                <span class="pantry-row-name">Sausage</span>
+                                <div class="pantry-row-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+                            </div>
+                            <div class="pantry-row">
+                                <span class="pantry-row-name">Ham</span>
+                                <div class="pantry-row-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+                            </div>
+                            <div class="pantry-row">
+                                <span class="pantry-row-name">Hot Dog</span>
+                                <div class="pantry-row-check"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="nav-bar green">
+                        <div class="nav-item"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
+                        <div class="nav-item"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></div>
+                        <div class="nav-item"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg></div>
+                        <div class="nav-item active"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
+                        <div class="nav-item"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
