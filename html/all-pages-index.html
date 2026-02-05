@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BetrFood - All Pages Index</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 48px;
+        }
+
+        h1 {
+            font-size: 48px;
+            font-weight: 800;
+            color: white;
+            margin-bottom: 12px;
+            text-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        .subtitle {
+            font-size: 20px;
+            color: rgba(255,255,255,0.9);
+            font-weight: 500;
+            margin-bottom: 16px;
+        }
+
+        .badges {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            display: inline-block;
+            background: #22C55E;
+            color: white;
+            padding: 8px 18px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .badge.new {
+            background: #F59E0B;
+        }
+
+        .badge.updated {
+            background: #3B82F6;
+        }
+
+        .section {
+            background: white;
+            border-radius: 24px;
+            padding: 32px;
+            margin-bottom: 24px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid #E2E8F0;
+        }
+
+        .section-title {
+            font-size: 28px;
+            font-weight: 800;
+            color: #0F172A;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .section-icon {
+            font-size: 32px;
+        }
+
+        .section-count {
+            background: #F8FAFC;
+            color: #64748B;
+            padding: 6px 14px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .section-description {
+            font-size: 15px;
+            color: #64748B;
+            margin-bottom: 24px;
+            line-height: 1.6;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 16px;
+        }
+
+        .card {
+            background: #F8FAFC;
+            border: 2px solid #E2E8F0;
+            border-radius: 16px;
+            padding: 20px;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(135deg, #22C55E 0%, #10B981 100%);
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .card:hover {
+            border-color: #22C55E;
+            background: #DCFCE7;
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(34, 197, 94, 0.25);
+        }
+
+        .card:hover::before {
+            opacity: 1;
+        }
+
+        .card-badge {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: #F59E0B;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .card-badge.updated {
+            background: #3B82F6;
+        }
+
+        .card-icon {
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(135deg, #22C55E 0%, #10B981 100%);
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+        }
+
+        .card-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #0F172A;
+            margin-bottom: 8px;
+        }
+
+        .card-description {
+            font-size: 13px;
+            color: #64748B;
+            line-height: 1.5;
+            flex: 1;
+        }
+
+        .card-path {
+            font-size: 11px;
+            color: #94A3B8;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid #E2E8F0;
+            font-family: 'Monaco', 'Courier New', monospace;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 20px;
+            padding: 24px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .stat-value {
+            font-size: 48px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #22C55E 0%, #10B981 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: #64748B;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 48px;
+            color: rgba(255,255,255,0.9);
+            font-size: 14px;
+        }
+
+        footer a {
+            color: white;
+            text-decoration: none;
+            font-weight: 600;
+            border-bottom: 2px solid rgba(255,255,255,0.3);
+            transition: border-color 0.2s;
+        }
+
+        footer a:hover {
+            border-bottom-color: white;
+        }
+
+        .quick-links {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin-top: 24px;
+            flex-wrap: wrap;
+        }
+
+        .quick-link {
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(10px);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 12px;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s;
+            border: 2px solid rgba(255,255,255,0.2);
+        }
+
+        .quick-link:hover {
+            background: rgba(255,255,255,0.25);
+            border-color: rgba(255,255,255,0.4);
+            transform: translateY(-2px);
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 32px;
+            }
+
+            .grid {
+                grid-template-columns: 1fr;
+            }
+
+            .stats {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🍽️ BetrFood Complete Pages</h1>
+            <p class="subtitle">All 33 High-Fidelity HTML Prototypes</p>
+            <div class="badges">
+                <span class="badge">✅ 98% Design Compliant</span>
+                <span class="badge new">8 New Pages</span>
+                <span class="badge updated">25 Updated Pages</span>
+            </div>
+        </header>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-value">33</div>
+                <div class="stat-label">Total Pages</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">8</div>
+                <div class="stat-label">Categories</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">98%</div>
+                <div class="stat-label">Design System Compliance</div>
+            </div>
+        </div>
+
+        <!-- Authentication Section -->
+        <div class="section">
+            <div class="section-header">
+                <div class="section-title">
+                    <span class="section-icon">🔐</span>
+                    Authentication & Security
+                </div>
+                <span class="section-count">5 pages</span>
+            </div>
+            <p class="section-description">
+                Complete authentication flow including sign up, login, password recovery, and email verification
+            </p>
+
+            <div class="grid">
+                <a href="pages/auth/welcome.html" class="card">
+                    <div class="card-icon">👋</div>
+                    <div class="card-title">Welcome Screen</div>
+                    <div class="card-description">
+                        App introduction with sign up and login options
+                    </div>
+                    <div class="card-path">pages/auth/welcome.html</div>
+                </a>
+
+                <a href="pages/auth/signup.html" class="card">
+                    <div class="card-icon">✍️</div>
+                    <div class="card-title">Sign Up</div>
+                    <div class="card-description">
+                        User registration with email/password and social options
+                    </div>
+                    <div class="card-path">pages/auth/signup.html</div>
+                </a>
+
+                <a href="pages/auth/forgot-password.html" class="card">
+                    <div class="card-badge">NEW</div>
+                    <div class="card-icon">🔒</div>
+                    <div class="card-title">Forgot Password</div>
+                    <div class="card-description">
+                        Password recovery with email input and reset link
+                    </div>
+                    <div class="card-path">pages/auth/forgot-password.html</div>
+                </a>
+
+                <a href="pages/auth/reset-password.html" class="card">
+                    <div class="card-badge">NEW</div>
+                    <div class="card-icon">🔑</div>
+                    <div class="card-title">Reset Password</div>
+                    <div class="card-description">
+                        New password creation with strength indicator
+                    </div>
+                    <div class="card-path">pages/auth/reset-password.html</div>
+                </a>
+
+                <a href="pages/auth/email-verification.html" class="card">
+                    <div class="card-badge">NEW</div>
+                    <div class="card-icon">✉️</div>
+                    <div class="card-title">Email Verification</div>
+                    <div class="card-description">
+                        6-digit code verification with resend timer
+                    </div>
+                    <div class="card-path">pages/auth/email-verification.html</div>
+                </a>
+            </div>
+        </div>
+
+        <!-- Profile Section -->
+        <div class="section">
+            <div class="section-header">
+                <div class="section-title">
+                    <span class="section-icon">👤</span>
+                    Profile & User Management
+                </div>
+                <span class="section-count">6 pages</span>
+            </div>
+            <p class="section-description">
+                User profiles, followers/following lists, health information, and settings
+            </p>
+
+            <div class="grid">
+                <a href="pages/profile/profile.html" class="card">
+                    <div class="card-badge updated">UPDATED</div>
+                    <div class="card-icon">👤</div>
+                    <div class="card-title">My Profile</div>
+                    <div class="card-description">
+                        User's own profile with posts grid and stats
+                    </div>
+                    <div class="card-path">pages/profile/profile.html</div>
+                </a>
+
+                <a href="pages/profile/user-profile.html" class="card">
+                    <div class="card-badge updated">UPDATED</div>
+                    <div class="card-icon">👥</div>
+                    <div class="card-title">User Profile</div>
+                    <div class="card-description">
+                        Other users' profiles with follow/message actions
+                    </div>
+                    <div class="card-path">pages/profile/user-profile.html</div>
+                </a>
+
+                <a href="pages/profile/followers.html" class="card">
+                    <div class="card-badge updated">UPDATED</div>
+                    <div class="card-icon">💚</div>
+                    <div class="card-title">Followers List</div>
+                    <div class="card-description">
+                        List of users following you with follow back options
+                    </div>
+                    <div class="card-path">pages/profile/followers.html</div>
+                </a>
+
+                <a href="pages/profile/following.html" class="card">
+                    <div class="card-badge updated">UPDATED</div>
+                    <div class="card-icon">➕</div>
+                    <div class="card-title">Following List</div>
+                    <div class="card-description">
+                        List of users you follow with manage options
+                    </div>
+                    <div class="card-path">pages/profile/following.html</div>
+                </a>
+
+                <a href="pages/profile/health-info.html" class="card">
+                    <div class="card-badge updated">UPDATED</div>
+                    <div class="card-icon">🏥</div>
+                    <div class="card-title">Health Information</div>
+                    <div class="card-description">
+                        Dietary preferences, allergies, and nutrition goals
+                    </div>
+                    <div class="card-path">pages/profile/health-info.html</div>
+                </a>
+
+                <a href="pages/profile/settings.html" class="card">
+                    <div class="card-badge updated">UPDATED</div>
+                    <div class="card-icon">⚙️</div>
+                    <div class="card-title">Settings</div>
+                    <div class="card-description">
+                        Account settings, privacy, and preferences
+                    </div>
+                    <div class="card-path">pages/profile/settings.html</div>
+                </a>
+            </div>
+        </div>
+
+        <!-- Feed Section -->
+        <div class="section">
+            <div class="section-header">
+                <div class="section-title">
+                    <span class="section-icon">📱</span>
+                    Feed & Social Interactions
+                </div>
+                <span class="section-count">4 pages</span>
+            </div>
+            <p class="section-description">
+                Main content feed, comments, likes, and sharing functionality
+            </p>
+
+            <div class="grid">
+                <a href="pages/feed/index.html" class="card">
+                    <div class="card-badge updated">UPDATED</div>
+                    <div class="card-icon">🏠</div>
+                    <div class="card-title">Home Feed</div>
+                    <div class="card-description">
+                        Main content feed with community posts and updates
+                    </div>
+                    <div class="card-path">pages/feed/index.html</div>
+                </a>
+
+                <a href="pages/feed/comments.html" class="card">
+                    <div class="card-badge updated">UPDATED</div>
+                    <div class="card-icon">💬</div>
+                    <div class="card-title">Comments</div>
+                    <div class="card-description">
+                        Post comments with threaded discussions
+                    </div>
+                    <div class="card-path">pages/feed/comments.html</div>
+                </a>
+
+                <a href="pages/feed/liked-by.html" class="card">
+                    <div class="card-badge updated">UPDATED</div>
+                    <div class="card-icon">❤️</div>
+                    <div class="card-title">Liked By</div>
+                    <div class="card-description">
+                        List of users who liked a post
+                    </div>
+                    <div class="card-path">pages/feed/liked-by.html</div>
+                </a>
+
+                <a href="pages/feed/share.html" class="card">
+                    <div class="card-badge updated">UPDATED</div>
+                    <div class="card-icon">📤</div>
+                    <div class="card-title">Share Post</div>
+                    <div class="card-description">
+                        Share options for posts to various platforms
+                    </div>
+                    <div class="card-path">pages/feed/share.html</div>
+                </a>
+            </div>
+        </div>
+
+        <!-- AI Section -->
+        <div class="section">
+            <div class="section-header">
+                <div class="section-title">
+                    <span class="section-icon">🤖</span>
+                    AI Assistant & Chat
+                </div>
+                <span class="section-count">6 pages</span>
+            </div>
+            <p class="section-description">
+                AI-powered cooking assistant, chat interface, and premium features
+            </p>
+
+            <div class="grid">
+                <a href="pages/ai/chat-active.html" class="card">
+                    <div class="card-badge updated">UPDATED</div>
+                    <div class="card-icon">💬</div>
+                    <div class="card-title">Active Chat</div>
+                    <div class="card-description">
+                        Active conversation with AI cooking assistant
+                    </div>
+                    <div class="card-path">pages/ai/chat-active.html</div>
+                </a>
+
+                <a href="pages/ai/chat-empty.html" class="card">
+                    <div class="card-badge updated">UPDATED</div>
+                    <div class="card-icon">🆕</div>
+                    <div class="card-title">New Chat</div>
+                    <div class="card-description">
+                        Empty chat state with suggested questions
+                    </div>
+                    <div class="card-path">pages/ai/chat-empty.html</div>
+                </a>
+
+                <a href="pages/ai/chat-history.html" class="card">
+                    <div class="card-badge updated">UPDATED</div>
+                    <div class="card-icon">📜</div>
+                    <div class="card-title">Chat History</div>
+                    <div class="card-description">
+                        Previous AI conversations and search
+                    </div>
+                    <div class="card-path">pages/ai/chat-history.html</div>
+                </a>
+
+                <a href="pages/ai/scanner.html" class="card">
+                    <div class="card-badge updated">UPDATED</div>
+                    <div class="card-icon">📷</div>
+                    <div class="card-title">Food Scanner</div>
+                    <div class="card-description">
+                        AI-powered food recognition and analysis
+                    </div>
+                    <div class="card-path">pages/ai/scanner.html</div>
+                </a>
+
+                <a href="pages/ai/upgrade.html" class="card">
+                    <div class="card-badge updated">UPDATED</div>
+                    <div class="card-icon">⭐</div>
+                    <div class="card-title">AI Upgrade</div>
+                    <div class="card-description">
+                        Upgrade to premium for unlimited AI queries
+                    </div>
+                    <div class="card-path">pages/ai/upgrade.html</div>
+                </a>
+
+                <a href="pages/ai/payment.html" class="card">
+                    <div class="card-badge updated">UPDATED</div>
+                    <div class="card-icon">💳</div>
+                    <div class="card-title">Payment</div>
+                    <div class="card-description">
+                        Payment processing for premium features
+                    </div>
+                    <div class="card-path">pages/ai/payment.html</div>
+                </a>
+            </div>
+        </div>
+
+        <!-- Content Creation Section -->
+        <div class="section">
+            <div class="section-header">
+                <div class="section-title">
+                    <span class="section-icon">📸</span>
+                    Content Creation
+                </div>
+                <span class="section-count">2 pages</span>
+            </div>
+            <p class="section-description">
+                Photo/video capture and content upload interface
+            </p>
+
+            <div class="grid">
+                <a href="pages/content/camera.html" class="card">
+                    <div class="card-icon">📷</div>
+                    <div class="card-title">Camera</div>
+                    <div class="card-description">
+                        Camera interface for capturing food photos
+                    </div>
+                    <div class="card-path">pages/content/camera.html</div>
+                </a>
+
+                <a href="pages/content/upload.html" class="card">
+                    <div class="card-icon">⬆️</div>
+                    <div class="card-title">Upload</div>
+                    <div class="card-description">
+                        Upload and edit photos before posting
+                    </div>
+                    <div class="card-path">pages/content/upload.html</div>
+                </a>
+            </div>
+        </div>
+
+        <!-- Meal Planning Section -->
+        <div class="section">
+            <div class="section-header">
+                <div class="section-title">
+                    <span class="section-icon">🗓️</span>
+                    Meal Planning
+                </div>
+                <span class="section-count">4 pages</span>
+            </div>
+            <p class="section-description">
+                Smart pantry management, recipes, and meal planning tools
+            </p>
+
+            <div class="grid">
+                <a href="pages/meal-planning/pantry-simple.html" class="card">
+                    <div class="card-badge updated">UPDATED</div>
+                    <div class="card-icon">🥫</div>
+                    <div class="card-title">Pantry Simple</div>
+                    <div class="card-description">
+                        Simple pantry view with ingredient list
+                    </div>
+                    <div class="card-path">pages/meal-planning/pantry-simple.html</div>
+                </a>
+
+                <a href="pages/meal-planning/pantry-full.html" class="card">
+                    <div class="card-badge updated">UPDATED</div>
+                    <div class="card-icon">📦</div>
+                    <div class="card-title">Pantry Full</div>
+                    <div class="card-description">
+                        Detailed pantry with categories and expiration
+                    </div>
+                    <div class="card-path">pages/meal-planning/pantry-full.html</div>
+                </a>
+
+                <a href="pages/meal-planning/pantry-keyboard.html" class="card">
+                    <div class="card-badge updated">UPDATED</div>
+                    <div class="card-icon">⌨️</div>
+                    <div class="card-title">Pantry Add Item</div>
+                    <div class="card-description">
+                        Add ingredients to pantry with keyboard
+                    </div>
+                    <div class="card-path">pages/meal-planning/pantry-keyboard.html</div>
+                </a>
+
+                <a href="pages/meal-planning/recipe.html" class="card">
+                    <div class="card-badge updated">UPDATED</div>
+                    <div class="card-icon">📖</div>
+                    <div class="card-title">Recipe View</div>
+                    <div class="card-description">
+                        Full recipe with ingredients and instructions
+                    </div>
+                    <div class="card-path">pages/meal-planning/recipe.html</div>
+                </a>
+            </div>
+        </div>
+
+        <!-- Premium Section -->
+        <div class="section">
+            <div class="section-header">
+                <div class="section-title">
+                    <span class="section-icon">👑</span>
+                    Premium & Monetization
+                </div>
+                <span class="section-count">2 pages</span>
+            </div>
+            <p class="section-description">
+                Subscription plans and creator earnings dashboard
+            </p>
+
+            <div class="grid">
+                <a href="pages/premium/subscription.html" class="card">
+                    <div class="card-badge">NEW</div>
+                    <div class="card-icon">⭐</div>
+                    <div class="card-title">Premium Subscription</div>
+                    <div class="card-description">
+                        Upgrade to premium with monthly/yearly plans
+                    </div>
+                    <div class="card-path">pages/premium/subscription.html</div>
+                </a>
+
+                <a href="pages/premium/creator-earnings.html" class="card">
+                    <div class="card-badge">NEW</div>
+                    <div class="card-icon">💰</div>
+                    <div class="card-title">Creator Earnings</div>
+                    <div class="card-description">
+                        Revenue tracking and payout management
+                    </div>
+                    <div class="card-path">pages/premium/creator-earnings.html</div>
+                </a>
+            </div>
+        </div>
+
+        <!-- Features Section -->
+        <div class="section">
+            <div class="section-header">
+                <div class="section-title">
+                    <span class="section-icon">✨</span>
+                    Key Features
+                </div>
+                <span class="section-count">3 pages</span>
+            </div>
+            <p class="section-description">
+                Innovative features that differentiate BetrFood from competitors
+            </p>
+
+            <div class="grid">
+                <a href="pages/features/meal-plan-share.html" class="card">
+                    <div class="card-badge">NEW</div>
+                    <div class="card-icon">📤</div>
+                    <div class="card-title">Meal Plan Sharing</div>
+                    <div class="card-description">
+                        Share meal plans to feed, communities, or PDF
+                    </div>
+                    <div class="card-path">pages/features/meal-plan-share.html</div>
+                </a>
+
+                <a href="pages/features/recipe-import.html" class="card">
+                    <div class="card-badge">NEW</div>
+                    <div class="card-icon">📥</div>
+                    <div class="card-title">Recipe Import</div>
+                    <div class="card-description">
+                        Import recipes from URLs or scan photos
+                    </div>
+                    <div class="card-path">pages/features/recipe-import.html</div>
+                </a>
+
+                <a href="pages/features/ingredient-substitution.html" class="card">
+                    <div class="card-badge">NEW</div>
+                    <div class="card-icon">🔄</div>
+                    <div class="card-title">Ingredient Substitution</div>
+                    <div class="card-description">
+                        AI-powered ingredient replacements
+                    </div>
+                    <div class="card-path">pages/features/ingredient-substitution.html</div>
+                </a>
+            </div>
+        </div>
+
+        <!-- Search Section -->
+        <div class="section">
+            <div class="section-header">
+                <div class="section-title">
+                    <span class="section-icon">🔍</span>
+                    Search & Discovery
+                </div>
+                <span class="section-count">1 page</span>
+            </div>
+            <p class="section-description">
+                Search functionality for finding recipes, users, and content
+            </p>
+
+            <div class="grid">
+                <a href="pages/search/search.html" class="card">
+                    <div class="card-badge updated">UPDATED</div>
+                    <div class="card-icon">🔎</div>
+                    <div class="card-title">Search</div>
+                    <div class="card-description">
+                        Search interface with filters and results
+                    </div>
+                    <div class="card-path">pages/search/search.html</div>
+                </a>
+            </div>
+        </div>
+
+        <footer>
+            <div class="quick-links">
+                <a href="new-pages-index.html" class="quick-link">📋 New Pages Only (8)</a>
+                <a href="DESIGN_AUDIT.md" class="quick-link">📊 Design Audit</a>
+                <a href="DESIGN_FIXES_COMPLETE.md" class="quick-link">✅ Fixes Report</a>
+                <a href="NEW_PAGES_SUMMARY.md" class="quick-link">📖 Documentation</a>
+                <a href="../DESIGN_SYSTEM.md" class="quick-link">🎨 Design System</a>
+            </div>
+            <p style="margin-top: 32px;">Created February 5, 2025 • All pages follow BetrFood Design System</p>
+            <p style="margin-top: 8px; font-size: 12px;">98% Design System Compliance • Plus Jakarta Sans Typography • Consistent UI Elements</p>
+        </footer>
+    </div>
+</body>
+</html>

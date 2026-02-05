@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New BetrFood Pages - Index</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 48px;
+        }
+
+        h1 {
+            font-size: 42px;
+            font-weight: 800;
+            color: white;
+            margin-bottom: 12px;
+            text-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        .subtitle {
+            font-size: 18px;
+            color: rgba(255,255,255,0.9);
+            font-weight: 500;
+        }
+
+        .badge {
+            display: inline-block;
+            background: #22C55E;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 700;
+            margin-top: 16px;
+        }
+
+        .section {
+            background: white;
+            border-radius: 24px;
+            padding: 32px;
+            margin-bottom: 24px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .section-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #0F172A;
+            margin-bottom: 8px;
+        }
+
+        .section-description {
+            font-size: 14px;
+            color: #64748B;
+            margin-bottom: 24px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background: #F8FAFC;
+            border: 2px solid #E2E8F0;
+            border-radius: 16px;
+            padding: 20px;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: block;
+        }
+
+        .card:hover {
+            border-color: #22C55E;
+            background: #DCFCE7;
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(34, 197, 94, 0.25);
+        }
+
+        .card-icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, #22C55E 0%, #10B981 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin-bottom: 14px;
+        }
+
+        .card-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #0F172A;
+            margin-bottom: 6px;
+        }
+
+        .card-description {
+            font-size: 13px;
+            color: #64748B;
+            line-height: 1.5;
+        }
+
+        .stats {
+            display: flex;
+            gap: 32px;
+            margin-top: 32px;
+            padding-top: 24px;
+            border-top: 1px solid #E2E8F0;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: 800;
+            color: #22C55E;
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #64748B;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 48px;
+            color: rgba(255,255,255,0.8);
+            font-size: 14px;
+        }
+
+        footer a {
+            color: white;
+            text-decoration: none;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🍽️ BetrFood New Pages</h1>
+            <p class="subtitle">High-Fidelity HTML Prototypes</p>
+            <div class="badge">8 NEW PAGES ADDED</div>
+        </header>
+
+        <!-- Authentication Section -->
+        <div class="section">
+            <h2 class="section-title">🔐 Authentication & Security</h2>
+            <p class="section-description">Complete password recovery and email verification flow</p>
+
+            <div class="grid">
+                <a href="pages/auth/forgot-password.html" class="card">
+                    <div class="card-icon">🔒</div>
+                    <div class="card-title">Forgot Password</div>
+                    <div class="card-description">
+                        Password recovery initiation with email input and reset link delivery
+                    </div>
+                </a>
+
+                <a href="pages/auth/reset-password.html" class="card">
+                    <div class="card-icon">🔑</div>
+                    <div class="card-title">Reset Password</div>
+                    <div class="card-description">
+                        New password creation with strength indicator and requirements checklist
+                    </div>
+                </a>
+
+                <a href="pages/auth/email-verification.html" class="card">
+                    <div class="card-icon">✉️</div>
+                    <div class="card-title">Email Verification</div>
+                    <div class="card-description">
+                        6-digit code verification with resend functionality and countdown timer
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        <!-- Premium Section -->
+        <div class="section">
+            <h2 class="section-title">👑 Premium & Monetization</h2>
+            <p class="section-description">Subscription management and creator economy features</p>
+
+            <div class="grid">
+                <a href="pages/premium/subscription.html" class="card">
+                    <div class="card-icon">⭐</div>
+                    <div class="card-title">Premium Subscription</div>
+                    <div class="card-description">
+                        Upgrade to premium with monthly/yearly plans, feature comparison, and free trial
+                    </div>
+                </a>
+
+                <a href="pages/premium/creator-earnings.html" class="card">
+                    <div class="card-icon">💰</div>
+                    <div class="card-title">Creator Earnings Dashboard</div>
+                    <div class="card-description">
+                        Revenue tracking, top selling content, payout management, and earnings breakdown
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        <!-- Features Section -->
+        <div class="section">
+            <h2 class="section-title">✨ Key Features</h2>
+            <p class="section-description">Innovative features that differentiate BetrFood from competitors</p>
+
+            <div class="grid">
+                <a href="pages/features/meal-plan-share.html" class="card">
+                    <div class="card-icon">📤</div>
+                    <div class="card-title">Meal Plan Sharing</div>
+                    <div class="card-description">
+                        Share meal plans to feed, communities, or export as PDF with privacy controls
+                    </div>
+                </a>
+
+                <a href="pages/features/recipe-import.html" class="card">
+                    <div class="card-icon">📥</div>
+                    <div class="card-title">Recipe Import</div>
+                    <div class="card-description">
+                        Import recipes from URLs, scan photos, or connect other apps (200+ sites supported)
+                    </div>
+                </a>
+
+                <a href="pages/features/ingredient-substitution.html" class="card">
+                    <div class="card-icon">🔄</div>
+                    <div class="card-title">Ingredient Substitution</div>
+                    <div class="card-description">
+                        AI-powered ingredient replacements with ratios, difficulty, and impact descriptions
+                    </div>
+                </a>
+            </div>
+
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-value">8</div>
+                    <div class="stat-label">New Pages</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value">100%</div>
+                    <div class="stat-label">Design System Compliant</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value">3</div>
+                    <div class="stat-label">Categories</div>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>Created February 5, 2025 • <a href="NEW_PAGES_SUMMARY.md">View Full Documentation</a></p>
+            <p style="margin-top: 8px; font-size: 12px;">All pages follow the BetrFood Design System specifications</p>
+        </footer>
+    </div>
+</body>
+</html>

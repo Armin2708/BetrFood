@@ -25,15 +25,56 @@
             --border: #E2E8F0;
             --danger: #EF4444;
         }
-
         body {
             font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: #000;
-            height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
             display: flex;
-            flex-direction: column;
-            overflow: hidden;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
         }
+
+        .phone-frame {
+            width: 375px;
+            height: 812px;
+            background: var(--surface);
+            border-radius: 50px;
+            box-shadow:
+                0 50px 100px rgba(0,0,0,0.3),
+                0 15px 35px rgba(0,0,0,0.2),
+                inset 0 0 0 2px rgba(255,255,255,0.1);
+            overflow: hidden;
+            position: relative;
+            border: 10px solid #1a1a1a;
+        }
+
+        .phone-frame::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 150px;
+            height: 28px;
+            background: #1a1a1a;
+            border-radius: 0 0 20px 20px;
+            z-index: 100;
+        }
+
+        .phone-frame::after {
+            content: '';
+            position: absolute;
+            top: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 6px;
+            background: #333;
+            border-radius: 3px;
+            z-index: 101;
+        }
+
 
         /* Status Bar */
         .camera-status-bar {
@@ -242,6 +283,9 @@
     </style>
 </head>
 <body>
+    <div class="phone-frame">
+        <div class="screen">
+
     <div class="camera-status-bar">
         <span class="status-time">9:41</span>
         <div class="status-icons">
@@ -290,6 +334,9 @@
     <div class="camera-mode-toggle">
         <span class="camera-mode">Video</span>
         <span class="camera-mode active">Photo</span>
+    </div>
+
+        </div>
     </div>
 </body>
 </html>

@@ -17,7 +17,7 @@
             --primary-light: #DCFCE7;
             --primary-dark: #16A34A;
             --secondary: #10B981;
-            --background: #FAFAFA;
+            --background: #F8FAFC;
             --surface: #FFFFFF;
             --text-primary: #0F172A;
             --text-secondary: #64748B;
@@ -26,14 +26,56 @@
             --danger: #EF4444;
             --pink-light: #FCE7F3;
         }
-
         body {
             font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: var(--background);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            margin: 0;
-            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
         }
+
+        .phone-frame {
+            width: 375px;
+            height: 812px;
+            background: var(--surface);
+            border-radius: 50px;
+            box-shadow:
+                0 50px 100px rgba(0,0,0,0.3),
+                0 15px 35px rgba(0,0,0,0.2),
+                inset 0 0 0 2px rgba(255,255,255,0.1);
+            overflow: hidden;
+            position: relative;
+            border: 10px solid #1a1a1a;
+        }
+
+        .phone-frame::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 150px;
+            height: 28px;
+            background: #1a1a1a;
+            border-radius: 0 0 20px 20px;
+            z-index: 100;
+        }
+
+        .phone-frame::after {
+            content: '';
+            position: absolute;
+            top: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 6px;
+            background: #333;
+            border-radius: 3px;
+            z-index: 101;
+        }
+
 
         .screen {
             width: 100%;
@@ -358,6 +400,9 @@
     </style>
 </head>
 <body>
+    <div class="phone-frame">
+        <div class="screen">
+
     <div class="screen" style="background: var(--surface);">
         <div class="status-bar">
             <span class="status-time">6:07</span>
@@ -441,6 +486,9 @@
             <div class="nav-item">
                 <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
             </div>
+        </div>
+    </div>
+
         </div>
     </div>
 </body>
