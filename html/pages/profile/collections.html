@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Collections - BetrFood</title>
+
+    <!-- REQUIRED: Google Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        /* REQUIRED: Reset */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* REQUIRED: CSS Variables */
+        :root {
+            --primary: #22C55E;
+            --primary-light: #DCFCE7;
+            --primary-dark: #16A34A;
+            --secondary: #10B981;
+            --background: #F8FAFC;
+            --surface: #FFFFFF;
+            --text-primary: #0F172A;
+            --text-secondary: #64748B;
+            --text-muted: #94A3B8;
+            --border: #E2E8F0;
+            --danger: #EF4444;
+            --danger-light: #FEE2E2;
+            --warning: #F59E0B;
+            --warning-light: #FEF3C7;
+        }
+
+        /* REQUIRED: Base Font */
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+
+        /* REQUIRED: Phone Frame */
+        .phone-frame {
+            width: 375px;
+            height: 812px;
+            background: var(--surface);
+            border-radius: 50px;
+            box-shadow:
+                0 50px 100px rgba(0,0,0,0.3),
+                0 15px 35px rgba(0,0,0,0.2),
+                inset 0 0 0 2px rgba(255,255,255,0.1);
+            overflow: hidden;
+            position: relative;
+            border: 10px solid #1a1a1a;
+        }
+
+        /* REQUIRED: Screen Container */
+        .screen {
+            width: 100%;
+            height: 100%;
+            background: var(--surface);
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Status Bar */
+        .status-bar {
+            height: 48px;
+            padding: 14px 24px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+            background: transparent;
+        }
+
+        .status-time {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .status-icons {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+
+        .status-icons svg {
+            width: 18px;
+            height: 18px;
+            fill: var(--text-primary);
+        }
+
+        /* Header */
+        .header {
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .back-button {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--background);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            cursor: pointer;
+        }
+
+        .back-button svg {
+            width: 20px;
+            height: 20px;
+            stroke: var(--text-primary);
+            stroke-width: 2;
+            fill: none;
+        }
+
+        .header-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .create-button {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 14px rgba(34, 197, 94, 0.35);
+        }
+
+        .create-button svg {
+            width: 20px;
+            height: 20px;
+            stroke: white;
+            stroke-width: 2;
+            fill: none;
+        }
+
+        /* Content Area */
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        /* Collections Grid */
+        .collections-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+        }
+
+        .collection-card {
+            background: var(--surface);
+            border-radius: 18px;
+            overflow: hidden;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            border: 1px solid var(--border);
+        }
+
+        .collection-thumbnail {
+            aspect-ratio: 1;
+            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+        }
+
+        .collection-info {
+            padding: 12px;
+        }
+
+        .collection-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .collection-count {
+            font-size: 12px;
+            font-weight: 400;
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+    <div class="phone-frame">
+        <div class="screen">
+            <!-- Status Bar (REQUIRED) -->
+            <div class="status-bar">
+                <span class="status-time">9:41</span>
+                <div class="status-icons">
+                    <svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+                    <svg viewBox="0 0 24 24"><path d="M17 2H7C5.9 2 5 2.9 5 4v16c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 18H7V4h10v16z"/><path d="M9 12h6v2H9z"/></svg>
+                </div>
+            </div>
+
+            <!-- Header -->
+            <div class="header">
+                <div class="header-left">
+                    <button class="back-button">
+                        <svg viewBox="0 0 24 24">
+                            <line x1="19" y1="12" x2="5" y2="12"/>
+                            <polyline points="12 19 5 12 12 5"/>
+                        </svg>
+                    </button>
+                    <h1 class="header-title">Collections</h1>
+                </div>
+                <div class="header-right">
+                    <button class="create-button">
+                        <svg viewBox="0 0 24 24">
+                            <line x1="12" y1="5" x2="12" y2="19"/>
+                            <line x1="5" y1="12" x2="19" y2="12"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Content Area -->
+            <div class="content">
+                <!-- Collections Grid -->
+                <div class="collections-grid">
+                    <div class="collection-card">
+                        <div class="collection-thumbnail">🍜</div>
+                        <div class="collection-info">
+                            <div class="collection-title">Asian Recipes</div>
+                            <div class="collection-count">24 posts</div>
+                        </div>
+                    </div>
+                    <div class="collection-card">
+                        <div class="collection-thumbnail">🥗</div>
+                        <div class="collection-info">
+                            <div class="collection-title">Healthy Meals</div>
+                            <div class="collection-count">18 posts</div>
+                        </div>
+                    </div>
+                    <div class="collection-card">
+                        <div class="collection-thumbnail">🍰</div>
+                        <div class="collection-info">
+                            <div class="collection-title">Desserts</div>
+                            <div class="collection-count">32 posts</div>
+                        </div>
+                    </div>
+                    <div class="collection-card">
+                        <div class="collection-thumbnail">🥘</div>
+                        <div class="collection-info">
+                            <div class="collection-title">Quick Dinners</div>
+                            <div class="collection-count">15 posts</div>
+                        </div>
+                    </div>
+                    <div class="collection-card">
+                        <div class="collection-thumbnail">🍕</div>
+                        <div class="collection-info">
+                            <div class="collection-title">Comfort Food</div>
+                            <div class="collection-count">21 posts</div>
+                        </div>
+                    </div>
+                    <div class="collection-card">
+                        <div class="collection-thumbnail">🥙</div>
+                        <div class="collection-info">
+                            <div class="collection-title">Meal Prep</div>
+                            <div class="collection-count">12 posts</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

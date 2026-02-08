@@ -28,7 +28,7 @@
 - **Slide 1**: Welcome to BetrFood
 - **Slide 2**: Discover recipes and share your creations
 - **Slide 3**: Connect with food lovers
-- **Slide 4**: AI-powered meal planning
+- **Slide 4**: AI-powered cooking assistance
 
 ### 6. Dietary Profile Setup
 - Select dietary preferences (vegan, vegetarian, etc.)
@@ -48,11 +48,10 @@
 ## Main Navigation
 
 ### 8. Bottom Navigation Bar
-Present on most screens with 5 tabs:
+Present on most screens with 4 tabs:
 - Home (Feed)
 - Search/Explore
 - Create Post (+)
-- Communities
 - Profile
 
 ---
@@ -77,7 +76,6 @@ Present on most screens with 5 tabs:
 - Complete caption
 - Full comments section
 - Related posts section
-- "Create Meal Plan" button
 - "Ask AI About This" button
 
 ### 11. Comments Screen
@@ -158,7 +156,6 @@ Present on most screens with 5 tabs:
   - Posts
   - Accounts
   - Recipes
-  - Communities
 - Filter button
 - Result cards
 
@@ -200,7 +197,6 @@ Present on most screens with 5 tabs:
   - Posts grid
   - Saved posts
   - Tagged posts
-  - Meal plans
 
 ### 25. Profile Screen (Other Users)
 - Same header as own profile
@@ -265,71 +261,9 @@ Present on most screens with 5 tabs:
 
 ---
 
-## Communities
-
-### 34. Communities Home Screen
-- Joined communities list
-- Discover communities section
-- Search communities
-- Create community button
-- Trending communities
-
-### 35. Community Detail Screen
-- Community header:
-  - Cover image
-  - Community name and description
-  - Member count
-  - Join/Joined button
-  - Share button
-- Tab navigation:
-  - Posts (Hot, New, Top)
-  - About
-  - Rules
-- Create post FAB (Floating Action Button)
-
-### 36. Community Post Detail Screen
-- Original post with text and images
-- Upvote/downvote buttons with count
-- Comments section
-- Share and save buttons
-- Post flair display
-
-### 37. Create Community Post Screen
-- Title input
-- Body text input
-- Add images option
-- Flair selection
-- Community rules reminder
-- Post button
-
-### 38. Create Community Screen
-- Community name input
-- Description text area
-- Category selection
-- Cover image upload
-- Community rules input
-- Privacy settings (public/private)
-- Create button
-
-### 39. Community Settings Screen (Moderators)
-- Edit community info
-- Manage rules
-- Moderate posts
-- Ban users
-- View reports
-- Community analytics
-
-### 40. Community Search Results Screen
-- List of matching communities
-- Community preview cards
-- Join buttons
-- Filter by category
-
----
-
 ## AI Chatbot
 
-### 41. AI Chatbot Screen
+### 34. AI Chatbot Screen
 - Chat interface
 - Message bubbles
 - Text input field
@@ -338,14 +272,13 @@ Present on most screens with 5 tabs:
 - Clear chat option
 - Chat history access
 
-### 42. AI Chat with Post Context Screen
+### 35. AI Chat with Post Context Screen
 - Post preview at top
 - Chat interface below
 - Context-aware suggestions
-- "Add to Meal Plan" quick action
 - "Save Recipe" quick action
 
-### 43. Chat History Screen
+### 36. Chat History Screen
 - List of previous conversations
 - Conversation previews
 - Search chat history
@@ -353,95 +286,14 @@ Present on most screens with 5 tabs:
 
 ---
 
-## Meal Planning
-
-### 44. Meal Plans Home Screen
-- Current active meal plan card
-- Upcoming meals preview
-- Past meal plans list
-- Create new meal plan button
-- Calendar view toggle
-
-### 45. Create Meal Plan Screen (from Post)
-- Selected post preview
-- Meal type selection (breakfast, lunch, dinner)
-- Date picker
-- Serving size adjustment
-- Dietary substitutions toggle
-- Generate plan button
-
-### 46. Create Custom Meal Plan Screen
-- Select multiple posts
-- Drag and drop to calendar
-- AI suggestion button
-- Duration selection (days/weeks)
-- Nutritional goals consideration
-- Generate button
-
-### 47. Meal Plan Detail Screen
-- Weekly calendar view
-- Daily meal cards
-- Nutritional summary
-- Shopping list button
-- Share meal plan button
-- Edit meal plan button
-- Start cooking mode
-
-### 48. Meal Plan Calendar View
-- Month/week calendar
-- Meal indicators on dates
-- Tap date to see meals
-- Add meal button
-- Navigate months
-
-### 49. Shopping List Screen
-- Ingredients grouped by category
-- Checkboxes to mark purchased
-- Quantity adjustments
-- Add custom items
-- Share list
-- Export to grocery apps
-
-### 50. Meal Prep Instructions Screen
-- Step-by-step prep schedule
-- Time estimates
-- Check off completed steps
-- Batch cooking tips
-- Make-ahead suggestions
-
-### 51. Cooking Mode Screen
-- Full-screen recipe view
-- Large text for easy reading
-- Voice control
-- Hands-free timer
-- Step-by-step navigation
-- Keep screen awake
-
-### 52. Nutritional Overview Screen
-- Daily calorie breakdown chart
-- Macro nutrient pie charts
-- Weekly nutrition trends
-- Goal progress indicators
-- Detailed nutrient list
-
-### 53. Saved Meal Plans Screen
-- Grid/list of saved plans
-- Plan preview cards
-- Reuse plan button
-- Edit and delete options
-- Search saved plans
-
----
-
 ## Notifications
 
-### 54. Notifications Screen
+### 37. Notifications Screen
 - Tabbed notifications:
   - All
   - Likes
   - Comments
   - Followers
-  - Communities
 - Notification cards with:
   - User avatar
   - Action description
@@ -454,7 +306,7 @@ Present on most screens with 5 tabs:
 
 ## Settings & Account
 
-### 55. Settings Home Screen
+### 38. Settings Home Screen
 - Account section
 - Privacy and security
 - Notifications
@@ -464,14 +316,14 @@ Present on most screens with 5 tabs:
 - Help and support
 - Log out
 
-### 56. Account Settings Screen
+### 39. Account Settings Screen
 - Email/phone
 - Change password
 - Connected accounts
 - Delete account
 - Download data
 
-### 57. Privacy Settings Screen
+### 40. Privacy Settings Screen
 - Profile visibility
 - Post visibility
 - Story settings
@@ -480,52 +332,49 @@ Present on most screens with 5 tabs:
 - Blocked accounts
 - Muted accounts
 
-### 58. Notification Settings Screen
+### 41. Notification Settings Screen
 - Push notifications toggle
 - Likes and comments
 - New followers
-- Community activity
-- Meal plan reminders
 - Newsletter subscription
 
-### 59. Appearance Settings Screen
+### 42. Appearance Settings Screen
 - Light/dark/auto theme
 - Font size
 - Display language
 - Date and time format
 
-### 60. Accessibility Settings Screen
+### 43. Accessibility Settings Screen
 - Screen reader support
 - High contrast mode
 - Reduce motion
 - Captions and subtitles
 - Text size adjustment
 
-### 61. Blocked Accounts Screen
+### 44. Blocked Accounts Screen
 - List of blocked users
 - Unblock option
 - Search blocked accounts
 
-### 62. Muted Accounts Screen
+### 45. Muted Accounts Screen
 - List of muted users
 - Unmute option
 - Mute duration settings
 
-### 63. Help & Support Screen
+### 46. Help & Support Screen
 - FAQ section
 - Contact support
 - Report a problem
-- Community guidelines
 - Terms of service
 - Privacy policy
 
-### 64. Report Problem Screen
+### 47. Report Problem Screen
 - Problem category selection
 - Description text area
 - Attach screenshots
 - Submit button
 
-### 65. About Screen
+### 48. About Screen
 - App version
 - Credits
 - Open source licenses
@@ -535,54 +384,53 @@ Present on most screens with 5 tabs:
 
 ## Additional Screens
 
-### 66. Stories Viewer Screen
+### 49. Stories Viewer Screen
 - Full-screen story playback
 - Tap left/right to navigate
 - Progress bars at top
 - Story reactions
 - Swipe up for more info
 
-### 67. Create Story Screen
+### 50. Create Story Screen
 - Camera interface
 - Story filters and effects
 - Text and stickers
 - Drawing tools
 - Share to story button
 
-### 68. Saved Posts Screen
+### 51. Saved Posts Screen
 - Grid of saved posts
 - Create collections
 - Organize by collection
 - Remove from saved
 
-### 69. Collections Screen
+### 52. Collections Screen
 - List of post collections
 - Collection covers
 - Create new collection
 - Edit/delete collections
 
-### 70. Collection Detail Screen
+### 53. Collection Detail Screen
 - Collection name and description
 - Grid of posts in collection
 - Add more posts
 - Share collection
 - Edit collection
 
-### 71. Share Sheet
+### 54. Share Sheet
 - Share to other apps
-- Share to BetrFood communities
 - Share to stories
 - Copy link
 - Send to friends (in-app)
 
-### 72. Direct Messages Screen
+### 55. Direct Messages Screen
 - Conversation list
 - Message previews
 - Unread indicators
 - New message button
 - Search conversations
 
-### 73. Conversation Screen
+### 56. Conversation Screen
 - Message thread
 - Text input
 - Send photos/videos
@@ -590,28 +438,28 @@ Present on most screens with 5 tabs:
 - Voice messages
 - Message reactions
 
-### 74. User Suggestions Screen
+### 57. User Suggestions Screen
 - Suggested users to follow
 - Based on interests
 - Mutual followers
 - Popular in your area
 - Dismiss suggestions
 
-### 75. Analytics Dashboard Screen (Creators)
+### 58. Analytics Dashboard Screen (Creators)
 - Post performance metrics
 - Follower growth chart
 - Engagement rate
 - Top performing posts
 - Audience demographics
 
-### 76. Error/Empty States
+### 59. Error/Empty States
 - No internet connection
 - Content not available
 - No posts yet
 - No followers yet
 - Search no results
 
-### 77. Loading States
+### 60. Loading States
 - Splash screen
 - Feed loading skeleton
 - Profile loading skeleton
@@ -619,18 +467,18 @@ Present on most screens with 5 tabs:
 
 ---
 
-## Total Screen Count: 77 Unique UI Pages
+## Total Screen Count: 60 Unique UI Pages
 
 ## Screen Priority Levels
 
 ### Phase 1 - MVP (Essential)
-Screens: 1-3, 8-13, 19-20, 24-25, 41, 44-49, 54-55, 76-77
+Screens: 1-3, 8-13, 19-20, 24-25, 37-39, 44-45
 
 ### Phase 2 - Core Features
-Screens: 4-7, 14-18, 21-23, 26-33, 34-40, 50-53, 56-60
+Screens: 4-7, 14-18, 21-23, 26-33, 40-43
 
 ### Phase 3 - Enhanced Features
-Screens: 42-43, 61-75
+Screens: 34-36, 46-60
 
 ## Navigation Flow Summary
 
@@ -640,7 +488,5 @@ Screens: 42-43, 61-75
 - Feed browsing → Post detail → Comments → Profile
 - Search → Results → Filters → Post detail
 - Create → Editor → Caption → Post
-- Communities → Community detail → Create post
 - Profile → Edit profile → Dietary preferences
-- Post → Create meal plan → Meal plan detail → Shopping list → Cooking mode
-- AI Chatbot → Context chat → Save to meal plan
+- AI Chatbot → Context chat → Save recipe

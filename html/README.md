@@ -25,9 +25,6 @@ html/
     │   ├── welcome.html            # Welcome/splash screen
     │   └── signup.html             # Sign up form
     │
-    ├── communities/                # Communities (Wiki: §34-40)
-    │   └── [To be added]
-    │
     ├── content/                    # Content Creation (Wiki: §14-18)
     │   ├── camera.html             # Camera interface for posts
     │   └── upload.html             # Upload/editor screen
@@ -70,7 +67,6 @@ The folder structure directly maps to the [UI-Pages Wiki](../wiki/UI-Pages.md) d
 | **Content Creation** (§14-18) | `pages/content/` | 2/5 screens |
 | **Search & Explore** (§19-23) | `pages/search/` | 1/5 screens |
 | **User Profiles** (§24-33) | `pages/profile/` | 6/10 screens |
-| **Communities** (§34-40) | `pages/communities/` | 0/7 screens |
 | **AI Chatbot** (§41-43) | `pages/ai/` | 6/3 screens + extras |
 | **Meal Planning** (§44-53) | `pages/meal-planning/` | 4/10 screens |
 | **Settings & Account** (§55-65) | `pages/settings/` | 0/11 screens |
@@ -80,7 +76,7 @@ The folder structure directly maps to the [UI-Pages Wiki](../wiki/UI-Pages.md) d
 Based on the wiki's phase breakdown:
 
 ### Phase 1 - MVP (Essential)
-- Feed screens: `pages/feed/index.html`, `pages/feed/comments.html`
+- Feed screens: `pages/feed/feed.html`, `pages/feed/comments.html`
 - Profile screens: `pages/profile/user-profile.html`
 - AI Chatbot: `pages/ai/chat-*.html`
 - Meal Planning: `pages/meal-planning/pantry-*.html`, `pages/meal-planning/recipe.html`
@@ -92,7 +88,6 @@ Based on the wiki's phase breakdown:
 - Profile Management: `pages/profile/followers.html`, `pages/profile/following.html`
 
 ### Phase 3 - Enhanced Features
-- Communities (to be implemented)
 - Advanced Settings (to be implemented)
 - Additional social features
 
@@ -101,7 +96,7 @@ Based on the wiki's phase breakdown:
 ### Viewing Individual Screens
 Open any HTML file in a web browser to view the prototype:
 ```bash
-open html/pages/feed/index.html
+open html/pages/feed/feed.html
 ```
 
 ### Viewing Multi-Screen Demos

@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Appearance Settings - BetrFood</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #22C55E;
+            --primary-light: #DCFCE7;
+            --primary-dark: #16A34A;
+            --secondary: #10B981;
+            --background: #F8FAFC;
+            --surface: #FFFFFF;
+            --text-primary: #0F172A;
+            --text-secondary: #64748B;
+            --text-muted: #94A3B8;
+            --border: #E2E8F0;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+
+        .phone-frame {
+            width: 375px;
+            height: 812px;
+            background: var(--surface);
+            border-radius: 50px;
+            box-shadow:
+                0 50px 100px rgba(0,0,0,0.3),
+                0 15px 35px rgba(0,0,0,0.2),
+                inset 0 0 0 2px rgba(255,255,255,0.1);
+            overflow: hidden;
+            position: relative;
+            border: 10px solid #1a1a1a;
+        }
+
+        .screen {
+            width: 100%;
+            height: 100%;
+            background: var(--background);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .status-bar {
+            height: 48px;
+            padding: 14px 24px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .status-time {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .status-icons {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+
+        .status-icons svg {
+            width: 18px;
+            height: 18px;
+            fill: var(--text-primary);
+        }
+
+        .header {
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        .back-button {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--background);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            cursor: pointer;
+        }
+
+        .back-button svg {
+            width: 20px;
+            height: 20px;
+            stroke: var(--text-primary);
+            stroke-width: 2;
+            fill: none;
+        }
+
+        .header-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .section {
+            background: var(--surface);
+            border-radius: 18px;
+            overflow: hidden;
+            margin-bottom: 14px;
+        }
+
+        .settings-item {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .settings-item:last-child {
+            border-bottom: none;
+        }
+
+        .settings-item-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 12px;
+        }
+
+        .section-header {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+        }
+
+        .theme-options {
+            display: flex;
+            gap: 12px;
+        }
+
+        .theme-option {
+            flex: 1;
+            aspect-ratio: 1;
+            border-radius: 14px;
+            border: 2px solid var(--border);
+            background: var(--surface);
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 16px;
+        }
+
+        .theme-option.selected {
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+
+        .theme-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--background);
+        }
+
+        .theme-option.selected .theme-icon {
+            background: var(--primary);
+        }
+
+        .theme-icon svg {
+            width: 20px;
+            height: 20px;
+            stroke: var(--text-primary);
+            stroke-width: 2;
+            fill: none;
+        }
+
+        .theme-option.selected .theme-icon svg {
+            stroke: white;
+        }
+
+        .theme-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .color-preview {
+            display: flex;
+            gap: 12px;
+            margin-top: 12px;
+        }
+
+        .color-preview-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .color-swatch {
+            width: 100%;
+            height: 60px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+        }
+
+        .color-swatch.primary {
+            background: var(--primary);
+        }
+
+        .color-swatch.surface {
+            background: var(--surface);
+            border: 1px solid var(--border);
+        }
+
+        .color-swatch.text {
+            background: var(--text-primary);
+        }
+
+        .color-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .font-size-control {
+            margin-top: 12px;
+        }
+
+        .font-size-slider {
+            width: 100%;
+            height: 8px;
+            border-radius: 50px;
+            background: var(--border);
+            position: relative;
+            margin: 16px 0;
+        }
+
+        .font-size-slider::before {
+            content: '';
+            position: absolute;
+            width: 60%;
+            height: 100%;
+            background: var(--primary);
+            border-radius: 50px;
+            left: 0;
+        }
+
+        .font-size-slider::after {
+            content: '';
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            background: var(--primary);
+            border-radius: 50%;
+            left: calc(60% - 12px);
+            top: 50%;
+            transform: translateY(-50%);
+            box-shadow: 0 2px 8px rgba(34, 197, 94, 0.3);
+        }
+
+        .font-size-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .font-preview {
+            margin-top: 16px;
+            padding: 16px;
+            background: var(--background);
+            border-radius: 12px;
+        }
+
+        .font-preview-text {
+            font-size: 15px;
+            color: var(--text-primary);
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="phone-frame">
+        <div class="screen">
+            <div class="status-bar">
+                <span class="status-time">9:41</span>
+                <div class="status-icons">
+                    <svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+                    <svg viewBox="0 0 24 24"><path d="M1 6l11 7 11-7M1 6l11 7v11M1 6v14l11-7"/></svg>
+                    <svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="10" rx="2"/><path d="M22 10v4"/></svg>
+                </div>
+            </div>
+
+            <div class="header">
+                <button class="back-button">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M19 12H5M12 19l-7-7 7-7" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+                <h1 class="header-title">Appearance</h1>
+            </div>
+
+            <div class="content">
+                <div class="section-header">Theme</div>
+
+                <div class="section">
+                    <div class="settings-item">
+                        <div class="settings-item-title">Choose Theme</div>
+                        <div class="theme-options">
+                            <div class="theme-option selected">
+                                <div class="theme-icon">
+                                    <svg viewBox="0 0 24 24">
+                                        <circle cx="12" cy="12" r="5"/>
+                                        <line x1="12" y1="1" x2="12" y2="3"/>
+                                        <line x1="12" y1="21" x2="12" y2="23"/>
+                                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+                                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                                        <line x1="1" y1="12" x2="3" y2="12"/>
+                                        <line x1="21" y1="12" x2="23" y2="12"/>
+                                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+                                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                                    </svg>
+                                </div>
+                                <div class="theme-label">Light</div>
+                            </div>
+                            <div class="theme-option">
+                                <div class="theme-icon">
+                                    <svg viewBox="0 0 24 24">
+                                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                                    </svg>
+                                </div>
+                                <div class="theme-label">Dark</div>
+                            </div>
+                            <div class="theme-option">
+                                <div class="theme-icon">
+                                    <svg viewBox="0 0 24 24">
+                                        <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                                        <line x1="8" y1="21" x2="16" y2="21"/>
+                                        <line x1="12" y1="17" x2="12" y2="21"/>
+                                    </svg>
+                                </div>
+                                <div class="theme-label">Auto</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section-header">Color Scheme</div>
+
+                <div class="section">
+                    <div class="settings-item">
+                        <div class="settings-item-title">Color Preview</div>
+                        <div class="color-preview">
+                            <div class="color-preview-item">
+                                <div class="color-swatch primary"></div>
+                                <div class="color-label">Primary</div>
+                            </div>
+                            <div class="color-preview-item">
+                                <div class="color-swatch surface"></div>
+                                <div class="color-label">Background</div>
+                            </div>
+                            <div class="color-preview-item">
+                                <div class="color-swatch text"></div>
+                                <div class="color-label">Text</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section-header">Typography</div>
+
+                <div class="section">
+                    <div class="settings-item">
+                        <div class="settings-item-title">Font Size</div>
+                        <div class="font-size-control">
+                            <div class="font-size-slider"></div>
+                            <div class="font-size-labels">
+                                <span>Small</span>
+                                <span>Medium</span>
+                                <span>Large</span>
+                            </div>
+                            <div class="font-preview">
+                                <div class="font-preview-text">
+                                    This is how your text will appear in the app. Adjust the slider to find your preferred reading size.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

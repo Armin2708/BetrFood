@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dietary Restrictions - BetrFood</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #22C55E;
+            --primary-light: #DCFCE7;
+            --primary-dark: #16A34A;
+            --secondary: #10B981;
+            --background: #F8FAFC;
+            --surface: #FFFFFF;
+            --text-primary: #0F172A;
+            --text-secondary: #64748B;
+            --text-muted: #94A3B8;
+            --border: #E2E8F0;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+
+        .phone-frame {
+            width: 375px;
+            height: 812px;
+            background: var(--surface);
+            border-radius: 50px;
+            box-shadow:
+                0 50px 100px rgba(0,0,0,0.3),
+                0 15px 35px rgba(0,0,0,0.2),
+                inset 0 0 0 2px rgba(255,255,255,0.1);
+            overflow: hidden;
+            position: relative;
+            border: 10px solid #1a1a1a;
+        }
+
+        .screen {
+            width: 100%;
+            height: 100%;
+            background: var(--background);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .status-bar {
+            height: 48px;
+            padding: 14px 24px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .status-time {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .status-icons {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+
+        .status-icons svg {
+            width: 18px;
+            height: 18px;
+            fill: var(--text-primary);
+        }
+
+        .header {
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--surface);
+            flex-shrink: 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .back-button {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--background);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            cursor: pointer;
+        }
+
+        .back-button svg {
+            width: 20px;
+            height: 20px;
+            stroke: var(--text-primary);
+            stroke-width: 2;
+            fill: none;
+        }
+
+        .header-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .description {
+            font-size: 14px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            margin-bottom: 24px;
+            text-align: center;
+        }
+
+        .section-group {
+            margin-bottom: 20px;
+        }
+
+        .section-header {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-primary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+            padding-left: 4px;
+        }
+
+        .restriction-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+        }
+
+        .restriction-card {
+            background: var(--surface);
+            border: 2px solid var(--border);
+            border-radius: 14px;
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .restriction-card.selected {
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+
+        .restriction-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: var(--background);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            flex-shrink: 0;
+        }
+
+        .restriction-card.selected .restriction-icon {
+            background: var(--surface);
+        }
+
+        .restriction-content {
+            flex: 1;
+        }
+
+        .restriction-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .restriction-description {
+            font-size: 12px;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+
+        .restriction-checkbox {
+            width: 24px;
+            height: 24px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            background: var(--surface);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: all 0.2s;
+        }
+
+        .restriction-card.selected .restriction-checkbox {
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .restriction-checkbox svg {
+            width: 14px;
+            height: 14px;
+            stroke: white;
+            stroke-width: 3;
+            fill: none;
+            opacity: 0;
+        }
+
+        .restriction-card.selected .restriction-checkbox svg {
+            opacity: 1;
+        }
+
+        .info-notice {
+            background: var(--primary-light);
+            border: 2px solid rgba(34, 197, 94, 0.2);
+            border-radius: 12px;
+            padding: 14px;
+            margin-bottom: 16px;
+            display: flex;
+            gap: 12px;
+        }
+
+        .info-icon {
+            width: 20px;
+            height: 20px;
+            stroke: var(--primary);
+            stroke-width: 2;
+            fill: none;
+            flex-shrink: 0;
+        }
+
+        .info-text {
+            font-size: 13px;
+            color: var(--primary-dark);
+            font-weight: 500;
+            line-height: 1.5;
+        }
+
+        .btn-primary {
+            width: 100%;
+            height: 52px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            border: none;
+            border-radius: 14px;
+            color: white;
+            font-size: 16px;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+            box-shadow: 0 4px 14px rgba(34, 197, 94, 0.35);
+            transition: all 0.2s;
+            margin-top: 24px;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(34, 197, 94, 0.4);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body>
+    <div class="phone-frame">
+        <div class="screen">
+            <div class="status-bar">
+                <span class="status-time">9:41</span>
+                <div class="status-icons">
+                    <svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+                    <svg viewBox="0 0 24 24"><path d="M1 6l11 7 11-7M1 6l11 7v11M1 6v14l11-7"/></svg>
+                    <svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="10" rx="2"/><path d="M22 10v4"/></svg>
+                </div>
+            </div>
+
+            <div class="header">
+                <div class="header-left">
+                    <button class="back-button">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M19 12H5M12 19l-7-7 7-7" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                    <h1 class="header-title">Dietary Restrictions</h1>
+                </div>
+            </div>
+
+            <div class="content">
+                <p class="description">Select any dietary restrictions that apply to you</p>
+
+                <div class="info-notice">
+                    <svg class="info-icon" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="10" stroke-linecap="round" stroke-linejoin="round"/>
+                        <line x1="12" y1="16" x2="12" y2="12" stroke-linecap="round" stroke-linejoin="round"/>
+                        <line x1="12" y1="8" x2="12.01" y2="8" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <div class="info-text">These restrictions help personalize your meal recommendations. You can select multiple.</div>
+                </div>
+
+                <div class="section-group">
+                    <div class="section-header">Religious</div>
+                    <div class="restriction-grid">
+                        <div class="restriction-card selected">
+                            <div class="restriction-icon">🕌</div>
+                            <div class="restriction-content">
+                                <div class="restriction-title">Halal</div>
+                                <div class="restriction-description">Islamic dietary guidelines</div>
+                            </div>
+                            <div class="restriction-checkbox">
+                                <svg viewBox="0 0 24 24">
+                                    <path d="M20 6L9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </div>
+                        </div>
+
+                        <div class="restriction-card">
+                            <div class="restriction-icon">✡️</div>
+                            <div class="restriction-content">
+                                <div class="restriction-title">Kosher</div>
+                                <div class="restriction-description">Jewish dietary laws</div>
+                            </div>
+                            <div class="restriction-checkbox">
+                                <svg viewBox="0 0 24 24">
+                                    <path d="M20 6L9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </div>
+                        </div>
+
+                        <div class="restriction-card">
+                            <div class="restriction-icon">🙏</div>
+                            <div class="restriction-content">
+                                <div class="restriction-title">Hindu</div>
+                                <div class="restriction-description">No beef, often vegetarian</div>
+                            </div>
+                            <div class="restriction-checkbox">
+                                <svg viewBox="0 0 24 24">
+                                    <path d="M20 6L9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section-group">
+                    <div class="section-header">Medical</div>
+                    <div class="restriction-grid">
+                        <div class="restriction-card">
+                            <div class="restriction-icon">💊</div>
+                            <div class="restriction-content">
+                                <div class="restriction-title">Low Sodium</div>
+                                <div class="restriction-description">Reduced salt intake</div>
+                            </div>
+                            <div class="restriction-checkbox">
+                                <svg viewBox="0 0 24 24">
+                                    <path d="M20 6L9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </div>
+                        </div>
+
+                        <div class="restriction-card">
+                            <div class="restriction-icon">🍬</div>
+                            <div class="restriction-content">
+                                <div class="restriction-title">Diabetic-Friendly</div>
+                                <div class="restriction-description">Low sugar, controlled carbs</div>
+                            </div>
+                            <div class="restriction-checkbox">
+                                <svg viewBox="0 0 24 24">
+                                    <path d="M20 6L9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </div>
+                        </div>
+
+                        <div class="restriction-card">
+                            <div class="restriction-icon">❤️</div>
+                            <div class="restriction-content">
+                                <div class="restriction-title">Heart-Healthy</div>
+                                <div class="restriction-description">Low fat, low cholesterol</div>
+                            </div>
+                            <div class="restriction-checkbox">
+                                <svg viewBox="0 0 24 24">
+                                    <path d="M20 6L9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section-group">
+                    <div class="section-header">Personal</div>
+                    <div class="restriction-grid">
+                        <div class="restriction-card">
+                            <div class="restriction-icon">🌿</div>
+                            <div class="restriction-content">
+                                <div class="restriction-title">Organic Only</div>
+                                <div class="restriction-description">Prefer organic ingredients</div>
+                            </div>
+                            <div class="restriction-checkbox">
+                                <svg viewBox="0 0 24 24">
+                                    <path d="M20 6L9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </div>
+                        </div>
+
+                        <div class="restriction-card">
+                            <div class="restriction-icon">🌾</div>
+                            <div class="restriction-content">
+                                <div class="restriction-title">Local Foods</div>
+                                <div class="restriction-description">Locally-sourced ingredients</div>
+                            </div>
+                            <div class="restriction-checkbox">
+                                <svg viewBox="0 0 24 24">
+                                    <path d="M20 6L9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </div>
+                        </div>
+
+                        <div class="restriction-card">
+                            <div class="restriction-icon">🍃</div>
+                            <div class="restriction-content">
+                                <div class="restriction-title">Raw Food</div>
+                                <div class="restriction-description">Uncooked, unprocessed foods</div>
+                            </div>
+                            <div class="restriction-checkbox">
+                                <svg viewBox="0 0 24 24">
+                                    <path d="M20 6L9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="btn-primary">Save Restrictions</button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

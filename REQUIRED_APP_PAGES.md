@@ -2,7 +2,7 @@
 
 **Document Purpose**: Comprehensive list of all required UI pages based on product requirements, competitive analysis, and user flows.
 
-**Total Pages**: 95 (up from 77 - added 18 critical pages)
+**Total Pages**: 98 (removed 11 community-related pages and 14 meal planning pages)
 
 **Status**: ✅ Aligned with Product Overview and Features
 
@@ -18,14 +18,12 @@ Based on product overview requirements, the following critical pages were missin
 3. **Premium/Subscription** (4 pages) - Monetization strategy
 4. **Creator Earnings Dashboard** (1 page) - Creator economy
 5. **Ingredient Substitution** (1 page) - AI-powered feature
-6. **Meal Plan Sharing** (1 page) - Social/viral feature
-7. **Recipe Import** (1 page) - User convenience
-8. **Verification Badge Request Detail** (1 page) - Trust & credibility
-9. **Content Reporting Detail** (1 page) - Community safety
-10. **Onboarding Skip Confirmation** (1 page) - UX best practice
-11. **Account Deletion Confirmation** (1 page) - Legal requirement
-12. **Post Scheduling** (1 page) - Creator tool
-13. **Community Member Management** (1 page) - Moderation
+6. **Recipe Import** (1 page) - User convenience
+7. **Verification Badge Request Detail** (1 page) - Trust & credibility
+8. **Content Reporting Detail** (1 page) - Community safety
+9. **Onboarding Skip Confirmation** (1 page) - UX best practice
+10. **Account Deletion Confirmation** (1 page) - Legal requirement
+11. **Post Scheduling** (1 page) - Creator tool
 
 ---
 
@@ -81,7 +79,7 @@ Based on product overview requirements, the following critical pages were missin
 - **Slide 1**: Welcome to BetrFood
 - **Slide 2**: Discover recipes and share your creations
 - **Slide 3**: Connect with food lovers
-- **Slide 4**: AI-powered meal planning
+- **Slide 4**: AI-powered cooking assistance
 - Skip button on each
 - Progress indicators
 - Next/Get Started buttons
@@ -113,11 +111,10 @@ Based on product overview requirements, the following critical pages were missin
 ## Main Navigation (1 page)
 
 ### 12. Bottom Navigation Bar ✅
-Present on most screens with 5 tabs:
+Present on most screens with 4 tabs:
 - **Home** (Feed icon)
 - **Search/Explore** (Magnifying glass)
 - **Create Post** (+) - Center, elevated
-- **Communities** (People icon)
 - **Profile** (User avatar)
 - Active state indicators
 - Badge notifications
@@ -141,7 +138,6 @@ Present on most screens with 5 tabs:
 - Stories bar at top (horizontal scrollable)
 - Pull to refresh
 - Infinite scroll
-- Quick action: Create Meal Plan button on recipe posts
 
 ### 14. Post Detail Screen ✅
 - Full post view
@@ -156,7 +152,6 @@ Present on most screens with 5 tabs:
 - Like, comment, share, save buttons
 - Full comments section preview
 - Related posts carousel at bottom
-- "Create Meal Plan" button (prominent)
 - "Ask AI About This" button
 - Share button with count
 
@@ -172,7 +167,6 @@ Present on most screens with 5 tabs:
 - Nutritional information table
 - Print recipe button
 - Share recipe button
-- Add to meal plan button
 - Save to collection button
 - Dietary tags/badges
 - Allergy warnings (if applicable)
@@ -327,7 +321,6 @@ Present on most screens with 5 tabs:
   - Posts
   - Accounts
   - Recipes
-  - Communities
 - Recent searches (with clear all button)
 - Trending hashtags (scrollable chips)
 - Trending searches list
@@ -342,7 +335,6 @@ Present on most screens with 5 tabs:
   - Posts (grid view)
   - Accounts (list with follow buttons)
   - Recipes (card view with key info)
-  - Communities (list with member count)
 - Filter button (with active filter indicator)
 - Sort dropdown (Relevance, Recent, Popular)
 - Result count
@@ -386,7 +378,6 @@ Present on most screens with 5 tabs:
 - Viral posts section (grid)
 - Rising creators section (horizontal scroll with profile cards)
 - Trending hashtags list (with post count)
-- Trending communities (with join buttons)
 - Time filter (Today, This Week, This Month)
 - Refresh button
 
@@ -431,14 +422,12 @@ Present on most screens with 5 tabs:
   - Following count
   - Likes received count
 - Action buttons row:
-  - Create Meal Plan
   - Saved Posts
   - Settings
 - Tab navigation:
   - Posts grid (default)
   - Saved posts
   - Tagged posts
-  - Meal plans
   - Collections
 - Empty states for each tab
 - Infinite scroll on grids
@@ -457,7 +446,6 @@ Present on most screens with 5 tabs:
 - Tab navigation:
   - Posts grid
   - Tagged posts
-  - Meal plans (if public)
 - Following status indicator
 - Mutual followers indicator
 - Recent activity preview (if following)
@@ -645,245 +633,9 @@ Present on most screens with 5 tabs:
 
 ---
 
-## Communities (11 pages)
-
-### 49. Communities Home Screen ✅
-- Header with search button
-- Joined communities section:
-  - Horizontal scroll
-  - Community cards (with cover image, name, member count)
-- Discover communities section:
-  - Category filters (Cuisine, Diet, Technique, Location)
-  - Community cards in list/grid
-  - Join button per community
-- Create community button (FAB)
-- Trending communities section
-- Recommended for you section
-- Pull to refresh
-- Empty state (no joined communities)
-
-### 50. Community Detail Screen ✅
-- Community header:
-  - Cover image
-  - Community icon
-  - Community name
-  - Description (expandable)
-  - Member count
-  - Online members count
-  - Join/Joined button (with dropdown: Leave, Notifications)
-  - Share button
-  - Three-dot menu (Report, Mute, Settings if mod)
-- Tab navigation:
-  - Posts (with sort: Hot, New, Top, Rising)
-  - About
-  - Rules
-  - Members (if joined)
-- Create post FAB (if member)
-- Pinned posts section (at top)
-- Post preview cards:
-  - Author info
-  - Post title
-  - Preview text
-  - Upvote/downvote buttons with count
-  - Comment count
-  - Award icons
-  - Thumbnail (if has image)
-- Infinite scroll
-
-### 51. Community Post Detail Screen ✅
-- Post header:
-  - Community name and icon
-  - Author info (with flair)
-  - Timestamp
-  - Three-dot menu (Save, Report, etc.)
-- Original post:
-  - Title (large text)
-  - Body text (full content)
-  - Images (if any, expandable)
-  - Video (if any, embedded player)
-  - Poll (if any, with vote button)
-  - External link preview (if any)
-- Post flair badge
-- Upvote/downvote buttons with score
-- Awards section (if any)
-- Share, save, hide buttons
-- Comments section:
-  - Sort dropdown (Best, Top, New, Controversial, Old)
-  - Comment threads
-  - Upvote/downvote per comment
-  - Reply button per comment
-  - Collapse/expand threads
-  - Award comment option
-  - Report comment option
-- Comment input field (at bottom, sticky)
-- Load more comments button
-
-### 52. Create Community Post Screen ✅
-- Post to community dropdown (select community)
-- Flair selection (required in some communities)
-- Post type selector:
-  - Text
-  - Image/Video
-  - Link
-  - Poll
-- Title input (required, character limit)
-- Body text input (markdown supported)
-- Add images/videos button (up to 10)
-- Add link (with preview)
-- Poll options (for poll type):
-  - Poll question
-  - Options (2-6)
-  - Duration
-  - Multiple choice toggle
-- NSFW toggle
-- Spoiler toggle
-- Community rules reminder (collapsible)
-- Post button
-- Save draft button
-- Preview button
-
-### 53. Create Community Screen ✅
-- Community name input:
-  - Availability check
-  - Character limit
-  - Naming rules
-- Display name (optional)
-- Description text area (required, 100-500 chars)
-- Category selection (dropdown)
-- Topics/tags (multi-select or text input)
-- Cover image upload (with crop tool)
-- Community icon upload (with crop tool)
-- Community type:
-  - Public (anyone can view and join)
-  - Restricted (anyone can view, must request to join)
-  - Private (invite-only)
-  - Radio buttons
-- NSFW toggle (with warning)
-- Community rules section:
-  - Add rule button
-  - Rule title and description inputs
-  - Reorder rules
-  - Delete rule
-- Create button
-- Cancel button
-- Preview community button
-
-### 54. Community Settings Screen (Moderators) ✅
-- Edit community info:
-  - Name, description, cover, icon
-  - Edit button
-- Manage rules:
-  - Add, edit, delete rules
-  - Reorder rules
-- Appearance settings:
-  - Colors, theme
-  - Custom CSS (advanced)
-- Post settings:
-  - Required flair
-  - Allowed post types
-  - Approval required toggle
-- Moderate posts queue:
-  - Pending posts count
-  - Reported posts count
-  - View queue button
-- Banned users list:
-  - Unban option
-  - Ban reason
-- Moderator management:
-  - Add moderators
-  - Remove moderators
-  - Moderator permissions
-- Community analytics:
-  - Member growth chart
-  - Post activity
-  - Engagement metrics
-- Delete community option (with confirmation)
-
-### 55. **Community Members Screen** 🆕
-- Search members
-- Filter options:
-  - All members
-  - Moderators
-  - Recent joiners
-  - Most active
-- Member list:
-  - Avatar, name, username
-  - Join date
-  - Role badge (mod, founder)
-  - Three-dot menu (View profile, Message, Ban if mod)
-- Member count at top
-- Invite members button
-- Export members list (for mods)
-
-### 56. Community Search Results Screen ✅
-- List of matching communities
-- Community preview cards:
-  - Cover image
-  - Icon
-  - Name and description preview
-  - Member count
-  - Activity indicator (posts/day)
-  - Join button
-  - Tags/topics
-- Filter dropdown:
-  - By size (Small, Medium, Large)
-  - By activity (Active, Growing, New)
-  - By type (Public, Private)
-- Sort options (Relevance, Members, Activity)
-- Empty state (no results)
-
-### 57. Community Rules Screen ✅
-- Community name at top
-- List of rules:
-  - Rule number and title
-  - Full description
-  - Collapsible sections
-- Consequences section (what happens if rules broken)
-- Moderator contact button
-- Report rule violation button
-- Back button
-
-### 58. Community About Screen ✅
-- Full community description
-- Community stats:
-  - Created date
-  - Member count
-  - Online members
-  - Posts per day average
-- Moderators list (with avatars)
-- Related communities
-- Community topics/tags
-- Contact moderators button
-- Report community button
-
-### 59. Moderation Queue Screen ✅
-- Tabs:
-  - Pending (posts awaiting approval)
-  - Reported (user reports)
-  - Spam (auto-flagged)
-- Item cards:
-  - Post preview/full content
-  - Reporter info (for reported)
-  - Report reason
-  - Timestamp
-  - Author info
-- Actions per item:
-  - Approve button
-  - Remove button
-  - Ban user button
-  - Ignore report button
-- Bulk actions:
-  - Select multiple
-  - Approve selected
-  - Remove selected
-- Filter options
-- Empty state (queue clear)
-
----
-
 ## AI Chatbot (4 pages)
 
-### 60. AI Chatbot Screen ✅
+### 49. AI Chatbot Screen ✅
 - Chat header:
   - "BetrFood AI" title
   - Clear chat button
@@ -910,7 +662,7 @@ Present on most screens with 5 tabs:
 - Error state (if API fails)
 - Empty state (start of new chat, with examples)
 
-### 61. AI Chat with Post Context Screen ✅
+### 50. AI Chat with Post Context Screen ✅
 - Post preview at top:
   - Thumbnail image
   - Recipe title
@@ -929,7 +681,7 @@ Present on most screens with 5 tabs:
   - View full post
 - Back to post button
 
-### 62. Chat History Screen ✅
+### 51. Chat History Screen ✅
 - List of previous conversations:
   - Preview of first message
   - Timestamp/date
@@ -947,7 +699,7 @@ Present on most screens with 5 tabs:
 - Empty state (no chat history)
 - Tap conversation to reopen
 
-### 63. AI Chat Settings Screen ✅
+### 52. AI Chat Settings Screen ✅
 - AI personality selector:
   - Professional chef
   - Friendly home cook
@@ -966,359 +718,9 @@ Present on most screens with 5 tabs:
 
 ---
 
-## Meal Planning (14 pages)
-
-### 64. Meal Plans Home Screen ✅
-- Header with calendar icon and "My Meal Plans"
-- Current active meal plan card:
-  - Week range
-  - Preview of upcoming meals (today, tomorrow)
-  - Quick access: View full plan, Shopping list, Start cooking
-  - Nutritional summary bar
-- Upcoming meals section:
-  - List of next 3-5 meals
-  - Meal cards (image, name, time, prep time)
-  - Check off completed button
-- Past meal plans list:
-  - Collapsible section
-  - List/grid of previous plans
-  - Tap to view or reuse
-- Create new meal plan button (FAB)
-- Calendar view toggle button
-- Empty state (no meal plans yet, with CTA)
-- Meal plan templates section (premade plans)
-
-### 65. Create Meal Plan Screen (from Post) ✅
-- Selected post preview:
-  - Image
-  - Recipe title
-  - Author
-  - Change recipe button
-- Meal configuration:
-  - Meal type selection (Breakfast, Lunch, Dinner, Snack)
-    - Radio buttons with icons
-  - Date picker (calendar popup)
-  - Time picker (optional)
-  - Serving size adjustment
-    - Number picker (1-20 servings)
-    - Scales ingredients automatically
-- Dietary substitutions section:
-  - Toggle switch
-  - Auto-replace based on dietary profile
-  - Manual substitutions button
-- Add more meals toggle (create multi-day plan)
-- Nutritional preview:
-  - Calories
-  - Macros (protein, carbs, fat)
-  - Alignment with goals (color-coded)
-- Generate plan button (primary CTA)
-- Save as template toggle
-- Cancel button
-
-### 66. Create Custom Meal Plan Screen ✅
-- Plan settings:
-  - Plan name input
-  - Duration selection (3 days, 1 week, 2 weeks, custom)
-  - Start date picker
-- Meal selection interface:
-  - Tab selector (Breakfast, Lunch, Dinner, Snacks)
-  - Search/browse saved posts
-  - Recent posts
-  - Recommended based on diet
-  - Add meal button per post
-- Weekly calendar view:
-  - 7-day grid
-  - Drag and drop meals to slots
-  - Empty slot indicators
-  - Quick copy to other days
-- AI suggestion button:
-  - "Let AI fill empty slots"
-  - Based on nutritional balance
-- Selected meals list:
-  - Reorder meals
-  - Remove meal
-  - Duplicate meal to other days
-- Nutritional goals consideration toggle
-- Generate plan button
-- Save draft button
-
-### 67. Meal Plan Detail Screen ✅
-- Plan header:
-  - Plan name (editable)
-  - Date range
-  - Edit plan button
-  - Three-dot menu (Share, Duplicate, Delete, Export)
-- Weekly calendar view:
-  - 7-day horizontal scroll
-  - Daily meal cards per day
-  - Meal cards show:
-    - Meal type icon
-    - Image
-    - Recipe name
-    - Time (if set)
-    - Checkmark if completed
-    - Tap to expand
-- Daily view toggle (switch to list view)
-- Nutritional summary section:
-  - Daily average calories
-  - Macro breakdown (pie chart)
-  - Weekly nutrition graph
-  - Goals comparison (on track / over / under)
-  - View detailed nutrition button
-- Quick actions bar:
-  - View shopping list button
-  - Start cooking mode button
-  - Share meal plan button
-- Prep instructions button
-- Notes section (add custom notes)
-- Reuse this plan button
-
-### 68. Meal Plan Calendar View ✅
-- Month calendar view:
-  - Current month displayed
-  - Navigate previous/next month arrows
-  - Today indicator
-  - Days with meals have colored dots (color per meal type)
-- Tap date to see meals:
-  - Bottom sheet pops up
-  - Meals for that day listed
-  - Add meal to this day button
-- Week view toggle
-- Filter by meal type (show only breakfast, lunch, etc.)
-- Add meal FAB
-- Jump to today button
-- Meal count per day indicator
-- Empty days show "+"
-
-### 69. Meal Plan Edit Screen ✅
-- Same layout as Meal Plan Detail
-- Edit mode enabled:
-  - Remove meal (X button on cards)
-  - Add meal (+ button on each day/slot)
-  - Reorder meals (drag handles)
-  - Change serving sizes per meal
-  - Reschedule meal (drag to different day)
-- Add meal search interface
-- Save changes button
-- Cancel button (with unsaved changes warning)
-- Recalculate nutrition button
-
-### 70. **Meal Plan Sharing Screen** 🆕
-- Preview of meal plan to share
-- Sharing options:
-  - Share as post to feed
-  - Share to communities
-  - Share to stories
-  - Copy link
-  - Send to BetrFood friends
-  - Export as PDF
-  - Export to external apps
-- Privacy settings:
-  - Public (anyone with link can view)
-  - Followers only
-  - Private (specific people)
-- Add caption/message
-- Share button
-- Cancel button
-
-### 71. Meal Plan Templates Screen ✅
-- Featured templates section:
-  - Staff picks
-  - Template cards (image, name, description, meal count)
-- Browse by goal:
-  - Weight loss
-  - Muscle gain
-  - Healthy eating
-  - Quick & easy
-  - Budget-friendly
-  - Meal prep
-- Browse by diet:
-  - Vegan, Keto, Mediterranean, etc.
-- Template detail (tap on template):
-  - Full week preview
-  - Nutritional summary
-  - Recipe list
-  - User ratings and reviews
-  - Use this template button
-  - Save template button
-- Search templates
-- Create your own template button
-
-### 72. Shopping List Screen ✅
-- List header:
-  - Meal plan name (linked)
-  - Grocery store selector (optional)
-  - Total items count
-  - Checked off count
-- Ingredients grouped by category:
-  - Produce
-  - Meat & Seafood
-  - Dairy & Eggs
-  - Pantry Staples
-  - Baking
-  - Frozen
-  - Other
-  - Collapsible sections
-- Ingredient items:
-  - Checkbox (to mark purchased)
-  - Quantity and unit
-  - Ingredient name
-  - Which recipe it's for (small text)
-  - Strikethrough when checked
-- Add custom items:
-  - Input field
-  - Category selector
-  - Add button
-- Smart features:
-  - Duplicate detection (combined quantities)
-  - Uncheck all button
-  - Remove checked items button
-- Actions:
-  - Share list (text, email, etc.)
-  - Print list
-  - Export to:
-    - Amazon Fresh
-    - Instacart
-    - Other grocery apps
-  - Check all button
-- Notes section (add shopping notes)
-
-### 73. Shopping List Share Screen ✅
-- Share options:
-  - Send via text/email
-  - Copy to clipboard
-  - Print
-  - Export to grocery apps
-  - Share with household members (in-app)
-- Format options:
-  - By category (default)
-  - Alphabetical
-  - By store aisle (if store selected)
-- Include options:
-  - Checked items toggle
-  - Recipe names toggle
-  - Notes toggle
-- Preview before sharing
-- Share button
-- Cancel button
-
-### 74. Meal Prep Instructions Screen ✅
-- Prep overview:
-  - Total prep time estimate
-  - Number of meals to prep
-  - Servings covered
-- Step-by-step prep schedule:
-  - Chronological order
-  - Time estimates per step
-  - Recipe it's for
-  - Checkboxes (mark as done)
-  - Expandable details per step
-- Batch cooking tips:
-  - Which recipes share prep steps
-  - Cook together suggestions
-  - Time-saving tips
-- Make-ahead suggestions:
-  - What can be prepped in advance
-  - Storage instructions
-  - How far ahead (days)
-- Timer buttons per step
-- Mark all done button
-- Print instructions button
-
-### 75. Cooking Mode Screen ✅
-- Full-screen recipe view:
-  - Recipe name at top
-  - Exit cooking mode button
-- Step-by-step navigation:
-  - Current step highlighted (large text)
-  - Step number indicator
-  - Previous/Next step buttons (large, easy to tap)
-  - Swipe to navigate steps
-  - Progress bar
-- Hands-free features:
-  - Voice control toggle
-  - Voice commands (next, previous, repeat, set timer)
-  - Keep screen awake
-  - Screen brightness boost
-- Timer integration:
-  - Set timer button per step
-  - Multiple timers supported
-  - Timer countdown displayed prominently
-  - Alarm when timer ends
-- Ingredients list (collapsible at bottom):
-  - Quick reference
-  - Checkbox to mark as added
-- Tips and notes per step (expandable)
-- Zoom text size buttons
-- Landscape orientation support
-- Pause/Resume cooking
-- Mark recipe as completed button
-
-### 76. Nutritional Overview Screen ✅
-- Time period selector:
-  - Today, This week, This month
-  - Custom date range
-- Daily calorie breakdown:
-  - Bar chart by day
-  - Goal line overlay
-  - Color coding (under/on track/over)
-- Macro nutrient distribution:
-  - Pie charts (protein, carbs, fat)
-  - Percentage and grams
-  - Goal vs actual comparison
-- Weekly nutrition trends:
-  - Line graph (calories over time)
-  - Macro trends
-- Micronutrients section:
-  - Vitamins and minerals
-  - Percentage of daily value
-  - Color-coded (adequate, low, high)
-- Goal progress indicators:
-  - Calories: on track/over/under
-  - Macros: goal alignment
-  - Streak counter (days on goal)
-- Detailed nutrient list:
-  - Expandable sections
-  - Per meal breakdown
-  - Per recipe contribution
-- Export data button (CSV, PDF)
-- Share progress button
-- Adjust goals button
-
-### 77. Saved Meal Plans Screen ✅
-- View toggle (Grid / List)
-- Filter options:
-  - All plans
-  - Favorites
-  - By date range
-  - By diet type
-- Plan preview cards:
-  - Plan name
-  - Date range or duration
-  - Thumbnail images (4 meal collage)
-  - Meal count
-  - Nutritional summary preview
-  - Favorite toggle (star icon)
-- Actions per plan:
-  - View plan
-  - Reuse plan button
-  - Edit plan
-  - Duplicate plan
-  - Delete plan
-  - Share plan
-- Search saved plans:
-  - By name
-  - By recipe included
-  - By date
-- Sort options:
-  - Recent, Oldest, Name, Most used
-- Empty state (no saved plans)
-
----
-
 ## Notifications (2 pages)
 
-### 78. Notifications Screen ✅
+### 53. Notifications Screen ✅
 - Header with "Notifications" title
 - Mark all as read button
 - Notification settings button (gear icon)
@@ -1327,8 +729,6 @@ Present on most screens with 5 tabs:
   - **Likes**
   - **Comments**
   - **Followers**
-  - **Communities**
-  - **Meal Plans** (reminders, prep alerts)
 - Notification cards:
   - User avatar (tappable to profile)
   - Action description with bolded user/item
@@ -1342,7 +742,7 @@ Present on most screens with 5 tabs:
 - Load more (infinite scroll)
 - Empty state (no notifications)
 
-### 79. Notification Settings Screen ✅
+### 54. Notification Settings Screen ✅
 - Push notifications master toggle
 - Notification categories:
   - **Social**:
@@ -1351,16 +751,6 @@ Present on most screens with 5 tabs:
     - New followers
     - Mentions and tags
     - Follow requests (private account)
-  - **Communities**:
-    - New posts in followed communities
-    - Replies to your comments
-    - Community announcements
-    - Pinned posts
-  - **Meal Planning**:
-    - Meal prep reminders
-    - Cooking time alerts
-    - Shopping list reminders
-    - Weekly plan suggestions
   - **AI Chat**:
     - Response ready notifications
   - **Updates**:
@@ -1384,7 +774,7 @@ Present on most screens with 5 tabs:
 
 ## Settings & Account (17 pages)
 
-### 80. Settings Home Screen ✅
+### 55. Settings Home Screen ✅
 - Profile preview card:
   - Avatar and name
   - View profile button
@@ -1412,7 +802,7 @@ Present on most screens with 5 tabs:
 - Log out button (at bottom, red)
 - Delete account option (at very bottom)
 
-### 81. Account Settings Screen ✅
+### 56. Account Settings Screen ✅
 - Email/Phone section:
   - Current email displayed
   - Change email button
@@ -1442,7 +832,7 @@ Present on most screens with 5 tabs:
   - Delete my account button (red)
   - Warning message
 
-### 82. Change Email Screen ✅
+### 57. Change Email Screen ✅
 - Current email displayed
 - New email input
 - Confirm new email input
@@ -1451,7 +841,7 @@ Present on most screens with 5 tabs:
 - Verification required message
 - Cancel button
 
-### 83. Change Password Screen ✅
+### 58. Change Password Screen ✅
 - Current password input
 - New password input
 - Confirm new password input
@@ -1466,7 +856,7 @@ Present on most screens with 5 tabs:
 - Forgot current password link
 - Cancel button
 
-### 84. Two-Factor Authentication Setup Screen ✅
+### 59. Two-Factor Authentication Setup Screen ✅
 - 2FA explanation
 - Setup methods:
   - Authenticator app (recommended)
@@ -1482,11 +872,10 @@ Present on most screens with 5 tabs:
 - Enable 2FA button
 - Cancel button
 
-### 85. **Account Deletion Confirmation Screen** 🆕
+### 60. **Account Deletion Confirmation Screen** 🆕
 - Warning header
 - Consequences list:
   - All posts will be deleted
-  - Meal plans will be lost
   - Followers will be removed
   - Cannot be undone
 - Re-enter password for confirmation
@@ -1498,7 +887,7 @@ Present on most screens with 5 tabs:
 - Cancel button (green)
 - Contact support link
 
-### 86. Privacy Settings Screen ✅
+### 61. Privacy Settings Screen ✅
 - Profile visibility:
   - Public, Private, Friends-only
   - Radio buttons
@@ -1531,10 +920,10 @@ Present on most screens with 5 tabs:
   - Share analytics with creators toggle
 - Save changes button
 
-### 87. Notification Settings Screen ✅
-(Duplicate of #79, included here for settings navigation flow)
+### 62. Notification Settings Screen ✅
+(Duplicate of #54, included here for settings navigation flow)
 
-### 88. Appearance Settings Screen ✅
+### 63. Appearance Settings Screen ✅
 - Theme selection:
   - Light mode
   - Dark mode
@@ -1562,7 +951,7 @@ Present on most screens with 5 tabs:
   - Data saver mode toggle
 - Save changes button
 
-### 89. Accessibility Settings Screen ✅
+### 64. Accessibility Settings Screen ✅
 - Screen reader support:
   - Enable toggle
   - Description labels detail level
@@ -1593,7 +982,7 @@ Present on most screens with 5 tabs:
   - Intensity slider
 - Save changes button
 
-### 90. Data and Storage Settings Screen ✅
+### 65. Data and Storage Settings Screen ✅
 - Storage usage:
   - Total app storage
   - Breakdown (cache, downloads, offline data)
@@ -1613,10 +1002,9 @@ Present on most screens with 5 tabs:
 - Offline mode:
   - Enable offline access toggle
   - Sync saved posts for offline
-  - Sync meal plans for offline
 - Clear all data button (red, with confirmation)
 
-### 91. Blocked Accounts Screen ✅
+### 66. Blocked Accounts Screen ✅
 - List of blocked users:
   - User avatar
   - Username and name
@@ -1630,7 +1018,7 @@ Present on most screens with 5 tabs:
 - Empty state (no blocked accounts)
 - Info section (what happens when you block)
 
-### 92. Muted Accounts Screen ✅
+### 67. Muted Accounts Screen ✅
 - List of muted users:
   - User avatar
   - Username and name
@@ -1644,11 +1032,10 @@ Present on most screens with 5 tabs:
 - Empty state (no muted accounts)
 - Info section (what happens when you mute)
 
-### 93. Help & Support Screen ✅
+### 68. Help & Support Screen ✅
 - Search help topics (search bar)
 - Quick links:
   - Getting started guide
-  - How to create meal plans
   - Understanding nutrition tracking
   - Community guidelines
   - Tips for creators
@@ -1672,7 +1059,7 @@ Present on most screens with 5 tabs:
   - Follow us section
   - Links to Twitter, Instagram, etc.
 
-### 94. Report Problem Screen ✅
+### 69. Report Problem Screen ✅
 - Problem category selection:
   - Account issue
   - Technical bug
@@ -1703,7 +1090,7 @@ Present on most screens with 5 tabs:
 - Confirmation message after submission
 - Track your report link
 
-### 95. About Screen ✅
+### 70. About Screen ✅
 - App logo
 - App name and tagline
 - Version number
@@ -1725,10 +1112,9 @@ Present on most screens with 5 tabs:
 - Terms of service link
 - Copyright notice
 
-### 96. **Premium/Subscription Screen** 🆕
+### 71. **Premium/Subscription Screen** 🆕
 - Current plan indicator (Free / Premium)
 - Premium features list:
-  - Unlimited meal plans per week
   - Unlimited AI chat queries
   - Advanced nutrition analytics
   - Ad-free experience
@@ -1736,8 +1122,6 @@ Present on most screens with 5 tabs:
   - Exclusive creator content
   - Early access to features
   - Custom nutrition goals
-  - Export meal plans to PDF
-  - Shopping list sync with delivery apps
 - Pricing:
   - Monthly: $9.99/month
   - Yearly: $79.99/year (save 33%)
@@ -1753,7 +1137,7 @@ Present on most screens with 5 tabs:
 - Restore purchases button
 - Terms and conditions link
 
-### 97. **Subscription Management Screen** 🆕
+### 72. **Subscription Management Screen** 🆕
 - Current subscription:
   - Plan name (Premium Monthly/Yearly)
   - Status (Active, Cancelled, Expired)
@@ -1777,7 +1161,7 @@ Present on most screens with 5 tabs:
   - Confirmation
 - Reactivate subscription button (if cancelled)
 
-### 98. **Creator Earnings Dashboard** 🆕
+### 73. **Creator Earnings Dashboard** 🆕
 - Header with total earnings
 - Earnings overview:
   - This month
@@ -1785,7 +1169,6 @@ Present on most screens with 5 tabs:
   - All time
   - Graph of earnings over time
 - Revenue breakdown:
-  - Meal plan sales
   - Recipe ebook sales
   - Sponsored posts
   - Tips received
@@ -1813,7 +1196,7 @@ Present on most screens with 5 tabs:
 
 ## Additional Screens (20 pages)
 
-### 99. Stories Viewer Screen ✅
+### 74. Stories Viewer Screen ✅
 - Full-screen story playback:
   - Image or video
   - Auto-advance to next story
@@ -1844,7 +1227,7 @@ Present on most screens with 5 tabs:
 - Close button (X at top right)
 - Mute/unmute audio button
 
-### 100. Create Story Screen ✅
+### 75. Create Story Screen ✅
 - Camera interface:
   - Live camera view
   - Capture button
@@ -1881,7 +1264,7 @@ Present on most screens with 5 tabs:
 - Save to camera roll option
 - Discard button
 
-### 101. Close Friends List Screen ✅
+### 76. Close Friends List Screen ✅
 - List of close friends:
   - User avatars and names
   - Remove from list button
@@ -1893,7 +1276,7 @@ Present on most screens with 5 tabs:
 - Sort options (Alphabetical, Recently added)
 - Empty state (no close friends)
 
-### 102. Saved Posts Screen ✅
+### 77. Saved Posts Screen ✅
 - View toggle (Grid / List)
 - Tab navigation:
   - All saved
@@ -1916,7 +1299,7 @@ Present on most screens with 5 tabs:
   - Meal type
 - Empty state (no saved posts)
 
-### 103. Collections Screen ✅
+### 78. Collections Screen ✅
 - List of post collections:
   - Collection cover image (first 4 posts grid)
   - Collection name
@@ -1931,7 +1314,7 @@ Present on most screens with 5 tabs:
 - Sort options (Name, Recent, Most items)
 - Empty state (no collections)
 
-### 104. Collection Detail Screen ✅
+### 79. Collection Detail Screen ✅
 - Collection header:
   - Collection name (editable)
   - Description (editable)
@@ -1952,7 +1335,7 @@ Present on most screens with 5 tabs:
 - Empty state (no posts in collection)
 - Back button
 
-### 105. Edit Collection Screen ✅
+### 80. Edit Collection Screen ✅
 - Collection name input
 - Description text area
 - Cover photo selection:
@@ -1968,11 +1351,10 @@ Present on most screens with 5 tabs:
 - Delete collection button (red)
 - Cancel button
 
-### 106. Share Sheet ✅
+### 81. Share Sheet ✅
 - Share options:
   - **Share to BetrFood**:
     - Share to your story
-    - Share to a community
     - Send to friends (list of recent chats)
   - **Share to other apps**:
     - Copy link
@@ -1988,7 +1370,7 @@ Present on most screens with 5 tabs:
 - Cancel button
 - Confirmation after sharing
 
-### 107. Direct Messages Screen ✅
+### 82. Direct Messages Screen ✅
 - Header with "Messages" title
 - New message button (compose icon)
 - Search conversations (search bar)
@@ -2009,7 +1391,7 @@ Present on most screens with 5 tabs:
   - Groups (future feature)
 - Empty state (no messages yet)
 
-### 108. Conversation Screen ✅
+### 83. Conversation Screen ✅
 - Header:
   - User avatar and name (tap to view profile)
   - Active status indicator (green dot)
@@ -2046,7 +1428,7 @@ Present on most screens with 5 tabs:
   - Delete
   - Report
 
-### 109. New Message Screen ✅
+### 84. New Message Screen ✅
 - Search users to message:
   - Search bar
   - Recent chats
@@ -2060,7 +1442,7 @@ Present on most screens with 5 tabs:
 - Next button (to start conversation)
 - Cancel button
 
-### 110. Message Info Screen ✅
+### 85. Message Info Screen ✅
 - Conversation settings:
   - Mute notifications toggle
   - Custom nickname for user
@@ -2076,7 +1458,7 @@ Present on most screens with 5 tabs:
 - Delete conversation (red)
 - Back button
 
-### 111. User Suggestions Screen ✅
+### 86. User Suggestions Screen ✅
 - Section headers:
   - Suggested for you
   - Based on your interests
@@ -2094,7 +1476,7 @@ Present on most screens with 5 tabs:
 - Tap user card to view profile
 - Empty state (no suggestions)
 
-### 112. Follow Requests Screen ✅
+### 87. Follow Requests Screen ✅
 (For private accounts)
 - List of follow requests:
   - User avatar
@@ -2111,7 +1493,7 @@ Present on most screens with 5 tabs:
 - Search requests
 - Empty state (no requests)
 
-### 113. Analytics Dashboard Screen (Creators) ✅
+### 88. Analytics Dashboard Screen (Creators) ✅
 - Time period selector (Last 7 days, 30 days, 90 days, All time)
 - Overview cards:
   - Total followers (with change %)
@@ -2144,7 +1526,7 @@ Present on most screens with 5 tabs:
 - Export data button
 - Learn more (tips to grow)
 
-### 114. Creator Analytics - Post Detail ✅
+### 89. Creator Analytics - Post Detail ✅
 - Post preview (image/video)
 - Post metadata (date, time posted)
 - Performance summary:
@@ -2170,7 +1552,6 @@ Present on most screens with 5 tabs:
   - Profile visits
   - Follows gained
   - Link clicks (if any)
-  - Meal plans created from post
 - Comments breakdown:
   - Sentiment analysis (positive, neutral, negative)
   - Top comments
@@ -2178,7 +1559,7 @@ Present on most screens with 5 tabs:
 - Promote post button (future feature)
 - Export post data
 
-### 115. **Recipe Import Screen** 🆕
+### 90. **Recipe Import Screen** 🆕
 - Import methods:
   - Paste recipe URL
   - Import from other apps (Paprika, Whisk, etc.)
@@ -2196,10 +1577,9 @@ Present on most screens with 5 tabs:
   - Servings, time, etc.
   - Edit before posting option
 - Post immediately or save as draft
-- Add to meal plan option
 - Cancel button
 
-### 116. **Ingredient Substitution Screen** 🆕
+### 91. **Ingredient Substitution Screen** 🆕
 - Recipe context displayed (which recipe)
 - Ingredient to substitute (highlighted)
 - Why substitute? (optional):
@@ -2220,7 +1600,7 @@ Present on most screens with 5 tabs:
 - Learn more (substitution guide)
 - Cancel button
 
-### 117. Common Substitutions Library Screen ✅
+### 92. Common Substitutions Library Screen ✅
 - Personal substitution library:
   - List of saved substitutions
   - Original ingredient → Substitute
@@ -2234,7 +1614,7 @@ Present on most screens with 5 tabs:
 - Dietary filter (vegan, gluten-free, etc.)
 - Apply to recipe (if viewing from recipe context)
 
-### 118. Recipe Scaling Screen ✅
+### 93. Recipe Scaling Screen ✅
 - Current serving size
 - Target serving size input:
   - Number picker
@@ -2258,7 +1638,7 @@ Present on most screens with 5 tabs:
 
 ## Error & Loading States (5 pages)
 
-### 119. Error/Empty States ✅
+### 94. Error/Empty States ✅
 Context-aware error and empty states for various scenarios:
 
 **No Internet Connection**
@@ -2308,18 +1688,6 @@ Context-aware error and empty states for various scenarios:
 - "Follow creators to see their posts here"
 - Explore button
 
-**Community Empty**
-- Illustration
-- "No posts in this community yet"
-- "Be the first to post!"
-- Create post button
-
-**Meal Plan Empty**
-- Illustration
-- "No meal plans yet"
-- "Start planning delicious meals"
-- Create meal plan button
-
 **Server Error (500)**
 - Error illustration
 - "Something went wrong"
@@ -2328,7 +1696,7 @@ Context-aware error and empty states for various scenarios:
 - Retry button
 - Go home button
 
-### 120. Loading States ✅
+### 95. Loading States ✅
 Loading skeletons and indicators for various screens:
 
 **Feed Loading Skeleton**
@@ -2368,15 +1736,6 @@ Loading skeletons and indicators for various screens:
 - Time remaining estimate
 - Cancel upload button
 
-**Meal Plan Generation Loading**
-- Animated cooking illustration
-- "Creating your meal plan..." text
-- Progress steps:
-  - Analyzing recipes ✓
-  - Calculating nutrition ✓
-  - Generating shopping list...
-  - Optimizing schedule
-
 **AI Chat Loading (Thinking)**
 - Three-dot animation
 - "AI is thinking..." text
@@ -2391,7 +1750,7 @@ Loading skeletons and indicators for various screens:
 - Spinner at top
 - "Refreshing..." text
 
-### 121. Onboarding Tooltips/Coachmarks ✅
+### 96. Onboarding Tooltips/Coachmarks ✅
 First-time user education overlays:
 
 **Home Feed - First Visit**
@@ -2399,31 +1758,17 @@ First-time user education overlays:
 - "Swipe to view stories from people you follow"
 - Next button
 
-**Post Detail - First Recipe Post**
-- Spotlight on "Create Meal Plan" button
-- "Turn any recipe into a meal plan with one tap"
-- Got it button
-
-**Meal Plan Created - First Time**
-- Spotlight on Shopping List button
-- "Your ingredients are auto-organized into a shopping list"
-- Next button
-
 **AI Chat - First Open**
 - "Ask me anything about cooking, ingredients, or recipes!"
 - Example questions chips
 - Try it button
-
-**Communities - First Visit**
-- "Join communities to discuss your favorite food topics"
-- Browse button
 
 **Profile - First Visit**
 - Spotlight on Edit Profile
 - "Set up your profile to connect with others"
 - Set up now / Later buttons
 
-### 122. Success/Confirmation States ✅
+### 97. Success/Confirmation States ✅
 Confirmation messages and success screens:
 
 **Post Published**
@@ -2433,12 +1778,6 @@ Confirmation messages and success screens:
 - Share button
 - Post another button
 - Auto-dismiss after 3 seconds
-
-**Meal Plan Created**
-- Success animation
-- "Meal plan created!"
-- View meal plan button
-- Create shopping list button
 
 **Recipe Saved**
 - Heart fill animation
@@ -2461,14 +1800,7 @@ Confirmation messages and success screens:
 - Dismiss button
 - Auto-dismiss after 2 seconds
 
-**Meal Completed**
-- Celebration animation
-- "Meal completed! How was it?"
-- Rating stars
-- Add photo of your creation button
-- Skip button
-
-### 123. Permission Requests ✅
+### 98. Permission Requests ✅
 System permission request screens:
 
 **Camera Permission**
@@ -2509,34 +1841,37 @@ System permission request screens:
 
 ---
 
-## Total Screen Count: 123 Unique UI Pages
+## Total Screen Count: 98 Unique UI Pages
 
-### New Pages Added: 26 pages
-78-95 (original), plus 18 new pages integrated throughout, plus 5 additional states/screens
+### Pages Removed:
+- 11 community-related pages (from previous version)
+- 14 meal planning and shopping list pages (current update)
+
+All community features and meal planning functionality have been removed from the app specification
 
 ---
 
 ## Updated Screen Priority Levels
 
-### Phase 1 - MVP (Essential) - 35 pages
+### Phase 1 - MVP (Essential) - 30 pages
 **Authentication & Core Features**
-- Pages: 1-7, 12-18, 27-28, 34-35, 60, 64-67, 72, 75-76, 78, 80, 119-120
+- Pages: 1-7, 12-18, 27-28, 34-35, 49, 53, 55, 94-95
 
-**Focus**: Launch-ready app with core posting, feed, basic meal planning, and AI chat
-
----
-
-### Phase 2 - Core Features (Enhanced) - 50 pages
-**Full Social & Planning Features**
-- Pages: 8-11, 19-26, 29-33, 36-48, 49-59, 68-74, 77, 81-95, 102-106, 121-122
-
-**Focus**: Complete social features, communities, advanced meal planning, settings
+**Focus**: Launch-ready app with core posting, feed, and AI chat
 
 ---
 
-### Phase 3 - Advanced Features (Premium) - 38 pages
+### Phase 2 - Core Features (Enhanced) - 38 pages
+**Full Social Features**
+- Pages: 8-11, 19-26, 29-33, 36-48, 54, 56-70, 77-80, 96-97
+
+**Focus**: Complete social features, full settings, and user management
+
+---
+
+### Phase 3 - Advanced Features (Premium) - 30 pages
 **Monetization & Advanced Tools**
-- Pages: 61-63, 96-98, 99-101, 107-118, 123
+- Pages: 50-52, 71-76, 81-93, 98
 
 **Focus**: Stories, DMs, creator tools, premium features, analytics, advanced utilities
 
@@ -2555,18 +1890,16 @@ System permission request screens:
 - **Creator Earnings Dashboard (98)**: Essential for creator economy
 - **Post Scheduling (24)**: Expected creator tool
 
-### Feature Gaps (9 pages)
-- **Meal Plan Sharing (70)**: Viral growth mechanic from product overview
-- **Recipe Import (115)**: User convenience, competitive parity
-- **Ingredient Substitution (116)**: AI-powered feature highlighted in overview
-- **Community Members (55)**: Moderation necessity
+### Feature Gaps (4 pages)
+- **Recipe Import (90)**: User convenience, competitive parity
+- **Ingredient Substitution (91)**: AI-powered feature highlighted in overview
 - **Content Reporting Detail**: Community safety
 - **Verification Request Detail (45)**: Trust & credibility system
 
 ### User Experience (5 pages)
-- **Tooltips/Coachmarks (121)**: First-time user education
-- **Success States (122)**: Feedback and delight
-- **Permission Requests (123)**: iOS/Android requirement
+- **Tooltips/Coachmarks (96)**: First-time user education
+- **Success States (97)**: Feedback and delight
+- **Permission Requests (98)**: iOS/Android requirement
 
 ---
 
@@ -2582,8 +1915,7 @@ Skip Confirmation (if skip) → Dietary Setup → Interest Selection → Home Fe
 
 1. **Content Discovery → Action**:
    ```
-   Feed → Post Detail → Create Meal Plan → Shopping List → Cooking Mode →
-   Mark Complete → Share Result
+   Feed → Post Detail → Save Recipe → View Recipe → Cook → Share Result
    ```
 
 2. **Social Engagement**:
@@ -2592,25 +1924,13 @@ Skip Confirmation (if skip) → Dietary Setup → Interest Selection → Home Fe
    Comment → Direct Message
    ```
 
-3. **Community Participation**:
-   ```
-   Communities Home → Join Community → Read Posts → Create Discussion →
-   Engage in Comments → Build Reputation
-   ```
-
-4. **Creator Journey**:
+3. **Creator Journey**:
    ```
    Create Post → Add Recipe Details → Publish → View Analytics →
    Grow Audience → Monetize (Premium Phase) → Earnings Dashboard
    ```
 
-5. **Health Management**:
-   ```
-   Settings → Dietary Profile → Set Goals → Browse Feed (personalized) →
-   Create Meal Plan → Track Nutrition → Adjust Goals
-   ```
-
-6. **Premium Conversion**:
+4. **Premium Conversion**:
    ```
    Hit Free Limit → View Premium Benefits → Compare Plans → Subscribe →
    Manage Subscription
@@ -2620,7 +1940,7 @@ Skip Confirmation (if skip) → Dietary Setup → Interest Selection → Home Fe
 
 ## Design System Compliance
 
-All 123 pages must follow the design specifications in **DESIGN_SYSTEM.md**:
+All 98 pages must follow the design specifications in **DESIGN_SYSTEM.md**:
 
 ✅ Mobile frame: 375×812px
 ✅ Plus Jakarta Sans font
@@ -2635,14 +1955,12 @@ All 123 pages must follow the design specifications in **DESIGN_SYSTEM.md**:
 
 ## Conclusion
 
-This comprehensive 123-page specification covers all features outlined in the Product Overview, including:
+This comprehensive 98-page specification covers the core features for a food social platform, including:
 
 ✅ Complete authentication flow with security best practices
 ✅ Rich social features (feed, profiles, follows, DMs)
-✅ Topic-based communities with Reddit-style discussions
 ✅ AI chatbot for cooking assistance
-✅ Advanced meal planning with shopping lists and cooking mode
-✅ Nutrition tracking and dietary management
+✅ Recipe management and dietary tracking
 ✅ Creator tools and analytics
 ✅ Monetization infrastructure (premium, creator earnings)
 ✅ Complete settings and account management
@@ -2651,10 +1969,12 @@ This comprehensive 123-page specification covers all features outlined in the Pr
 ✅ User onboarding and education
 ✅ All features needed for product-market fit and scaling
 
+**Note**: Community features and meal planning functionality have been removed from this specification. The app now focuses on individual user interactions, content creation, recipe sharing, and direct social engagement.
+
 The app is now fully specified and ready for development in three phases, with clear prioritization aligned to the business model and user needs outlined in the Product Overview.
 
 ---
 
-*Document Version: 2.0*
-*Last Updated: February 5, 2025*
+*Document Version: 3.0*
+*Last Updated: February 7, 2026*
 *Maintained By: BetrFood Product Team*

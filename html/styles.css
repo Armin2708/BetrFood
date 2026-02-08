@@ -270,6 +270,17 @@ body {
     z-index: 100;
 }
 
+/* Navigation Bar (Standard 4-item) */
+.nav-bar {
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-around;
+    align-items: flex-start;
+    padding: 8px 8px 20px;
+    flex-shrink: 0;
+}
+
 .nav-item {
     display: flex;
     flex-direction: column;
@@ -278,17 +289,31 @@ body {
     font-size: 12px;
     color: var(--text-secondary);
     text-decoration: none;
-    padding: 8px 16px;
+    padding: 8px 12px;
+    border-radius: 12px;
     cursor: pointer;
-    transition: color 0.2s;
+    transition: all 0.2s;
 }
 
 .nav-item.active {
     color: var(--primary);
+    background: var(--primary-light);
 }
 
 .nav-item:hover {
     color: var(--primary);
+}
+
+.nav-item svg {
+    width: 24px;
+    height: 24px;
+    stroke: var(--text-muted);
+    fill: none;
+    stroke-width: 2;
+}
+
+.nav-item.active svg {
+    stroke: var(--primary);
 }
 
 /* Cards */

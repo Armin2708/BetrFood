@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BetrFood - All Pages Index</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #22C55E;
+            --primary-light: #DCFCE7;
+            --primary-dark: #16A34A;
+            --background: #F8FAFC;
+            --surface: #FFFFFF;
+            --text-primary: #0F172A;
+            --text-secondary: #64748B;
+            --text-muted: #94A3B8;
+            --border: #E2E8F0;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--background);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 48px;
+        }
+
+        .header h1 {
+            font-size: 48px;
+            font-weight: 800;
+            color: var(--text-primary);
+            margin-bottom: 12px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p {
+            font-size: 18px;
+            color: var(--text-secondary);
+        }
+
+        .folder-row {
+            background: var(--surface);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            transition: all 0.2s;
+        }
+
+        .folder-row:hover {
+            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+        }
+
+        .folder-name {
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--text-primary);
+            margin-bottom: 16px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .folder-icon {
+            width: 24px;
+            height: 24px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--primary-light);
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .page-count {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--primary-light);
+            color: var(--primary-dark);
+            font-size: 12px;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 12px;
+            margin-left: 8px;
+        }
+
+        .pages-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .page-link {
+            display: inline-block;
+            padding: 8px 16px;
+            background: var(--background);
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            color: var(--text-primary);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .page-link:hover {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .stat-card {
+            background: var(--surface);
+            border-radius: 16px;
+            padding: 24px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .stat-value {
+            font-size: 36px;
+            font-weight: 800;
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>BetrFood</h1>
+            <p>Complete UI Prototype Index</p>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-value">72</div>
+                <div class="stat-label">Total Pages</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">14</div>
+                <div class="stat-label">Categories</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">100%</div>
+                <div class="stat-label">Design Compliant</div>
+            </div>
+        </div>
+
+        <!-- AI -->
+        <div class="folder-row">
+            <div class="folder-name">
+                <span class="folder-icon">🤖</span>
+                AI
+                <span class="page-count">7</span>
+            </div>
+            <div class="pages-list">
+                <a href="pages/ai/chat-active.html" class="page-link">chat-active</a>
+                <a href="pages/ai/chat-context.html" class="page-link">chat-context</a>
+                <a href="pages/ai/chat-empty.html" class="page-link">chat-empty</a>
+                <a href="pages/ai/chat-history.html" class="page-link">chat-history</a>
+                <a href="pages/ai/payment.html" class="page-link">payment</a>
+                <a href="pages/ai/scanner.html" class="page-link">scanner</a>
+                <a href="pages/ai/upgrade.html" class="page-link">upgrade</a>
+            </div>
+        </div>
+
+        <!-- Analytics -->
+        <div class="folder-row">
+            <div class="folder-name">
+                <span class="folder-icon">📊</span>
+                Analytics
+                <span class="page-count">1</span>
+            </div>
+            <div class="pages-list">
+                <a href="pages/analytics/dashboard.html" class="page-link">dashboard</a>
+            </div>
+        </div>
+
+        <!-- Auth -->
+        <div class="folder-row">
+            <div class="folder-name">
+                <span class="folder-icon">🔐</span>
+                Auth
+                <span class="page-count">10</span>
+            </div>
+            <div class="pages-list">
+                <a href="pages/auth/dietary-setup.html" class="page-link">dietary-setup</a>
+                <a href="pages/auth/email-verification.html" class="page-link">email-verification</a>
+                <a href="pages/auth/forgot-password.html" class="page-link">forgot-password</a>
+                <a href="pages/auth/interest-selection.html" class="page-link">interest-selection</a>
+                <a href="pages/auth/login.html" class="page-link">login</a>
+                <a href="pages/auth/onboarding.html" class="page-link">onboarding</a>
+                <a href="pages/auth/reset-password.html" class="page-link">reset-password</a>
+                <a href="pages/auth/signup.html" class="page-link">signup</a>
+                <a href="pages/auth/splash.html" class="page-link">splash</a>
+                <a href="pages/auth/welcome.html" class="page-link">welcome</a>
+            </div>
+        </div>
+
+        <!-- Content -->
+        <div class="folder-row">
+            <div class="folder-name">
+                <span class="folder-icon">📷</span>
+                Content
+                <span class="page-count">6</span>
+            </div>
+            <div class="pages-list">
+                <a href="pages/content/camera.html" class="page-link">camera</a>
+                <a href="pages/content/drafts.html" class="page-link">drafts</a>
+                <a href="pages/content/post-caption.html" class="page-link">post-caption</a>
+                <a href="pages/content/post-editor.html" class="page-link">post-editor</a>
+                <a href="pages/content/recipe-details.html" class="page-link">recipe-details</a>
+                <a href="pages/content/upload.html" class="page-link">upload</a>
+            </div>
+        </div>
+
+        <!-- Features -->
+        <div class="folder-row">
+            <div class="folder-name">
+                <span class="folder-icon">⚡</span>
+                Features
+                <span class="page-count">2</span>
+            </div>
+            <div class="pages-list">
+                <a href="pages/features/ingredient-substitution.html" class="page-link">ingredient-substitution</a>
+                <a href="pages/features/recipe-import.html" class="page-link">recipe-import</a>
+            </div>
+        </div>
+
+        <!-- Feed -->
+        <div class="folder-row">
+            <div class="folder-name">
+                <span class="folder-icon">🏠</span>
+                Feed
+                <span class="page-count">7</span>
+            </div>
+            <div class="pages-list">
+                <a href="pages/feed/comments.html" class="page-link">comments</a>
+                <a href="pages/feed/feed.html" class="page-link">feed</a>
+                <a href="pages/feed/liked-by.html" class="page-link">liked-by</a>
+                <a href="pages/feed/post-detail.html" class="page-link">post-detail</a>
+                <a href="pages/feed/share-sheet.html" class="page-link">share-sheet</a>
+                <a href="pages/feed/share.html" class="page-link">share</a>
+                <a href="pages/feed/video-player.html" class="page-link">video-player</a>
+            </div>
+        </div>
+
+        <!-- Messages -->
+        <div class="folder-row">
+            <div class="folder-name">
+                <span class="folder-icon">💬</span>
+                Messages
+                <span class="page-count">2</span>
+            </div>
+            <div class="pages-list">
+                <a href="pages/messages/conversation.html" class="page-link">conversation</a>
+                <a href="pages/messages/inbox.html" class="page-link">inbox</a>
+            </div>
+        </div>
+
+        <!-- Notifications -->
+        <div class="folder-row">
+            <div class="folder-name">
+                <span class="folder-icon">🔔</span>
+                Notifications
+                <span class="page-count">1</span>
+            </div>
+            <div class="pages-list">
+                <a href="pages/notifications/notifications.html" class="page-link">notifications</a>
+            </div>
+        </div>
+
+        <!-- Premium -->
+        <div class="folder-row">
+            <div class="folder-name">
+                <span class="folder-icon">💎</span>
+                Premium
+                <span class="page-count">2</span>
+            </div>
+            <div class="pages-list">
+                <a href="pages/premium/creator-earnings.html" class="page-link">creator-earnings</a>
+                <a href="pages/premium/subscription.html" class="page-link">subscription</a>
+            </div>
+        </div>
+
+        <!-- Profile -->
+        <div class="folder-row">
+            <div class="folder-name">
+                <span class="folder-icon">👤</span>
+                Profile
+                <span class="page-count">15</span>
+            </div>
+            <div class="pages-list">
+                <a href="pages/profile/collection-detail.html" class="page-link">collection-detail</a>
+                <a href="pages/profile/collections.html" class="page-link">collections</a>
+                <a href="pages/profile/edit-allergies.html" class="page-link">edit-allergies</a>
+                <a href="pages/profile/edit-dietary-preferences.html" class="page-link">edit-dietary-preferences</a>
+                <a href="pages/profile/edit-dietary-restrictions.html" class="page-link">edit-dietary-restrictions</a>
+                <a href="pages/profile/edit-nutritional-goals.html" class="page-link">edit-nutritional-goals</a>
+                <a href="pages/profile/edit-profile.html" class="page-link">edit-profile</a>
+                <a href="pages/profile/followers.html" class="page-link">followers</a>
+                <a href="pages/profile/following.html" class="page-link">following</a>
+                <a href="pages/profile/health-info.html" class="page-link">health-info</a>
+                <a href="pages/profile/profile.html" class="page-link">profile</a>
+                <a href="pages/profile/saved-posts.html" class="page-link">saved-posts</a>
+                <a href="pages/profile/settings.html" class="page-link">settings</a>
+                <a href="pages/profile/suggestions.html" class="page-link">suggestions</a>
+                <a href="pages/profile/user-profile.html" class="page-link">user-profile</a>
+            </div>
+        </div>
+
+        <!-- Search -->
+        <div class="folder-row">
+            <div class="folder-name">
+                <span class="folder-icon">🔍</span>
+                Search
+                <span class="page-count">5</span>
+            </div>
+            <div class="pages-list">
+                <a href="pages/search/explore.html" class="page-link">explore</a>
+                <a href="pages/search/filters.html" class="page-link">filters</a>
+                <a href="pages/search/search-results.html" class="page-link">search-results</a>
+                <a href="pages/search/search.html" class="page-link">search</a>
+                <a href="pages/search/trending.html" class="page-link">trending</a>
+            </div>
+        </div>
+
+        <!-- Settings -->
+        <div class="folder-row">
+            <div class="folder-name">
+                <span class="folder-icon">⚙️</span>
+                Settings
+                <span class="page-count">10</span>
+            </div>
+            <div class="pages-list">
+                <a href="pages/settings/about.html" class="page-link">about</a>
+                <a href="pages/settings/accessibility.html" class="page-link">accessibility</a>
+                <a href="pages/settings/account.html" class="page-link">account</a>
+                <a href="pages/settings/appearance.html" class="page-link">appearance</a>
+                <a href="pages/settings/blocked-accounts.html" class="page-link">blocked-accounts</a>
+                <a href="pages/settings/help-support.html" class="page-link">help-support</a>
+                <a href="pages/settings/muted-accounts.html" class="page-link">muted-accounts</a>
+                <a href="pages/settings/notification-settings.html" class="page-link">notification-settings</a>
+                <a href="pages/settings/privacy.html" class="page-link">privacy</a>
+                <a href="pages/settings/report-problem.html" class="page-link">report-problem</a>
+            </div>
+        </div>
+
+        <!-- States -->
+        <div class="folder-row">
+            <div class="folder-name">
+                <span class="folder-icon">⏳</span>
+                States
+                <span class="page-count">2</span>
+            </div>
+            <div class="pages-list">
+                <a href="pages/states/error-empty.html" class="page-link">error-empty</a>
+                <a href="pages/states/loading.html" class="page-link">loading</a>
+            </div>
+        </div>
+
+        <!-- Stories -->
+        <div class="folder-row">
+            <div class="folder-name">
+                <span class="folder-icon">📱</span>
+                Stories
+                <span class="page-count">2</span>
+            </div>
+            <div class="pages-list">
+                <a href="pages/stories/create.html" class="page-link">create</a>
+                <a href="pages/stories/viewer.html" class="page-link">viewer</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

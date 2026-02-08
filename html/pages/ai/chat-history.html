@@ -49,31 +49,6 @@
             border: 10px solid #1a1a1a;
         }
 
-        .phone-frame::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 150px;
-            height: 28px;
-            background: #1a1a1a;
-            border-radius: 0 0 20px 20px;
-            z-index: 100;
-        }
-
-        .phone-frame::after {
-            content: '';
-            position: absolute;
-            top: 8px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 60px;
-            height: 6px;
-            background: #333;
-            border-radius: 3px;
-            z-index: 101;
-        }
 
 
         .screen {
@@ -158,6 +133,43 @@
         .history-item:first-child {
             font-weight: 700;
         }
+
+        /* Navigation Bar */
+        .nav-bar {
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-around;
+            align-items: flex-start;
+            padding: 8px 8px 20px;
+            flex-shrink: 0;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            padding: 8px 12px;
+            border-radius: 12px;
+            cursor: pointer;
+        }
+
+        .nav-item.active {
+            background: var(--primary-light);
+        }
+
+        .nav-item svg {
+            width: 24px;
+            height: 24px;
+            stroke: var(--text-muted);
+            fill: none;
+            stroke-width: 2;
+        }
+
+        .nav-item.active svg {
+            stroke: var(--primary);
+        }
     </style>
 </head>
 <body>
@@ -189,6 +201,7 @@
             <div class="history-item">Previous Chat Title</div>
             <div class="history-item">Previous Chat Title</div>
         </div>
+
     </div>
 
         </div>

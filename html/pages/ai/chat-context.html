@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Chat - Post Context - BetrFood</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #22C55E;
+            --primary-light: #DCFCE7;
+            --primary-dark: #16A34A;
+            --secondary: #10B981;
+            --background: #F8FAFC;
+            --surface: #FFFFFF;
+            --text-primary: #0F172A;
+            --text-secondary: #64748B;
+            --text-muted: #94A3B8;
+            --border: #E2E8F0;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+
+        .phone-frame {
+            width: 375px;
+            height: 812px;
+            background: var(--surface);
+            border-radius: 50px;
+            box-shadow:
+                0 50px 100px rgba(0,0,0,0.3),
+                0 15px 35px rgba(0,0,0,0.2),
+                inset 0 0 0 2px rgba(255,255,255,0.1);
+            overflow: hidden;
+            position: relative;
+            border: 10px solid #1a1a1a;
+        }
+
+        .screen {
+            width: 100%;
+            height: 100%;
+            background: var(--surface);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .status-bar {
+            height: 48px;
+            padding: 14px 24px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .status-time {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .status-icons {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+
+        .status-icons svg {
+            width: 18px;
+            height: 18px;
+            fill: var(--text-primary);
+        }
+
+        .header {
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        .back-button {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--background);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            cursor: pointer;
+        }
+
+        .back-button svg {
+            width: 20px;
+            height: 20px;
+            stroke: var(--text-primary);
+            stroke-width: 2;
+            fill: none;
+        }
+
+        .header-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-primary);
+            flex: 1;
+        }
+
+        .header-action svg {
+            width: 20px;
+            height: 20px;
+            stroke: var(--text-primary);
+            stroke-width: 2;
+            fill: none;
+        }
+
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            background: var(--background);
+        }
+
+        .post-context {
+            background: var(--surface);
+            padding: 18px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .post-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .post-avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 14px;
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        .post-user-info {
+            flex: 1;
+        }
+
+        .post-username {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .post-time {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .post-image {
+            width: 100%;
+            aspect-ratio: 4/3;
+            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+            border-radius: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            margin-bottom: 12px;
+        }
+
+        .post-caption {
+            font-size: 15px;
+            color: var(--text-primary);
+            line-height: 1.5;
+            margin-bottom: 12px;
+        }
+
+        .post-tags {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .post-tag {
+            padding: 6px 12px;
+            border-radius: 10px;
+            background: var(--primary-light);
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .chat-section {
+            padding: 20px;
+        }
+
+        .chat-label {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+        }
+
+        .chat-messages {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .chat-message {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-message.user {
+            align-items: flex-end;
+        }
+
+        .chat-message.assistant {
+            align-items: flex-start;
+        }
+
+        .chat-bubble {
+            max-width: 85%;
+            padding: 14px 18px;
+            border-radius: 18px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .chat-message.user .chat-bubble {
+            background: var(--primary);
+            color: white;
+            border-bottom-right-radius: 8px;
+        }
+
+        .chat-message.assistant .chat-bubble {
+            background: var(--background);
+            color: var(--text-primary);
+            border-bottom-left-radius: 8px;
+        }
+
+        .chat-input-area {
+            padding: 12px 20px 20px;
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        .chat-input-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: var(--background);
+            border-radius: 14px;
+            padding: 12px 16px;
+            border: 2px solid var(--border);
+            transition: all 0.2s;
+        }
+
+        .chat-input-wrapper:focus-within {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.1);
+        }
+
+        .chat-input {
+            flex: 1;
+            border: none;
+            background: transparent;
+            font-size: 15px;
+            font-family: inherit;
+            color: var(--text-primary);
+            outline: none;
+        }
+
+        .chat-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .send-button {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .send-button:hover {
+            transform: scale(1.1);
+        }
+
+        .send-button svg {
+            width: 18px;
+            height: 18px;
+            stroke: white;
+            fill: none;
+            stroke-width: 2;
+        }
+    </style>
+</head>
+<body>
+    <div class="phone-frame">
+        <div class="screen">
+            <div class="status-bar">
+                <span class="status-time">9:41</span>
+                <div class="status-icons">
+                    <svg viewBox="0 0 24 24"><path d="M12.01 21.49L23.64 7c-.45-.34-4.93-4-11.64-4C5.28 3 .81 6.66.36 7l11.63 14.49.01.01.01-.01z"/></svg>
+                    <svg viewBox="0 0 24 24"><path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33c.74 0 1.34-.6 1.34-1.33V5.33C17 4.6 16.4 4 15.67 4z"/></svg>
+                </div>
+            </div>
+
+            <div class="header">
+                <button class="back-button">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M19 12H5M12 19l-7-7 7-7" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+                <h1 class="header-title">AI Chat About Post</h1>
+                <button class="header-action">
+                    <svg viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="1"/>
+                        <circle cx="12" cy="5" r="1"/>
+                        <circle cx="12" cy="19" r="1"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="content">
+                <div class="post-context">
+                    <div class="post-header">
+                        <div class="post-avatar">👨‍🍳</div>
+                        <div class="post-user-info">
+                            <div class="post-username">Chef Marcus</div>
+                            <div class="post-time">2 hours ago</div>
+                        </div>
+                    </div>
+
+                    <div class="post-image">🍝</div>
+
+                    <div class="post-caption">
+                        Just made the perfect carbonara! The secret is to use freshly grated Pecorino Romano and take the pan off the heat before adding the eggs. Creamy perfection every time.
+                    </div>
+
+                    <div class="post-tags">
+                        <div class="post-tag">#Pasta</div>
+                        <div class="post-tag">#Italian</div>
+                        <div class="post-tag">#Carbonara</div>
+                    </div>
+                </div>
+
+                <div class="chat-section">
+                    <div class="chat-label">Ask AI About This Post</div>
+
+                    <div class="chat-messages">
+                        <div class="chat-message user">
+                            <div class="chat-bubble">Can you give me the full recipe for this carbonara?</div>
+                        </div>
+
+                        <div class="chat-message assistant">
+                            <div class="chat-bubble">Based on Chef Marcus's post, here's a classic carbonara recipe:
+
+Ingredients:
+- 400g spaghetti
+- 200g guanciale or pancetta
+- 4 large egg yolks
+- 100g Pecorino Romano, freshly grated
+- Black pepper
+- Salt for pasta water
+
+Instructions:
+1. Cook pasta in salted boiling water
+2. Crisp the guanciale in a pan
+3. Mix egg yolks with grated cheese
+4. Remove pan from heat
+5. Add drained pasta to the pan
+6. Add egg mixture and toss quickly
+7. Season with black pepper
+
+The key tip from the post: take the pan off heat before adding eggs to avoid scrambling!</div>
+                        </div>
+
+                        <div class="chat-message user">
+                            <div class="chat-bubble">What if I can't find Pecorino Romano?</div>
+                        </div>
+
+                        <div class="chat-message assistant">
+                            <div class="chat-bubble">Great question! While Pecorino Romano is traditional, you can substitute with Parmigiano-Reggiano (Parmesan). Some cooks even use a 50/50 blend. Pecorino is sharper and saltier, while Parmesan is milder and nuttier. Both work beautifully in carbonara!</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chat-input-area">
+                <div class="chat-input-wrapper">
+                    <input type="text" class="chat-input" placeholder="Ask about ingredients, substitutions...">
+                    <button class="send-button">
+                        <svg viewBox="0 0 24 24">
+                            <line x1="22" y1="2" x2="11" y2="13" stroke-linecap="round" stroke-linejoin="round"/>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

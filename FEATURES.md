@@ -1,7 +1,7 @@
 # BetrFood - Feature Specification
 
 ## Overview
-BetrFood is a social media platform dedicated to food content, combining Instagram/TikTok-style posts with community discussions, AI-powered meal planning, and personalized dietary management.
+BetrFood is a social media platform dedicated to food content, combining Instagram/TikTok-style posts with AI-powered cooking assistance and personalized dietary management.
 
 ---
 
@@ -70,37 +70,10 @@ BetrFood is a social media platform dedicated to food content, combining Instagr
 - New followers
 - Likes and comments on your posts
 - Mentions and tags
-- Community discussion replies
 
 ---
 
-## 4. Community Discussions (Subreddit-Style)
-
-### Discussion Boards
-- **Topic-Based Communities**: Communities organized by:
-  - Cuisine types (Italian Food, Asian Cuisine, etc.)
-  - Dietary preferences (Vegan Living, Keto Community, etc.)
-  - Cooking techniques (Baking, Grilling, etc.)
-  - Local food scenes (NYC Food, Tokyo Eats, etc.)
-
-### Discussion Features
-- **Create Posts**: Text posts with optional images
-- **Upvote/Downvote**: Community-driven content ranking
-- **Threaded Comments**: Multi-level comment discussions
-- **Sort Options**: Hot, New, Top, Controversial
-- **Moderation**: Community moderators and reporting system
-- **Pinned Posts**: Important community announcements
-- **Flair System**: Tag posts with relevant categories
-
-### Community Management
-- Join/Leave communities
-- Create new communities
-- Community rules and guidelines
-- Moderator tools for community creators
-
----
-
-## 5. AI Chatbot for Food
+## 4. AI Chatbot for Food
 
 ### Food Information
 - **Ingredient Information**: Nutritional facts, origins, seasonality
@@ -123,7 +96,7 @@ BetrFood is a social media platform dedicated to food content, combining Instagr
 
 ---
 
-## 6. Profile Management
+## 5. Profile Management
 
 ### User Profile
 - **Profile Picture & Bio**: Customize your presence
@@ -163,54 +136,7 @@ BetrFood is a social media platform dedicated to food content, combining Instagr
 
 ---
 
-## 7. AI Meal Planning
-
-### Meal Plan Generation from Posts
-- **One-Click Meal Plans**: Generate meal plan from any post
-- **Multi-Post Meal Plans**: Combine multiple posts into a weekly plan
-- **Smart Scheduling**: AI suggests optimal meal timing
-- **Customization**:
-  - Adjust serving sizes
-  - Swap ingredients based on preferences
-  - Modify based on dietary restrictions
-  - Set preparation time constraints
-
-### Meal Plan Features
-- **Shopping List Generation**:
-  - Automatic ingredient aggregation
-  - Quantity calculations for multiple recipes
-  - Organize by store section
-  - Check off items while shopping
-
-- **Prep Instructions**:
-  - Step-by-step cooking schedule
-  - Meal prep timing optimization
-  - Batch cooking suggestions
-  - Make-ahead tips
-
-- **Nutritional Overview**:
-  - Daily calorie breakdown
-  - Macro and micronutrient tracking
-  - Alignment with dietary goals
-  - Health score ratings
-
-### Meal Plan Management
-- **Save Meal Plans**: Archive for future use
-- **Share Meal Plans**: Send to friends or post to feed
-- **Recurring Plans**: Set weekly or monthly meal rotations
-- **Calendar Integration**: Sync with device calendar
-- **Reminders**: Prep and cooking notifications
-
-### AI Personalization
-- Learn from cooking history and preferences
-- Adapt to seasonal ingredient availability
-- Suggest substitutions for unavailable ingredients
-- Balance nutrition across the week
-- Accommodate schedule constraints
-
----
-
-## 8. Additional Features
+## 6. Additional Features
 
 ### Collaboration
 - **Cooking Together**: Invite followers to cook the same recipe
@@ -220,13 +146,12 @@ BetrFood is a social media platform dedicated to food content, combining Instagr
 ### Monetization (Future)
 - **Creator Tools**: Analytics and insights for content creators
 - **Sponsored Posts**: Partner with food brands
-- **Premium Features**: Advanced meal planning, exclusive content
-- **Marketplace**: Sell meal plans, recipe ebooks, cooking courses
+- **Premium Features**: Exclusive content and advanced features
+- **Marketplace**: Sell recipe ebooks and cooking courses
 
 ### Integration
 - **Export Recipes**: Save to external recipe managers
 - **Smart Device Integration**: Send recipes to smart displays
-- **Grocery Delivery**: Partner with delivery services
 - **Fitness App Sync**: Connect with health tracking apps
 
 ---
@@ -259,4 +184,3 @@ BetrFood is a social media platform dedicated to food content, combining Instagr
 - Food photography filters and editing tools
 - Restaurant reservation integration
 - Nutrition tracking dashboard
-- Community challenges and events

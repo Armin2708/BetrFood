@@ -148,7 +148,6 @@ All pages follow the BetrFood Design System specifications with:
   - 4-image grid preview
 - Share destination options:
   - Post to Feed (primary green)
-  - Share to Communities (primary green)
   - Copy Link (blue)
   - Export as PDF (red)
 - Privacy selector (radio buttons):
@@ -392,11 +391,10 @@ Options show selection via:
 1. **Onboarding Skip Confirmation** - Modal overlay
 2. **Account Deletion Confirmation** - Critical action warning
 3. **Post Scheduling** - Calendar picker interface
-4. **Community Members List** - Scrollable user list
-5. **Recipe Scaling** - Number input with preview
-6. **Success States** - Toast/modal confirmations
-7. **Loading States** - Skeleton screens
-8. **Error States** - Empty states with CTAs
+4. **Recipe Scaling** - Number input with preview
+5. **Success States** - Toast/modal confirmations
+6. **Loading States** - Skeleton screens
+7. **Error States** - Empty states with CTAs
 
 ### Enhancements for Current Pages
 - Add JavaScript for interactive behaviors

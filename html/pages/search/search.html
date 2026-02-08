@@ -3,69 +3,358 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BetrFood - Search</title>
-    <link rel="stylesheet" href="../../styles.css">
+    <title>Search - BetrFood</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #22C55E;
+            --primary-light: #DCFCE7;
+            --primary-dark: #16A34A;
+            --secondary: #10B981;
+            --background: #F8FAFC;
+            --surface: #FFFFFF;
+            --text-primary: #0F172A;
+            --text-secondary: #64748B;
+            --text-muted: #94A3B8;
+            --border: #E2E8F0;
+            --danger: #EF4444;
+            --warning: #F59E0B;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+
+        .phone-frame {
+            width: 375px;
+            height: 812px;
+            background: var(--surface);
+            border-radius: 50px;
+            box-shadow:
+                0 50px 100px rgba(0,0,0,0.3),
+                0 15px 35px rgba(0,0,0,0.2),
+                inset 0 0 0 2px rgba(255,255,255,0.1);
+            overflow: hidden;
+            position: relative;
+            border: 10px solid #1a1a1a;
+        }
+
+        .screen {
+            width: 100%;
+            height: 100%;
+            background: var(--background);
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Status Bar */
+        .status-bar {
+            height: 48px;
+            padding: 14px 24px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .status-time {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .status-icons {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+
+        .status-icons svg {
+            width: 18px;
+            height: 18px;
+            fill: var(--text-primary);
+        }
+
+        /* Header */
+        .header {
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        .back-button {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--background);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .back-button svg {
+            width: 20px;
+            height: 20px;
+            stroke: var(--text-primary);
+            stroke-width: 2;
+            fill: none;
+        }
+
+        .header-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        /* Search Container */
+        .search-container {
+            padding: 16px 20px;
+            background: var(--surface);
+            flex-shrink: 0;
+        }
+
+        .search-bar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: var(--background);
+            border-radius: 14px;
+            padding: 12px 16px;
+            border: 2px solid var(--border);
+        }
+
+        .search-bar:focus-within {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.1);
+        }
+
+        .search-icon {
+            width: 20px;
+            height: 20px;
+            stroke: var(--text-muted);
+            stroke-width: 2;
+            fill: none;
+            flex-shrink: 0;
+        }
+
+        .search-input {
+            flex: 1;
+            border: none;
+            background: transparent;
+            font-size: 15px;
+            font-family: inherit;
+            color: var(--text-primary);
+            outline: none;
+        }
+
+        .search-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .mic-button {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+        }
+
+        .mic-button svg {
+            width: 20px;
+            height: 20px;
+            stroke: var(--text-muted);
+            stroke-width: 2;
+            fill: none;
+        }
+
+        /* Content Area */
+        .content {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--surface);
+            overflow-y: auto;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .empty-state-icon {
+            font-size: 64px;
+            margin-bottom: 16px;
+        }
+
+        .empty-state-text {
+            font-size: 15px;
+            color: var(--text-secondary);
+        }
+
+        /* Keyboard */
+        .keyboard {
+            background: #D1D5DB;
+            padding: 8px 4px 4px;
+            flex-shrink: 0;
+            display: none;
+        }
+
+        .keyboard.active {
+            display: block;
+        }
+
+        .keyboard-row {
+            display: flex;
+            justify-content: center;
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+
+        .key {
+            min-width: 32px;
+            height: 38px;
+            background: var(--surface);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            font-weight: 500;
+            color: var(--text-primary);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            border: none;
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        .key.wide {
+            flex: 1;
+            max-width: 180px;
+        }
+
+        .key.action {
+            background: var(--primary);
+            color: white;
+            padding: 0 16px;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+    </style>
 </head>
 <body>
     <div class="phone-frame">
         <div class="screen">
+            <!-- Status Bar -->
+            <div class="status-bar">
+                <span class="status-time">9:41</span>
+                <div class="status-icons">
+                    <svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+                    <svg viewBox="0 0 24 24"><path d="M1 6l11 7 11-7M1 6l11 7v11M1 6v14l11-7"/></svg>
+                    <svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="10" rx="2"/><path d="M22 10v4"/></svg>
+                </div>
+            </div>
 
-    <div class="header">
-        <button class="icon-button" onclick="window.history.back()">✕</button>
-        <div class="header-title" style="flex: 1; text-align: center;">Community</div>
-    </div>
+            <!-- Header -->
+            <div class="header">
+                <button class="back-button" onclick="window.history.back()">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M19 12H5M12 19l-7-7 7-7" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+                <h1 class="header-title">Search</h1>
+            </div>
 
-    <div class="search-container">
-        <div class="search-bar">
-            <span class="icon">🔍</span>
-            <input type="text" placeholder="Search" id="searchInput">
-            <span class="icon">🎤</span>
-            <button class="send-button">Search</button>
-        </div>
-    </div>
+            <!-- Search Bar -->
+            <div class="search-container">
+                <div class="search-bar">
+                    <svg class="search-icon" viewBox="0 0 24 24">
+                        <circle cx="11" cy="11" r="8"/>
+                        <path d="m21 21-4.35-4.35"/>
+                    </svg>
+                    <input type="text" class="search-input" placeholder="Search recipes, users..." id="searchInput">
+                    <button class="mic-button">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                            <path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
 
-    <div style="height: calc(100vh - 180px); display: flex; align-items: center; justify-content: center; color: var(--text-secondary);">
-        <p>Start typing to search...</p>
-    </div>
+            <!-- Content Area -->
+            <div class="content">
+                <div class="empty-state">
+                    <div class="empty-state-icon">🔍</div>
+                    <p class="empty-state-text">Start typing to search...</p>
+                </div>
+            </div>
 
-    <div class="keyboard" id="keyboard" style="display: none;">
-        <div class="keyboard-row">
-            <button class="key">q</button>
-            <button class="key">w</button>
-            <button class="key">e</button>
-            <button class="key">r</button>
-            <button class="key">t</button>
-            <button class="key">y</button>
-            <button class="key">u</button>
-            <button class="key">i</button>
-            <button class="key">o</button>
-            <button class="key">p</button>
-        </div>
-        <div class="keyboard-row">
-            <button class="key">a</button>
-            <button class="key">s</button>
-            <button class="key">d</button>
-            <button class="key">f</button>
-            <button class="key">g</button>
-            <button class="key">h</button>
-            <button class="key">j</button>
-            <button class="key">k</button>
-            <button class="key">l</button>
-        </div>
-        <div class="keyboard-row">
-            <button class="key">z</button>
-            <button class="key">x</button>
-            <button class="key">c</button>
-            <button class="key">v</button>
-            <button class="key">b</button>
-            <button class="key">n</button>
-            <button class="key">m</button>
-            <button class="key">⌫</button>
-        </div>
-        <div class="keyboard-row">
-            <button class="key">123</button>
-            <button class="key wide">space</button>
-            <button class="key action">Search</button>
+            <!-- Keyboard -->
+            <div class="keyboard" id="keyboard">
+                <div class="keyboard-row">
+                    <button class="key">q</button>
+                    <button class="key">w</button>
+                    <button class="key">e</button>
+                    <button class="key">r</button>
+                    <button class="key">t</button>
+                    <button class="key">y</button>
+                    <button class="key">u</button>
+                    <button class="key">i</button>
+                    <button class="key">o</button>
+                    <button class="key">p</button>
+                </div>
+                <div class="keyboard-row">
+                    <button class="key">a</button>
+                    <button class="key">s</button>
+                    <button class="key">d</button>
+                    <button class="key">f</button>
+                    <button class="key">g</button>
+                    <button class="key">h</button>
+                    <button class="key">j</button>
+                    <button class="key">k</button>
+                    <button class="key">l</button>
+                </div>
+                <div class="keyboard-row">
+                    <button class="key">z</button>
+                    <button class="key">x</button>
+                    <button class="key">c</button>
+                    <button class="key">v</button>
+                    <button class="key">b</button>
+                    <button class="key">n</button>
+                    <button class="key">m</button>
+                    <button class="key">⌫</button>
+                </div>
+                <div class="keyboard-row">
+                    <button class="key">123</button>
+                    <button class="key wide">space</button>
+                    <button class="key action">Search</button>
+                </div>
+            </div>
+
         </div>
     </div>
 
@@ -74,7 +363,7 @@
         const keyboard = document.getElementById('keyboard');
 
         input.addEventListener('focus', () => {
-            keyboard.style.display = 'block';
+            keyboard.classList.add('active');
         });
 
         document.querySelectorAll('.key').forEach(key => {
@@ -85,7 +374,7 @@
                 } else if (value === 'space') {
                     input.value += ' ';
                 } else if (value === 'Search') {
-                    keyboard.style.display = 'none';
+                    keyboard.classList.remove('active');
                     input.blur();
                 } else if (value.length === 1) {
                     input.value += value;
@@ -93,20 +382,5 @@
             });
         });
     </script>
-
-    <div class="bottom-nav">
-        <a href="index.html" class="nav-item">
-            <span class="nav-icon">🏠</span>
-        </a>
-        <a href="search.html" class="nav-item active">
-            <span class="nav-icon">📋</span>
-        </a>
-        <a href="profile.html" class="nav-item">
-            <span class="nav-icon">👤</span>
-        </a>
-    </div>
-
-        </div>
-    </div>
 </body>
 </html>

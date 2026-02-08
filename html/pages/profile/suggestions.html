@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Suggested Users - BetrFood</title>
+
+    <!-- REQUIRED: Google Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        /* REQUIRED: Reset */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* REQUIRED: CSS Variables */
+        :root {
+            --primary: #22C55E;
+            --primary-light: #DCFCE7;
+            --primary-dark: #16A34A;
+            --secondary: #10B981;
+            --background: #F8FAFC;
+            --surface: #FFFFFF;
+            --text-primary: #0F172A;
+            --text-secondary: #64748B;
+            --text-muted: #94A3B8;
+            --border: #E2E8F0;
+            --danger: #EF4444;
+            --danger-light: #FEE2E2;
+            --warning: #F59E0B;
+            --warning-light: #FEF3C7;
+        }
+
+        /* REQUIRED: Base Font */
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+
+        /* REQUIRED: Phone Frame */
+        .phone-frame {
+            width: 375px;
+            height: 812px;
+            background: var(--surface);
+            border-radius: 50px;
+            box-shadow:
+                0 50px 100px rgba(0,0,0,0.3),
+                0 15px 35px rgba(0,0,0,0.2),
+                inset 0 0 0 2px rgba(255,255,255,0.1);
+            overflow: hidden;
+            position: relative;
+            border: 10px solid #1a1a1a;
+        }
+
+        /* REQUIRED: Screen Container */
+        .screen {
+            width: 100%;
+            height: 100%;
+            background: var(--background);
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Status Bar */
+        .status-bar {
+            height: 48px;
+            padding: 14px 24px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+            background: transparent;
+        }
+
+        .status-time {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .status-icons {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+
+        .status-icons svg {
+            width: 18px;
+            height: 18px;
+            fill: var(--text-primary);
+        }
+
+        /* Header */
+        .header {
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        .back-button {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--background);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            cursor: pointer;
+        }
+
+        .back-button svg {
+            width: 20px;
+            height: 20px;
+            stroke: var(--text-primary);
+            stroke-width: 2;
+            fill: none;
+        }
+
+        .header-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        /* Content Area */
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .section-header {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 16px;
+        }
+
+        /* Suggestion Cards */
+        .suggestion-cards {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .suggestion-card {
+            background: var(--surface);
+            border-radius: 18px;
+            padding: 18px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            position: relative;
+        }
+
+        .card-content {
+            display: flex;
+            gap: 12px;
+        }
+
+        .user-avatar {
+            width: 64px;
+            height: 64px;
+            border-radius: 18px;
+            background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            flex-shrink: 0;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+        }
+
+        .user-avatar.gradient-yellow {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        }
+
+        .user-avatar.gradient-red {
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+        }
+
+        .user-avatar.gradient-blue {
+            background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+        }
+
+        .user-avatar.gradient-pink {
+            background: linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%);
+        }
+
+        .user-avatar.gradient-cyan {
+            background: linear-gradient(135deg, #cffafe 0%, #a5f3fc 100%);
+        }
+
+        .user-avatar.gradient-purple {
+            background: linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%);
+        }
+
+        .user-avatar.gradient-lime {
+            background: linear-gradient(135deg, #ecfccb 0%, #d9f99d 100%);
+        }
+
+        .user-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .user-name {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 2px;
+        }
+
+        .user-username {
+            font-size: 12px;
+            font-weight: 400;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+
+        .user-bio {
+            font-size: 13px;
+            font-weight: 400;
+            color: var(--text-secondary);
+            line-height: 1.4;
+            margin-bottom: 8px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+        }
+
+        .mutual-friends {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .mutual-friends svg {
+            width: 14px;
+            height: 14px;
+            stroke: var(--text-muted);
+            stroke-width: 2;
+            fill: none;
+        }
+
+        .dismiss-button {
+            position: absolute;
+            top: 18px;
+            right: 18px;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--background);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .dismiss-button:hover {
+            background: var(--border);
+        }
+
+        .dismiss-button svg {
+            width: 16px;
+            height: 16px;
+            stroke: var(--text-muted);
+            stroke-width: 2;
+            fill: none;
+        }
+
+        .card-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 14px;
+        }
+
+        .btn-follow {
+            flex: 1;
+            height: 40px;
+            border-radius: 12px;
+            border: 2px solid var(--primary);
+            background: var(--primary);
+            color: white;
+            font-size: 14px;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-follow:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 14px rgba(34, 197, 94, 0.35);
+        }
+
+        .btn-view-profile {
+            flex: 1;
+            height: 40px;
+            border-radius: 12px;
+            border: 2px solid var(--border);
+            background: var(--surface);
+            color: var(--text-primary);
+            font-size: 14px;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-view-profile:hover {
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+
+        .stats {
+            display: flex;
+            gap: 16px;
+            margin-top: 12px;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 16px;
+            font-weight: 800;
+            color: var(--text-primary);
+            margin-bottom: 2px;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="phone-frame">
+        <div class="screen">
+            <!-- Status Bar (REQUIRED) -->
+            <div class="status-bar">
+                <span class="status-time">9:41</span>
+                <div class="status-icons">
+                    <svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+                    <svg viewBox="0 0 24 24"><path d="M17 2H7C5.9 2 5 2.9 5 4v16c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 18H7V4h10v16z"/><path d="M9 12h6v2H9z"/></svg>
+                </div>
+            </div>
+
+            <!-- Header -->
+            <div class="header">
+                <button class="back-button">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M19 12H5M12 19l-7-7 7-7" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+                <h1 class="header-title">Suggested Users</h1>
+            </div>
+
+            <!-- Content Area -->
+            <div class="content">
+                <div class="section-header">People You Might Know</div>
+
+                <div class="suggestion-cards">
+                    <!-- Suggestion Card 1 -->
+                    <div class="suggestion-card">
+                        <button class="dismiss-button">
+                            <svg viewBox="0 0 24 24">
+                                <line x1="18" y1="6" x2="6" y2="18" stroke-linecap="round" stroke-linejoin="round"/>
+                                <line x1="6" y1="6" x2="18" y2="18" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        <div class="card-content">
+                            <div class="user-avatar gradient-yellow">👨‍🍳</div>
+                            <div class="user-info">
+                                <div class="user-name">Chef Marcus</div>
+                                <div class="user-username">@chefmarcus</div>
+                                <div class="user-bio">Italian cuisine enthusiast. Making pasta from scratch daily. Award-winning chef.</div>
+                                <div class="mutual-friends">
+                                    <svg viewBox="0 0 24 24">
+                                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                                        <circle cx="9" cy="7" r="4"/>
+                                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                                        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                                    </svg>
+                                    12 mutual friends
+                                </div>
+                                <div class="stats">
+                                    <div class="stat-item">
+                                        <div class="stat-value">245</div>
+                                        <div class="stat-label">Posts</div>
+                                    </div>
+                                    <div class="stat-item">
+                                        <div class="stat-value">18.5K</div>
+                                        <div class="stat-label">Followers</div>
+                                    </div>
+                                    <div class="stat-item">
+                                        <div class="stat-value">892</div>
+                                        <div class="stat-label">Following</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-actions">
+                            <button class="btn-follow">Follow</button>
+                            <button class="btn-view-profile">View Profile</button>
+                        </div>
+                    </div>
+
+                    <!-- Suggestion Card 2 -->
+                    <div class="suggestion-card">
+                        <button class="dismiss-button">
+                            <svg viewBox="0 0 24 24">
+                                <line x1="18" y1="6" x2="6" y2="18" stroke-linecap="round" stroke-linejoin="round"/>
+                                <line x1="6" y1="6" x2="18" y2="18" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        <div class="card-content">
+                            <div class="user-avatar gradient-pink">👩‍🍳</div>
+                            <div class="user-info">
+                                <div class="user-name">Sarah's Kitchen</div>
+                                <div class="user-username">@sarahskitchen</div>
+                                <div class="user-bio">Vegan recipes & plant-based cooking. Sharing healthy meals that taste amazing!</div>
+                                <div class="mutual-friends">
+                                    <svg viewBox="0 0 24 24">
+                                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                                        <circle cx="9" cy="7" r="4"/>
+                                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                                        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                                    </svg>
+                                    8 mutual friends
+                                </div>
+                                <div class="stats">
+                                    <div class="stat-item">
+                                        <div class="stat-value">412</div>
+                                        <div class="stat-label">Posts</div>
+                                    </div>
+                                    <div class="stat-item">
+                                        <div class="stat-value">24.2K</div>
+                                        <div class="stat-label">Followers</div>
+                                    </div>
+                                    <div class="stat-item">
+                                        <div class="stat-value">1.2K</div>
+                                        <div class="stat-label">Following</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-actions">
+                            <button class="btn-follow">Follow</button>
+                            <button class="btn-view-profile">View Profile</button>
+                        </div>
+                    </div>
+
+                    <!-- Suggestion Card 3 -->
+                    <div class="suggestion-card">
+                        <button class="dismiss-button">
+                            <svg viewBox="0 0 24 24">
+                                <line x1="18" y1="6" x2="6" y2="18" stroke-linecap="round" stroke-linejoin="round"/>
+                                <line x1="6" y1="6" x2="18" y2="18" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        <div class="card-content">
+                            <div class="user-avatar gradient-blue">🧑‍🍳</div>
+                            <div class="user-info">
+                                <div class="user-name">Asian Fusion Foodie</div>
+                                <div class="user-username">@asianfusionfoodie</div>
+                                <div class="user-bio">Blending traditional Asian flavors with modern techniques. Ramen specialist.</div>
+                                <div class="mutual-friends">
+                                    <svg viewBox="0 0 24 24">
+                                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                                        <circle cx="9" cy="7" r="4"/>
+                                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                                        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                                    </svg>
+                                    15 mutual friends
+                                </div>
+                                <div class="stats">
+                                    <div class="stat-item">
+                                        <div class="stat-value">328</div>
+                                        <div class="stat-label">Posts</div>
+                                    </div>
+                                    <div class="stat-item">
+                                        <div class="stat-value">31.8K</div>
+                                        <div class="stat-label">Followers</div>
+                                    </div>
+                                    <div class="stat-item">
+                                        <div class="stat-value">654</div>
+                                        <div class="stat-label">Following</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-actions">
+                            <button class="btn-follow">Follow</button>
+                            <button class="btn-view-profile">View Profile</button>
+                        </div>
+                    </div>
+
+                    <!-- Suggestion Card 4 -->
+                    <div class="suggestion-card">
+                        <button class="dismiss-button">
+                            <svg viewBox="0 0 24 24">
+                                <line x1="18" y1="6" x2="6" y2="18" stroke-linecap="round" stroke-linejoin="round"/>
+                                <line x1="6" y1="6" x2="18" y2="18" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        <div class="card-content">
+                            <div class="user-avatar gradient-cyan">👨‍🍳</div>
+                            <div class="user-info">
+                                <div class="user-name">Baking Master</div>
+                                <div class="user-username">@bakingmaster</div>
+                                <div class="user-bio">Professional pastry chef. Teaching artisan bread and French pastries.</div>
+                                <div class="mutual-friends">
+                                    <svg viewBox="0 0 24 24">
+                                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                                        <circle cx="9" cy="7" r="4"/>
+                                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                                        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                                    </svg>
+                                    6 mutual friends
+                                </div>
+                                <div class="stats">
+                                    <div class="stat-item">
+                                        <div class="stat-value">567</div>
+                                        <div class="stat-label">Posts</div>
+                                    </div>
+                                    <div class="stat-item">
+                                        <div class="stat-value">42.1K</div>
+                                        <div class="stat-label">Followers</div>
+                                    </div>
+                                    <div class="stat-item">
+                                        <div class="stat-value">389</div>
+                                        <div class="stat-label">Following</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-actions">
+                            <button class="btn-follow">Follow</button>
+                            <button class="btn-view-profile">View Profile</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

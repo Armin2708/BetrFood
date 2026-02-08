@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Muted Accounts - BetrFood</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #22C55E;
+            --primary-light: #DCFCE7;
+            --primary-dark: #16A34A;
+            --secondary: #10B981;
+            --background: #F8FAFC;
+            --surface: #FFFFFF;
+            --text-primary: #0F172A;
+            --text-secondary: #64748B;
+            --text-muted: #94A3B8;
+            --border: #E2E8F0;
+            --warning: #F59E0B;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+
+        .phone-frame {
+            width: 375px;
+            height: 812px;
+            background: var(--surface);
+            border-radius: 50px;
+            box-shadow:
+                0 50px 100px rgba(0,0,0,0.3),
+                0 15px 35px rgba(0,0,0,0.2),
+                inset 0 0 0 2px rgba(255,255,255,0.1);
+            overflow: hidden;
+            position: relative;
+            border: 10px solid #1a1a1a;
+        }
+
+        .screen {
+            width: 100%;
+            height: 100%;
+            background: var(--surface);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .status-bar {
+            height: 48px;
+            padding: 14px 24px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .status-time {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .status-icons {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+
+        .status-icons svg {
+            width: 18px;
+            height: 18px;
+            fill: var(--text-primary);
+        }
+
+        .header {
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        .back-button {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--background);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            cursor: pointer;
+        }
+
+        .back-button svg {
+            width: 20px;
+            height: 20px;
+            stroke: var(--text-primary);
+            stroke-width: 2;
+            fill: none;
+        }
+
+        .header-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .search-bar {
+            margin: 16px 20px;
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .search-input {
+            width: 100%;
+            height: 44px;
+            border: 2px solid var(--border);
+            border-radius: 14px;
+            padding: 0 18px 0 44px;
+            font-size: 15px;
+            font-family: inherit;
+            background: var(--background);
+            color: var(--text-primary);
+            transition: all 0.2s;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.1);
+        }
+
+        .search-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 20px;
+            height: 20px;
+            stroke: var(--text-muted);
+            stroke-width: 2;
+            fill: none;
+        }
+
+        .content {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .user-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .user-item:last-child {
+            border-bottom: none;
+        }
+
+        .user-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 14px;
+            background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            flex-shrink: 0;
+        }
+
+        .user-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .user-name {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .user-meta {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .user-username {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .user-duration {
+            font-size: 11px;
+            color: var(--warning);
+            font-weight: 600;
+        }
+
+        .btn-unmute {
+            height: 32px;
+            padding: 0 16px;
+            border-radius: 10px;
+            border: 2px solid var(--warning);
+            background: transparent;
+            color: var(--warning);
+            font-size: 12px;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-unmute:hover {
+            background: var(--warning);
+            color: white;
+        }
+
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 60px 40px;
+            text-align: center;
+        }
+
+        .empty-icon {
+            width: 80px;
+            height: 80px;
+            background: var(--background);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .empty-icon svg {
+            width: 40px;
+            height: 40px;
+            stroke: var(--text-muted);
+            stroke-width: 2;
+            fill: none;
+        }
+
+        .empty-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .empty-subtitle {
+            font-size: 14px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="phone-frame">
+        <div class="screen">
+            <div class="status-bar">
+                <span class="status-time">9:41</span>
+                <div class="status-icons">
+                    <svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+                    <svg viewBox="0 0 24 24"><path d="M1 6l11 7 11-7M1 6l11 7v11M1 6v14l11-7"/></svg>
+                    <svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="10" rx="2"/><path d="M22 10v4"/></svg>
+                </div>
+            </div>
+
+            <div class="header">
+                <button class="back-button">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M19 12H5M12 19l-7-7 7-7" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+                <h1 class="header-title">Muted Accounts</h1>
+            </div>
+
+            <div class="search-bar">
+                <svg class="search-icon" viewBox="0 0 24 24">
+                    <circle cx="11" cy="11" r="8" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="m21 21-4.35-4.35" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <input type="text" class="search-input" placeholder="Search muted accounts...">
+            </div>
+
+            <div class="content">
+                <div class="user-item">
+                    <div class="user-avatar">🍕</div>
+                    <div class="user-info">
+                        <div class="user-name">Sarah Johnson</div>
+                        <div class="user-meta">
+                            <div class="user-username">@sarahjohnson</div>
+                            <div class="user-duration">• 7 days left</div>
+                        </div>
+                    </div>
+                    <button class="btn-unmute">Unmute</button>
+                </div>
+
+                <div class="user-item">
+                    <div class="user-avatar" style="background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);">🍔</div>
+                    <div class="user-info">
+                        <div class="user-name">David Martinez</div>
+                        <div class="user-meta">
+                            <div class="user-username">@davidmartinez</div>
+                            <div class="user-duration">• 3 days left</div>
+                        </div>
+                    </div>
+                    <button class="btn-unmute">Unmute</button>
+                </div>
+
+                <div class="user-item">
+                    <div class="user-avatar" style="background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);">🌮</div>
+                    <div class="user-info">
+                        <div class="user-name">Lisa Anderson</div>
+                        <div class="user-meta">
+                            <div class="user-username">@lisaanderson</div>
+                            <div class="user-duration">• Permanent</div>
+                        </div>
+                    </div>
+                    <button class="btn-unmute">Unmute</button>
+                </div>
+
+                <div class="user-item">
+                    <div class="user-avatar" style="background: linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%);">🍜</div>
+                    <div class="user-info">
+                        <div class="user-name">Tom Wilson</div>
+                        <div class="user-meta">
+                            <div class="user-username">@tomwilson</div>
+                            <div class="user-duration">• 14 days left</div>
+                        </div>
+                    </div>
+                    <button class="btn-unmute">Unmute</button>
+                </div>
+
+                <div class="user-item">
+                    <div class="user-avatar" style="background: linear-gradient(135deg, #cffafe 0%, #a5f3fc 100%);">🍰</div>
+                    <div class="user-info">
+                        <div class="user-name">Rachel Green</div>
+                        <div class="user-meta">
+                            <div class="user-username">@rachelgreen</div>
+                            <div class="user-duration">• 1 day left</div>
+                        </div>
+                    </div>
+                    <button class="btn-unmute">Unmute</button>
+                </div>
+
+                <!-- Uncomment for empty state -->
+                <!--
+                <div class="empty-state">
+                    <div class="empty-icon">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M11 5L6 9H2v6h4l5 4V5z" stroke-linecap="round" stroke-linejoin="round"/>
+                            <line x1="23" y1="9" x2="17" y2="15" stroke-linecap="round" stroke-linejoin="round"/>
+                            <line x1="17" y1="9" x2="23" y2="15" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                    <div class="empty-title">No Muted Accounts</div>
+                    <div class="empty-subtitle">You haven't muted anyone yet. Mute accounts to hide their posts from your feed without unfollowing them.</div>
+                </div>
+                -->
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notifications - BetrFood</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #22C55E;
+            --primary-light: #DCFCE7;
+            --primary-dark: #16A34A;
+            --secondary: #10B981;
+            --background: #F8FAFC;
+            --surface: #FFFFFF;
+            --text-primary: #0F172A;
+            --text-secondary: #64748B;
+            --text-muted: #94A3B8;
+            --border: #E2E8F0;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+
+        .phone-frame {
+            width: 375px;
+            height: 812px;
+            background: var(--surface);
+            border-radius: 50px;
+            box-shadow:
+                0 50px 100px rgba(0,0,0,0.3),
+                0 15px 35px rgba(0,0,0,0.2),
+                inset 0 0 0 2px rgba(255,255,255,0.1);
+            overflow: hidden;
+            position: relative;
+            border: 10px solid #1a1a1a;
+        }
+
+        .screen {
+            width: 100%;
+            height: 100%;
+            background: var(--surface);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .status-bar {
+            height: 48px;
+            padding: 14px 24px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .status-time {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .status-icons {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+
+        .status-icons svg {
+            width: 18px;
+            height: 18px;
+            fill: var(--text-primary);
+        }
+
+        .header {
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .back-button {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--background);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            cursor: pointer;
+        }
+
+        .back-button svg {
+            width: 20px;
+            height: 20px;
+            stroke: var(--text-primary);
+            stroke-width: 2;
+            fill: none;
+        }
+
+        .header-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .mark-read-btn {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--primary);
+            background: none;
+            border: none;
+            cursor: pointer;
+        }
+
+        .tabs {
+            display: flex;
+            padding: 12px 20px;
+            gap: 8px;
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        .tab {
+            padding: 8px 16px;
+            border-radius: 10px;
+            background: transparent;
+            border: none;
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .tab.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .content {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .notification-card {
+            display: flex;
+            gap: 12px;
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .notification-card:hover {
+            background: var(--background);
+        }
+
+        .notification-card.unread {
+            background: rgba(34, 197, 94, 0.03);
+        }
+
+        .notification-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 14px;
+            background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            flex-shrink: 0;
+        }
+
+        .notification-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .notification-text {
+            font-size: 15px;
+            color: var(--text-primary);
+            line-height: 1.4;
+        }
+
+        .notification-text strong {
+            font-weight: 700;
+        }
+
+        .notification-time {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .notification-thumbnail {
+            width: 50px;
+            height: 50px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+            flex-shrink: 0;
+        }
+
+        .mark-all-btn {
+            margin: 20px;
+            height: 48px;
+            background: var(--surface);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-size: 14px;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .mark-all-btn:hover {
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+    </style>
+</head>
+<body>
+    <div class="phone-frame">
+        <div class="screen">
+            <div class="status-bar">
+                <span class="status-time">9:41</span>
+                <div class="status-icons">
+                    <svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+                    <svg viewBox="0 0 24 24"><path d="M1 6l11 7 11-7M1 6l11 7v11M1 6v14l11-7"/></svg>
+                    <svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="10" rx="2"/><path d="M22 10v4"/></svg>
+                </div>
+            </div>
+
+            <div class="header">
+                <div class="header-left">
+                    <button class="back-button">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M19 12H5M12 19l-7-7 7-7" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                    <h1 class="header-title">Notifications</h1>
+                </div>
+                <button class="mark-read-btn">Mark all read</button>
+            </div>
+
+            <div class="tabs">
+                <button class="tab active">All</button>
+                <button class="tab">Likes</button>
+                <button class="tab">Comments</button>
+                <button class="tab">Followers</button>
+            </div>
+
+            <div class="content">
+                <div class="notification-card unread">
+                    <div class="notification-avatar">🍕</div>
+                    <div class="notification-content">
+                        <div class="notification-text">
+                            <strong>Sarah Chen</strong> liked your post
+                        </div>
+                        <div class="notification-time">2 minutes ago</div>
+                    </div>
+                    <div class="notification-thumbnail"></div>
+                </div>
+
+                <div class="notification-card unread">
+                    <div class="notification-avatar">🍜</div>
+                    <div class="notification-content">
+                        <div class="notification-text">
+                            <strong>Marcus Rivera</strong> started following you
+                        </div>
+                        <div class="notification-time">15 minutes ago</div>
+                    </div>
+                </div>
+
+                <div class="notification-card">
+                    <div class="notification-avatar">🥗</div>
+                    <div class="notification-content">
+                        <div class="notification-text">
+                            <strong>Emily Johnson</strong> commented: "This looks amazing!"
+                        </div>
+                        <div class="notification-time">1 hour ago</div>
+                    </div>
+                    <div class="notification-thumbnail"></div>
+                </div>
+
+                <div class="notification-card">
+                    <div class="notification-avatar">🍱</div>
+                    <div class="notification-content">
+                        <div class="notification-text">
+                            <strong>Alex Kim</strong> liked your post
+                        </div>
+                        <div class="notification-time">2 hours ago</div>
+                    </div>
+                    <div class="notification-thumbnail"></div>
+                </div>
+
+                <div class="notification-card">
+                    <div class="notification-avatar">🍔</div>
+                    <div class="notification-content">
+                        <div class="notification-text">
+                            <strong>Jordan Lee</strong> started following you
+                        </div>
+                        <div class="notification-time">3 hours ago</div>
+                    </div>
+                </div>
+
+                <div class="notification-card">
+                    <div class="notification-avatar">🌮</div>
+                    <div class="notification-content">
+                        <div class="notification-text">
+                            <strong>Taylor Swift</strong> commented: "Where is this place?"
+                        </div>
+                        <div class="notification-time">5 hours ago</div>
+                    </div>
+                    <div class="notification-thumbnail"></div>
+                </div>
+
+                <div class="notification-card">
+                    <div class="notification-avatar">🍰</div>
+                    <div class="notification-content">
+                        <div class="notification-text">
+                            <strong>Chris Martin</strong> liked your post
+                        </div>
+                        <div class="notification-time">Yesterday</div>
+                    </div>
+                    <div class="notification-thumbnail"></div>
+                </div>
+
+                <div class="notification-card">
+                    <div class="notification-avatar">🍣</div>
+                    <div class="notification-content">
+                        <div class="notification-text">
+                            <strong>Maya Patel</strong> started following you
+                        </div>
+                        <div class="notification-time">2 days ago</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

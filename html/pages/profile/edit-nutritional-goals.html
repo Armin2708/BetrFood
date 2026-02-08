@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nutritional Goals - BetrFood</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #22C55E;
+            --primary-light: #DCFCE7;
+            --primary-dark: #16A34A;
+            --secondary: #10B981;
+            --background: #F8FAFC;
+            --surface: #FFFFFF;
+            --text-primary: #0F172A;
+            --text-secondary: #64748B;
+            --text-muted: #94A3B8;
+            --border: #E2E8F0;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+
+        .phone-frame {
+            width: 375px;
+            height: 812px;
+            background: var(--surface);
+            border-radius: 50px;
+            box-shadow:
+                0 50px 100px rgba(0,0,0,0.3),
+                0 15px 35px rgba(0,0,0,0.2),
+                inset 0 0 0 2px rgba(255,255,255,0.1);
+            overflow: hidden;
+            position: relative;
+            border: 10px solid #1a1a1a;
+        }
+
+        .screen {
+            width: 100%;
+            height: 100%;
+            background: var(--background);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .status-bar {
+            height: 48px;
+            padding: 14px 24px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .status-time {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .status-icons {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+
+        .status-icons svg {
+            width: 18px;
+            height: 18px;
+            fill: var(--text-primary);
+        }
+
+        .header {
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--surface);
+            flex-shrink: 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .back-button {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--background);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            cursor: pointer;
+        }
+
+        .back-button svg {
+            width: 20px;
+            height: 20px;
+            stroke: var(--text-primary);
+            stroke-width: 2;
+            fill: none;
+        }
+
+        .header-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .description {
+            font-size: 14px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            margin-bottom: 24px;
+            text-align: center;
+        }
+
+        .goals-section {
+            background: var(--surface);
+            border-radius: 18px;
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+
+        .section-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-primary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 20px;
+        }
+
+        .goal-item {
+            margin-bottom: 28px;
+        }
+
+        .goal-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .goal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .goal-label {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .goal-value {
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--primary);
+        }
+
+        .goal-unit {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-left: 4px;
+        }
+
+        .slider-container {
+            position: relative;
+            width: 100%;
+            height: 8px;
+        }
+
+        .slider {
+            width: 100%;
+            height: 8px;
+            border-radius: 10px;
+            background: var(--background);
+            outline: none;
+            appearance: none;
+            cursor: pointer;
+        }
+
+        .slider::-webkit-slider-thumb {
+            appearance: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(34, 197, 94, 0.3);
+        }
+
+        .slider::-moz-range-thumb {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 8px rgba(34, 197, 94, 0.3);
+        }
+
+        .slider::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 8px;
+            border-radius: 10px;
+            background: var(--background);
+        }
+
+        .slider::-moz-range-track {
+            width: 100%;
+            height: 8px;
+            border-radius: 10px;
+            background: var(--background);
+        }
+
+        .goal-range {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 6px;
+        }
+
+        .range-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .macros-section {
+            background: var(--surface);
+            border-radius: 18px;
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+
+        .macro-cards {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .macro-card {
+            background: var(--background);
+            border-radius: 14px;
+            padding: 14px;
+            text-align: center;
+        }
+
+        .macro-icon {
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+
+        .macro-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .macro-value {
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--text-primary);
+        }
+
+        .macro-unit {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        .macro-percentage {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--primary);
+            margin-top: 2px;
+        }
+
+        .progress-bar-container {
+            margin-top: 12px;
+        }
+
+        .progress-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: var(--background);
+            border-radius: 10px;
+            overflow: hidden;
+            display: flex;
+        }
+
+        .progress-segment {
+            height: 100%;
+            transition: width 0.3s;
+        }
+
+        .progress-protein {
+            background: #EF4444;
+        }
+
+        .progress-carbs {
+            background: #F59E0B;
+        }
+
+        .progress-fats {
+            background: #3B82F6;
+        }
+
+        .btn-primary {
+            width: 100%;
+            height: 52px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            border: none;
+            border-radius: 14px;
+            color: white;
+            font-size: 16px;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+            box-shadow: 0 4px 14px rgba(34, 197, 94, 0.35);
+            transition: all 0.2s;
+            margin-top: 24px;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(34, 197, 94, 0.4);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body>
+    <div class="phone-frame">
+        <div class="screen">
+            <div class="status-bar">
+                <span class="status-time">9:41</span>
+                <div class="status-icons">
+                    <svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+                    <svg viewBox="0 0 24 24"><path d="M1 6l11 7 11-7M1 6l11 7v11M1 6v14l11-7"/></svg>
+                    <svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="10" rx="2"/><path d="M22 10v4"/></svg>
+                </div>
+            </div>
+
+            <div class="header">
+                <div class="header-left">
+                    <button class="back-button">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M19 12H5M12 19l-7-7 7-7" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                    <h1 class="header-title">Nutritional Goals</h1>
+                </div>
+            </div>
+
+            <div class="content">
+                <p class="description">Set your daily nutritional targets to track your health goals</p>
+
+                <div class="goals-section">
+                    <div class="section-title">Daily Targets</div>
+
+                    <div class="goal-item">
+                        <div class="goal-header">
+                            <div class="goal-label">Daily Calories</div>
+                            <div>
+                                <span class="goal-value">2000</span>
+                                <span class="goal-unit">kcal</span>
+                            </div>
+                        </div>
+                        <div class="slider-container">
+                            <input type="range" min="1200" max="4000" value="2000" class="slider">
+                        </div>
+                        <div class="goal-range">
+                            <span class="range-label">1200</span>
+                            <span class="range-label">4000</span>
+                        </div>
+                    </div>
+
+                    <div class="goal-item">
+                        <div class="goal-header">
+                            <div class="goal-label">Protein</div>
+                            <div>
+                                <span class="goal-value">150</span>
+                                <span class="goal-unit">g</span>
+                            </div>
+                        </div>
+                        <div class="slider-container">
+                            <input type="range" min="50" max="300" value="150" class="slider">
+                        </div>
+                        <div class="goal-range">
+                            <span class="range-label">50g</span>
+                            <span class="range-label">300g</span>
+                        </div>
+                    </div>
+
+                    <div class="goal-item">
+                        <div class="goal-header">
+                            <div class="goal-label">Carbohydrates</div>
+                            <div>
+                                <span class="goal-value">200</span>
+                                <span class="goal-unit">g</span>
+                            </div>
+                        </div>
+                        <div class="slider-container">
+                            <input type="range" min="50" max="400" value="200" class="slider">
+                        </div>
+                        <div class="goal-range">
+                            <span class="range-label">50g</span>
+                            <span class="range-label">400g</span>
+                        </div>
+                    </div>
+
+                    <div class="goal-item">
+                        <div class="goal-header">
+                            <div class="goal-label">Fats</div>
+                            <div>
+                                <span class="goal-value">70</span>
+                                <span class="goal-unit">g</span>
+                            </div>
+                        </div>
+                        <div class="slider-container">
+                            <input type="range" min="30" max="150" value="70" class="slider">
+                        </div>
+                        <div class="goal-range">
+                            <span class="range-label">30g</span>
+                            <span class="range-label">150g</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="macros-section">
+                    <div class="section-title">Macro Breakdown</div>
+
+                    <div class="macro-cards">
+                        <div class="macro-card">
+                            <div class="macro-icon">🥩</div>
+                            <div class="macro-label">Protein</div>
+                            <div class="macro-value">150<span class="macro-unit">g</span></div>
+                            <div class="macro-percentage">30%</div>
+                        </div>
+
+                        <div class="macro-card">
+                            <div class="macro-icon">🍞</div>
+                            <div class="macro-label">Carbs</div>
+                            <div class="macro-value">200<span class="macro-unit">g</span></div>
+                            <div class="macro-percentage">40%</div>
+                        </div>
+
+                        <div class="macro-card">
+                            <div class="macro-icon">🥑</div>
+                            <div class="macro-label">Fats</div>
+                            <div class="macro-value">70<span class="macro-unit">g</span></div>
+                            <div class="macro-percentage">30%</div>
+                        </div>
+                    </div>
+
+                    <div class="progress-bar-container">
+                        <div class="progress-label">Calorie Distribution</div>
+                        <div class="progress-bar">
+                            <div class="progress-segment progress-protein" style="width: 30%"></div>
+                            <div class="progress-segment progress-carbs" style="width: 40%"></div>
+                            <div class="progress-segment progress-fats" style="width: 30%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="btn-primary">Save Goals</button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

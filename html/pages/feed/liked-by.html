@@ -3,89 +3,366 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BetrFood - Liked By</title>
-    <link rel="stylesheet" href="../../styles.css">
+    <title>Liked By - BetrFood</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #22C55E;
+            --primary-light: #DCFCE7;
+            --primary-dark: #16A34A;
+            --secondary: #10B981;
+            --background: #F8FAFC;
+            --surface: #FFFFFF;
+            --text-primary: #0F172A;
+            --text-secondary: #64748B;
+            --text-muted: #94A3B8;
+            --border: #E2E8F0;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+
+        .phone-frame {
+            width: 375px;
+            height: 812px;
+            background: var(--surface);
+            border-radius: 50px;
+            box-shadow:
+                0 50px 100px rgba(0,0,0,0.3),
+                0 15px 35px rgba(0,0,0,0.2),
+                inset 0 0 0 2px rgba(255,255,255,0.1);
+            overflow: hidden;
+            position: relative;
+            border: 10px solid #1a1a1a;
+        }
+
+        .screen {
+            width: 100%;
+            height: 100%;
+            background: var(--surface);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .status-bar {
+            height: 48px;
+            padding: 14px 24px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .status-time {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .status-icons {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+
+        .status-icons svg {
+            width: 18px;
+            height: 18px;
+            fill: var(--text-primary);
+        }
+
+        .header {
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .back-button {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--background);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            cursor: pointer;
+        }
+
+        .back-button svg {
+            width: 20px;
+            height: 20px;
+            stroke: var(--text-primary);
+            stroke-width: 2;
+            fill: none;
+        }
+
+        .header-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            background: var(--background);
+        }
+
+        .likes-count {
+            padding: 16px 20px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .user-list {
+            background: var(--surface);
+        }
+
+        .user-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 20px;
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .user-item:hover {
+            background: var(--background);
+        }
+
+        .avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: 700;
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .avatar.gradient-1 {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            color: var(--text-primary);
+        }
+
+        .avatar.gradient-2 {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .avatar.gradient-3 {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        .avatar.gradient-4 {
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        }
+
+        .avatar.gradient-5 {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        }
+
+        .avatar.gradient-6 {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .user-info {
+            flex: 1;
+        }
+
+        .user-name {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 2px;
+        }
+
+        .user-handle {
+            font-size: 13px;
+            font-weight: 400;
+            color: var(--text-muted);
+        }
+
+        .follow-button {
+            padding: 8px 20px;
+            border-radius: 10px;
+            border: none;
+            font-size: 14px;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .follow-button.primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .follow-button.primary:hover {
+            background: var(--primary-dark);
+        }
+
+        .follow-button.secondary {
+            background: var(--background);
+            color: var(--text-primary);
+            border: 2px solid var(--border);
+        }
+
+        .follow-button.secondary:hover {
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+    </style>
 </head>
 <body>
     <div class="phone-frame">
         <div class="screen">
-
-    <div class="header">
-        <button class="icon-button" onclick="window.history.back()">←</button>
-        <div class="header-title" style="flex: 1; text-align: center;">Community</div>
-        <button class="icon-button">🔍</button>
-    </div>
-
-    <div class="post-header" style="border-bottom: 1px solid var(--border-color);">
-        <div class="avatar">T</div>
-        <div class="post-user-info">
-            <div class="post-username">tinychef3</div>
-        </div>
-    </div>
-
-    <div style="padding: 16px; border-bottom: 8px solid var(--surface);">
-        <div style="text-align: center; padding: 40px 0;">
-            <div style="font-size: 80px; margin-bottom: 16px;">📷</div>
-            <div style="font-size: 20px; font-weight: 600; margin-bottom: 8px;">Photos/Video</div>
-        </div>
-    </div>
-
-    <div style="padding: 16px; background: var(--surface); border-bottom: 1px solid var(--border-color);">
-        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
-            <span style="font-size: 20px;">❤️</span>
-            <span style="font-weight: 600;">Liked By</span>
-        </div>
-    </div>
-
-    <div class="user-list">
-        <div class="user-item">
-            <div class="avatar">A</div>
-            <div class="user-info">
-                <div class="user-username">Username</div>
+            <div class="status-bar">
+                <span class="status-time">9:41</span>
+                <div class="status-icons">
+                    <svg viewBox="0 0 24 24"><path d="M12.01 21.49L23.64 7c-.45-.34-4.93-4-11.64-4C5.28 3 .81 6.66.36 7l11.63 14.49.01.01.01-.01z"/></svg>
+                    <svg viewBox="0 0 24 24"><path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33c.74 0 1.34-.6 1.34-1.33V5.33C17 4.6 16.4 4 15.67 4z"/></svg>
+                </div>
             </div>
-        </div>
 
-        <div class="user-item">
-            <div class="avatar" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">B</div>
-            <div class="user-info">
-                <div class="user-username">Username</div>
+            <div class="header">
+                <div class="header-left">
+                    <button class="back-button">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M19 12H5M12 19l-7-7 7-7" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                    <span class="header-title">Liked By</span>
+                </div>
             </div>
-        </div>
 
-        <div class="user-item">
-            <div class="avatar" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">C</div>
-            <div class="user-info">
-                <div class="user-username">Username</div>
+            <div class="content">
+                <div class="likes-count">142 likes</div>
+
+                <div class="user-list">
+                    <div class="user-item">
+                        <div class="avatar gradient-1">👩</div>
+                        <div class="user-info">
+                            <div class="user-name">Sarah Johnson</div>
+                            <div class="user-handle">@sarahcooks</div>
+                        </div>
+                        <button class="follow-button primary">Follow</button>
+                    </div>
+
+                    <div class="user-item">
+                        <div class="avatar gradient-2">🧑</div>
+                        <div class="user-info">
+                            <div class="user-name">David Lee</div>
+                            <div class="user-handle">@davidfoodie</div>
+                        </div>
+                        <button class="follow-button secondary">Following</button>
+                    </div>
+
+                    <div class="user-item">
+                        <div class="avatar gradient-3">👨</div>
+                        <div class="user-info">
+                            <div class="user-name">Mike Chen</div>
+                            <div class="user-handle">@chefmike</div>
+                        </div>
+                        <button class="follow-button primary">Follow</button>
+                    </div>
+
+                    <div class="user-item">
+                        <div class="avatar gradient-4">👵</div>
+                        <div class="user-info">
+                            <div class="user-name">Linda Martinez</div>
+                            <div class="user-handle">@lindaskitchen</div>
+                        </div>
+                        <button class="follow-button primary">Follow</button>
+                    </div>
+
+                    <div class="user-item">
+                        <div class="avatar gradient-5">🧔</div>
+                        <div class="user-info">
+                            <div class="user-name">James Wilson</div>
+                            <div class="user-handle">@jamesbakes</div>
+                        </div>
+                        <button class="follow-button secondary">Following</button>
+                    </div>
+
+                    <div class="user-item">
+                        <div class="avatar gradient-6">👱‍♀️</div>
+                        <div class="user-info">
+                            <div class="user-name">Emma Thompson</div>
+                            <div class="user-handle">@emmaeats</div>
+                        </div>
+                        <button class="follow-button primary">Follow</button>
+                    </div>
+
+                    <div class="user-item">
+                        <div class="avatar gradient-1">👨‍🍳</div>
+                        <div class="user-info">
+                            <div class="user-name">Alex Rivera</div>
+                            <div class="user-handle">@alexchef</div>
+                        </div>
+                        <button class="follow-button primary">Follow</button>
+                    </div>
+
+                    <div class="user-item">
+                        <div class="avatar gradient-2">👩‍🍳</div>
+                        <div class="user-info">
+                            <div class="user-name">Maria Garcia</div>
+                            <div class="user-handle">@mariascooking</div>
+                        </div>
+                        <button class="follow-button secondary">Following</button>
+                    </div>
+
+                    <div class="user-item">
+                        <div class="avatar gradient-3">🧑‍🍳</div>
+                        <div class="user-info">
+                            <div class="user-name">Chris Park</div>
+                            <div class="user-handle">@chrisculinary</div>
+                        </div>
+                        <button class="follow-button primary">Follow</button>
+                    </div>
+
+                    <div class="user-item">
+                        <div class="avatar gradient-4">👨</div>
+                        <div class="user-info">
+                            <div class="user-name">Tom Anderson</div>
+                            <div class="user-handle">@tomsfood</div>
+                        </div>
+                        <button class="follow-button primary">Follow</button>
+                    </div>
+                </div>
             </div>
-        </div>
-
-        <div class="user-item">
-            <div class="avatar" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">D</div>
-            <div class="user-info">
-                <div class="user-username">Username</div>
-            </div>
-        </div>
-
-        <div class="user-item">
-            <div class="avatar" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">E</div>
-            <div class="user-info">
-                <div class="user-username">Username</div>
-            </div>
-        </div>
-    </div>
-
-    <div class="bottom-nav">
-        <a href="index.html" class="nav-item">
-            <span class="nav-icon">🏠</span>
-        </a>
-        <a href="search.html" class="nav-item">
-            <span class="nav-icon">📋</span>
-        </a>
-        <a href="profile.html" class="nav-item">
-            <span class="nav-icon">👤</span>
-        </a>
-    </div>
-
         </div>
     </div>
 </body>

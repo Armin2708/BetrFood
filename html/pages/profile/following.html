@@ -3,72 +3,360 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BetrFood - Following</title>
-    <link rel="stylesheet" href="../../styles.css">
+    <title>Following - BetrFood</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #22C55E;
+            --primary-light: #DCFCE7;
+            --primary-dark: #16A34A;
+            --secondary: #10B981;
+            --background: #F8FAFC;
+            --surface: #FFFFFF;
+            --text-primary: #0F172A;
+            --text-secondary: #64748B;
+            --text-muted: #94A3B8;
+            --border: #E2E8F0;
+            --danger: #EF4444;
+            --warning: #F59E0B;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+
+        .phone-frame {
+            width: 375px;
+            height: 812px;
+            background: var(--surface);
+            border-radius: 50px;
+            box-shadow:
+                0 50px 100px rgba(0,0,0,0.3),
+                0 15px 35px rgba(0,0,0,0.2),
+                inset 0 0 0 2px rgba(255,255,255,0.1);
+            overflow: hidden;
+            position: relative;
+            border: 10px solid #1a1a1a;
+        }
+
+        .screen {
+            width: 100%;
+            height: 100%;
+            background: var(--background);
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Status Bar */
+        .status-bar {
+            height: 48px;
+            padding: 14px 24px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .status-time {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .status-icons {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+
+        .status-icons svg {
+            width: 18px;
+            height: 18px;
+            fill: var(--text-primary);
+        }
+
+        /* Header */
+        .header {
+            padding: 16px 20px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        .header-tabs {
+            display: flex;
+            gap: 24px;
+            align-items: center;
+        }
+
+        .header-tab {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-muted);
+            padding-bottom: 8px;
+            cursor: pointer;
+            transition: color 0.2s;
+            position: relative;
+        }
+
+        .header-tab.active {
+            color: var(--text-primary);
+        }
+
+        .header-tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--primary);
+            border-radius: 2px;
+        }
+
+        /* Feed Content */
+        .feed-content {
+            flex: 1;
+            overflow-y: auto;
+            background: var(--background);
+        }
+
+        /* Post Card */
+        .post-card {
+            background: var(--surface);
+            margin-bottom: 12px;
+        }
+
+        .post-header {
+            padding: 14px 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .post-avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .post-user-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .post-username {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .post-time {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .post-menu-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            border: none;
+            background: transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: var(--text-muted);
+            font-size: 18px;
+        }
+
+        .post-image {
+            width: 100%;
+            aspect-ratio: 1;
+            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+            object-fit: cover;
+        }
+
+        .post-actions {
+            padding: 12px 16px;
+            display: flex;
+            gap: 16px;
+        }
+
+        .action-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 24px;
+        }
+
+        .post-info {
+            padding: 0 16px 16px;
+        }
+
+        .post-likes {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 6px;
+            cursor: pointer;
+        }
+
+        .post-caption {
+            font-size: 13px;
+            color: var(--text-primary);
+            line-height: 1.4;
+        }
+
+        .post-caption .username {
+            font-weight: 700;
+            margin-right: 6px;
+        }
+
+        /* Navigation Bar */
+        .nav-bar {
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-around;
+            align-items: flex-start;
+            padding: 8px 8px 20px;
+            flex-shrink: 0;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            padding: 8px 12px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .nav-item.active {
+            background: var(--primary-light);
+        }
+
+        .nav-item svg {
+            width: 24px;
+            height: 24px;
+            stroke: var(--text-muted);
+            fill: none;
+            stroke-width: 2;
+        }
+
+        .nav-item.active svg {
+            stroke: var(--primary);
+        }
+    </style>
 </head>
 <body>
     <div class="phone-frame">
         <div class="screen">
-
-    <div class="header">
-        <div class="header-tabs">
-            <div class="header-tab" onclick="window.location.href='index.html'">Community</div>
-            <div class="header-tab active">Following</div>
-        </div>
-        <button class="icon-button">🔍</button>
-    </div>
-
-    <div class="post-detail">
-        <div class="post-header">
-            <div class="avatar">T</div>
-            <div class="post-user-info">
-                <div class="post-username">tinychef3</div>
+            <!-- Status Bar -->
+            <div class="status-bar">
+                <span class="status-time">9:41</span>
+                <div class="status-icons">
+                    <svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+                    <svg viewBox="0 0 24 24"><path d="M1 6l11 7 11-7M1 6l11 7v11M1 6v14l11-7"/></svg>
+                    <svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="10" rx="2"/><path d="M22 10v4"/></svg>
+                </div>
             </div>
-            <button class="icon-button">⋯</button>
-        </div>
 
-        <div style="position: relative;">
-            <img src="https://images.unsplash.com/photo-1591814468924-caf88d1232e1?w=800&h=800&fit=crop"
-                 alt="Pho Recipe"
-                 class="post-image">
-        </div>
-
-        <div class="post-actions">
-            <button class="action-button">
-                <span>❤️</span>
-            </button>
-            <button class="action-button" onclick="window.location.href='comments.html'">
-                <span>💬</span>
-            </button>
-            <button class="action-button" onclick="window.location.href='share.html'">
-                <span>📤</span>
-            </button>
-        </div>
-
-        <div class="post-info">
-            <div class="post-likes" onclick="window.location.href='liked-by.html'" style="cursor: pointer;">
-                Liked by <strong>joe_le-tigre</strong> and others
+            <!-- Header -->
+            <div class="header">
+                <div class="header-tabs">
+                    <div class="header-tab">Feed</div>
+                    <div class="header-tab active">Following</div>
+                </div>
             </div>
-            <div class="post-caption">
-                <span class="username">tinychef3</span>
-                <strong>Pho Recipe</strong><br>
-                Here's a new delicious Pho recipe for everyone!
+
+            <!-- Feed Content -->
+            <div class="feed-content">
+                <div class="post-card">
+                    <div class="post-header">
+                        <div class="post-avatar">T</div>
+                        <div class="post-user-info">
+                            <div class="post-username">tinychef3</div>
+                            <div class="post-time">2h ago</div>
+                        </div>
+                        <button class="post-menu-btn">⋯</button>
+                    </div>
+
+                    <img src="https://images.unsplash.com/photo-1591814468924-caf88d1232e1?w=800&h=800&fit=crop" alt="Pho Recipe" class="post-image">
+
+                    <div class="post-actions">
+                        <button class="action-btn">❤️</button>
+                        <button class="action-btn">💬</button>
+                        <button class="action-btn">📤</button>
+                    </div>
+
+                    <div class="post-info">
+                        <div class="post-likes">Liked by joe_le-tigre and others</div>
+                        <div class="post-caption">
+                            <span class="username">tinychef3</span>
+                            <strong>Pho Recipe</strong><br>
+                            Here's a new delicious Pho recipe for everyone!
+                        </div>
+                    </div>
+                </div>
             </div>
-        </div>
-    </div>
 
-    <div class="bottom-nav">
-        <a href="index.html" class="nav-item active">
-            <span class="nav-icon">🏠</span>
-        </a>
-        <a href="search.html" class="nav-item">
-            <span class="nav-icon">📋</span>
-        </a>
-        <a href="profile.html" class="nav-item">
-            <span class="nav-icon">👤</span>
-        </a>
-    </div>
-
+            <!-- Bottom Navigation -->
+            <div class="nav-bar">
+                <div class="nav-item active">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                        <polyline points="9 22 9 12 15 12 15 22"/>
+                    </svg>
+                </div>
+                <div class="nav-item">
+                    <svg viewBox="0 0 24 24">
+                        <circle cx="11" cy="11" r="8"/>
+                        <path d="m21 21-4.35-4.35"/>
+                    </svg>
+                </div>
+                <div class="nav-item">
+                    <svg viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="5"/>
+                        <path d="M12 1v6m0 6v6m5.66-13.66l-4.24 4.24m-2.82 2.82l-4.24 4.24m16.24-2.82l-4.24-4.24m-2.82-2.82L1.34 1.34"/>
+                    </svg>
+                </div>
+                <div class="nav-item">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                    </svg>
+                </div>
+                <div class="nav-item">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                        <circle cx="12" cy="7" r="4"/>
+                    </svg>
+                </div>
+            </div>
         </div>
     </div>
 </body>

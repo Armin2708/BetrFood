@@ -191,7 +191,7 @@ font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
 - `html/pages/profile/following.html`
 - `html/pages/profile/health-info.html`
 - `html/pages/profile/settings.html`
-- `html/pages/feed/index.html`
+- `html/pages/feed/feed.html`
 - `html/pages/feed/comments.html`
 - `html/pages/feed/liked-by.html`
 - `html/pages/feed/share.html`
@@ -250,7 +250,7 @@ font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
 
 **Recommendation**: Make changes, then visually test:
 - `html/pages/profile/profile.html`
-- `html/pages/feed/index.html`
+- `html/pages/feed/feed.html`
 - Any other frequently used pages
 
 ---

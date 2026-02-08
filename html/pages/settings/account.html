@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account Settings - BetrFood</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #22C55E;
+            --primary-light: #DCFCE7;
+            --primary-dark: #16A34A;
+            --secondary: #10B981;
+            --background: #F8FAFC;
+            --surface: #FFFFFF;
+            --text-primary: #0F172A;
+            --text-secondary: #64748B;
+            --text-muted: #94A3B8;
+            --border: #E2E8F0;
+            --danger: #EF4444;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+
+        .phone-frame {
+            width: 375px;
+            height: 812px;
+            background: var(--surface);
+            border-radius: 50px;
+            box-shadow:
+                0 50px 100px rgba(0,0,0,0.3),
+                0 15px 35px rgba(0,0,0,0.2),
+                inset 0 0 0 2px rgba(255,255,255,0.1);
+            overflow: hidden;
+            position: relative;
+            border: 10px solid #1a1a1a;
+        }
+
+        .screen {
+            width: 100%;
+            height: 100%;
+            background: var(--background);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .status-bar {
+            height: 48px;
+            padding: 14px 24px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .status-time {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .status-icons {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+
+        .status-icons svg {
+            width: 18px;
+            height: 18px;
+            fill: var(--text-primary);
+        }
+
+        .header {
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        .back-button {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--background);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            cursor: pointer;
+        }
+
+        .back-button svg {
+            width: 20px;
+            height: 20px;
+            stroke: var(--text-primary);
+            stroke-width: 2;
+            fill: none;
+        }
+
+        .header-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .section {
+            background: var(--surface);
+            border-radius: 18px;
+            overflow: hidden;
+            margin-bottom: 14px;
+        }
+
+        .settings-item {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .settings-item:last-child {
+            border-bottom: none;
+        }
+
+        .settings-item:hover {
+            background: var(--background);
+        }
+
+        .settings-item-left {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .settings-item-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .settings-item-subtitle {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .settings-item-right svg {
+            width: 20px;
+            height: 20px;
+            stroke: var(--text-muted);
+            stroke-width: 2;
+            fill: none;
+        }
+
+        .settings-item.danger .settings-item-title {
+            color: var(--danger);
+        }
+
+        .connected-accounts {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .account-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            border-radius: 12px;
+            background: var(--background);
+        }
+
+        .account-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .account-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        .account-icon.google {
+            background: #FEE2E2;
+        }
+
+        .account-icon.apple {
+            background: #F1F5F9;
+        }
+
+        .account-icon.facebook {
+            background: #E0E7FF;
+        }
+
+        .account-name {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .btn-connect {
+            height: 32px;
+            padding: 0 16px;
+            border-radius: 10px;
+            border: 2px solid var(--primary);
+            background: transparent;
+            color: var(--primary);
+            font-size: 12px;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-connect.connected {
+            background: var(--primary);
+            color: white;
+        }
+
+        .section-header {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="phone-frame">
+        <div class="screen">
+            <div class="status-bar">
+                <span class="status-time">9:41</span>
+                <div class="status-icons">
+                    <svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+                    <svg viewBox="0 0 24 24"><path d="M1 6l11 7 11-7M1 6l11 7v11M1 6v14l11-7"/></svg>
+                    <svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="10" rx="2"/><path d="M22 10v4"/></svg>
+                </div>
+            </div>
+
+            <div class="header">
+                <button class="back-button">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M19 12H5M12 19l-7-7 7-7" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+                <h1 class="header-title">Account Settings</h1>
+            </div>
+
+            <div class="content">
+                <div class="section">
+                    <div class="settings-item">
+                        <div class="settings-item-left">
+                            <div class="settings-item-title">Email Address</div>
+                            <div class="settings-item-subtitle">your.email@example.com</div>
+                        </div>
+                        <div class="settings-item-right">
+                            <svg viewBox="0 0 24 24">
+                                <polyline points="9 18 15 12 9 6" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+                    </div>
+
+                    <div class="settings-item">
+                        <div class="settings-item-left">
+                            <div class="settings-item-title">Phone Number</div>
+                            <div class="settings-item-subtitle">+1 (555) 123-4567</div>
+                        </div>
+                        <div class="settings-item-right">
+                            <svg viewBox="0 0 24 24">
+                                <polyline points="9 18 15 12 9 6" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+                    </div>
+
+                    <div class="settings-item">
+                        <div class="settings-item-left">
+                            <div class="settings-item-title">Change Password</div>
+                        </div>
+                        <div class="settings-item-right">
+                            <svg viewBox="0 0 24 24">
+                                <polyline points="9 18 15 12 9 6" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section-header">Connected Accounts</div>
+
+                <div class="section">
+                    <div class="settings-item">
+                        <div class="connected-accounts" style="width: 100%;">
+                            <div class="account-item">
+                                <div class="account-left">
+                                    <div class="account-icon google">🔴</div>
+                                    <div class="account-name">Google</div>
+                                </div>
+                                <button class="btn-connect connected">Connected</button>
+                            </div>
+
+                            <div class="account-item">
+                                <div class="account-left">
+                                    <div class="account-icon apple">🍎</div>
+                                    <div class="account-name">Apple</div>
+                                </div>
+                                <button class="btn-connect">Connect</button>
+                            </div>
+
+                            <div class="account-item">
+                                <div class="account-left">
+                                    <div class="account-icon facebook">📘</div>
+                                    <div class="account-name">Facebook</div>
+                                </div>
+                                <button class="btn-connect">Connect</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="settings-item">
+                        <div class="settings-item-left">
+                            <div class="settings-item-title">Download Your Data</div>
+                            <div class="settings-item-subtitle">Get a copy of your data</div>
+                        </div>
+                        <div class="settings-item-right">
+                            <svg viewBox="0 0 24 24">
+                                <polyline points="9 18 15 12 9 6" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+                    </div>
+
+                    <div class="settings-item danger">
+                        <div class="settings-item-left">
+                            <div class="settings-item-title">Delete Account</div>
+                            <div class="settings-item-subtitle">Permanently delete your account</div>
+                        </div>
+                        <div class="settings-item-right">
+                            <svg viewBox="0 0 24 24">
+                                <polyline points="9 18 15 12 9 6" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

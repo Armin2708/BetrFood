@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About - BetrFood</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #22C55E;
+            --primary-light: #DCFCE7;
+            --primary-dark: #16A34A;
+            --secondary: #10B981;
+            --background: #F8FAFC;
+            --surface: #FFFFFF;
+            --text-primary: #0F172A;
+            --text-secondary: #64748B;
+            --text-muted: #94A3B8;
+            --border: #E2E8F0;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+
+        .phone-frame {
+            width: 375px;
+            height: 812px;
+            background: var(--surface);
+            border-radius: 50px;
+            box-shadow:
+                0 50px 100px rgba(0,0,0,0.3),
+                0 15px 35px rgba(0,0,0,0.2),
+                inset 0 0 0 2px rgba(255,255,255,0.1);
+            overflow: hidden;
+            position: relative;
+            border: 10px solid #1a1a1a;
+        }
+
+        .screen {
+            width: 100%;
+            height: 100%;
+            background: var(--background);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .status-bar {
+            height: 48px;
+            padding: 14px 24px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .status-time {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .status-icons {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+
+        .status-icons svg {
+            width: 18px;
+            height: 18px;
+            fill: var(--text-primary);
+        }
+
+        .header {
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        .back-button {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--background);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            cursor: pointer;
+        }
+
+        .back-button svg {
+            width: 20px;
+            height: 20px;
+            stroke: var(--text-primary);
+            stroke-width: 2;
+            fill: none;
+        }
+
+        .header-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .app-logo {
+            text-align: center;
+            padding: 32px 0 24px;
+        }
+
+        .logo-container {
+            width: 88px;
+            height: 88px;
+            margin: 0 auto 16px;
+            border-radius: 24px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            box-shadow: 0 8px 24px rgba(34, 197, 94, 0.35);
+        }
+
+        .app-name {
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .app-tagline {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .section {
+            background: var(--surface);
+            border-radius: 18px;
+            overflow: hidden;
+            margin-bottom: 14px;
+        }
+
+        .info-item {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .info-item:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .info-value {
+            font-size: 15px;
+            color: var(--text-secondary);
+        }
+
+        .link-item {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .link-item:last-child {
+            border-bottom: none;
+        }
+
+        .link-item:hover {
+            background: var(--background);
+        }
+
+        .link-label {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .link-arrow svg {
+            width: 20px;
+            height: 20px;
+            stroke: var(--text-muted);
+            stroke-width: 2;
+            fill: none;
+        }
+
+        .section-header {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+        }
+
+        .credits-text {
+            padding: 16px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            text-align: center;
+        }
+
+        .credits-text strong {
+            color: var(--text-primary);
+            font-weight: 700;
+        }
+
+        .copyright {
+            text-align: center;
+            font-size: 12px;
+            color: var(--text-muted);
+            padding: 20px;
+        }
+
+        .social-links {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            padding: 16px;
+        }
+
+        .social-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: var(--background);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .social-icon:hover {
+            background: var(--primary-light);
+            transform: scale(1.1);
+        }
+
+        .social-icon svg {
+            width: 20px;
+            height: 20px;
+            fill: var(--text-primary);
+        }
+    </style>
+</head>
+<body>
+    <div class="phone-frame">
+        <div class="screen">
+            <div class="status-bar">
+                <span class="status-time">9:41</span>
+                <div class="status-icons">
+                    <svg viewBox="0 0 24 24"><path d="M12.01 21.49L23.64 7c-.45-.34-4.93-4-11.64-4C5.28 3 .81 6.66.36 7l11.63 14.49.01.01.01-.01z"/></svg>
+                    <svg viewBox="0 0 24 24"><path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33c.74 0 1.34-.6 1.34-1.33V5.33C17 4.6 16.4 4 15.67 4z"/></svg>
+                </div>
+            </div>
+
+            <div class="header">
+                <button class="back-button">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M19 12H5M12 19l-7-7 7-7" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+                <h1 class="header-title">About</h1>
+            </div>
+
+            <div class="content">
+                <div class="app-logo">
+                    <div class="logo-container">🥗</div>
+                    <div class="app-name">BetrFood</div>
+                    <div class="app-tagline">Discover. Share. Eat Better.</div>
+                </div>
+
+                <div class="section-header">App Information</div>
+                <div class="section">
+                    <div class="info-item">
+                        <div class="info-label">Version</div>
+                        <div class="info-value">2.4.1</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Build Number</div>
+                        <div class="info-value">2024.02.08.1</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Release Date</div>
+                        <div class="info-value">February 8, 2024</div>
+                    </div>
+                </div>
+
+                <div class="section-header">Legal</div>
+                <div class="section">
+                    <div class="link-item">
+                        <div class="link-label">Terms of Service</div>
+                        <div class="link-arrow">
+                            <svg viewBox="0 0 24 24">
+                                <polyline points="9 18 15 12 9 6" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="link-item">
+                        <div class="link-label">Privacy Policy</div>
+                        <div class="link-arrow">
+                            <svg viewBox="0 0 24 24">
+                                <polyline points="9 18 15 12 9 6" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="link-item">
+                        <div class="link-label">Community Guidelines</div>
+                        <div class="link-arrow">
+                            <svg viewBox="0 0 24 24">
+                                <polyline points="9 18 15 12 9 6" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="link-item">
+                        <div class="link-label">Cookie Policy</div>
+                        <div class="link-arrow">
+                            <svg viewBox="0 0 24 24">
+                                <polyline points="9 18 15 12 9 6" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section-header">Resources</div>
+                <div class="section">
+                    <div class="link-item">
+                        <div class="link-label">Open Source Licenses</div>
+                        <div class="link-arrow">
+                            <svg viewBox="0 0 24 24">
+                                <polyline points="9 18 15 12 9 6" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="link-item">
+                        <div class="link-label">Acknowledgments</div>
+                        <div class="link-arrow">
+                            <svg viewBox="0 0 24 24">
+                                <polyline points="9 18 15 12 9 6" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section-header">Follow Us</div>
+                <div class="section">
+                    <div class="social-links">
+                        <div class="social-icon">
+                            <svg viewBox="0 0 24 24"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+                        </div>
+                        <div class="social-icon">
+                            <svg viewBox="0 0 24 24"><path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"/></svg>
+                        </div>
+                        <div class="social-icon">
+                            <svg viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+                        </div>
+                        <div class="social-icon">
+                            <svg viewBox="0 0 24 24"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="credits-text">
+                        <strong>BetrFood</strong> is made with love by a team passionate about food and technology. Our mission is to help people discover amazing recipes, connect with fellow food lovers, and make healthier eating choices.
+                        <br><br>
+                        Special thanks to our amazing community of chefs, home cooks, and food enthusiasts who make this app extraordinary.
+                    </div>
+                </div>
+
+                <div class="copyright">
+                    © 2024 BetrFood, Inc. All rights reserved.
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

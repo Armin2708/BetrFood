@@ -36,7 +36,7 @@ cd html
 python3 -m http.server 8000
 
 # Open in browser
-open http://localhost:8000/pages/feed/index.html
+open http://localhost:8000/pages/feed/feed.html
 ```
 
 ### B. Using Node.js Live Server
@@ -60,7 +60,7 @@ live-server
 
 ### D. Using WebStorm's Built-in Server
 Since you're using WebStorm:
-1. Right-click any HTML file (e.g., `html/pages/feed/index.html`)
+1. Right-click any HTML file (e.g., `html/pages/feed/feed.html`)
 2. Select **"Open in Browser"** or press `Ctrl+Shift+X` (Windows/Linux) or `Cmd+Shift+X` (Mac)
 3. WebStorm will automatically start its built-in server
 
@@ -253,7 +253,7 @@ To better simulate the mobile app experience:
 3. Check `html/demos/upload-camera-pantry-screens.html` - Content creation flow
 
 ### For Detailed Exploration
-1. **Feed Experience**: `html/pages/feed/index.html`
+1. **Feed Experience**: `html/pages/feed/feed.html`
 2. **Social Features**: `html/pages/feed/comments.html`, `html/pages/profile/user-profile.html`
 3. **Content Creation**: `html/pages/content/camera.html`, `html/pages/content/upload.html`
 4. **AI Features**: `html/pages/ai/chat-active.html`, `html/pages/ai/scanner.html`
@@ -289,7 +289,7 @@ html/
 │   └── upload-camera-pantry-screens.html
 │
 └── pages/                          # ⚠️  Need styles.css or live server
-    ├── feed/index.html             # Home feed
+    ├── feed/feed.html             # Home feed
     ├── profile/user-profile.html   # User profile
     ├── ai/chat-active.html         # AI chat
     └── ...
