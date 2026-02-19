@@ -1,4 +1,4 @@
-name: Create BetrFood Epics & Project Board
+name: Create BetrFood Project Board
 
 on:
   push:
@@ -14,112 +14,111 @@ permissions:
   contents: read
 
 jobs:
-  create-epics:
+  create-project:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Create epic label
+      - name: Create Project Board & Add Epic Issues
         uses: actions/github-script@v7
         with:
           script: |
-            try {
-              await github.rest.issues.createLabel({
+            // Step 1: Get all epic-labeled issues
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: 'epic',
+              state: 'open',
+              per_page: 20
+            });
+            console.log(`Found ${issues.data.length} epic issues`);
+
+            if (issues.data.length === 0) {
+              console.log('No epic issues found. Skipping project creation.');
+              return;
+            }
+
+            // Step 2: Check if project already exists
+            const existingProjects = await github.rest.projects.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo
+            });
+
+            let project;
+            const existing = existingProjects.data.find(p => p.name === 'BetrFood Development');
+
+            if (existing) {
+              console.log(`Project already exists: ${existing.name} (ID: ${existing.id})`);
+              project = existing;
+            } else {
+              // Create a new classic project board
+              const created = await github.rest.projects.createForRepo({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                name: 'epic',
-                color: '6f42c1',
-                description: 'Epic-level feature tracking issue'
+                name: 'BetrFood Development',
+                body: 'Main development board for BetrFood iOS app — tracking all epics and features across 6 core areas: Content, Users, Pantry, AI Chat, Discovery, and Settings.'
               });
-              console.log('Created epic label');
-            } catch (e) {
-              if (e.status === 422) {
-                console.log('Label already exists');
+              project = created.data;
+              console.log(`Created project: ${project.name} (ID: ${project.id})`);
+            }
+
+            // Step 3: Create columns (if they don't exist)
+            const existingColumns = await github.rest.projects.listColumns({
+              project_id: project.id
+            });
+            const existingColNames = existingColumns.data.map(c => c.name);
+
+            const columnNames = ['Backlog', 'In Progress', 'Review', 'Done'];
+            const columnIds = {};
+
+            // Map existing columns
+            for (const col of existingColumns.data) {
+              columnIds[col.name] = col.id;
+            }
+
+            // Create missing columns
+            for (const colName of columnNames) {
+              if (!existingColNames.includes(colName)) {
+                const col = await github.rest.projects.createColumn({
+                  project_id: project.id,
+                  name: colName
+                });
+                columnIds[colName] = col.data.id;
+                console.log(`Created column: ${colName}`);
               } else {
-                throw e;
+                console.log(`Column already exists: ${colName}`);
               }
             }
 
-      - name: Create Epic Issues
-        id: create-issues
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const fs = require('fs');
-            const epics = [
-              { file: 'epics/01-content-system.md', title: 'Epic 1: Content System (Instagram-Style Feed & Interactions)' },
-              { file: 'epics/02-user-management.md', title: 'Epic 2: User Management System (Roles & Registration)' },
-              { file: 'epics/03-pantry.md', title: 'Epic 3: Pantry (Photo-Based Inventory Management)' },
-              { file: 'epics/04-ai-chat.md', title: 'Epic 4: AI Chat (OpenRouter-Powered Food Assistant)' },
-              { file: 'epics/05-content-suggestion.md', title: 'Epic 5: Content Suggestion & Discovery (Search + For You)' },
-              { file: 'epics/06-app-management.md', title: 'Epic 6: App Management & Settings' }
-            ];
+            // Step 4: Add epic issues to Backlog column
+            const backlogId = columnIds['Backlog'];
 
-            const issueNumbers = [];
-
-            for (const epic of epics) {
-              const body = fs.readFileSync(epic.file, 'utf8');
-              const issue = await github.rest.issues.create({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                title: epic.title,
-                body: body,
-                labels: ['epic']
-              });
-              console.log(`Created issue #${issue.data.number}: ${epic.title}`);
-              issueNumbers.push(issue.data.number);
-            }
-
-            core.setOutput('issue_numbers', issueNumbers.join(','));
-            return issueNumbers;
-
-      - name: Create Project Board & Add Issues
-        uses: actions/github-script@v7
-        env:
-          ISSUE_NUMBERS: ${{ steps.create-issues.outputs.issue_numbers }}
-        with:
-          script: |
-            const issueNumbers = process.env.ISSUE_NUMBERS.split(',').map(Number);
-
-            // Create a classic project board
-            const project = await github.rest.projects.createForRepo({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              name: 'BetrFood Development',
-              body: 'Main development board for BetrFood iOS app — tracking all epics and features.'
+            // Get existing cards to avoid duplicates
+            const existingCards = await github.rest.projects.listCards({
+              column_id: backlogId,
+              per_page: 100
             });
-            console.log(`Created project: ${project.data.name} (ID: ${project.data.id})`);
+            const existingContentIds = existingCards.data
+              .filter(c => c.content_url)
+              .map(c => c.content_url);
 
-            // Create columns
-            const columns = ['Backlog', 'In Progress', 'Review', 'Done'];
-            const columnIds = {};
+            for (const issue of issues.data) {
+              const issueApiUrl = issue.url;
+              if (existingContentIds.includes(issueApiUrl)) {
+                console.log(`Issue #${issue.number} already in Backlog, skipping`);
+                continue;
+              }
 
-            for (const colName of columns) {
-              const col = await github.rest.projects.createColumn({
-                project_id: project.data.id,
-                name: colName
-              });
-              columnIds[colName] = col.data.id;
-              console.log(`Created column: ${colName} (ID: ${col.data.id})`);
-            }
-
-            // Add all epic issues to Backlog column
-            for (const issueNum of issueNumbers) {
-              const issue = await github.rest.issues.get({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: issueNum
-              });
-
-              await github.rest.projects.createCard({
-                column_id: columnIds['Backlog'],
-                content_id: issue.data.id,
-                content_type: 'Issue'
-              });
-              console.log(`Added issue #${issueNum} to Backlog`);
+              try {
+                await github.rest.projects.createCard({
+                  column_id: backlogId,
+                  content_id: issue.id,
+                  content_type: 'Issue'
+                });
+                console.log(`Added issue #${issue.number} to Backlog: ${issue.title}`);
+              } catch (e) {
+                console.log(`Failed to add issue #${issue.number}: ${e.message}`);
+              }
             }
 
             console.log('\n=== Setup Complete ===');
-            console.log(`Project URL: ${project.data.html_url}`);
-            console.log(`Issues created: ${issueNumbers.join(', ')}`);
+            console.log(`Project URL: ${project.html_url}`);
+            console.log(`Epic issues: ${issues.data.map(i => '#' + i.number).join(', ')}`);
