@@ -1,6 +1,11 @@
 name: Create BetrFood Epics & Project Board
 
 on:
+  push:
+    branches:
+      - claude/create-app-epics-ZcWv6
+    paths:
+      - '.github/workflows/create-epics.yml'
   workflow_dispatch:
 
 permissions:
