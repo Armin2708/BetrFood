@@ -30,95 +30,94 @@ jobs:
               per_page: 20
             });
             console.log(`Found ${issues.data.length} epic issues`);
+            issues.data.forEach(i => console.log(`  #${i.number}: ${i.title}`));
 
             if (issues.data.length === 0) {
-              console.log('No epic issues found. Skipping project creation.');
+              console.log('No epic issues found. Skipping.');
               return;
             }
 
-            // Step 2: Check if project already exists
-            const existingProjects = await github.rest.projects.listForRepo({
-              owner: context.repo.owner,
-              repo: context.repo.repo
-            });
-
+            // Step 2: Create classic project board
             let project;
-            const existing = existingProjects.data.find(p => p.name === 'BetrFood Development');
-
-            if (existing) {
-              console.log(`Project already exists: ${existing.name} (ID: ${existing.id})`);
-              project = existing;
-            } else {
-              // Create a new classic project board
-              const created = await github.rest.projects.createForRepo({
+            try {
+              // Check if project exists
+              const existing = await github.rest.projects.listForRepo({
                 owner: context.repo.owner,
-                repo: context.repo.repo,
-                name: 'BetrFood Development',
-                body: 'Main development board for BetrFood iOS app — tracking all epics and features across 6 core areas: Content, Users, Pantry, AI Chat, Discovery, and Settings.'
+                repo: context.repo.repo
               });
-              project = created.data;
-              console.log(`Created project: ${project.name} (ID: ${project.id})`);
+              project = existing.data.find(p => p.name === 'BetrFood Development');
+
+              if (project) {
+                console.log(`Project already exists: ${project.name} (ID: ${project.id})`);
+              }
+            } catch (e) {
+              console.log(`Warning listing projects: ${e.status} ${e.message}`);
             }
 
-            // Step 3: Create columns (if they don't exist)
-            const existingColumns = await github.rest.projects.listColumns({
-              project_id: project.id
-            });
-            const existingColNames = existingColumns.data.map(c => c.name);
+            if (!project) {
+              try {
+                const created = await github.rest.projects.createForRepo({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  name: 'BetrFood Development',
+                  body: 'Main development board for BetrFood iOS app'
+                });
+                project = created.data;
+                console.log(`Created project: ${project.name} (ID: ${project.id})`);
+              } catch (e) {
+                core.error(`Failed to create project: HTTP ${e.status} - ${e.message}`);
+                core.setFailed(`Cannot create project: ${e.message}. You may need to enable Projects in repo Settings > Features > Projects.`);
+                return;
+              }
+            }
 
+            // Step 3: Create columns
             const columnNames = ['Backlog', 'In Progress', 'Review', 'Done'];
             const columnIds = {};
 
-            // Map existing columns
-            for (const col of existingColumns.data) {
-              columnIds[col.name] = col.id;
+            try {
+              const existingCols = await github.rest.projects.listColumns({ project_id: project.id });
+              existingCols.data.forEach(c => { columnIds[c.name] = c.id; });
+            } catch (e) {
+              console.log(`Warning listing columns: ${e.message}`);
             }
 
-            // Create missing columns
-            for (const colName of columnNames) {
-              if (!existingColNames.includes(colName)) {
-                const col = await github.rest.projects.createColumn({
-                  project_id: project.id,
-                  name: colName
-                });
-                columnIds[colName] = col.data.id;
-                console.log(`Created column: ${colName}`);
+            for (const name of columnNames) {
+              if (!columnIds[name]) {
+                try {
+                  const col = await github.rest.projects.createColumn({ project_id: project.id, name });
+                  columnIds[name] = col.data.id;
+                  console.log(`Created column: ${name}`);
+                } catch (e) {
+                  console.log(`Warning creating column ${name}: ${e.message}`);
+                }
               } else {
-                console.log(`Column already exists: ${colName}`);
+                console.log(`Column exists: ${name}`);
               }
             }
 
-            // Step 4: Add epic issues to Backlog column
+            // Step 4: Add issues to Backlog
             const backlogId = columnIds['Backlog'];
-
-            // Get existing cards to avoid duplicates
-            const existingCards = await github.rest.projects.listCards({
-              column_id: backlogId,
-              per_page: 100
-            });
-            const existingContentIds = existingCards.data
-              .filter(c => c.content_url)
-              .map(c => c.content_url);
+            if (!backlogId) {
+              core.setFailed('Backlog column not found');
+              return;
+            }
 
             for (const issue of issues.data) {
-              const issueApiUrl = issue.url;
-              if (existingContentIds.includes(issueApiUrl)) {
-                console.log(`Issue #${issue.number} already in Backlog, skipping`);
-                continue;
-              }
-
               try {
                 await github.rest.projects.createCard({
                   column_id: backlogId,
                   content_id: issue.id,
                   content_type: 'Issue'
                 });
-                console.log(`Added issue #${issue.number} to Backlog: ${issue.title}`);
+                console.log(`Added #${issue.number} to Backlog`);
               } catch (e) {
-                console.log(`Failed to add issue #${issue.number}: ${e.message}`);
+                if (e.status === 422) {
+                  console.log(`#${issue.number} already in project`);
+                } else {
+                  console.log(`Warning adding #${issue.number}: ${e.status} ${e.message}`);
+                }
               }
             }
 
-            console.log('\n=== Setup Complete ===');
-            console.log(`Project URL: ${project.html_url}`);
-            console.log(`Epic issues: ${issues.data.map(i => '#' + i.number).join(', ')}`);
+            console.log(`\nDone! Project: ${project.html_url}`);
