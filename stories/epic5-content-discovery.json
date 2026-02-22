@@ -1,0 +1,296 @@
+[
+  {
+    "title": "Search Posts by Keywords",
+    "epic": 13,
+    "epicName": "Epic 5: Content Suggestion & Discovery",
+    "role": "user",
+    "want": "Search for posts by keywords (e.g., \"chicken pasta\", \"vegan dessert\") to find specific recipes",
+    "benefit": "I can quickly find recipes that match what I'm craving or planning to cook",
+    "priority": "High",
+    "effort": "Medium",
+    "criteria": [
+      "User can enter keywords in a search bar and receive relevant post results",
+      "Results are ranked by relevance to the search query",
+      "Search returns results within 2 seconds for typical queries",
+      "Search matches against post titles, descriptions, ingredients, and tags"
+    ],
+    "subtasks": [
+      "Implement full-text search indexing on posts (title, description, ingredients, tags)",
+      "Build search API endpoint with pagination and relevance scoring",
+      "Create search results UI with post preview cards",
+      "Add analytics tracking for search queries and result clicks"
+    ],
+    "labels": ["epic-5", "search"]
+  },
+  {
+    "title": "Search Users by Name",
+    "epic": 13,
+    "epicName": "Epic 5: Content Suggestion & Discovery",
+    "role": "user",
+    "want": "Search for users by username or display name",
+    "benefit": "I can find and follow specific creators whose content I enjoy",
+    "priority": "High",
+    "effort": "Low",
+    "criteria": [
+      "User can search for other users by typing a username or display name",
+      "Results show user avatar, username, display name, and follower count",
+      "Partial matches and case-insensitive matching are supported",
+      "Tapping a user result navigates to their profile"
+    ],
+    "subtasks": [
+      "Build user search API endpoint with prefix and fuzzy matching",
+      "Create user result card component with avatar and metadata",
+      "Integrate user search tab into the search UI",
+      "Index username and display name fields for efficient lookup"
+    ],
+    "labels": ["epic-5", "search"]
+  },
+  {
+    "title": "Search Result Filters",
+    "epic": 13,
+    "epicName": "Epic 5: Content Suggestion & Discovery",
+    "role": "user",
+    "want": "Apply filters to search results: dietary tags, cuisine type, meal type, cooking time, difficulty",
+    "benefit": "I can narrow down results to find exactly the type of recipe I need",
+    "priority": "High",
+    "effort": "Medium",
+    "criteria": [
+      "Filter options are available for dietary tags, cuisine type, meal type, cooking time, and difficulty",
+      "Multiple filters can be applied simultaneously",
+      "Active filters are clearly displayed and individually removable",
+      "Filtered results update in real time as filters are toggled"
+    ],
+    "subtasks": [
+      "Design and implement filter UI panel with collapsible sections",
+      "Extend search API to accept filter parameters and apply them to queries",
+      "Persist selected filters during the search session",
+      "Display active filter chips with remove capability above results"
+    ],
+    "labels": ["epic-5", "search"]
+  },
+  {
+    "title": "Search Autocomplete Suggestions",
+    "epic": 13,
+    "epicName": "Epic 5: Content Suggestion & Discovery",
+    "role": "user",
+    "want": "See search suggestions and autocomplete as I type",
+    "benefit": "I can find what I'm looking for faster without typing the full query",
+    "priority": "High",
+    "effort": "Medium",
+    "criteria": [
+      "Suggestions appear in a dropdown as the user types at least 2 characters",
+      "Suggestions include popular searches, matching tags, and matching recipe titles",
+      "Tapping a suggestion immediately executes that search",
+      "Suggestions update within 300ms of keystroke input"
+    ],
+    "subtasks": [
+      "Build autocomplete API endpoint with debounced query support",
+      "Maintain a popular/trending search terms index for suggestion ranking",
+      "Create autocomplete dropdown UI component with keyboard and tap navigation",
+      "Implement client-side debouncing to limit API calls while typing"
+    ],
+    "labels": ["epic-5", "search"]
+  },
+  {
+    "title": "Recent Searches",
+    "epic": 13,
+    "epicName": "Epic 5: Content Suggestion & Discovery",
+    "role": "user",
+    "want": "See recent searches for quick re-access",
+    "benefit": "I can quickly repeat previous searches without retyping them",
+    "priority": "High",
+    "effort": "Low",
+    "criteria": [
+      "Recent searches are displayed when the user taps the search bar before typing",
+      "Up to 10 most recent searches are shown in reverse chronological order",
+      "Tapping a recent search re-executes that query"
+    ],
+    "subtasks": [
+      "Store recent search queries locally on the device",
+      "Display recent searches list in the search bar focus state",
+      "Implement tap-to-search on recent search items"
+    ],
+    "labels": ["epic-5", "search"]
+  },
+  {
+    "title": "Clear Search History",
+    "epic": 13,
+    "epicName": "Epic 5: Content Suggestion & Discovery",
+    "role": "user",
+    "want": "Clear my search history",
+    "benefit": "I can maintain my privacy and keep the search experience clean",
+    "priority": "High",
+    "effort": "Low",
+    "criteria": [
+      "A 'Clear All' button is visible on the recent searches list",
+      "Individual recent searches can be swiped or tapped to delete",
+      "Clearing history removes all stored search queries immediately",
+      "A confirmation prompt is shown before clearing all history"
+    ],
+    "subtasks": [
+      "Add clear-all button to recent searches UI with confirmation dialog",
+      "Implement swipe-to-delete on individual recent search items",
+      "Clear local storage of search history on confirmation"
+    ],
+    "labels": ["epic-5", "search"]
+  },
+  {
+    "title": "For You Personalized Feed",
+    "epic": 13,
+    "epicName": "Epic 5: Content Suggestion & Discovery",
+    "role": "user",
+    "want": "See a 'For You' feed of posts matching my interests, dietary preferences, and interaction patterns",
+    "benefit": "I can discover new recipes tailored to my taste without actively searching",
+    "priority": "High",
+    "effort": "High",
+    "criteria": [
+      "A dedicated 'For You' tab or feed is accessible from the main navigation",
+      "Posts shown are personalized based on user dietary preferences, liked/saved content, and followed creators",
+      "The feed refreshes with new recommendations on pull-to-refresh",
+      "Feed loads with infinite scroll pagination"
+    ],
+    "subtasks": [
+      "Design and implement the recommendation engine using collaborative and content-based filtering",
+      "Build the For You feed API endpoint with personalized ranking",
+      "Create the For You feed UI with post cards and infinite scroll",
+      "Integrate user preference and interaction data as inputs to the recommendation model"
+    ],
+    "labels": ["epic-5", "discovery", "recommendations"]
+  },
+  {
+    "title": "Improving Recommendations Over Time",
+    "epic": 13,
+    "epicName": "Epic 5: Content Suggestion & Discovery",
+    "role": "user",
+    "want": "Recommendations that improve over time as I interact with more content",
+    "benefit": "The app becomes more useful and relevant the more I use it",
+    "priority": "High",
+    "effort": "High",
+    "criteria": [
+      "The recommendation engine incorporates likes, saves, comments, and time-spent signals",
+      "Recommendations noticeably shift toward preferred content types after sustained interaction",
+      "Users can provide explicit feedback (e.g., 'Not interested') to refine recommendations",
+      "Recommendation model retrains or updates on a regular cadence"
+    ],
+    "subtasks": [
+      "Implement interaction event tracking pipeline (likes, saves, views, dwell time)",
+      "Build feedback loop to update user preference vectors based on interaction history",
+      "Add 'Not interested' action on recommended posts to capture negative signals",
+      "Schedule periodic model retraining or real-time preference vector updates"
+    ],
+    "labels": ["epic-5", "discovery", "recommendations"]
+  },
+  {
+    "title": "Cold Start Recommendations",
+    "epic": 13,
+    "epicName": "Epic 5: Content Suggestion & Discovery",
+    "role": "user",
+    "want": "Reasonable recommendations even before I have much interaction history, using my onboarding preferences",
+    "benefit": "I get a good experience from day one instead of seeing irrelevant content",
+    "priority": "High",
+    "effort": "High",
+    "criteria": [
+      "New users see relevant recommendations based on dietary preferences and interests selected during onboarding",
+      "Cold start recommendations blend popular/trending content with preference-matched content",
+      "The transition from cold start to fully personalized recommendations is seamless"
+    ],
+    "subtasks": [
+      "Map onboarding preference selections to initial user preference vectors",
+      "Build cold start recommendation strategy blending popular content with preference-matched content",
+      "Implement gradual transition logic from cold start to interaction-based recommendations",
+      "Create fallback recommendation set for users with no onboarding data"
+    ],
+    "labels": ["epic-5", "discovery", "recommendations"]
+  },
+  {
+    "title": "Explore Page with Curated Sections",
+    "epic": 13,
+    "epicName": "Epic 5: Content Suggestion & Discovery",
+    "role": "user",
+    "want": "Browse an Explore page with curated sections: Trending Now, Popular This Week, Based on Preferences, New from Creators You Follow, and Categories",
+    "benefit": "I can discover diverse content through multiple entry points organized by relevance and freshness",
+    "priority": "Medium",
+    "effort": "Medium",
+    "criteria": [
+      "Explore page displays distinct horizontal-scrollable sections for each curated category",
+      "Each section shows a minimum of 5 posts with a 'See All' option",
+      "Sections load progressively so the page feels responsive",
+      "The 'Based on Preferences' section reflects the user's dietary and cuisine preferences"
+    ],
+    "subtasks": [
+      "Build Explore page API aggregating data for each curated section",
+      "Create Explore page UI with horizontally scrollable section carousels",
+      "Implement section-specific data queries (trending, popular, preference-based, followed creators, categories)",
+      "Add 'See All' navigation from each section to a full list view"
+    ],
+    "labels": ["epic-5", "discovery"]
+  },
+  {
+    "title": "Category Browsing with Sort Options",
+    "epic": 13,
+    "epicName": "Epic 5: Content Suggestion & Discovery",
+    "role": "user",
+    "want": "Tap into a category and see all matching posts with sort options (most popular, newest, most saved)",
+    "benefit": "I can explore a specific category in depth and find the best content within it",
+    "priority": "Medium",
+    "effort": "Medium",
+    "criteria": [
+      "Tapping a category navigates to a dedicated page showing all posts in that category",
+      "Sort options for most popular, newest, and most saved are available and functional",
+      "The selected sort order persists during the browsing session",
+      "Results support infinite scroll pagination"
+    ],
+    "subtasks": [
+      "Build category detail API endpoint with sort and pagination parameters",
+      "Create category detail page UI with sort toggle and post grid",
+      "Implement sorting logic for popularity, recency, and save count",
+      "Add category header with name, description, and post count"
+    ],
+    "labels": ["epic-5", "discovery"]
+  },
+  {
+    "title": "Trending Food Hashtags",
+    "epic": 13,
+    "epicName": "Epic 5: Content Suggestion & Discovery",
+    "role": "user",
+    "want": "See trending hashtags related to food",
+    "benefit": "I can stay up to date with what the food community is excited about right now",
+    "priority": "Medium",
+    "effort": "Medium",
+    "criteria": [
+      "A trending hashtags section is visible on the Explore or Search page",
+      "Hashtags are ranked by recent usage frequency and engagement",
+      "Each hashtag displays the tag name and the number of associated posts",
+      "Trending hashtags refresh periodically to reflect current activity"
+    ],
+    "subtasks": [
+      "Build trending hashtags computation job based on recent post tagging frequency and engagement",
+      "Create trending hashtags API endpoint with caching",
+      "Design and implement trending hashtags UI component (chip list or ranked list)",
+      "Schedule periodic refresh of trending hashtag rankings"
+    ],
+    "labels": ["epic-5", "trending"]
+  },
+  {
+    "title": "Hashtag Post Listing",
+    "epic": 13,
+    "epicName": "Epic 5: Content Suggestion & Discovery",
+    "role": "user",
+    "want": "Tap a hashtag and see all posts with that tag",
+    "benefit": "I can explore all content around a specific topic or trend",
+    "priority": "Medium",
+    "effort": "Low",
+    "criteria": [
+      "Tapping a hashtag navigates to a page showing all posts tagged with it",
+      "The hashtag page displays the tag name, total post count, and a grid or list of posts",
+      "Posts are sorted by most recent by default with option to sort by popularity",
+      "Results support infinite scroll pagination"
+    ],
+    "subtasks": [
+      "Build hashtag detail API endpoint with post listing, sort, and pagination",
+      "Create hashtag detail page UI with header and post grid",
+      "Implement navigation from trending hashtags and in-post hashtag taps to the hashtag detail page"
+    ],
+    "labels": ["epic-5", "trending"]
+  }
+]

@@ -1,0 +1,782 @@
+[
+  {
+    "title": "Access Settings Screen",
+    "epic": 14,
+    "epicName": "Epic 6: App Management & Settings",
+    "role": "user",
+    "want": "access a Settings screen from my profile or a dedicated tab",
+    "benefit": "I can manage all my app preferences in one centralized place",
+    "priority": "High",
+    "effort": "Medium",
+    "criteria": [
+      "Settings screen is accessible from the profile screen via a gear icon",
+      "Settings screen is accessible from a dedicated tab or navigation item",
+      "Settings screen loads within 1 second",
+      "Back navigation returns to the previous screen"
+    ],
+    "subtasks": [
+      "Create SettingsScreen component with navigation routing",
+      "Add settings gear icon button to profile screen header",
+      "Implement navigation stack for settings flow",
+      "Add settings entry point to tab bar or profile menu"
+    ],
+    "labels": ["epic-6", "settings"]
+  },
+  {
+    "title": "Organized Settings Sections",
+    "epic": 14,
+    "epicName": "Epic 6: App Management & Settings",
+    "role": "user",
+    "want": "the Settings screen organized into clear sections: Account, Preferences, Notifications, Privacy, Appearance, Help & Support, About",
+    "benefit": "I can quickly find and navigate to the specific setting I want to change",
+    "priority": "High",
+    "effort": "Medium",
+    "criteria": [
+      "Settings screen displays all seven sections with clear headings",
+      "Each section is visually separated with headers and dividers",
+      "Tapping a section navigates to its dedicated sub-screen",
+      "Sections are displayed in a logical, consistent order"
+    ],
+    "subtasks": [
+      "Design and implement sectioned list layout for settings",
+      "Create navigation routes for each settings sub-screen",
+      "Add section icons and labels for visual clarity",
+      "Implement scrollable list with section headers"
+    ],
+    "labels": ["epic-6", "settings"]
+  },
+  {
+    "title": "Change Email Address",
+    "epic": 14,
+    "epicName": "Epic 6: App Management & Settings",
+    "role": "user",
+    "want": "change my email address from account settings",
+    "benefit": "I can keep my account associated with my current email for login and communications",
+    "priority": "High",
+    "effort": "Medium",
+    "criteria": [
+      "User can enter a new email address in the account settings",
+      "A verification email is sent to the new address before the change takes effect",
+      "User must confirm current password before changing email",
+      "Old email receives a notification about the change for security"
+    ],
+    "subtasks": [
+      "Create change email form UI with validation",
+      "Implement backend API endpoint for email change requests",
+      "Build email verification flow for new email address",
+      "Send security notification to old email address"
+    ],
+    "labels": ["epic-6", "settings", "account"]
+  },
+  {
+    "title": "Change Password",
+    "epic": 14,
+    "epicName": "Epic 6: App Management & Settings",
+    "role": "user",
+    "want": "change my password from account settings",
+    "benefit": "I can maintain the security of my account by updating my credentials regularly",
+    "priority": "High",
+    "effort": "Medium",
+    "criteria": [
+      "User must enter current password before setting a new one",
+      "New password must meet minimum strength requirements",
+      "Confirmation field ensures new password is entered correctly",
+      "User receives a confirmation email after password change"
+    ],
+    "subtasks": [
+      "Create change password form with current/new/confirm fields",
+      "Implement password strength validation and visual indicator",
+      "Build backend API endpoint for password update",
+      "Send password change confirmation email"
+    ],
+    "labels": ["epic-6", "settings", "account"]
+  },
+  {
+    "title": "Manage Linked Accounts",
+    "epic": 14,
+    "epicName": "Epic 6: App Management & Settings",
+    "role": "user",
+    "want": "manage my linked accounts such as Apple and Google",
+    "benefit": "I can control which third-party accounts are connected for sign-in convenience",
+    "priority": "High",
+    "effort": "Medium",
+    "criteria": [
+      "User can see which accounts (Apple, Google) are currently linked",
+      "User can link a new third-party account from settings",
+      "User can unlink a third-party account if another login method exists",
+      "Unlinking requires confirmation to prevent accidental lockout"
+    ],
+    "subtasks": [
+      "Create linked accounts management UI showing connection status",
+      "Implement OAuth linking flow for Apple and Google",
+      "Build backend endpoints for linking and unlinking accounts",
+      "Add safety check preventing unlinking if it is the only login method"
+    ],
+    "labels": ["epic-6", "settings", "account"]
+  },
+  {
+    "title": "Deactivate or Delete Account",
+    "epic": 14,
+    "epicName": "Epic 6: App Management & Settings",
+    "role": "user",
+    "want": "deactivate or permanently delete my account with a confirmation flow",
+    "benefit": "I have full control over my account lifecycle and can leave the platform if I choose",
+    "priority": "High",
+    "effort": "High",
+    "criteria": [
+      "User can choose between temporary deactivation and permanent deletion",
+      "A multi-step confirmation flow prevents accidental deletion",
+      "User must enter password and confirm intent before account deletion",
+      "Account deletion includes a grace period before data is permanently removed"
+    ],
+    "subtasks": [
+      "Create account deactivation/deletion UI with clear explanations",
+      "Implement multi-step confirmation dialog with password verification",
+      "Build backend logic for soft-delete with grace period and hard-delete scheduler",
+      "Handle cascading data cleanup for posts, comments, and relationships"
+    ],
+    "labels": ["epic-6", "settings", "account"]
+  },
+  {
+    "title": "Export Personal Data",
+    "epic": 14,
+    "epicName": "Epic 6: App Management & Settings",
+    "role": "user",
+    "want": "export my data including posts, recipes, and profile info as a downloadable file",
+    "benefit": "I can retain a copy of my data for personal use, ensuring GDPR compliance",
+    "priority": "High",
+    "effort": "High",
+    "criteria": [
+      "User can request a data export from account settings",
+      "Export includes posts, recipes, profile info, and associated media",
+      "User receives a download link via email when the export is ready",
+      "Export is generated in a standard format such as JSON or ZIP"
+    ],
+    "subtasks": [
+      "Create data export request UI with progress indicator",
+      "Build backend job to aggregate and package user data",
+      "Implement secure download link generation with expiration",
+      "Send email notification when export file is ready for download"
+    ],
+    "labels": ["epic-6", "settings", "account"]
+  },
+  {
+    "title": "Toggle Push Notifications Globally",
+    "epic": 14,
+    "epicName": "Epic 6: App Management & Settings",
+    "role": "user",
+    "want": "enable or disable push notifications globally",
+    "benefit": "I can quickly silence all notifications without changing individual settings",
+    "priority": "High",
+    "effort": "Low",
+    "criteria": [
+      "A single toggle enables or disables all push notifications",
+      "When disabled, no push notifications are sent regardless of individual settings",
+      "Individual notification settings are preserved when global toggle is off",
+      "Toggle state persists across app sessions"
+    ],
+    "subtasks": [
+      "Create global notification toggle UI component",
+      "Implement backend flag to suppress all notifications for user",
+      "Sync toggle state with device notification permissions",
+      "Persist setting in user preferences storage"
+    ],
+    "labels": ["epic-6", "settings", "notifications"]
+  },
+  {
+    "title": "Granular Notification Controls",
+    "epic": 14,
+    "epicName": "Epic 6: App Management & Settings",
+    "role": "user",
+    "want": "have granular control over notification types including new followers, likes, comments, comment replies, pantry expiration, AI chat suggestions, and weekly digest",
+    "benefit": "I only receive notifications that are relevant and important to me",
+    "priority": "High",
+    "effort": "Medium",
+    "criteria": [
+      "Individual toggles exist for each notification type: new follower, likes, comments, comment replies, pantry expiration, AI chat suggestions, weekly digest",
+      "Each toggle can be independently enabled or disabled",
+      "Changes take effect immediately without requiring app restart",
+      "Default notification preferences are set during onboarding or first use"
+    ],
+    "subtasks": [
+      "Create notification preferences UI with individual toggles for each type",
+      "Build backend notification preference model with per-type flags",
+      "Integrate preference checks into each notification dispatch pipeline",
+      "Set sensible default notification preferences for new users"
+    ],
+    "labels": ["epic-6", "settings", "notifications"]
+  },
+  {
+    "title": "Set Quiet Hours for Notifications",
+    "epic": 14,
+    "epicName": "Epic 6: App Management & Settings",
+    "role": "user",
+    "want": "set quiet hours during which push notifications are suppressed",
+    "benefit": "I am not disturbed during sleep or focus time while still receiving notifications later",
+    "priority": "High",
+    "effort": "Medium",
+    "criteria": [
+      "User can set a start and end time for quiet hours",
+      "Push notifications are held and delivered after quiet hours end",
+      "Quiet hours respect the user's local timezone",
+      "User can enable or disable quiet hours with a toggle"
+    ],
+    "subtasks": [
+      "Create quiet hours time picker UI with start and end fields",
+      "Implement backend scheduling logic to hold notifications during quiet window",
+      "Handle timezone detection and conversion for quiet hours",
+      "Build toggle to enable/disable quiet hours independently of time settings"
+    ],
+    "labels": ["epic-6", "settings", "notifications"]
+  },
+  {
+    "title": "Set Profile Public or Private",
+    "epic": 14,
+    "epicName": "Epic 6: App Management & Settings",
+    "role": "user",
+    "want": "set my profile to public or private",
+    "benefit": "I can control who can view my profile content and follow me",
+    "priority": "Medium",
+    "effort": "Medium",
+    "criteria": [
+      "User can toggle profile between public and private modes",
+      "Private profiles require follow approval before content is visible",
+      "Switching from public to private does not remove existing followers",
+      "Profile visibility status is clearly indicated in settings"
+    ],
+    "subtasks": [
+      "Create public/private profile toggle in privacy settings",
+      "Implement follow request approval flow for private profiles",
+      "Update backend API to enforce visibility rules based on profile status",
+      "Display profile visibility badge on user profile screen"
+    ],
+    "labels": ["epic-6", "settings", "privacy"]
+  },
+  {
+    "title": "Control Dietary Preferences Visibility",
+    "epic": 14,
+    "epicName": "Epic 6: App Management & Settings",
+    "role": "user",
+    "want": "control who can see my dietary preferences with options for everyone, followers only, or nobody",
+    "benefit": "I can share my dietary information only with the audience I am comfortable with",
+    "priority": "Medium",
+    "effort": "Low",
+    "criteria": [
+      "User can select from three visibility options: everyone, followers only, nobody",
+      "Dietary preferences are hidden from users outside the selected audience",
+      "Default visibility is set during onboarding or defaults to followers only",
+      "Changes take effect immediately on the user's profile"
+    ],
+    "subtasks": [
+      "Create visibility selector UI with three options",
+      "Implement backend visibility filtering for dietary preferences endpoint",
+      "Update profile API to respect dietary preferences visibility setting",
+      "Set default dietary visibility for new users"
+    ],
+    "labels": ["epic-6", "settings", "privacy"]
+  },
+  {
+    "title": "Control Pantry Visibility",
+    "epic": 14,
+    "epicName": "Epic 6: App Management & Settings",
+    "role": "user",
+    "want": "control who can see my pantry, with 'nobody/only me' as the default",
+    "benefit": "my pantry contents remain private unless I explicitly choose to share them",
+    "priority": "Medium",
+    "effort": "Low",
+    "criteria": [
+      "Pantry visibility defaults to 'only me' for all users",
+      "User can change pantry visibility to followers only or everyone",
+      "Pantry data is not exposed via API to unauthorized viewers",
+      "Visibility setting is clearly displayed in privacy settings"
+    ],
+    "subtasks": [
+      "Create pantry visibility selector in privacy settings",
+      "Set default pantry visibility to 'only me' in user model",
+      "Implement backend access control for pantry data based on visibility",
+      "Update pantry API responses to respect visibility settings"
+    ],
+    "labels": ["epic-6", "settings", "privacy"]
+  },
+  {
+    "title": "Manage Blocked Users",
+    "epic": 14,
+    "epicName": "Epic 6: App Management & Settings",
+    "role": "user",
+    "want": "view my list of blocked users and unblock them from settings",
+    "benefit": "I can review and manage my block list to restore interactions if desired",
+    "priority": "Medium",
+    "effort": "Medium",
+    "criteria": [
+      "User can view a list of all blocked users with profile info",
+      "Each blocked user has an unblock button",
+      "Unblocking requires confirmation to prevent accidental action",
+      "List updates immediately after unblocking a user"
+    ],
+    "subtasks": [
+      "Create blocked users list screen with paginated loading",
+      "Implement unblock action with confirmation dialog",
+      "Build backend API endpoint to fetch blocked users and process unblock",
+      "Update UI state immediately upon successful unblock"
+    ],
+    "labels": ["epic-6", "settings", "privacy"]
+  },
+  {
+    "title": "Manage Muted Users",
+    "epic": 14,
+    "epicName": "Epic 6: App Management & Settings",
+    "role": "user",
+    "want": "view my list of muted users and unmute them from settings",
+    "benefit": "I can review and manage my mute list to restore content visibility if desired",
+    "priority": "Medium",
+    "effort": "Medium",
+    "criteria": [
+      "User can view a list of all muted users with profile info",
+      "Each muted user has an unmute button",
+      "Unmuting requires confirmation to prevent accidental action",
+      "List updates immediately after unmuting a user"
+    ],
+    "subtasks": [
+      "Create muted users list screen with paginated loading",
+      "Implement unmute action with confirmation dialog",
+      "Build backend API endpoint to fetch muted users and process unmute",
+      "Update UI state and feed immediately upon successful unmute"
+    ],
+    "labels": ["epic-6", "settings", "privacy"]
+  },
+  {
+    "title": "Control Search Result Visibility",
+    "epic": 14,
+    "epicName": "Epic 6: App Management & Settings",
+    "role": "user",
+    "want": "control whether my profile appears in search results",
+    "benefit": "I can maintain a low profile and prevent others from discovering my account through search",
+    "priority": "Medium",
+    "effort": "Low",
+    "criteria": [
+      "User can toggle profile visibility in search results on or off",
+      "When disabled, profile does not appear in user search queries",
+      "Setting defaults to visible for new accounts",
+      "Change takes effect immediately across the platform"
+    ],
+    "subtasks": [
+      "Create search visibility toggle in privacy settings",
+      "Implement backend search index exclusion based on user preference",
+      "Update search API to filter out users who opted out of search visibility",
+      "Persist search visibility preference in user settings"
+    ],
+    "labels": ["epic-6", "settings", "privacy"]
+  },
+  {
+    "title": "Switch Appearance Theme",
+    "epic": 14,
+    "epicName": "Epic 6: App Management & Settings",
+    "role": "user",
+    "want": "switch between Light Mode, Dark Mode, and System Default for the app appearance",
+    "benefit": "I can use the app comfortably in any lighting condition according to my preference",
+    "priority": "Medium",
+    "effort": "Medium",
+    "criteria": [
+      "User can select Light Mode, Dark Mode, or System Default",
+      "Theme changes apply immediately without requiring app restart",
+      "System Default follows the device OS theme setting",
+      "Selected theme persists across app sessions"
+    ],
+    "subtasks": [
+      "Create theme selector UI with three options in appearance settings",
+      "Implement theme provider with light and dark color schemes",
+      "Add system theme detection and listener for real-time OS theme changes",
+      "Persist theme preference in local storage"
+    ],
+    "labels": ["epic-6", "settings", "appearance"]
+  },
+  {
+    "title": "Adjust Text Size",
+    "epic": 14,
+    "epicName": "Epic 6: App Management & Settings",
+    "role": "user",
+    "want": "adjust the text size within the app for accessibility",
+    "benefit": "I can read content comfortably regardless of my visual needs",
+    "priority": "Medium",
+    "effort": "Medium",
+    "criteria": [
+      "User can select from multiple text size options (small, default, large, extra large)",
+      "Text size changes apply across all screens in the app",
+      "A preview of the selected text size is shown before confirming",
+      "Text size preference persists across app sessions"
+    ],
+    "subtasks": [
+      "Create text size adjustment UI with slider or preset options",
+      "Implement dynamic font scaling system across all app components",
+      "Add live preview of text size changes in settings screen",
+      "Persist text size preference in local storage"
+    ],
+    "labels": ["epic-6", "settings", "appearance"]
+  },
+  {
+    "title": "Choose Feed Layout Preference",
+    "epic": 14,
+    "epicName": "Epic 6: App Management & Settings",
+    "role": "user",
+    "want": "choose my feed layout preference between grid view and list view on my profile",
+    "benefit": "I can browse content in the visual format I find most convenient",
+    "priority": "Medium",
+    "effort": "Low",
+    "criteria": [
+      "User can select between grid view and list view for profile feed",
+      "Layout preference applies immediately to the profile screen",
+      "Grid view shows thumbnails in a multi-column layout",
+      "List view shows posts with larger previews and more detail"
+    ],
+    "subtasks": [
+      "Create layout preference toggle in appearance settings",
+      "Implement grid view layout component for profile feed",
+      "Implement list view layout component for profile feed",
+      "Persist layout preference and apply on profile screen load"
+    ],
+    "labels": ["epic-6", "settings", "appearance"]
+  },
+  {
+    "title": "Update Dietary Preferences from Settings",
+    "epic": 14,
+    "epicName": "Epic 6: App Management & Settings",
+    "role": "user",
+    "want": "update my dietary preferences from the Settings screen using the same UI as onboarding",
+    "benefit": "I can modify my dietary profile as my needs change without confusion",
+    "priority": "High",
+    "effort": "Medium",
+    "criteria": [
+      "Dietary preferences editor in settings uses the same UI components as onboarding",
+      "Current dietary preferences are pre-populated when opening the editor",
+      "Changes are saved and reflected across the app including content recommendations",
+      "User can cancel without saving changes"
+    ],
+    "subtasks": [
+      "Reuse onboarding dietary preference components in settings context",
+      "Pre-populate form with current user dietary preferences from API",
+      "Implement save and cancel actions with appropriate API calls",
+      "Trigger content recommendation refresh after dietary preference update"
+    ],
+    "labels": ["epic-6", "settings", "preferences"]
+  },
+  {
+    "title": "Update Allergies and Intolerances",
+    "epic": 14,
+    "epicName": "Epic 6: App Management & Settings",
+    "role": "user",
+    "want": "update my allergies and intolerances from Settings",
+    "benefit": "I can keep my allergy information current to ensure safe recipe and content recommendations",
+    "priority": "High",
+    "effort": "Medium",
+    "criteria": [
+      "User can add or remove allergies and intolerances from a predefined list",
+      "Custom allergies can be entered if not in the predefined list",
+      "Changes are saved and immediately affect content filtering and warnings",
+      "Current allergies are clearly displayed with easy removal"
+    ],
+    "subtasks": [
+      "Create allergies and intolerances editor UI with search and selection",
+      "Support custom allergy entry with free-text input",
+      "Build backend API to update user allergy profile",
+      "Update content filtering and recipe warning systems after allergy changes"
+    ],
+    "labels": ["epic-6", "settings", "preferences"]
+  },
+  {
+    "title": "Update Favorite Cuisines",
+    "epic": 14,
+    "epicName": "Epic 6: App Management & Settings",
+    "role": "user",
+    "want": "update my favorite cuisines from Settings",
+    "benefit": "I can refine my content feed to show recipes and posts from cuisines I enjoy",
+    "priority": "Medium",
+    "effort": "Low",
+    "criteria": [
+      "User can select or deselect cuisines from a comprehensive list",
+      "Current favorite cuisines are pre-selected when opening the editor",
+      "Changes influence the content recommendation algorithm",
+      "At least one cuisine must be selected or all cuisines are shown by default"
+    ],
+    "subtasks": [
+      "Create favorite cuisines editor UI with multi-select grid",
+      "Pre-populate selections with current user favorites from API",
+      "Implement save action to update cuisine preferences via backend",
+      "Trigger recommendation engine refresh after cuisine preference update"
+    ],
+    "labels": ["epic-6", "settings", "preferences"]
+  },
+  {
+    "title": "Reset Content Recommendations",
+    "epic": 14,
+    "epicName": "Epic 6: App Management & Settings",
+    "role": "user",
+    "want": "reset my content recommendations by clearing my interaction history",
+    "benefit": "I can get a fresh start on content suggestions if my current feed feels stale or irrelevant",
+    "priority": "Medium",
+    "effort": "Medium",
+    "criteria": [
+      "User can trigger a recommendation reset from settings",
+      "A confirmation dialog explains what data will be cleared",
+      "Interaction history used for recommendations is deleted upon confirmation",
+      "Content feed reflects fresh, non-personalized recommendations after reset"
+    ],
+    "subtasks": [
+      "Create reset recommendations button with explanatory text",
+      "Implement confirmation dialog detailing the scope of the reset",
+      "Build backend endpoint to clear user interaction history for recommendations",
+      "Reset recommendation model state and serve default content after clearing"
+    ],
+    "labels": ["epic-6", "settings", "preferences", "data-management"]
+  },
+  {
+    "title": "Clear Search History",
+    "epic": 14,
+    "epicName": "Epic 6: App Management & Settings",
+    "role": "user",
+    "want": "clear my search history from Settings",
+    "benefit": "I can maintain my privacy and remove outdated or unwanted search suggestions",
+    "priority": "Medium",
+    "effort": "Low",
+    "criteria": [
+      "User can clear all search history with a single action",
+      "A confirmation dialog is shown before clearing",
+      "Search suggestions based on history are removed immediately",
+      "New searches after clearing start building a fresh history"
+    ],
+    "subtasks": [
+      "Create clear search history button in data management settings",
+      "Implement confirmation dialog for search history deletion",
+      "Build backend or local storage deletion for search history records",
+      "Update search suggestion UI to reflect empty history state"
+    ],
+    "labels": ["epic-6", "settings", "data-management"]
+  },
+  {
+    "title": "Clear AI Chat History",
+    "epic": 14,
+    "epicName": "Epic 6: App Management & Settings",
+    "role": "user",
+    "want": "clear my AI chat history from Settings",
+    "benefit": "I can remove past AI conversations for privacy or to start fresh interactions",
+    "priority": "Medium",
+    "effort": "Low",
+    "criteria": [
+      "User can clear all AI chat history with a single action",
+      "A confirmation dialog warns that chat history cannot be recovered",
+      "AI chat screen shows empty state after history is cleared",
+      "Future AI interactions are not affected by the cleared history"
+    ],
+    "subtasks": [
+      "Create clear AI chat history button in data management settings",
+      "Implement confirmation dialog for AI chat history deletion",
+      "Build backend endpoint to delete all AI chat records for user",
+      "Update AI chat screen to display empty state after clearing"
+    ],
+    "labels": ["epic-6", "settings", "data-management"]
+  },
+  {
+    "title": "Manage Cached Data",
+    "epic": 14,
+    "epicName": "Epic 6: App Management & Settings",
+    "role": "user",
+    "want": "manage cached data by clearing the image and video cache to free up storage",
+    "benefit": "I can reclaim device storage space when the app cache grows too large",
+    "priority": "Low",
+    "effort": "Low",
+    "criteria": [
+      "User can see the current size of the app cache",
+      "User can clear the image and video cache with a single action",
+      "Cache size display updates after clearing",
+      "App continues to function normally after cache is cleared with assets re-downloaded as needed"
+    ],
+    "subtasks": [
+      "Calculate and display current cache size in data management settings",
+      "Implement cache clearing functionality for images and videos",
+      "Update cache size display after successful clearing",
+      "Ensure graceful fallback and re-downloading of cached assets after clear"
+    ],
+    "labels": ["epic-6", "settings", "data-management"]
+  },
+  {
+    "title": "View App Storage Usage",
+    "epic": 14,
+    "epicName": "Epic 6: App Management & Settings",
+    "role": "user",
+    "want": "see how much storage the app is using on my device",
+    "benefit": "I can make informed decisions about managing app data and device storage",
+    "priority": "Low",
+    "effort": "Low",
+    "criteria": [
+      "Storage usage is broken down by category (cache, downloads, app data)",
+      "Total storage usage is displayed clearly",
+      "Storage information refreshes when the screen is opened",
+      "Storage values are displayed in human-readable format (MB/GB)"
+    ],
+    "subtasks": [
+      "Create storage usage display UI with category breakdown",
+      "Implement storage calculation logic for each data category",
+      "Format storage sizes into human-readable units",
+      "Add pull-to-refresh to update storage calculations"
+    ],
+    "labels": ["epic-6", "settings", "data-management"]
+  },
+  {
+    "title": "Access Help and FAQ Section",
+    "epic": 14,
+    "epicName": "Epic 6: App Management & Settings",
+    "role": "user",
+    "want": "access a Help/FAQ section within the app",
+    "benefit": "I can find answers to common questions without needing to contact support",
+    "priority": "Low",
+    "effort": "Medium",
+    "criteria": [
+      "Help/FAQ section is accessible from the Settings screen",
+      "FAQs are organized by category with searchable content",
+      "FAQ content can be updated remotely without an app update",
+      "Each FAQ item is expandable to show the full answer"
+    ],
+    "subtasks": [
+      "Create Help/FAQ screen with categorized accordion-style layout",
+      "Implement search functionality across FAQ content",
+      "Build backend CMS integration for remotely updatable FAQ content",
+      "Add analytics tracking for frequently viewed FAQ items"
+    ],
+    "labels": ["epic-6", "settings", "help-support"]
+  },
+  {
+    "title": "Contact Support",
+    "epic": 14,
+    "epicName": "Epic 6: App Management & Settings",
+    "role": "user",
+    "want": "contact support via email or an in-app form",
+    "benefit": "I can get help with issues that are not covered in the FAQ",
+    "priority": "Low",
+    "effort": "Medium",
+    "criteria": [
+      "User can submit a support request via an in-app form",
+      "Form includes fields for subject, description, and optional screenshot attachment",
+      "User receives a confirmation that the request was submitted",
+      "Device and app version info is automatically included in the support request"
+    ],
+    "subtasks": [
+      "Create support contact form UI with subject, description, and attachment fields",
+      "Implement form submission to support ticketing backend or email service",
+      "Auto-populate device info, OS version, and app version in the request",
+      "Show submission confirmation and estimated response time"
+    ],
+    "labels": ["epic-6", "settings", "help-support"]
+  },
+  {
+    "title": "Report a Bug",
+    "epic": 14,
+    "epicName": "Epic 6: App Management & Settings",
+    "role": "user",
+    "want": "report a bug with the ability to include a screenshot",
+    "benefit": "I can help improve the app by providing detailed bug reports to the development team",
+    "priority": "Low",
+    "effort": "Medium",
+    "criteria": [
+      "User can submit a bug report from settings or help section",
+      "Bug report form includes description field and screenshot attachment option",
+      "Device info and app version are automatically included",
+      "User receives confirmation that the bug report was submitted"
+    ],
+    "subtasks": [
+      "Create bug report form UI with description and screenshot upload",
+      "Implement screenshot capture or gallery selection for attachment",
+      "Build backend endpoint to receive and store bug reports with attachments",
+      "Auto-attach device diagnostics and app version metadata"
+    ],
+    "labels": ["epic-6", "settings", "help-support"]
+  },
+  {
+    "title": "View App Version and Build Number",
+    "epic": 14,
+    "epicName": "Epic 6: App Management & Settings",
+    "role": "user",
+    "want": "see the app version and build number",
+    "benefit": "I can reference the exact version when reporting issues or checking for updates",
+    "priority": "Low",
+    "effort": "Low",
+    "criteria": [
+      "App version and build number are displayed in the About section of settings",
+      "Version information is accurate and reflects the installed build",
+      "User can tap to copy version info to clipboard for easy sharing"
+    ],
+    "subtasks": [
+      "Display app version and build number in About settings section",
+      "Retrieve version info from app configuration at build time",
+      "Implement tap-to-copy functionality for version string"
+    ],
+    "labels": ["epic-6", "settings", "help-support"]
+  },
+  {
+    "title": "Read Terms of Service",
+    "epic": 14,
+    "epicName": "Epic 6: App Management & Settings",
+    "role": "user",
+    "want": "read the Terms of Service within the app",
+    "benefit": "I can review the terms governing my use of the app at any time",
+    "priority": "Low",
+    "effort": "Low",
+    "criteria": [
+      "Terms of Service are accessible from the About section in settings",
+      "Content loads from a remote source to allow updates without app releases",
+      "Text is displayed in a readable, scrollable format",
+      "Last updated date is visible at the top of the document"
+    ],
+    "subtasks": [
+      "Create Terms of Service display screen with scrollable text view",
+      "Fetch Terms of Service content from remote URL or CMS",
+      "Display last updated date and version of the terms",
+      "Handle offline state with cached version of terms"
+    ],
+    "labels": ["epic-6", "settings", "legal"]
+  },
+  {
+    "title": "Read Privacy Policy",
+    "epic": 14,
+    "epicName": "Epic 6: App Management & Settings",
+    "role": "user",
+    "want": "read the Privacy Policy within the app",
+    "benefit": "I can understand how my data is collected, used, and protected at any time",
+    "priority": "Low",
+    "effort": "Low",
+    "criteria": [
+      "Privacy Policy is accessible from the About section in settings",
+      "Content loads from a remote source to allow updates without app releases",
+      "Text is displayed in a readable, scrollable format",
+      "Last updated date is visible at the top of the document"
+    ],
+    "subtasks": [
+      "Create Privacy Policy display screen with scrollable text view",
+      "Fetch Privacy Policy content from remote URL or CMS",
+      "Display last updated date and version of the policy",
+      "Handle offline state with cached version of the policy"
+    ],
+    "labels": ["epic-6", "settings", "legal"]
+  },
+  {
+    "title": "View Open Source Licenses",
+    "epic": 14,
+    "epicName": "Epic 6: App Management & Settings",
+    "role": "user",
+    "want": "view the open source licenses used in the app",
+    "benefit": "I can see attribution for third-party libraries and understand the app's open source dependencies",
+    "priority": "Low",
+    "effort": "Low",
+    "criteria": [
+      "Open source licenses screen is accessible from the About section in settings",
+      "Each library is listed with its name, version, and license type",
+      "Tapping a library shows the full license text",
+      "License list is generated automatically from project dependencies"
+    ],
+    "subtasks": [
+      "Create open source licenses list screen with library entries",
+      "Auto-generate license data from project dependency manifest",
+      "Implement expandable detail view for full license text per library",
+      "Sort libraries alphabetically for easy browsing"
+    ],
+    "labels": ["epic-6", "settings", "legal"]
+  }
+]

@@ -1,0 +1,568 @@
+[
+  {
+    "title": "Email/Password Registration",
+    "epic": 10,
+    "epicName": "Epic 2: User Management System",
+    "role": "new user",
+    "want": "sign up with email and password to create an account",
+    "benefit": "I can access all features of the platform with a personal account",
+    "priority": "High",
+    "effort": "Medium",
+    "criteria": [
+      "User can enter email and password on the registration screen",
+      "Email must be unique and in valid format; password must meet minimum strength requirements",
+      "Account is created and user receives a verification email",
+      "User is redirected to the onboarding flow upon successful registration"
+    ],
+    "subtasks": [
+      "Build registration form UI with email and password fields and validation",
+      "Implement Firebase Auth email/password sign-up backend integration",
+      "Create user document in Firestore upon successful registration",
+      "Send email verification link and handle verification status"
+    ],
+    "labels": ["epic-2", "auth"]
+  },
+  {
+    "title": "Apple Sign-In Registration",
+    "epic": 10,
+    "epicName": "Epic 2: User Management System",
+    "role": "new user",
+    "want": "sign up with Apple Sign-In to register quickly and securely",
+    "benefit": "I can create an account instantly without managing another password",
+    "priority": "High",
+    "effort": "Medium",
+    "criteria": [
+      "Apple Sign-In button is displayed on the registration screen",
+      "Tapping the button triggers the native Apple authentication flow",
+      "Account is created and linked to Apple identity on first sign-in",
+      "User is redirected to the onboarding flow after successful registration"
+    ],
+    "subtasks": [
+      "Configure Apple Sign-In capability in Xcode and App Store Connect",
+      "Integrate Apple Sign-In SDK with Firebase Auth provider",
+      "Handle first-time vs returning Apple sign-in to distinguish registration from login",
+      "Create user document in Firestore with Apple identity metadata"
+    ],
+    "labels": ["epic-2", "auth"]
+  },
+  {
+    "title": "Google Sign-In Registration",
+    "epic": 10,
+    "epicName": "Epic 2: User Management System",
+    "role": "new user",
+    "want": "sign up with Google Sign-In as an alternative social login option",
+    "benefit": "I can register quickly using my existing Google account",
+    "priority": "High",
+    "effort": "Medium",
+    "criteria": [
+      "Google Sign-In button is displayed on the registration screen",
+      "Tapping the button triggers the Google authentication flow",
+      "Account is created and linked to Google identity on first sign-in",
+      "User is redirected to the onboarding flow after successful registration"
+    ],
+    "subtasks": [
+      "Configure Google Sign-In in Firebase console and obtain OAuth credentials",
+      "Integrate Google Sign-In SDK with Firebase Auth provider",
+      "Handle first-time vs returning Google sign-in to distinguish registration from login",
+      "Create user document in Firestore with Google identity metadata"
+    ],
+    "labels": ["epic-2", "auth"]
+  },
+  {
+    "title": "Post-Registration Onboarding Flow",
+    "epic": 10,
+    "epicName": "Epic 2: User Management System",
+    "role": "new user",
+    "want": "complete an onboarding flow after registration to set my display name, username, avatar, and dietary preferences",
+    "benefit": "my profile is personalized and the app can tailor content to my needs from the start",
+    "priority": "High",
+    "effort": "High",
+    "criteria": [
+      "Onboarding screens are presented sequentially after registration",
+      "User can set display name, choose a unique username, upload an avatar, and select dietary preferences",
+      "Username uniqueness is validated in real time",
+      "User can skip optional steps but must complete required fields before proceeding"
+    ],
+    "subtasks": [
+      "Design and build multi-step onboarding UI with progress indicator",
+      "Implement username availability check with real-time Firestore query",
+      "Integrate avatar upload with image picker and Firebase Storage",
+      "Save all onboarding data to the user's Firestore profile document"
+    ],
+    "labels": ["epic-2", "auth", "profile"]
+  },
+  {
+    "title": "User Login",
+    "epic": 10,
+    "epicName": "Epic 2: User Management System",
+    "role": "user",
+    "want": "log in with my credentials (email/password or social login)",
+    "benefit": "I can access my account and personalized content",
+    "priority": "High",
+    "effort": "Medium",
+    "criteria": [
+      "Login screen offers email/password fields and social login buttons",
+      "Valid credentials authenticate the user and navigate to the home feed",
+      "Invalid credentials display a clear error message",
+      "Login works for all supported auth providers (email, Apple, Google)"
+    ],
+    "subtasks": [
+      "Build login form UI with email/password fields and social login buttons",
+      "Implement Firebase Auth sign-in for email/password provider",
+      "Implement Firebase Auth sign-in for Apple and Google providers",
+      "Handle and display authentication errors with user-friendly messages"
+    ],
+    "labels": ["epic-2", "auth"]
+  },
+  {
+    "title": "User Logout",
+    "epic": 10,
+    "epicName": "Epic 2: User Management System",
+    "role": "user",
+    "want": "log out of my account",
+    "benefit": "I can secure my account when sharing a device or switching accounts",
+    "priority": "High",
+    "effort": "Low",
+    "criteria": [
+      "Logout option is accessible from the settings or profile screen",
+      "Tapping logout signs the user out and navigates to the login screen",
+      "Local session data and cached credentials are cleared on logout"
+    ],
+    "subtasks": [
+      "Add logout button to the settings/profile screen",
+      "Call Firebase Auth sign-out and clear local session state",
+      "Reset navigation stack to the authentication flow after logout"
+    ],
+    "labels": ["epic-2", "auth"]
+  },
+  {
+    "title": "Password Reset via Email",
+    "epic": 10,
+    "epicName": "Epic 2: User Management System",
+    "role": "user",
+    "want": "reset my password via email if I have forgotten it",
+    "benefit": "I can regain access to my account without creating a new one",
+    "priority": "High",
+    "effort": "Low",
+    "criteria": [
+      "A 'Forgot Password' link is visible on the login screen",
+      "User enters their email and receives a password reset link",
+      "The reset link allows setting a new password that meets strength requirements",
+      "User can log in with the new password after resetting"
+    ],
+    "subtasks": [
+      "Build forgot-password UI with email input field",
+      "Integrate Firebase Auth sendPasswordResetEmail method",
+      "Display confirmation message after reset email is sent",
+      "Handle errors for unregistered emails and rate limiting"
+    ],
+    "labels": ["epic-2", "auth"]
+  },
+  {
+    "title": "Persistent Session / Auto-Login",
+    "epic": 10,
+    "epicName": "Epic 2: User Management System",
+    "role": "user",
+    "want": "my session to persist so I don't have to log in every time I open the app",
+    "benefit": "I have a seamless experience without repeated authentication",
+    "priority": "High",
+    "effort": "Low",
+    "criteria": [
+      "User remains authenticated after closing and reopening the app",
+      "Auth state is checked on app launch and user is routed accordingly",
+      "Session tokens are refreshed automatically before expiration"
+    ],
+    "subtasks": [
+      "Configure Firebase Auth persistence to retain session across app launches",
+      "Implement auth state listener on app startup to detect existing sessions",
+      "Route authenticated users to the home feed and unauthenticated users to login"
+    ],
+    "labels": ["epic-2", "auth"]
+  },
+  {
+    "title": "Edit Profile Information",
+    "epic": 10,
+    "epicName": "Epic 2: User Management System",
+    "role": "user",
+    "want": "set and update my profile picture, display name, username, and bio",
+    "benefit": "I can present myself accurately and keep my profile up to date",
+    "priority": "High",
+    "effort": "Medium",
+    "criteria": [
+      "Edit profile screen allows changing avatar, display name, username, and bio",
+      "Username changes are validated for uniqueness in real time",
+      "Profile picture can be selected from camera or photo library",
+      "Changes are saved and reflected immediately across the app"
+    ],
+    "subtasks": [
+      "Build edit profile UI with fields for avatar, display name, username, and bio",
+      "Implement image picker and upload new avatar to Firebase Storage",
+      "Add real-time username uniqueness validation against Firestore",
+      "Update user document in Firestore and propagate changes to UI"
+    ],
+    "labels": ["epic-2", "profile"]
+  },
+  {
+    "title": "View Own Profile Page",
+    "epic": 10,
+    "epicName": "Epic 2: User Management System",
+    "role": "user",
+    "want": "view my own profile page showing my posts, stats (post count, followers, following), and collections",
+    "benefit": "I can see how my profile appears to others and track my activity",
+    "priority": "High",
+    "effort": "Medium",
+    "criteria": [
+      "Profile page displays avatar, display name, username, and bio",
+      "Stats section shows post count, follower count, and following count",
+      "Tabs or sections display the user's posts and saved collections",
+      "Edit profile button is visible on own profile"
+    ],
+    "subtasks": [
+      "Build profile page UI with header, stats bar, and tabbed content sections",
+      "Fetch and display user profile data and aggregate stats from Firestore",
+      "Implement paginated post list for the user's posts tab",
+      "Implement collections tab showing saved/bookmarked content"
+    ],
+    "labels": ["epic-2", "profile"]
+  },
+  {
+    "title": "View Other Users' Profiles",
+    "epic": 10,
+    "epicName": "Epic 2: User Management System",
+    "role": "user",
+    "want": "view other users' profiles with their posts and public information",
+    "benefit": "I can discover content from other users and decide whether to follow them",
+    "priority": "High",
+    "effort": "Medium",
+    "criteria": [
+      "Tapping a username or avatar navigates to that user's profile page",
+      "Profile displays public info, stats, and posts",
+      "Follow/unfollow button is visible on other users' profiles",
+      "Private profiles show limited information with a follow-request prompt"
+    ],
+    "subtasks": [
+      "Build reusable profile page component that works for any user",
+      "Fetch target user's profile data and posts from Firestore",
+      "Display follow/unfollow button with correct state based on relationship",
+      "Handle private profile visibility restrictions"
+    ],
+    "labels": ["epic-2", "profile", "social"]
+  },
+  {
+    "title": "Set Dietary Preferences",
+    "epic": 10,
+    "epicName": "Epic 2: User Management System",
+    "role": "user",
+    "want": "set dietary preferences (vegetarian, vegan, keto, gluten-free, etc.) during onboarding and update them later",
+    "benefit": "the app can filter and recommend food content that matches my diet",
+    "priority": "High",
+    "effort": "Medium",
+    "criteria": [
+      "Dietary preferences screen is part of onboarding and accessible from settings",
+      "User can select multiple dietary preferences from a predefined list",
+      "Preferences are saved to the user's profile and can be updated at any time",
+      "Selected preferences influence content recommendations and feed filtering"
+    ],
+    "subtasks": [
+      "Build dietary preferences UI with multi-select chip/tag list",
+      "Define dietary preference options as a configurable data set",
+      "Save and retrieve dietary preferences from the user's Firestore document",
+      "Expose preferences to the recommendation and feed filtering systems"
+    ],
+    "labels": ["epic-2", "profile"]
+  },
+  {
+    "title": "Set Food Allergies and Intolerances",
+    "epic": 10,
+    "epicName": "Epic 2: User Management System",
+    "role": "user",
+    "want": "set food allergies and intolerances with severity levels",
+    "benefit": "the app can warn me about content containing ingredients I need to avoid",
+    "priority": "High",
+    "effort": "Medium",
+    "criteria": [
+      "User can add allergies and intolerances from a predefined list or custom entry",
+      "Each allergy can have a severity level (mild, moderate, severe)",
+      "Allergy data is saved to the user's profile and editable from settings",
+      "Recipes and food posts display warnings when they contain user's allergens"
+    ],
+    "subtasks": [
+      "Build allergy management UI with add, edit, and remove functionality",
+      "Implement severity level selector for each allergy entry",
+      "Store allergy data with severity levels in Firestore user document",
+      "Create allergen matching logic to flag content containing user allergens"
+    ],
+    "labels": ["epic-2", "profile"]
+  },
+  {
+    "title": "Set Favorite Cuisines and Cooking Preferences",
+    "epic": 10,
+    "epicName": "Epic 2: User Management System",
+    "role": "user",
+    "want": "set favorite cuisines and cooking preferences",
+    "benefit": "the app can personalize my feed with content that matches my culinary interests",
+    "priority": "High",
+    "effort": "Low",
+    "criteria": [
+      "User can select favorite cuisines from a categorized list (Italian, Mexican, Japanese, etc.)",
+      "User can set cooking preferences such as skill level, preferred cooking time, and equipment",
+      "Preferences are saved and editable from the profile settings"
+    ],
+    "subtasks": [
+      "Build cuisine and cooking preferences UI with multi-select options",
+      "Define cuisine categories and cooking preference options as configurable data",
+      "Save and retrieve preferences from the user's Firestore document",
+      "Expose preferences to the content recommendation engine"
+    ],
+    "labels": ["epic-2", "profile"]
+  },
+  {
+    "title": "Role-Based Access System",
+    "epic": 10,
+    "epicName": "Epic 2: User Management System",
+    "role": "admin",
+    "want": "the system to support roles: User, Creator, Moderator, and Admin",
+    "benefit": "different levels of access and capabilities can be enforced across the platform",
+    "priority": "High",
+    "effort": "High",
+    "criteria": [
+      "Each user has a role field stored in their profile (default: User)",
+      "Role-based guards restrict access to features and screens based on role",
+      "Backend security rules enforce role-based permissions on Firestore and Cloud Functions",
+      "Role changes take effect immediately without requiring re-login"
+    ],
+    "subtasks": [
+      "Define role enum and add role field to user Firestore document schema",
+      "Implement role-based access control middleware in Cloud Functions",
+      "Add Firestore security rules that enforce permissions based on user role",
+      "Create client-side role guards to conditionally render UI based on role"
+    ],
+    "labels": ["epic-2", "auth", "privacy"]
+  },
+  {
+    "title": "Admin Role Management",
+    "epic": 10,
+    "epicName": "Epic 2: User Management System",
+    "role": "admin",
+    "want": "assign and revoke roles for users",
+    "benefit": "I can manage platform responsibilities and elevate trusted users",
+    "priority": "Medium",
+    "effort": "Medium",
+    "criteria": [
+      "Admin dashboard includes a user management section with role controls",
+      "Admin can search for users and change their role via a dropdown or selector",
+      "Role changes are logged for audit purposes",
+      "Non-admin users cannot access or invoke role management functionality"
+    ],
+    "subtasks": [
+      "Build admin user management UI with search and role assignment controls",
+      "Implement Cloud Function for role assignment with admin-only authorization",
+      "Add audit logging for all role change events",
+      "Write Firestore security rules to restrict role modification to admins"
+    ],
+    "labels": ["epic-2", "auth", "privacy"]
+  },
+  {
+    "title": "Creator Verification Badge",
+    "epic": 10,
+    "epicName": "Epic 2: User Management System",
+    "role": "creator",
+    "want": "a verification badge displayed on my profile",
+    "benefit": "other users can trust that I am a verified content creator",
+    "priority": "Medium",
+    "effort": "Low",
+    "criteria": [
+      "Verification badge icon is displayed next to the creator's display name",
+      "Badge appears on profile page, posts, and comments authored by the creator",
+      "Badge is automatically applied when a user is assigned the Creator role"
+    ],
+    "subtasks": [
+      "Design verification badge icon asset",
+      "Implement badge rendering logic tied to user role in profile and post components",
+      "Ensure badge appears/disappears dynamically when role changes"
+    ],
+    "labels": ["epic-2", "profile"]
+  },
+  {
+    "title": "Follow and Unfollow Users",
+    "epic": 10,
+    "epicName": "Epic 2: User Management System",
+    "role": "user",
+    "want": "follow and unfollow other users",
+    "benefit": "I can curate my feed with content from people I am interested in",
+    "priority": "Medium",
+    "effort": "Medium",
+    "criteria": [
+      "Follow button is displayed on other users' profile pages",
+      "Tapping follow creates a follow relationship and updates the button to 'Following'",
+      "Tapping unfollow removes the relationship and reverts the button to 'Follow'",
+      "Follow/unfollow actions update follower and following counts in real time"
+    ],
+    "subtasks": [
+      "Design Firestore data model for follow relationships (followers/following subcollections)",
+      "Implement follow/unfollow Cloud Function with atomic counter updates",
+      "Build follow/unfollow button component with optimistic UI updates",
+      "Handle private account follow requests with pending state"
+    ],
+    "labels": ["epic-2", "social"]
+  },
+  {
+    "title": "View Followers and Following Lists",
+    "epic": 10,
+    "epicName": "Epic 2: User Management System",
+    "role": "user",
+    "want": "see my followers and following lists",
+    "benefit": "I can manage my social connections and discover who follows me",
+    "priority": "Medium",
+    "effort": "Medium",
+    "criteria": [
+      "Tapping follower or following count on a profile opens the respective list",
+      "Each list item shows avatar, display name, username, and follow status",
+      "User can follow/unfollow directly from the list",
+      "Lists support pagination for users with many connections"
+    ],
+    "subtasks": [
+      "Build followers and following list UI with user row components",
+      "Fetch paginated follower/following data from Firestore subcollections",
+      "Add inline follow/unfollow button on each list item",
+      "Implement pull-to-refresh and infinite scroll for large lists"
+    ],
+    "labels": ["epic-2", "social"]
+  },
+  {
+    "title": "Follower and Following Counts on Profiles",
+    "epic": 10,
+    "epicName": "Epic 2: User Management System",
+    "role": "user",
+    "want": "see follower and following counts on profiles",
+    "benefit": "I can gauge a user's popularity and community engagement at a glance",
+    "priority": "Medium",
+    "effort": "Low",
+    "criteria": [
+      "Follower and following counts are displayed on every user's profile",
+      "Counts update in real time when follow/unfollow actions occur",
+      "Counts are accurate and maintained via atomic increments/decrements"
+    ],
+    "subtasks": [
+      "Add follower and following count fields to the user Firestore document",
+      "Display counts in the profile stats section with tap-to-view-list functionality",
+      "Ensure follow/unfollow Cloud Functions atomically update count fields"
+    ],
+    "labels": ["epic-2", "social", "profile"]
+  },
+  {
+    "title": "Block and Mute Users",
+    "epic": 10,
+    "epicName": "Epic 2: User Management System",
+    "role": "user",
+    "want": "block and mute other users",
+    "benefit": "I can protect myself from unwanted interactions and content",
+    "priority": "Medium",
+    "effort": "Medium",
+    "criteria": [
+      "Block and mute options are accessible from a user's profile or content menu",
+      "Blocked users cannot view the blocker's profile, posts, or send messages",
+      "Muted users' content is hidden from the muter's feed without notifying them",
+      "User can view and manage blocked and muted lists from settings"
+    ],
+    "subtasks": [
+      "Design Firestore data model for block and mute relationships",
+      "Implement block/mute Cloud Functions with bidirectional restrictions",
+      "Add block/mute options to profile action menu and content context menu",
+      "Build blocked and muted users management screen in settings"
+    ],
+    "labels": ["epic-2", "social", "privacy"]
+  },
+  {
+    "title": "New Follower Notification",
+    "epic": 10,
+    "epicName": "Epic 2: User Management System",
+    "role": "user",
+    "want": "receive a notification when someone follows me",
+    "benefit": "I stay informed about new connections and can follow them back",
+    "priority": "Medium",
+    "effort": "Medium",
+    "criteria": [
+      "Push notification is sent when a new user follows the recipient",
+      "Notification includes the follower's display name and avatar",
+      "Tapping the notification navigates to the follower's profile",
+      "User can disable follow notifications in notification settings"
+    ],
+    "subtasks": [
+      "Create Cloud Function trigger on new follow document to send push notification",
+      "Configure Firebase Cloud Messaging for push notification delivery",
+      "Build in-app notification item for new follower events",
+      "Add notification preference toggle for follow notifications in settings"
+    ],
+    "labels": ["epic-2", "social"]
+  },
+  {
+    "title": "Profile Visibility Settings",
+    "epic": 10,
+    "epicName": "Epic 2: User Management System",
+    "role": "user",
+    "want": "set my profile visibility to public or private",
+    "benefit": "I can control who sees my content and personal information",
+    "priority": "Medium",
+    "effort": "Medium",
+    "criteria": [
+      "Privacy settings screen allows toggling between public and private profile",
+      "Private profiles require follow approval before granting access to posts and details",
+      "Public profiles are visible to all users including unauthenticated visitors",
+      "Changing visibility takes effect immediately for all viewers"
+    ],
+    "subtasks": [
+      "Add profile visibility toggle to privacy settings screen",
+      "Store visibility setting in user Firestore document",
+      "Implement follow-request approval flow for private accounts",
+      "Update Firestore security rules to enforce visibility restrictions on reads"
+    ],
+    "labels": ["epic-2", "privacy"]
+  },
+  {
+    "title": "Dietary Information Visibility Control",
+    "epic": 10,
+    "epicName": "Epic 2: User Management System",
+    "role": "user",
+    "want": "control who can see my dietary information",
+    "benefit": "I can share sensitive health-related data only with people I trust",
+    "priority": "Medium",
+    "effort": "Low",
+    "criteria": [
+      "Privacy settings include a control for dietary information visibility",
+      "Options include: everyone, followers only, and only me",
+      "Dietary data is hidden from users who do not meet the visibility criteria",
+      "Default visibility is set to 'only me' for new accounts"
+    ],
+    "subtasks": [
+      "Add dietary visibility selector to privacy settings screen",
+      "Store dietary visibility preference in user Firestore document",
+      "Enforce dietary data access control in Firestore security rules",
+      "Filter dietary information from profile API responses based on viewer permissions"
+    ],
+    "labels": ["epic-2", "privacy", "profile"]
+  },
+  {
+    "title": "Account Deletion",
+    "epic": 10,
+    "epicName": "Epic 2: User Management System",
+    "role": "user",
+    "want": "delete my account and all associated data",
+    "benefit": "I can exercise my right to be forgotten and remove my presence from the platform",
+    "priority": "Medium",
+    "effort": "High",
+    "criteria": [
+      "Delete account option is accessible from settings with a confirmation prompt",
+      "User must re-authenticate before deletion proceeds",
+      "All user data including profile, posts, comments, follows, and media are permanently removed",
+      "Deletion is irreversible and the user is signed out and returned to the welcome screen"
+    ],
+    "subtasks": [
+      "Build account deletion UI with confirmation dialog and re-authentication step",
+      "Implement Cloud Function to cascade-delete all user data across Firestore collections",
+      "Delete user media assets from Firebase Storage",
+      "Remove Firebase Auth account and sign out the user on the client"
+    ],
+    "labels": ["epic-2", "privacy"]
+  }
+]

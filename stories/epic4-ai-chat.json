@@ -1,0 +1,347 @@
+[
+  {
+    "title": "Open Chat and Ask Food Questions",
+    "epic": 12,
+    "epicName": "Epic 4: AI Chat",
+    "role": "user",
+    "want": "Open a chat screen and type a food or cooking question in natural language",
+    "benefit": "I can get instant help with cooking questions without leaving the app",
+    "priority": "High",
+    "effort": "High",
+    "criteria": [
+      "Chat screen is accessible from main navigation",
+      "Text input field accepts free-form natural language questions",
+      "Submitted messages appear in the chat thread immediately",
+      "Chat screen is responsive and works on all supported device sizes"
+    ],
+    "subtasks": [
+      "Build chat screen UI with message input bar and scrollable message list",
+      "Implement message sending logic and local state management",
+      "Integrate OpenRouter API client for sending prompts",
+      "Add navigation entry point to chat from bottom tab or menu"
+    ],
+    "labels": ["epic-4", "ai-chat", "openrouter"]
+  },
+  {
+    "title": "Receive AI Responses on Food Topics",
+    "epic": 12,
+    "epicName": "Epic 4: AI Chat",
+    "role": "user",
+    "want": "Receive AI-generated responses about cooking techniques, ingredient info, recipe ideas, and food facts",
+    "benefit": "I get accurate and helpful culinary knowledge on demand",
+    "priority": "High",
+    "effort": "High",
+    "criteria": [
+      "AI responds with relevant, accurate information about cooking techniques",
+      "AI provides ingredient information including common substitutions",
+      "AI can suggest recipe ideas based on user queries",
+      "Responses are formatted clearly with proper text structure"
+    ],
+    "subtasks": [
+      "Design system prompt that scopes AI to food and cooking domain",
+      "Implement OpenRouter API request/response handling with error recovery",
+      "Build message bubble components for displaying AI responses with markdown support",
+      "Add loading and error states for AI response delivery"
+    ],
+    "labels": ["epic-4", "ai-chat", "openrouter"]
+  },
+  {
+    "title": "Multi-Turn Conversational Context",
+    "epic": 12,
+    "epicName": "Epic 4: AI Chat",
+    "role": "user",
+    "want": "Chat that feels conversational with multi-turn context so the AI remembers earlier discussion in the session",
+    "benefit": "I can have a natural back-and-forth conversation without repeating myself",
+    "priority": "High",
+    "effort": "Medium",
+    "criteria": [
+      "AI correctly references information from earlier messages in the same session",
+      "Conversation context is maintained for at least 20 message turns",
+      "AI does not contradict or forget details shared earlier in the session",
+      "Context window is managed to stay within token limits without losing key information"
+    ],
+    "subtasks": [
+      "Implement conversation history array that accumulates messages per session",
+      "Send full message history with each API request to maintain context",
+      "Add token counting and context window truncation strategy",
+      "Write tests to verify multi-turn context retention"
+    ],
+    "labels": ["epic-4", "ai-chat", "openrouter"]
+  },
+  {
+    "title": "New Chat Sessions and Chat History",
+    "epic": 12,
+    "epicName": "Epic 4: AI Chat",
+    "role": "user",
+    "want": "Start new chat sessions and access chat history",
+    "benefit": "I can organize my conversations and revisit past advice",
+    "priority": "High",
+    "effort": "Medium",
+    "criteria": [
+      "User can create a new chat session with a single tap",
+      "Previous chat sessions are listed in reverse chronological order",
+      "Tapping a past session loads the full conversation history",
+      "Each session displays a title or preview of the first message"
+    ],
+    "subtasks": [
+      "Design and build chat history list screen with session previews",
+      "Implement local persistence of chat sessions using database or secure storage",
+      "Add 'New Chat' button that resets context and creates a fresh session",
+      "Implement session auto-titling based on first user message"
+    ],
+    "labels": ["epic-4", "ai-chat"]
+  },
+  {
+    "title": "Delete Chat Sessions",
+    "epic": 12,
+    "epicName": "Epic 4: AI Chat",
+    "role": "user",
+    "want": "Delete chat sessions I no longer need",
+    "benefit": "I can keep my chat history clean and remove outdated conversations",
+    "priority": "High",
+    "effort": "Low",
+    "criteria": [
+      "User can delete a chat session via swipe-to-delete or a delete button",
+      "A confirmation prompt appears before permanent deletion",
+      "Deleted sessions are removed from both the UI and local storage",
+      "Bulk delete option is available for clearing multiple sessions"
+    ],
+    "subtasks": [
+      "Add swipe-to-delete gesture on chat history list items",
+      "Implement confirmation dialog before deletion",
+      "Remove session data from local persistence on confirm",
+      "Add 'Clear All' option in chat history settings"
+    ],
+    "labels": ["epic-4", "ai-chat"]
+  },
+  {
+    "title": "Open AI Chat from Post Detail",
+    "epic": 12,
+    "epicName": "Epic 4: AI Chat",
+    "role": "user",
+    "want": "Open AI chat directly from a post detail screen so the AI has context about that specific recipe or post",
+    "benefit": "I can ask follow-up questions about a recipe without manually explaining what I'm looking at",
+    "priority": "Medium",
+    "effort": "Medium",
+    "criteria": [
+      "An 'Ask AI' button is visible on the post detail screen",
+      "Tapping it opens a chat session pre-loaded with post context",
+      "AI's first response acknowledges the referenced post",
+      "The post title and key details are visible in the chat header"
+    ],
+    "subtasks": [
+      "Add 'Ask AI about this post' button to post detail screen",
+      "Serialize post data (title, ingredients, steps) into a context prompt",
+      "Create a new chat session with post metadata injected into the system prompt",
+      "Display post reference card at the top of the contextualized chat"
+    ],
+    "labels": ["epic-4", "ai-chat", "openrouter", "post-aware"]
+  },
+  {
+    "title": "Ask Questions About a Specific Post",
+    "epic": 12,
+    "epicName": "Epic 4: AI Chat",
+    "role": "user",
+    "want": "Ask questions about a specific post such as 'Can I substitute the butter in this recipe?'",
+    "benefit": "I get precise answers tailored to the exact recipe I'm looking at",
+    "priority": "Medium",
+    "effort": "Medium",
+    "criteria": [
+      "AI correctly answers substitution questions referencing the post's ingredient list",
+      "AI understands and responds to questions about cooking steps in the referenced post",
+      "AI handles follow-up questions that refer to the post implicitly",
+      "Responses are specific to the referenced post, not generic"
+    ],
+    "subtasks": [
+      "Enhance system prompt to instruct AI to reference provided post data in answers",
+      "Parse and structure post ingredients and steps for inclusion in prompt context",
+      "Test AI accuracy on substitution and modification questions for various recipe types",
+      "Add fallback handling when post data is incomplete or missing fields"
+    ],
+    "labels": ["epic-4", "ai-chat", "openrouter", "post-aware"]
+  },
+  {
+    "title": "AI References Recipe Details in Answers",
+    "epic": 12,
+    "epicName": "Epic 4: AI Chat",
+    "role": "user",
+    "want": "AI references the recipe's ingredients, steps, and metadata when answering my questions",
+    "benefit": "I receive accurate, context-aware answers grounded in the actual recipe content",
+    "priority": "Medium",
+    "effort": "Medium",
+    "criteria": [
+      "AI cites specific ingredients from the recipe when answering nutrition or substitution questions",
+      "AI references specific step numbers or cooking instructions when explaining techniques",
+      "AI uses recipe metadata like prep time, servings, and tags in its responses",
+      "AI does not fabricate ingredients or steps that are not in the original post"
+    ],
+    "subtasks": [
+      "Structure recipe data as a well-formatted context block in the system prompt",
+      "Include ingredient quantities, step ordering, and metadata fields in context",
+      "Add prompt instructions that tell AI to cite recipe details and avoid hallucination",
+      "Validate AI responses against source recipe data in integration tests"
+    ],
+    "labels": ["epic-4", "ai-chat", "openrouter", "post-aware"]
+  },
+  {
+    "title": "AI Suggests Relevant BetrFood Posts",
+    "epic": 12,
+    "epicName": "Epic 4: AI Chat",
+    "role": "user",
+    "want": "AI suggests posts from BetrFood relevant to my question, such as 'Show me pasta recipes'",
+    "benefit": "I discover content within the app that matches my interests without manual searching",
+    "priority": "Medium",
+    "effort": "High",
+    "criteria": [
+      "AI returns relevant post suggestions when asked for recipes by category or ingredient",
+      "Suggested posts exist in the BetrFood database and are navigable",
+      "Suggestions include post title, image preview, and brief description",
+      "AI explains why each suggested post is relevant to the query"
+    ],
+    "subtasks": [
+      "Build a post search or retrieval API that AI can query by keywords and tags",
+      "Implement function-calling or RAG pattern to let AI fetch matching posts",
+      "Format post suggestions as structured cards within the chat response",
+      "Add navigation deep links from suggested post cards to post detail screens"
+    ],
+    "labels": ["epic-4", "ai-chat", "openrouter", "post-aware"]
+  },
+  {
+    "title": "AI Knows Dietary Preferences and Allergies",
+    "epic": 12,
+    "epicName": "Epic 4: AI Chat",
+    "role": "user",
+    "want": "AI knows my dietary preferences and allergies so it gives safe, personalized advice",
+    "benefit": "I receive recommendations that respect my health needs without having to repeat them every time",
+    "priority": "Medium",
+    "effort": "Medium",
+    "criteria": [
+      "AI tailors recipe suggestions to match user's dietary preferences (e.g., vegan, keto)",
+      "AI avoids recommending recipes containing user's flagged allergens",
+      "User's dietary profile is loaded into the chat context automatically",
+      "Changes to dietary preferences in profile are reflected in subsequent chat sessions"
+    ],
+    "subtasks": [
+      "Fetch user dietary preferences and allergies from profile on chat session start",
+      "Inject dietary and allergy data into the AI system prompt",
+      "Add prompt instructions for AI to always respect dietary restrictions",
+      "Test AI responses against various dietary profiles to ensure compliance"
+    ],
+    "labels": ["epic-4", "ai-chat", "openrouter", "personalization"]
+  },
+  {
+    "title": "AI References Pantry Items for Meal Suggestions",
+    "epic": 12,
+    "epicName": "Epic 4: AI Chat",
+    "role": "user",
+    "want": "AI references my pantry items when I ask 'What can I cook tonight?'",
+    "benefit": "I get practical meal ideas based on ingredients I already have at home",
+    "priority": "Medium",
+    "effort": "Medium",
+    "criteria": [
+      "AI lists meal suggestions that primarily use ingredients from the user's pantry",
+      "AI identifies which pantry items would be used in each suggestion",
+      "AI notes any additional ingredients needed beyond what is in the pantry",
+      "Pantry data is current and reflects recent additions or removals"
+    ],
+    "subtasks": [
+      "Fetch current pantry inventory from user profile or pantry service on chat start",
+      "Serialize pantry items with quantities into AI context prompt",
+      "Add prompt instructions for AI to prioritize pantry ingredients in suggestions",
+      "Handle edge cases such as empty pantry or expired items"
+    ],
+    "labels": ["epic-4", "ai-chat", "openrouter", "personalization", "pantry"]
+  },
+  {
+    "title": "AI Allergen Warnings on Suggestions",
+    "epic": 12,
+    "epicName": "Epic 4: AI Chat",
+    "role": "user",
+    "want": "AI warns me if a suggestion contains an allergen I've flagged",
+    "benefit": "I am protected from accidentally following a recipe that could trigger an allergic reaction",
+    "priority": "Medium",
+    "effort": "Medium",
+    "criteria": [
+      "AI displays a visible warning when a suggested recipe contains a user's flagged allergen",
+      "Warning specifies which allergen is present and in which ingredient",
+      "AI proactively offers allergen-free alternatives alongside the warning",
+      "Warnings appear even when allergens are in less obvious ingredients (e.g., soy in sauces)"
+    ],
+    "subtasks": [
+      "Load user's allergen list into chat context alongside dietary preferences",
+      "Add explicit prompt instructions requiring allergen checks on every suggestion",
+      "Design and implement a distinct visual warning component for allergen alerts in chat",
+      "Test with common and edge-case allergens (nuts, dairy, gluten, shellfish, soy)"
+    ],
+    "labels": ["epic-4", "ai-chat", "openrouter", "personalization", "allergens"]
+  },
+  {
+    "title": "Real-Time Streaming AI Responses",
+    "epic": 12,
+    "epicName": "Epic 4: AI Chat",
+    "role": "user",
+    "want": "AI response streams in real-time with a typing indicator or streamed text for a responsive feel",
+    "benefit": "I see answers appear progressively instead of waiting for a long delay, making the chat feel fast and alive",
+    "priority": "Low",
+    "effort": "High",
+    "criteria": [
+      "AI responses render token-by-token as they are received from the API",
+      "A typing indicator is shown while the AI is generating but before tokens arrive",
+      "Streaming does not cause UI jank or layout shifts as text grows",
+      "If streaming is interrupted, partial response is preserved and an error message is shown"
+    ],
+    "subtasks": [
+      "Implement server-sent events (SSE) or streaming HTTP connection to OpenRouter",
+      "Build incremental text rendering in the chat message bubble component",
+      "Add typing indicator animation that appears before first token arrives",
+      "Handle stream interruption, timeout, and reconnection gracefully"
+    ],
+    "labels": ["epic-4", "ai-chat", "openrouter", "streaming"]
+  },
+  {
+    "title": "Copy AI Responses to Clipboard",
+    "epic": 12,
+    "epicName": "Epic 4: AI Chat",
+    "role": "user",
+    "want": "Copy AI responses to my clipboard",
+    "benefit": "I can easily save or share useful cooking advice and recipe information",
+    "priority": "Low",
+    "effort": "Low",
+    "criteria": [
+      "A copy button or long-press option is available on each AI response bubble",
+      "Tapping copy places the full response text on the system clipboard",
+      "A brief confirmation toast or indicator appears after copying",
+      "Copied text preserves formatting such as lists and line breaks"
+    ],
+    "subtasks": [
+      "Add a copy icon button to the AI message bubble component",
+      "Implement clipboard write using platform clipboard API",
+      "Show a success toast or snackbar on copy completion",
+      "Ensure markdown formatting is converted to plain text appropriately for clipboard"
+    ],
+    "labels": ["epic-4", "ai-chat", "clipboard"]
+  },
+  {
+    "title": "Tappable Recipe Card Suggestions in Chat",
+    "epic": 12,
+    "epicName": "Epic 4: AI Chat",
+    "role": "user",
+    "want": "See recipe suggestions from AI as tappable cards that navigate to the actual post",
+    "benefit": "I can seamlessly jump from an AI recommendation to the full recipe without searching for it",
+    "priority": "Low",
+    "effort": "Medium",
+    "criteria": [
+      "AI recipe suggestions render as visually distinct, tappable card components in the chat",
+      "Each card shows the post title, thumbnail image, and a short description",
+      "Tapping a card navigates to the full post detail screen",
+      "Cards are visually consistent with recipe cards elsewhere in the app"
+    ],
+    "subtasks": [
+      "Design a compact recipe card component for use within chat message bubbles",
+      "Parse AI responses to detect and extract structured post references",
+      "Map extracted post references to actual post IDs and fetch metadata for card display",
+      "Implement navigation from tapped recipe card to post detail screen"
+    ],
+    "labels": ["epic-4", "ai-chat", "post-aware", "navigation"]
+  }
+]

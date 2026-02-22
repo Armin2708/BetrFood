@@ -1,0 +1,370 @@
+[
+  {
+    "title": "View Pantry Items",
+    "epic": 11,
+    "epicName": "Epic 3: Pantry",
+    "role": "user",
+    "want": "View my pantry as a list of items currently at home",
+    "benefit": "I can quickly see what ingredients and food I have available without opening every cabinet and fridge shelf",
+    "priority": "High",
+    "effort": "Medium",
+    "criteria": [
+      "Pantry screen displays all added items in a scrollable list",
+      "Each item shows name, quantity, category, and expiration date if set",
+      "Empty state displays a helpful message prompting the user to add their first item",
+      "List updates in real time when items are added or removed"
+    ],
+    "subtasks": [
+      "Create PantryScreen component with list layout",
+      "Implement pantry item data model and local storage schema",
+      "Build PantryItemCard component displaying item details",
+      "Add empty state illustration and onboarding prompt"
+    ],
+    "labels": ["epic-3", "pantry", "core"]
+  },
+  {
+    "title": "Manually Add Pantry Item",
+    "epic": 11,
+    "epicName": "Epic 3: Pantry",
+    "role": "user",
+    "want": "Manually add an item to my pantry by typing its name and optional details such as quantity, expiration date, and category",
+    "benefit": "I can keep an accurate digital record of what I have at home even when I add items one at a time",
+    "priority": "High",
+    "effort": "Medium",
+    "criteria": [
+      "User can enter an item name (required) and optionally set quantity, expiration date, and category",
+      "Category can be selected from a predefined list or entered as custom text",
+      "Newly added item appears immediately in the pantry list",
+      "Form validates that name is not empty before allowing submission"
+    ],
+    "subtasks": [
+      "Create AddItemForm component with name, quantity, expiration, and category fields",
+      "Implement category picker with predefined options and custom entry",
+      "Wire form submission to pantry state management and persistence layer",
+      "Add input validation and user feedback on successful addition"
+    ],
+    "labels": ["epic-3", "pantry", "core"]
+  },
+  {
+    "title": "Remove Pantry Item",
+    "epic": 11,
+    "epicName": "Epic 3: Pantry",
+    "role": "user",
+    "want": "Remove items from my pantry when they are used up",
+    "benefit": "My pantry list stays accurate and only reflects what I actually have on hand",
+    "priority": "High",
+    "effort": "Low",
+    "criteria": [
+      "User can remove an item via a delete action on the item card",
+      "A confirmation prompt appears before permanent deletion",
+      "Removed item disappears from the pantry list immediately",
+      "Undo option is available briefly after deletion"
+    ],
+    "subtasks": [
+      "Add delete button or swipe-to-delete gesture on PantryItemCard",
+      "Implement confirmation dialog before removal",
+      "Update pantry state and persistence layer on deletion",
+      "Add temporary undo snackbar after item removal"
+    ],
+    "labels": ["epic-3", "pantry", "core"]
+  },
+  {
+    "title": "Edit Pantry Item Details",
+    "epic": 11,
+    "epicName": "Epic 3: Pantry",
+    "role": "user",
+    "want": "Edit item details including name, quantity, and expiration date",
+    "benefit": "I can correct mistakes and update quantities as I use portions of an item without removing and re-adding it",
+    "priority": "High",
+    "effort": "Low",
+    "criteria": [
+      "User can tap an item to open an edit form pre-populated with current values",
+      "All editable fields (name, quantity, expiration) can be modified and saved",
+      "Changes are reflected immediately in the pantry list after saving",
+      "Cancel action discards changes and returns to the pantry list"
+    ],
+    "subtasks": [
+      "Create EditItemForm component reusing AddItemForm fields",
+      "Pre-populate form with existing item data on open",
+      "Implement save and cancel actions with appropriate state updates",
+      "Add validation to prevent saving an item with an empty name"
+    ],
+    "labels": ["epic-3", "pantry", "core"]
+  },
+  {
+    "title": "Organize Pantry by Category",
+    "epic": 11,
+    "epicName": "Epic 3: Pantry",
+    "role": "user",
+    "want": "See my pantry items organized by category such as produce, dairy, proteins, grains, spices, and canned goods",
+    "benefit": "I can quickly find specific types of ingredients and get a sense of what food groups I have stocked",
+    "priority": "High",
+    "effort": "Medium",
+    "criteria": [
+      "Pantry list can be toggled to a category-grouped view",
+      "Each category section has a header and shows the count of items within it",
+      "Categories with no items are hidden from the grouped view",
+      "Items without a category are placed under a general or uncategorized section"
+    ],
+    "subtasks": [
+      "Define default category list (produce, dairy, proteins, grains, spices, canned goods, other)",
+      "Implement grouped list view with collapsible category sections",
+      "Add toggle control to switch between flat list and category-grouped view",
+      "Handle uncategorized items with a fallback section"
+    ],
+    "labels": ["epic-3", "pantry", "core"]
+  },
+  {
+    "title": "Search and Filter Pantry Items",
+    "epic": 11,
+    "epicName": "Epic 3: Pantry",
+    "role": "user",
+    "want": "Search and filter my pantry items",
+    "benefit": "I can instantly find a specific item without scrolling through my entire pantry list",
+    "priority": "High",
+    "effort": "Low",
+    "criteria": [
+      "A search bar at the top of the pantry screen filters items as the user types",
+      "Search matches against item name and category",
+      "Filter chips or dropdown allow filtering by category",
+      "Clear search button resets the list to show all items"
+    ],
+    "subtasks": [
+      "Add search bar component to the pantry screen header",
+      "Implement real-time filtering logic matching name and category fields",
+      "Add category filter chips below the search bar",
+      "Implement clear/reset functionality for search and filters"
+    ],
+    "labels": ["epic-3", "pantry", "core"]
+  },
+  {
+    "title": "Photo-Add Groceries to Pantry",
+    "epic": 11,
+    "epicName": "Epic 3: Pantry",
+    "role": "user",
+    "want": "Take a photo of my groceries or ingredients and have the app automatically identify items to quickly add to my pantry",
+    "benefit": "I can stock my pantry in seconds after a grocery trip instead of manually typing every item",
+    "priority": "Medium",
+    "effort": "High",
+    "criteria": [
+      "User can open the camera from the pantry screen to capture a photo of groceries",
+      "App sends the photo to an image recognition service and returns a list of identified items",
+      "Identified items are presented for review before being added to the pantry",
+      "Processing state is clearly indicated with a loading indicator"
+    ],
+    "subtasks": [
+      "Integrate device camera access with capture-photo flow from pantry screen",
+      "Implement API call to image recognition service with the captured photo",
+      "Parse recognition response into a list of pantry item candidates",
+      "Display loading and error states during photo processing"
+    ],
+    "labels": ["epic-3", "pantry", "photo-recognition"]
+  },
+  {
+    "title": "Photo-Identify Single Item",
+    "epic": 11,
+    "epicName": "Epic 3: Pantry",
+    "role": "user",
+    "want": "Take a photo of a single item for identification",
+    "benefit": "I can identify an unfamiliar ingredient or product and add it to my pantry with the correct name and category",
+    "priority": "Medium",
+    "effort": "High",
+    "criteria": [
+      "User can photograph a single item and receive its identified name and suggested category",
+      "Recognition returns a confidence score and the top identification result",
+      "User can accept the identification or manually correct the name before adding",
+      "Photo can be taken from the add-item flow as an alternative to typing"
+    ],
+    "subtasks": [
+      "Add single-item photo capture mode in the add-item flow",
+      "Send photo to recognition API and parse single-item response",
+      "Display identification result with confidence indicator",
+      "Allow user to accept or override the identified name and category"
+    ],
+    "labels": ["epic-3", "pantry", "photo-recognition"]
+  },
+  {
+    "title": "Photo-Identify Multiple Items",
+    "epic": 11,
+    "epicName": "Epic 3: Pantry",
+    "role": "user",
+    "want": "Take a photo of multiple items and have the app identify all visible items",
+    "benefit": "I can add many items at once from a single photo saving significant time when unloading groceries",
+    "priority": "Medium",
+    "effort": "High",
+    "criteria": [
+      "App detects and identifies multiple distinct items within a single photo",
+      "Each identified item is listed separately with its name and suggested category",
+      "Items are visually annotated or numbered so the user can match identifications to the photo",
+      "Recognition handles at least 5-10 items per photo with reasonable accuracy"
+    ],
+    "subtasks": [
+      "Implement multi-object detection pipeline in the recognition API call",
+      "Parse multi-item response into individual pantry item candidates",
+      "Build UI to display annotated photo alongside the list of identified items",
+      "Handle edge cases for overlapping or partially hidden items"
+    ],
+    "labels": ["epic-3", "pantry", "photo-recognition"]
+  },
+  {
+    "title": "Review and Confirm Photo-Identified Items",
+    "epic": 11,
+    "epicName": "Epic 3: Pantry",
+    "role": "user",
+    "want": "Review and confirm identified items before adding them to my pantry, including editing names, removing incorrect identifications, and adding missed items",
+    "benefit": "I maintain full control over what goes into my pantry list and can correct any recognition errors before they are saved",
+    "priority": "Medium",
+    "effort": "Medium",
+    "criteria": [
+      "A review screen lists all identified items with editable name and category fields",
+      "User can remove any incorrectly identified item from the list",
+      "User can manually add missed items that were not identified",
+      "A confirm button adds all approved items to the pantry in one action"
+    ],
+    "subtasks": [
+      "Create ReviewIdentifiedItemsScreen with an editable list of candidates",
+      "Add inline edit controls for item name and category on each row",
+      "Implement remove and manual-add actions on the review list",
+      "Wire confirm action to batch-add all approved items to the pantry"
+    ],
+    "labels": ["epic-3", "pantry", "photo-recognition"]
+  },
+  {
+    "title": "Photo-Scan Receipt to Add Items",
+    "epic": 11,
+    "epicName": "Epic 3: Pantry",
+    "role": "user",
+    "want": "Take a photo of a receipt to extract purchased items",
+    "benefit": "I can populate my pantry from a store receipt without re-typing every line item",
+    "priority": "Medium",
+    "effort": "High",
+    "criteria": [
+      "User can photograph a grocery receipt and have the app extract item names",
+      "Extracted items are presented in a review list before being added to the pantry",
+      "Common receipt abbreviations are expanded to recognizable item names where possible",
+      "User is informed if the receipt is unreadable or no items could be extracted"
+    ],
+    "subtasks": [
+      "Integrate OCR service for receipt text extraction from a captured photo",
+      "Implement parsing logic to identify line items and filter out non-item text like totals and tax",
+      "Map common receipt abbreviations to full item names using a lookup table",
+      "Route extracted items to the ReviewIdentifiedItemsScreen for confirmation"
+    ],
+    "labels": ["epic-3", "pantry", "photo-recognition", "ocr"]
+  },
+  {
+    "title": "View Items Expiring Soon",
+    "epic": 11,
+    "epicName": "Epic 3: Pantry",
+    "role": "user",
+    "want": "See items that are expiring soon so I can use them before they go bad",
+    "benefit": "I reduce food waste and save money by prioritizing ingredients that need to be used first",
+    "priority": "Medium",
+    "effort": "Medium",
+    "criteria": [
+      "A dedicated section or filter shows items expiring within a configurable number of days",
+      "Items are sorted by expiration date with the soonest at the top",
+      "Expired items are visually distinguished from items that are expiring soon",
+      "Items without an expiration date are excluded from this view"
+    ],
+    "subtasks": [
+      "Create ExpiringSoonSection component with date-based filtering logic",
+      "Sort filtered items by expiration date ascending",
+      "Add visual indicators (color coding or badges) for expired vs. expiring-soon items",
+      "Allow user to configure the expiring-soon threshold in settings"
+    ],
+    "labels": ["epic-3", "pantry", "expiration"]
+  },
+  {
+    "title": "Expiration Notifications",
+    "epic": 11,
+    "epicName": "Epic 3: Pantry",
+    "role": "user",
+    "want": "Get notified when items are about to expire",
+    "benefit": "I am proactively reminded to use perishable items even when I am not actively checking my pantry",
+    "priority": "Medium",
+    "effort": "Medium",
+    "criteria": [
+      "App sends a push notification when an item is within the expiring-soon threshold",
+      "Notification includes the item name and how many days until expiration",
+      "User can enable or disable expiration notifications in settings",
+      "Notifications are not sent for items without an expiration date"
+    ],
+    "subtasks": [
+      "Implement local notification scheduling based on item expiration dates",
+      "Create notification content template with item name and days remaining",
+      "Add notification toggle and threshold settings in the app settings screen",
+      "Reschedule or cancel notifications when items are removed or edited"
+    ],
+    "labels": ["epic-3", "pantry", "expiration", "notifications"]
+  },
+  {
+    "title": "Pantry Category Summary",
+    "epic": 11,
+    "epicName": "Epic 3: Pantry",
+    "role": "user",
+    "want": "See a summary of what categories of food I have available",
+    "benefit": "I get a quick high-level overview of my pantry balance and can spot gaps in my food stock at a glance",
+    "priority": "Medium",
+    "effort": "Low",
+    "criteria": [
+      "A summary view shows each category with the number of items in it",
+      "Categories with zero items are displayed as empty to highlight gaps",
+      "Summary is accessible from the pantry screen header or a dedicated tab",
+      "Tapping a category navigates to the filtered list of items in that category"
+    ],
+    "subtasks": [
+      "Create PantrySummary component that aggregates items by category",
+      "Design summary cards or bar chart showing item counts per category",
+      "Implement navigation from a summary category to the filtered pantry list",
+      "Handle empty categories with visual indication of missing stock"
+    ],
+    "labels": ["epic-3", "pantry", "insights"]
+  },
+  {
+    "title": "AI Chat Pantry Recipe Suggestions",
+    "epic": 11,
+    "epicName": "Epic 3: Pantry",
+    "role": "user",
+    "want": "Ask the AI chat 'What can I cook with what's in my pantry?' and get suggestions based on my actual pantry items",
+    "benefit": "I get personalized meal ideas that use what I already have, reducing the need to buy extra ingredients",
+    "priority": "Medium",
+    "effort": "Medium",
+    "criteria": [
+      "AI chat can access the current pantry item list when generating recipe suggestions",
+      "Suggestions only use ingredients available in the pantry or flag any extras needed",
+      "Responses include recipe names, brief descriptions, and the pantry items they use",
+      "User can ask follow-up questions to refine suggestions based on preferences or constraints"
+    ],
+    "subtasks": [
+      "Expose pantry data as context to the AI chat service when pantry-related queries are detected",
+      "Implement prompt engineering to generate recipe suggestions from a list of available ingredients",
+      "Format AI response to clearly list recipes, required pantry items, and any missing ingredients",
+      "Add pantry-aware intent detection to route relevant queries to the enriched prompt"
+    ],
+    "labels": ["epic-3", "pantry", "ai-integration", "chat"]
+  },
+  {
+    "title": "Feed Recipes Matching Pantry",
+    "epic": 11,
+    "epicName": "Epic 3: Pantry",
+    "role": "user",
+    "want": "See recipe posts in the feed that can be made with my current pantry items or with minimal extra ingredients",
+    "benefit": "I discover relevant recipes passively while browsing and can cook them without a separate shopping trip",
+    "priority": "Medium",
+    "effort": "Medium",
+    "criteria": [
+      "Feed includes a filter or tag highlighting recipes that match the user's pantry",
+      "Matching logic considers recipes where at least 80% of ingredients are in the pantry",
+      "Each matching recipe shows how many pantry items it uses and how many extras are needed",
+      "Filter can be toggled on and off without leaving the feed screen"
+    ],
+    "subtasks": [
+      "Implement ingredient-matching algorithm comparing recipe ingredients to pantry items",
+      "Add a pantry-match badge or indicator on recipe post cards in the feed",
+      "Create a feed filter toggle for showing only pantry-compatible recipes",
+      "Display matched and missing ingredient counts on each recipe card"
+    ],
+    "labels": ["epic-3", "pantry", "ai-integration", "feed"]
+  }
+]

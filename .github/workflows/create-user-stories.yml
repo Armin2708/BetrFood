@@ -1,0 +1,174 @@
+name: Create User Story Issues
+
+on:
+  push:
+    branches:
+      - claude/create-github-issues-dchd8
+    paths:
+      - 'stories/*.json'
+      - '.github/workflows/create-user-stories.yml'
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  create-labels:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create labels
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const labels = [
+              { name: 'user-story', color: '1d76db', description: 'Individual user story issue' },
+              { name: 'epic-1', color: 'e07c5a', description: 'Epic 1: Content System' },
+              { name: 'epic-2', color: 'e0a05a', description: 'Epic 2: User Management' },
+              { name: 'epic-3', color: '5ae07c', description: 'Epic 3: Pantry' },
+              { name: 'epic-4', color: '5a7ce0', description: 'Epic 4: AI Chat' },
+              { name: 'epic-5', color: 'c05ae0', description: 'Epic 5: Content Discovery' },
+              { name: 'epic-6', color: 'e05a8c', description: 'Epic 6: App Settings' },
+              { name: 'priority:high', color: 'b60205', description: 'High priority' },
+              { name: 'priority:medium', color: 'fbca04', description: 'Medium priority' },
+              { name: 'priority:low', color: '0e8a16', description: 'Low priority' },
+              { name: 'effort:high', color: 'd93f0b', description: 'High effort' },
+              { name: 'effort:medium', color: 'f9d0c4', description: 'Medium effort' },
+              { name: 'effort:low', color: 'c2e0c6', description: 'Low effort' },
+            ];
+
+            for (const label of labels) {
+              try {
+                await github.rest.issues.createLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  ...label
+                });
+                console.log(`Created label: ${label.name}`);
+              } catch (e) {
+                if (e.status === 422) {
+                  console.log(`Label already exists: ${label.name}`);
+                } else {
+                  console.error(`Error creating label ${label.name}:`, e.message);
+                }
+              }
+            }
+
+  create-issues:
+    needs: create-labels
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create user story issues
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+
+            // Read all story JSON files
+            const storiesDir = 'stories';
+            const files = fs.readdirSync(storiesDir).filter(f => f.endsWith('.json')).sort();
+            console.log(`Found ${files.length} story files: ${files.join(', ')}`);
+
+            // Get existing issues to avoid duplicates
+            let existingIssues = [];
+            let page = 1;
+            while (true) {
+              const response = await github.rest.issues.listForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: 'all',
+                per_page: 100,
+                page: page
+              });
+              existingIssues = existingIssues.concat(response.data);
+              if (response.data.length < 100) break;
+              page++;
+            }
+            const existingTitles = new Set(existingIssues.map(i => i.title));
+            console.log(`Found ${existingIssues.length} existing issues`);
+
+            let created = 0;
+            let skipped = 0;
+            let errors = 0;
+
+            for (const file of files) {
+              const filePath = path.join(storiesDir, file);
+              const stories = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+              console.log(`\nProcessing ${file}: ${stories.length} stories`);
+
+              for (let i = 0; i < stories.length; i++) {
+                const story = stories[i];
+                const issueTitle = `[${story.epicName}] Story: ${story.title}`;
+
+                // Skip if issue already exists
+                if (existingTitles.has(issueTitle)) {
+                  console.log(`  SKIP (exists): ${issueTitle}`);
+                  skipped++;
+                  continue;
+                }
+
+                // Build issue body
+                const criteriaList = story.criteria.map(c => `- [ ] ${c}`).join('\n');
+                const subtaskList = story.subtasks.map(s => `- [ ] ${s}`).join('\n');
+
+                const body = `# ${story.epicName}
+**Parent Epic:** #${story.epic}
+
+---
+
+## User Story: ${story.title}
+
+* **As a:** ${story.role}
+* **I want to:** ${story.want}
+* **So that:** ${story.benefit}
+* **Priority:** ${story.priority}
+* **Effort:** ${story.effort}
+* **Assigned to:** TBD
+
+### Acceptance Criteria:
+${criteriaList}
+
+### Subtasks:
+${subtaskList}
+`;
+
+                // Build labels
+                const labels = [
+                  'user-story',
+                  `priority:${story.priority.toLowerCase()}`,
+                  `effort:${story.effort.toLowerCase()}`,
+                  ...(story.labels || [])
+                ];
+
+                try {
+                  const issue = await github.rest.issues.create({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    title: issueTitle,
+                    body: body,
+                    labels: labels
+                  });
+                  console.log(`  CREATED #${issue.data.number}: ${issueTitle}`);
+                  created++;
+                  existingTitles.add(issueTitle);
+
+                  // Rate limiting: wait 1 second between creates
+                  await new Promise(r => setTimeout(r, 1000));
+                } catch (e) {
+                  console.error(`  ERROR creating "${issueTitle}": ${e.message}`);
+                  errors++;
+                  // Wait longer on error (might be rate limited)
+                  await new Promise(r => setTimeout(r, 3000));
+                }
+              }
+            }
+
+            console.log(`\n--- Summary ---`);
+            console.log(`Created: ${created}`);
+            console.log(`Skipped (duplicates): ${skipped}`);
+            console.log(`Errors: ${errors}`);
+            console.log(`Total stories processed: ${created + skipped + errors}`);

@@ -1,0 +1,508 @@
+[
+  {
+    "title": "Upload food photo with caption",
+    "epic": 9,
+    "epicName": "Epic 1: Content System",
+    "role": "creator",
+    "want": "upload a food photo with a caption",
+    "benefit": "I can share my culinary creations with my followers",
+    "priority": "High",
+    "effort": "Medium",
+    "criteria": [
+      "Creator can select a photo from device gallery or take a new photo",
+      "Creator can add a text caption up to a defined character limit",
+      "Post appears in followers' feeds after publishing",
+      "Uploaded images are compressed and optimized for fast loading"
+    ],
+    "subtasks": [
+      "Implement image picker and camera integration",
+      "Build post creation form with caption input",
+      "Create backend API endpoint for post creation with image upload",
+      "Integrate cloud storage for image hosting and CDN delivery"
+    ],
+    "labels": ["epic-1", "content-creation"]
+  },
+  {
+    "title": "Attach structured recipe data to post",
+    "epic": 9,
+    "epicName": "Epic 1: Content System",
+    "role": "creator",
+    "want": "attach structured recipe data including ingredients, steps, cook time, servings, and difficulty",
+    "benefit": "my followers can cook the dish themselves",
+    "priority": "High",
+    "effort": "High",
+    "criteria": [
+      "Creator can add a list of ingredients with quantities and units",
+      "Creator can add numbered cooking steps",
+      "Creator can specify cook time, servings, and difficulty level",
+      "Recipe data renders in a structured, readable format on the post detail screen"
+    ],
+    "subtasks": [
+      "Design recipe data schema and database models",
+      "Build recipe input form with dynamic ingredient and step fields",
+      "Create API endpoints for recipe CRUD operations",
+      "Implement recipe display component on post detail view"
+    ],
+    "labels": ["epic-1", "content-creation"]
+  },
+  {
+    "title": "Upload multiple images in a single post (carousel)",
+    "epic": 9,
+    "epicName": "Epic 1: Content System",
+    "role": "creator",
+    "want": "upload multiple images in a single post as a carousel",
+    "benefit": "I can show the cooking process or different angles of the dish",
+    "priority": "Medium",
+    "effort": "Medium",
+    "criteria": [
+      "Creator can select and upload multiple images in one post",
+      "Images display as a swipeable carousel in the feed and detail view",
+      "Carousel includes pagination indicators showing current position",
+      "A maximum image count per post is enforced"
+    ],
+    "subtasks": [
+      "Implement multi-image selection in the image picker",
+      "Build carousel/swipeable image component for display",
+      "Update post creation API to handle multiple image uploads",
+      "Add image ordering and reordering support in the creation flow"
+    ],
+    "labels": ["epic-1", "content-creation"]
+  },
+  {
+    "title": "Upload short-form video content",
+    "epic": 9,
+    "epicName": "Epic 1: Content System",
+    "role": "creator",
+    "want": "upload short-form video content",
+    "benefit": "I can share cooking tutorials and food reels with my audience",
+    "priority": "Medium",
+    "effort": "High",
+    "criteria": [
+      "Creator can upload a video from device or record a new one",
+      "Videos are limited to a maximum duration (e.g., 60 seconds)",
+      "Videos are transcoded and optimized for streaming playback",
+      "Video posts display with a play button and autoplay in feed on mute"
+    ],
+    "subtasks": [
+      "Implement video picker and recording integration",
+      "Set up server-side video transcoding pipeline",
+      "Build video player component with playback controls",
+      "Integrate video CDN for adaptive streaming delivery"
+    ],
+    "labels": ["epic-1", "content-creation"]
+  },
+  {
+    "title": "Tag post with categories",
+    "epic": 9,
+    "epicName": "Epic 1: Content System",
+    "role": "creator",
+    "want": "tag my post with categories such as cuisine type, meal type, and dietary tags",
+    "benefit": "my content is discoverable by users interested in those categories",
+    "priority": "High",
+    "effort": "Low",
+    "criteria": [
+      "Creator can select one or more cuisine type tags (e.g., Italian, Japanese)",
+      "Creator can select meal type tags (e.g., breakfast, lunch, dinner, snack)",
+      "Creator can select dietary tags (e.g., vegan, gluten-free, keto)",
+      "Tags are displayed on the post and are searchable/filterable"
+    ],
+    "subtasks": [
+      "Define tag taxonomy and seed database with initial tag values",
+      "Build tag selection UI component with search/filter",
+      "Create API for associating tags with posts",
+      "Index tags for search and feed filtering"
+    ],
+    "labels": ["epic-1", "content-creation"]
+  },
+  {
+    "title": "Save post as draft before publishing",
+    "epic": 9,
+    "epicName": "Epic 1: Content System",
+    "role": "creator",
+    "want": "save a post as a draft before publishing",
+    "benefit": "I can refine the content later before making it public",
+    "priority": "Medium",
+    "effort": "Medium",
+    "criteria": [
+      "Creator can save an in-progress post as a draft",
+      "Drafts are accessible from a dedicated drafts section in the profile",
+      "Creator can resume editing a draft and publish it when ready",
+      "Drafts are not visible to other users"
+    ],
+    "subtasks": [
+      "Add draft status field to the post data model",
+      "Implement save-as-draft button in the post creation flow",
+      "Build drafts list view accessible from the creator profile",
+      "Create API endpoints for listing, updating, and publishing drafts"
+    ],
+    "labels": ["epic-1", "content-creation"]
+  },
+  {
+    "title": "Edit post after publishing",
+    "epic": 9,
+    "epicName": "Epic 1: Content System",
+    "role": "creator",
+    "want": "edit my post's caption, tags, and recipe data after publishing",
+    "benefit": "I can correct mistakes or improve the content",
+    "priority": "High",
+    "effort": "Low",
+    "criteria": [
+      "Creator can edit caption text on a published post",
+      "Creator can add, remove, or change tags on a published post",
+      "Creator can update recipe data on a published post",
+      "An 'edited' indicator is shown on modified posts"
+    ],
+    "subtasks": [
+      "Build edit post screen pre-populated with existing post data",
+      "Create API endpoint for updating post fields",
+      "Add edit timestamp tracking to post model",
+      "Implement authorization check ensuring only the post owner can edit"
+    ],
+    "labels": ["epic-1", "content-creation"]
+  },
+  {
+    "title": "Delete own posts",
+    "epic": 9,
+    "epicName": "Epic 1: Content System",
+    "role": "creator",
+    "want": "delete my own posts",
+    "benefit": "I can remove content I no longer want published",
+    "priority": "High",
+    "effort": "Low",
+    "criteria": [
+      "Creator can delete any of their own posts",
+      "A confirmation dialog is shown before deletion",
+      "Deleted posts are removed from all feeds, profiles, and collections",
+      "Associated media files are cleaned up from storage"
+    ],
+    "subtasks": [
+      "Add delete button with confirmation dialog to post options menu",
+      "Create API endpoint for soft-deleting posts",
+      "Implement cascading cleanup of likes, comments, bookmarks, and media",
+      "Add authorization check ensuring only the post owner can delete"
+    ],
+    "labels": ["epic-1", "content-creation"]
+  },
+  {
+    "title": "Scroll through personalized home feed",
+    "epic": 9,
+    "epicName": "Epic 1: Content System",
+    "role": "user",
+    "want": "scroll through a personalized home feed",
+    "benefit": "I can discover relevant food content tailored to my interests",
+    "priority": "High",
+    "effort": "High",
+    "criteria": [
+      "User sees a feed of posts ranked by relevance to their interests",
+      "Feed considers user interactions, followed accounts, and preferred categories",
+      "Feed displays post image/video, caption preview, author info, and engagement counts",
+      "New users see a curated default feed until personalization data is available"
+    ],
+    "subtasks": [
+      "Design feed ranking algorithm incorporating engagement signals and preferences",
+      "Build feed API endpoint with cursor-based pagination",
+      "Implement feed UI with post card components",
+      "Set up feed caching layer for performance"
+    ],
+    "labels": ["epic-1", "feed"]
+  },
+  {
+    "title": "Switch between For You and Following feeds",
+    "epic": 9,
+    "epicName": "Epic 1: Content System",
+    "role": "user",
+    "want": "switch between a 'For You' algorithmic feed and a 'Following' chronological feed",
+    "benefit": "I can choose between discovering new content and seeing posts from people I follow",
+    "priority": "High",
+    "effort": "Medium",
+    "criteria": [
+      "Feed screen has tabs or toggle for 'For You' and 'Following'",
+      "'For You' feed uses algorithmic ranking for content discovery",
+      "'Following' feed shows posts only from followed accounts in reverse chronological order",
+      "Selected feed preference persists within the session"
+    ],
+    "subtasks": [
+      "Build tab/toggle UI component for feed switching",
+      "Implement 'Following' feed query filtered to followed accounts",
+      "Implement 'For You' feed query with algorithmic ranking",
+      "Persist last-selected feed tab in local state"
+    ],
+    "labels": ["epic-1", "feed"]
+  },
+  {
+    "title": "View full post detail with recipe",
+    "epic": 9,
+    "epicName": "Epic 1: Content System",
+    "role": "user",
+    "want": "view the full post detail screen with the complete recipe, ingredients, and cooking steps",
+    "benefit": "I can follow the recipe and cook the dish",
+    "priority": "High",
+    "effort": "Medium",
+    "criteria": [
+      "Tapping a post in the feed opens a full detail screen",
+      "Detail screen shows full-resolution image/video, complete caption, and author info",
+      "Recipe section displays ingredients list, numbered steps, cook time, servings, and difficulty",
+      "User can scroll through all content and interact (like, comment, save) from the detail screen"
+    ],
+    "subtasks": [
+      "Build post detail screen layout with all content sections",
+      "Create API endpoint for fetching full post data including recipe",
+      "Implement recipe display component with ingredients and steps formatting",
+      "Add navigation from feed post card to detail screen"
+    ],
+    "labels": ["epic-1", "feed"]
+  },
+  {
+    "title": "Optimized feed loading with pagination",
+    "epic": 9,
+    "epicName": "Epic 1: Content System",
+    "role": "user",
+    "want": "the feed to load fast with optimized image and video delivery and infinite scroll pagination",
+    "benefit": "I have a smooth, uninterrupted browsing experience",
+    "priority": "High",
+    "effort": "High",
+    "criteria": [
+      "Feed loads initial batch of posts within acceptable performance threshold",
+      "Images and videos are served via CDN with appropriate compression and caching",
+      "Additional posts load automatically as the user scrolls near the bottom",
+      "Loading indicators are shown during fetch without blocking existing content"
+    ],
+    "subtasks": [
+      "Implement cursor-based infinite scroll pagination on frontend",
+      "Configure CDN and image optimization pipeline with responsive sizes",
+      "Add lazy loading for off-screen images and videos",
+      "Implement skeleton loading placeholders during data fetch"
+    ],
+    "labels": ["epic-1", "feed"]
+  },
+  {
+    "title": "Pull-to-refresh feed",
+    "epic": 9,
+    "epicName": "Epic 1: Content System",
+    "role": "user",
+    "want": "pull-to-refresh my feed to see the latest posts",
+    "benefit": "I can quickly check for new content without restarting the app",
+    "priority": "Medium",
+    "effort": "Low",
+    "criteria": [
+      "Pulling down on the feed triggers a refresh animation and data reload",
+      "Feed updates with the latest posts after refresh completes",
+      "Scroll position resets to the top on refresh",
+      "A visual indicator confirms when the refresh is complete"
+    ],
+    "subtasks": [
+      "Implement pull-to-refresh gesture handler on the feed scroll view",
+      "Trigger feed API refetch on pull-to-refresh activation",
+      "Add refresh animation and completion indicator",
+      "Reset pagination cursor on refresh"
+    ],
+    "labels": ["epic-1", "feed"]
+  },
+  {
+    "title": "Like and unlike a post",
+    "epic": 9,
+    "epicName": "Epic 1: Content System",
+    "role": "user",
+    "want": "like and unlike a post",
+    "benefit": "I can express appreciation for content I enjoy",
+    "priority": "High",
+    "effort": "Low",
+    "criteria": [
+      "User can tap a heart/like button to like a post",
+      "Tapping again unlikes the post (toggle behavior)",
+      "Like count updates in real time on the post",
+      "Like state persists and is reflected correctly across sessions"
+    ],
+    "subtasks": [
+      "Build like/unlike toggle button with animation",
+      "Create API endpoints for liking and unliking posts",
+      "Implement optimistic UI update for instant feedback",
+      "Add like count to post data model and feed response"
+    ],
+    "labels": ["epic-1", "interactions"]
+  },
+  {
+    "title": "Comment on a post",
+    "epic": 9,
+    "epicName": "Epic 1: Content System",
+    "role": "user",
+    "want": "comment on a post",
+    "benefit": "I can ask questions or share my thoughts about the content",
+    "priority": "High",
+    "effort": "Medium",
+    "criteria": [
+      "User can type and submit a comment on any post",
+      "Comments appear in chronological order below the post",
+      "Comment count is displayed on the post in the feed",
+      "User can delete their own comments"
+    ],
+    "subtasks": [
+      "Build comment input field and submit button on post detail screen",
+      "Create API endpoints for creating, listing, and deleting comments",
+      "Implement comment list component with pagination",
+      "Add comment count to post data model and feed response"
+    ],
+    "labels": ["epic-1", "interactions"]
+  },
+  {
+    "title": "Reply to comments (threaded comments)",
+    "epic": 9,
+    "epicName": "Epic 1: Content System",
+    "role": "user",
+    "want": "reply to comments to create threaded conversations",
+    "benefit": "conversations stay organized and easy to follow",
+    "priority": "Medium",
+    "effort": "Medium",
+    "criteria": [
+      "User can tap 'Reply' on a comment to respond directly",
+      "Replies are visually nested under the parent comment",
+      "Thread can be expanded or collapsed for readability",
+      "Reply authors are notified of responses to their comments"
+    ],
+    "subtasks": [
+      "Add parent_comment_id field to comment data model for threading",
+      "Build threaded comment display with indentation and collapse/expand",
+      "Implement reply input that references the parent comment",
+      "Create notification trigger for replies to a user's comment"
+    ],
+    "labels": ["epic-1", "interactions"]
+  },
+  {
+    "title": "Save/bookmark a post to a collection",
+    "epic": 9,
+    "epicName": "Epic 1: Content System",
+    "role": "user",
+    "want": "save or bookmark a post to a collection",
+    "benefit": "I can easily find it later when I want to cook that recipe",
+    "priority": "High",
+    "effort": "Medium",
+    "criteria": [
+      "User can tap a bookmark icon to save a post",
+      "User is prompted to select or create a collection when saving",
+      "Saved posts are accessible from the user's profile",
+      "User can unsave/remove a bookmark from a post"
+    ],
+    "subtasks": [
+      "Build bookmark toggle button on post card and detail screen",
+      "Create API endpoints for saving and unsaving posts",
+      "Implement collection picker modal shown on save action",
+      "Add saved/bookmarked state to post response for the current user"
+    ],
+    "labels": ["epic-1", "interactions", "collections"]
+  },
+  {
+    "title": "Share a post externally",
+    "epic": 9,
+    "epicName": "Epic 1: Content System",
+    "role": "user",
+    "want": "share a post externally via copy link or share to other apps",
+    "benefit": "I can share great food content with friends outside the platform",
+    "priority": "Medium",
+    "effort": "Low",
+    "criteria": [
+      "User can tap a share button on any post",
+      "Share options include copying a direct link to the post",
+      "Share options include sharing to other apps via the native share sheet",
+      "Shared links open the post in-app or on the web if the app is not installed"
+    ],
+    "subtasks": [
+      "Generate shareable deep link URLs for posts",
+      "Implement native share sheet integration",
+      "Add copy-to-clipboard functionality for post links",
+      "Set up deep link handling for incoming shared links"
+    ],
+    "labels": ["epic-1", "interactions"]
+  },
+  {
+    "title": "Report inappropriate content",
+    "epic": 9,
+    "epicName": "Epic 1: Content System",
+    "role": "user",
+    "want": "report inappropriate content",
+    "benefit": "the platform remains safe and welcoming for all users",
+    "priority": "High",
+    "effort": "Low",
+    "criteria": [
+      "User can tap a 'Report' option from the post options menu",
+      "User can select a report reason from a predefined list (spam, harassment, etc.)",
+      "A confirmation is shown after the report is submitted",
+      "Reported content is flagged for moderator review"
+    ],
+    "subtasks": [
+      "Build report flow UI with reason selection and optional description",
+      "Create API endpoint for submitting content reports",
+      "Implement report data model with status tracking for moderation",
+      "Add report option to post options menu"
+    ],
+    "labels": ["epic-1", "interactions"]
+  },
+  {
+    "title": "Create named collections",
+    "epic": 9,
+    "epicName": "Epic 1: Content System",
+    "role": "user",
+    "want": "create named collections such as 'Weeknight Dinners' or 'Desserts'",
+    "benefit": "I can organize my saved posts into meaningful categories",
+    "priority": "Medium",
+    "effort": "Medium",
+    "criteria": [
+      "User can create a new collection with a custom name",
+      "User can rename or delete existing collections",
+      "Collections are listed in the user's profile under a collections tab",
+      "Each collection shows a preview thumbnail and post count"
+    ],
+    "subtasks": [
+      "Design collection data model with name, owner, and cover image",
+      "Build create/edit collection form with name input",
+      "Create API endpoints for collection CRUD operations",
+      "Implement collections list view with thumbnails and counts"
+    ],
+    "labels": ["epic-1", "collections"]
+  },
+  {
+    "title": "Add and remove posts from collections",
+    "epic": 9,
+    "epicName": "Epic 1: Content System",
+    "role": "user",
+    "want": "add and remove posts from my collections",
+    "benefit": "I can curate and manage the content in each collection",
+    "priority": "Medium",
+    "effort": "Low",
+    "criteria": [
+      "User can add a post to one or more collections from the bookmark action",
+      "User can remove a post from a collection",
+      "Collection contents update immediately after adding or removing",
+      "Post's saved state reflects whether it exists in any collection"
+    ],
+    "subtasks": [
+      "Build collection picker with checkboxes for multi-select",
+      "Create API endpoints for adding and removing posts from collections",
+      "Implement remove-from-collection action within the collection view",
+      "Update bookmark state based on collection membership"
+    ],
+    "labels": ["epic-1", "collections"]
+  },
+  {
+    "title": "Browse collections from profile",
+    "epic": 9,
+    "epicName": "Epic 1: Content System",
+    "role": "user",
+    "want": "browse my collections from my profile",
+    "benefit": "I can easily access and revisit my organized saved content",
+    "priority": "Medium",
+    "effort": "Low",
+    "criteria": [
+      "User's profile has a collections tab or section",
+      "Collections are displayed as a grid with cover images and names",
+      "Tapping a collection opens it and shows all saved posts inside",
+      "Posts within a collection can be viewed in detail by tapping"
+    ],
+    "subtasks": [
+      "Add collections tab to the user profile screen",
+      "Build collection grid view with cover image and name",
+      "Create collection detail view showing contained posts",
+      "Implement API endpoint for fetching user's collections with previews"
+    ],
+    "labels": ["epic-1", "collections"]
+  }
+]
