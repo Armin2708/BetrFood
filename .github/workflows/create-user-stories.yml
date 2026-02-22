@@ -60,6 +60,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: claude/create-github-issues-dchd8
 
       - name: Create user story issues
         uses: actions/github-script@v7
@@ -112,8 +114,8 @@ jobs:
                 }
 
                 // Build issue body
-                const criteriaList = story.criteria.map(c => `- [ ] ${c}`).join('\n');
-                const subtaskList = story.subtasks.map(s => `- [ ] ${s}`).join('\n');
+                const criteriaList = story.criteria.map(c => `    * [ ] ${c}`).join('\n');
+                const subtaskList = story.subtasks.map(s => `    * [ ] ${s}`).join('\n');
 
                 const body = `# ${story.epicName}
 **Parent Epic:** #${story.epic}
