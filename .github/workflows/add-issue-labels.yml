@@ -1,0 +1,189 @@
+name: Add Technical Labels to User Story Issues
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - claude/add-issue-labels-*
+
+permissions:
+  issues: write
+
+jobs:
+  create-labels:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create technical labels
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          # Create labels if they don't exist
+          declare -A LABELS
+          LABELS["frontend"]="1D76DB:Involves UI components, screens, and client-side code"
+          LABELS["backend"]="D93F0B:Involves server-side logic, API endpoints, and cloud functions"
+          LABELS["database"]="0E8A16:Involves data storage, schema design, and queries"
+          LABELS["ui-ux"]="C5DEF5:Focused on design, layout, theming, and user experience"
+          LABELS["infrastructure"]="F9D0C4:Involves push notifications, CDN, deployment, and external services"
+          LABELS["logic"]="FBCA04:Involves business logic, algorithms, and AI processing"
+
+          for label in "${!LABELS[@]}"; do
+            IFS=':' read -r color description <<< "${LABELS[$label]}"
+            gh label create "$label" --color "$color" --description "$description" --repo "$REPO" 2>/dev/null || \
+            gh label edit "$label" --color "$color" --description "$description" --repo "$REPO" 2>/dev/null || \
+            echo "Label '$label' already exists"
+          done
+
+      - name: Add labels to user story issues
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          add_labels() {
+            local issue=$1
+            shift
+            local labels="$@"
+            for label in $labels; do
+              gh issue edit "$issue" --add-label "$label" --repo "$REPO" 2>/dev/null || echo "Failed to add $label to #$issue"
+            done
+            echo "Updated #$issue with: $labels"
+          }
+
+          echo "=== Epic 1: Content System ==="
+          add_labels 15 frontend backend database
+          add_labels 16 frontend backend database
+          add_labels 17 frontend backend
+          add_labels 18 frontend backend infrastructure
+          add_labels 19 frontend backend database
+          add_labels 20 frontend backend database
+          add_labels 21 frontend backend database
+          add_labels 22 frontend backend database
+          add_labels 23 frontend backend logic
+          add_labels 24 frontend backend logic
+          add_labels 25 frontend ui-ux
+          add_labels 26 frontend backend infrastructure
+          add_labels 27 frontend
+          add_labels 28 frontend backend database
+          add_labels 29 frontend backend database
+          add_labels 30 frontend backend database
+          add_labels 31 frontend backend database
+          add_labels 32 frontend
+          add_labels 33 frontend backend database
+          add_labels 34 frontend backend database
+          add_labels 35 frontend backend database
+          add_labels 36 frontend backend
+
+          echo "=== Epic 2: User Management System ==="
+          add_labels 37 frontend backend database infrastructure
+          add_labels 38 frontend backend infrastructure
+          add_labels 39 frontend backend infrastructure
+          add_labels 40 frontend ui-ux
+          add_labels 41 frontend backend
+          add_labels 42 frontend backend
+          add_labels 43 frontend backend infrastructure
+          add_labels 44 frontend backend
+          add_labels 45 frontend backend database
+          add_labels 46 frontend
+          add_labels 47 frontend backend
+          add_labels 48 frontend backend database
+          add_labels 49 frontend backend database
+          add_labels 50 frontend backend database
+          add_labels 51 backend database logic
+          add_labels 52 frontend backend database
+          add_labels 53 frontend backend database
+          add_labels 54 frontend backend database
+          add_labels 55 frontend backend
+          add_labels 56 frontend backend
+          add_labels 57 frontend backend database
+          add_labels 58 backend infrastructure
+          add_labels 59 frontend backend database
+          add_labels 60 frontend backend database
+          add_labels 61 frontend backend database
+
+          echo "=== Epic 3: Pantry ==="
+          add_labels 62 frontend backend
+          add_labels 63 frontend backend database
+          add_labels 64 frontend backend database
+          add_labels 65 frontend backend database
+          add_labels 66 frontend logic
+          add_labels 67 frontend backend
+          add_labels 68 frontend backend logic
+          add_labels 69 frontend logic infrastructure
+          add_labels 70 frontend logic infrastructure
+          add_labels 71 frontend ui-ux
+          add_labels 72 frontend logic infrastructure
+          add_labels 73 frontend backend logic
+          add_labels 74 backend infrastructure
+          add_labels 75 frontend backend logic
+          add_labels 76 backend logic
+          add_labels 77 backend logic
+
+          echo "=== Epic 4: AI Chat ==="
+          add_labels 78 frontend backend
+          add_labels 79 frontend backend logic
+          add_labels 80 backend logic
+          add_labels 81 frontend backend database
+          add_labels 82 frontend backend database
+          add_labels 83 frontend ui-ux
+          add_labels 84 frontend backend logic
+          add_labels 85 backend logic
+          add_labels 86 backend logic
+          add_labels 87 backend logic
+          add_labels 88 backend logic
+          add_labels 89 backend logic
+          add_labels 90 frontend backend infrastructure
+          add_labels 91 frontend
+          add_labels 92 frontend ui-ux
+
+          echo "=== Epic 5: Content Suggestion & Discovery ==="
+          add_labels 93 frontend backend
+          add_labels 94 frontend backend
+          add_labels 95 frontend backend
+          add_labels 96 frontend backend logic
+          add_labels 97 frontend database
+          add_labels 98 frontend database
+          add_labels 99 frontend backend logic
+          add_labels 100 backend logic
+          add_labels 101 backend logic
+          add_labels 102 frontend backend ui-ux
+          add_labels 103 frontend backend
+          add_labels 104 frontend backend logic
+          add_labels 105 frontend backend
+
+          echo "=== Epic 6: App Management & Settings ==="
+          add_labels 106 frontend ui-ux
+          add_labels 107 frontend ui-ux
+          add_labels 108 frontend backend database
+          add_labels 109 frontend backend
+          add_labels 110 frontend backend database
+          add_labels 111 frontend backend database
+          add_labels 112 frontend backend database
+          add_labels 113 frontend backend infrastructure
+          add_labels 114 frontend backend infrastructure
+          add_labels 115 frontend backend infrastructure logic
+          add_labels 116 frontend backend database
+          add_labels 117 frontend backend database
+          add_labels 118 frontend backend database
+          add_labels 119 frontend backend database
+          add_labels 120 frontend backend database
+          add_labels 121 frontend backend database
+          add_labels 122 frontend ui-ux
+          add_labels 123 frontend ui-ux
+          add_labels 124 frontend ui-ux
+          add_labels 125 frontend backend database
+          add_labels 126 frontend backend database
+          add_labels 127 frontend backend database
+          add_labels 128 frontend backend database logic
+          add_labels 129 frontend database
+          add_labels 130 frontend backend database
+          add_labels 131 frontend infrastructure
+          add_labels 132 frontend infrastructure
+          add_labels 133 frontend ui-ux
+          add_labels 134 frontend backend
+          add_labels 135 frontend backend
+          add_labels 136 frontend
+          add_labels 137 frontend ui-ux
+          add_labels 138 frontend ui-ux
+          add_labels 139 frontend ui-ux
+
+          echo "=== Done! All labels applied. ==="
