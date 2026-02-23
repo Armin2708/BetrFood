@@ -1,0 +1,223 @@
+name: Update Issues - Link Parents, Priority, Iterations
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - claude/create-github-issues-dchd8
+    paths:
+      - '.github/workflows/update-issues.yml'
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  update-issues:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: claude/create-github-issues-dchd8
+
+      - name: Create milestones, link parents, assign iterations
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+
+            // ── Step 1: Create milestones (iterations) ──
+            const milestones = [
+              { title: 'Iteration 1 - Core Content & Authentication', description: 'MVP: High-priority stories from Epic 1 (Content System) and Epic 2 (User Management). Focus on user registration, login, posting content, and feed.' },
+              { title: 'Iteration 2 - Content & User Features Completion', description: 'Medium-priority stories from Epic 1 and Epic 2. Complete content creation features (carousel, video, drafts) and social features (follow, block).' },
+              { title: 'Iteration 3 - Pantry, AI Chat & Discovery Core', description: 'High-priority stories from Epic 3 (Pantry), Epic 4 (AI Chat), and Epic 5 (Content Discovery). Core search, pantry management, and AI chat.' },
+              { title: 'Iteration 4 - Pantry, AI & Discovery Polish', description: 'Medium-priority stories from Epic 3, Epic 4, and Epic 5. Photo-based pantry features, AI context awareness, explore page, and trending content.' },
+              { title: 'Iteration 5 - AI Extras & Settings Core', description: 'Low-priority AI Chat stories and High-priority Epic 6 (Settings) stories. Streaming responses, settings screen, account management, notifications.' },
+              { title: 'Iteration 6 - Settings Completion & Polish', description: 'Medium and Low-priority Epic 6 stories. Privacy controls, appearance settings, help/support, legal pages, and final polish.' },
+            ];
+
+            const milestoneMap = {};
+            for (let i = 0; i < milestones.length; i++) {
+              const m = milestones[i];
+              try {
+                const existing = await github.rest.issues.listMilestones({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  state: 'all',
+                });
+                const found = existing.data.find(function(ms) { return ms.title === m.title; });
+                if (found) {
+                  console.log('Milestone exists: ' + m.title + ' (#' + found.number + ')');
+                  milestoneMap[m.title] = found.number;
+                } else {
+                  const created = await github.rest.issues.createMilestone({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    title: m.title,
+                    description: m.description,
+                  });
+                  console.log('Created milestone: ' + m.title + ' (#' + created.data.number + ')');
+                  milestoneMap[m.title] = created.data.number;
+                }
+              } catch (e) {
+                console.error('Error with milestone ' + m.title + ': ' + e.message);
+              }
+            }
+
+            // ── Step 2: Define iteration mapping ──
+            // Key: "epicNumber-priority" -> milestone title
+            const iterationMapping = {
+              '9-high': 'Iteration 1 - Core Content & Authentication',
+              '9-medium': 'Iteration 2 - Content & User Features Completion',
+              '10-high': 'Iteration 1 - Core Content & Authentication',
+              '10-medium': 'Iteration 2 - Content & User Features Completion',
+              '11-high': 'Iteration 3 - Pantry, AI Chat & Discovery Core',
+              '11-medium': 'Iteration 4 - Pantry, AI & Discovery Polish',
+              '12-high': 'Iteration 3 - Pantry, AI Chat & Discovery Core',
+              '12-medium': 'Iteration 4 - Pantry, AI & Discovery Polish',
+              '12-low': 'Iteration 5 - AI Extras & Settings Core',
+              '13-high': 'Iteration 3 - Pantry, AI Chat & Discovery Core',
+              '13-medium': 'Iteration 4 - Pantry, AI & Discovery Polish',
+              '14-high': 'Iteration 5 - AI Extras & Settings Core',
+              '14-medium': 'Iteration 6 - Settings Completion & Polish',
+              '14-low': 'Iteration 6 - Settings Completion & Polish',
+            };
+
+            // ── Step 3: Get all existing issues ──
+            let allIssues = [];
+            let page = 1;
+            while (true) {
+              const response = await github.rest.issues.listForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: 'all',
+                per_page: 100,
+                page: page,
+              });
+              allIssues = allIssues.concat(response.data);
+              if (response.data.length < 100) break;
+              page++;
+            }
+            console.log('Total issues in repo: ' + allIssues.length);
+
+            // Build a map of issue title -> issue data
+            const issuesByTitle = {};
+            for (const issue of allIssues) {
+              issuesByTitle[issue.title] = issue;
+            }
+
+            // ── Step 4: Get epic issue node IDs for sub-issue linking ──
+            const epicIssueNumbers = [9, 10, 11, 12, 13, 14];
+            const epicNodeIds = {};
+            for (const num of epicIssueNumbers) {
+              try {
+                const query = 'query($owner: String!, $repo: String!, $number: Int!) { repository(owner: $owner, name: $repo) { issue(number: $number) { id } } }';
+                const result = await github.graphql(query, {
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  number: num,
+                });
+                epicNodeIds[num] = result.repository.issue.id;
+                console.log('Epic #' + num + ' node ID: ' + epicNodeIds[num]);
+              } catch (e) {
+                console.error('Error getting node ID for epic #' + num + ': ' + e.message);
+              }
+            }
+
+            // ── Step 5: Process each story file ──
+            const storiesDir = 'stories';
+            const files = fs.readdirSync(storiesDir).filter(function(f) { return f.endsWith('.json'); }).sort();
+            console.log('\nProcessing ' + files.length + ' story files...');
+
+            let linked = 0;
+            let milestoned = 0;
+            let skippedLink = 0;
+            let skippedMilestone = 0;
+            let errorCount = 0;
+
+            for (const file of files) {
+              const filePath = path.join(storiesDir, file);
+              const stories = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+              console.log('\n--- ' + file + ' (' + stories.length + ' stories) ---');
+
+              for (const story of stories) {
+                const issueTitle = '[' + story.epicName + '] Story: ' + story.title;
+                const issue = issuesByTitle[issueTitle];
+
+                if (!issue) {
+                  console.log('  Issue not found: ' + issueTitle);
+                  errorCount++;
+                  continue;
+                }
+
+                const issueNum = issue.number;
+                const epicNum = story.epic;
+                const priority = story.priority.toLowerCase();
+
+                // ── 5a: Assign milestone (iteration) ──
+                const mapKey = epicNum + '-' + priority;
+                const milestoneName = iterationMapping[mapKey];
+                const milestoneNum = milestoneName ? milestoneMap[milestoneName] : null;
+
+                if (milestoneNum && (!issue.milestone || issue.milestone.number !== milestoneNum)) {
+                  try {
+                    await github.rest.issues.update({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      issue_number: issueNum,
+                      milestone: milestoneNum,
+                    });
+                    console.log('  #' + issueNum + ' -> milestone: ' + milestoneName);
+                    milestoned++;
+                  } catch (e) {
+                    console.error('  Error setting milestone on #' + issueNum + ': ' + e.message);
+                    errorCount++;
+                  }
+                } else if (issue.milestone) {
+                  skippedMilestone++;
+                }
+
+                // ── 5b: Link as sub-issue of parent epic ──
+                const parentNodeId = epicNodeIds[epicNum];
+                if (parentNodeId) {
+                  try {
+                    // Get child issue node ID
+                    const childQuery = 'query($owner: String!, $repo: String!, $number: Int!) { repository(owner: $owner, name: $repo) { issue(number: $number) { id } } }';
+                    const childResult = await github.graphql(childQuery, {
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      number: issueNum,
+                    });
+                    const childNodeId = childResult.repository.issue.id;
+
+                    // Add sub-issue relationship
+                    const mutation = 'mutation($parentId: ID!, $childId: ID!) { addSubIssue(input: { issueId: $parentId, subIssueId: $childId }) { issue { id } subIssue { id } } }';
+                    await github.graphql(mutation, {
+                      parentId: parentNodeId,
+                      childId: childNodeId,
+                    });
+                    console.log('  #' + issueNum + ' -> linked to epic #' + epicNum);
+                    linked++;
+                  } catch (e) {
+                    if (e.message && e.message.includes('already')) {
+                      skippedLink++;
+                    } else {
+                      console.error('  Error linking #' + issueNum + ' to epic #' + epicNum + ': ' + e.message);
+                      errorCount++;
+                    }
+                  }
+                }
+
+                // Rate limiting
+                await new Promise(function(r) { setTimeout(r, 500); });
+              }
+            }
+
+            console.log('\n=== SUMMARY ===');
+            console.log('Milestones assigned: ' + milestoned);
+            console.log('Sub-issues linked: ' + linked);
+            console.log('Skipped (already milestoned): ' + skippedMilestone);
+            console.log('Skipped (already linked): ' + skippedLink);
+            console.log('Errors: ' + errorCount);
