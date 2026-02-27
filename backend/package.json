@@ -1,0 +1,12 @@
+{
+  "name": "betrfood-backend",
+  "version": "1.0.0",
+  "description": "BetrFood backend API",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}
