@@ -7,6 +7,10 @@
     "start": "node src/index.js",
     "dev": "nodemon src/index.js"
   },
-  "dependencies": {},
-  "devDependencies": {}
+  "dependencies": {
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "multer": "^2.1.0",
+    "uuid": "^13.0.0"
+  }
 }
