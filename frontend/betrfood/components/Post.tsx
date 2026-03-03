@@ -1,14 +1,17 @@
 import React, { useState } from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
+import { RecipeSummary } from './RecipeDisplay';
+import type { Recipe } from '../services/api';
 
 interface PostProps {
   profilePic: string;
   username: string;
   postImage: string;
   caption: string;
+  recipe?: Recipe | null;
 }
 
-export default function Post({ profilePic, username, postImage, caption }: PostProps) {
+export default function Post({ profilePic, username, postImage, caption, recipe }: PostProps) {
   const [liked, setLiked] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -47,6 +50,9 @@ export default function Post({ profilePic, username, postImage, caption }: PostP
         <Text style={styles.username}>{username} </Text>
         {caption}
       </Text>
+
+      {/* Recipe summary */}
+      {recipe && <RecipeSummary recipe={recipe} />}
     </View>
   );
 }
