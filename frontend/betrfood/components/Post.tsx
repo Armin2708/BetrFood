@@ -9,11 +9,21 @@ interface PostProps {
 }
 
 export default function Post({ profilePic, username, postImage, caption }: PostProps) {
+  // TODO: api call to see if user liked/saved post before
   const [liked, setLiked] = useState(false);
   const [saved, setSaved] = useState(false);
 
   const toggleLike = () => setLiked(!liked);
-  const toggleSave = () => setSaved(!saved);
+  const toggleSave = () => {
+    // TODO: insert api calls
+    if (saved) {
+      
+    }
+    else{
+
+    }
+    setSaved(!saved)
+  };
 
   return (
     <View style={styles.container}>

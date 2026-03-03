@@ -1,4 +1,5 @@
 import { View, Text, Pressable, StyleSheet, Image, FlatList, Dimensions } from 'react-native';
+import { useRouter } from 'expo-router'
 
 const { width } = Dimensions.get('window');
 const ITEM_SIZE = width / 3;
@@ -8,6 +9,8 @@ const mockPosts = Array.from({ length: 18 }).map((_, i) => ({
 }));
 
 export default function ProfileScreen() {
+  const router = useRouter()
+  
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -18,9 +21,9 @@ export default function ProfileScreen() {
         />
 
         <View style={styles.statsRow}>
-          <Stat label="Following" value="120" />
-          <Stat label="Followers" value="1.2K" />
-          <Stat label="Likes" value="8.4K" />
+          <Stat label="Following" value="120" callback={ () => router.push('(tabs)/profile/info/FollowingScreen') }/>
+          <Stat label="Followers" value="1.2K" callback={ () => router.push('(tabs)/profile/info/FollowersScreen') } />
+          <Stat label="Likes" value="8.4K" callback={ () => {} }/>
         </View>
       </View>
 
@@ -49,11 +52,13 @@ export default function ProfileScreen() {
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function Stat({ label, value, callback }: { label: string; value: string; callback: () => void }) {
   return (
     <View style={styles.statItem}>
-      <Text style={styles.statValue}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
+      <Pressable onPress={ callback }>
+        <Text style={styles.statValue}>{value}</Text>
+        <Text style={styles.statLabel}>{label}</Text>
+        </Pressable>
     </View>
   );
 }
