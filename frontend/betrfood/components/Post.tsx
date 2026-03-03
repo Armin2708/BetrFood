@@ -1,14 +1,31 @@
 import React, { useState } from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
+import { Tag } from '../services/api';
+import TagDisplay from './TagDisplay';
 
 interface PostProps {
+  id?: string;
   profilePic: string;
   username: string;
   postImage: string;
   caption: string;
+  userId?: string;
+  currentUserId?: string;
+  onDeleted?: (postId: string) => void;
+  tags?: Tag[];
 }
 
-export default function Post({ profilePic, username, postImage, caption }: PostProps) {
+export default function Post({
+  id,
+  profilePic,
+  username,
+  postImage,
+  caption,
+  userId,
+  currentUserId,
+  onDeleted,
+  tags,
+}: PostProps) {
   const [liked, setLiked] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -31,13 +48,13 @@ export default function Post({ profilePic, username, postImage, caption }: PostP
         {/* Like button */}
         <TouchableOpacity onPress={toggleLike}>
           <Text style={[styles.likeButton, liked && styles.liked]}>
-            {liked ? '❤️ Liked' : '🤍 Like'}
+            {liked ? 'Liked' : 'Like'}
           </Text>
         </TouchableOpacity>
         {/* Save button */}
         <TouchableOpacity onPress={toggleSave}>
           <Text style={[styles.likeButton, saved && styles.saved]}>
-            {saved ? '💙 Saved' : '🤍 Save'}
+            {saved ? 'Saved' : 'Save'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -47,6 +64,9 @@ export default function Post({ profilePic, username, postImage, caption }: PostP
         <Text style={styles.username}>{username} </Text>
         {caption}
       </Text>
+
+      {/* Tags */}
+      {tags && tags.length > 0 && <TagDisplay tags={tags} />}
     </View>
   );
 }
@@ -81,6 +101,7 @@ const styles = StyleSheet.create({
   actions: {
     flexDirection: 'row',
     padding: 10,
+    gap: 16,
   },
   likeButton: {
     fontSize: 16,
