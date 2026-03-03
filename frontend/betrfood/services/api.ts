@@ -23,27 +23,11 @@ export async function fetchPosts(cursor?: string | null, limit: number = 10): Pr
   const params = new URLSearchParams({ limit: String(limit) });
   if (cursor) params.set('cursor', cursor);
   const response = await fetch(`${API_BASE_URL}/api/posts?${params}`);
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Failed to fetch posts');
-  }
+  if (!response.ok) { const e = await response.json(); throw new Error(e.error || 'Failed to fetch posts'); }
   return response.json();
 }
 
-export async function fetchPost(postId: string): Promise<Post> {
-  const response = await fetch(`${API_BASE_URL}/api/posts/${postId}`);
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Failed to fetch post');
-  }
-  return response.json();
-}
-
-export async function createPostApi(
-  imageUri: string,
-  caption: string,
-  userId: string = 'current-user'
-): Promise<Post> {
+export async function createPostApi(imageUri: string, caption: string, userId: string = 'current-user'): Promise<Post> {
   const formData = new FormData();
   const filename = imageUri.split('/').pop() || 'photo.jpg';
   const match = /\.(\w+)$/.exec(filename);
@@ -51,42 +35,21 @@ export async function createPostApi(
   formData.append('image', { uri: imageUri, name: filename, type } as any);
   formData.append('caption', caption);
   formData.append('userId', userId);
-  const response = await fetch(`${API_BASE_URL}/api/posts`, {
-    method: 'POST', body: formData,
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Failed to create post');
-  }
+  const response = await fetch(`${API_BASE_URL}/api/posts`, { method: 'POST', body: formData, headers: { 'Content-Type': 'multipart/form-data' } });
+  if (!response.ok) { const e = await response.json(); throw new Error(e.error || 'Failed to create post'); }
+  return response.json();
+}
+
+export function getImageUrl(imagePath: string): string { return `${API_BASE_URL}${imagePath}`; }
+
+export async function deletePost(postId: string, userId: string): Promise<{ message: string }> {
+  const response = await fetch(`${API_BASE_URL}/api/posts/${postId}`, { method: 'DELETE', headers: { 'Content-Type': 'application/json', 'x-user-id': userId } });
+  if (!response.ok) { const e = await response.json(); throw new Error(e.error || 'Failed to delete post'); }
   return response.json();
 }
 
 export async function updatePost(postId: string, userId: string, updates: { caption?: string }): Promise<Post> {
-  const response = await fetch(`${API_BASE_URL}/api/posts/${postId}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
-    body: JSON.stringify(updates),
-  });
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Failed to update post');
-  }
+  const response = await fetch(`${API_BASE_URL}/api/posts/${postId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'x-user-id': userId }, body: JSON.stringify(updates) });
+  if (!response.ok) { const e = await response.json(); throw new Error(e.error || 'Failed to update post'); }
   return response.json();
-}
-
-export async function deletePost(postId: string, userId: string): Promise<{ message: string }> {
-  const response = await fetch(`${API_BASE_URL}/api/posts/${postId}`, {
-    method: 'DELETE',
-    headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
-  });
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Failed to delete post');
-  }
-  return response.json();
-}
-
-export function getImageUrl(imagePath: string): string {
-  return `${API_BASE_URL}${imagePath}`;
 }

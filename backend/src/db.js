@@ -5,8 +5,8 @@ const DB_PATH = path.join(__dirname, '..', 'data', 'posts.json');
 
 function readDB() {
   const dir = path.dirname(DB_PATH);
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  if (!fs.existsSync(DB_PATH)) fs.writeFileSync(DB_PATH, JSON.stringify([], null, 2));
+  if (!fs.existsSync(dir)) { fs.mkdirSync(dir, { recursive: true }); }
+  if (!fs.existsSync(DB_PATH)) { fs.writeFileSync(DB_PATH, JSON.stringify([], null, 2)); }
   return JSON.parse(fs.readFileSync(DB_PATH, 'utf-8'));
 }
 
@@ -20,15 +20,15 @@ function getPaginatedPosts(cursor, limit) {
   const allPosts = getAllPosts();
   let startIndex = 0;
   if (cursor) {
-    const ci = allPosts.findIndex(p => p.id === cursor);
-    if (ci === -1) return { posts: [], nextCursor: null, hasMore: false };
-    startIndex = ci + 1;
+    const idx = allPosts.findIndex(p => p.id === cursor);
+    if (idx === -1) return { posts: [], nextCursor: null, hasMore: false };
+    startIndex = idx + 1;
   }
-  const posts = allPosts.slice(startIndex, startIndex + limit + 1);
-  const hasMore = posts.length > limit;
-  const resultPosts = hasMore ? posts.slice(0, limit) : posts;
-  const nextCursor = hasMore && resultPosts.length > 0 ? resultPosts[resultPosts.length - 1].id : null;
-  return { posts: resultPosts, nextCursor, hasMore };
+  const slice = allPosts.slice(startIndex, startIndex + limit + 1);
+  const hasMore = slice.length > limit;
+  const posts = hasMore ? slice.slice(0, limit) : slice;
+  const nextCursor = hasMore && posts.length > 0 ? posts[posts.length - 1].id : null;
+  return { posts, nextCursor, hasMore };
 }
 
 function getPostById(id) { return readDB().find(p => p.id === id) || null; }
@@ -37,19 +37,19 @@ function createPost(post) { const posts = readDB(); posts.push(post); writeDB(po
 
 function updatePost(id, updates) {
   const posts = readDB();
-  const index = posts.findIndex(p => p.id === id);
-  if (index === -1) return null;
+  const i = posts.findIndex(p => p.id === id);
+  if (i === -1) return null;
   const now = new Date().toISOString();
-  posts[index] = { ...posts[index], ...updates, updatedAt: now, editedAt: now };
+  posts[i] = { ...posts[i], ...updates, updatedAt: now, editedAt: now };
   writeDB(posts);
-  return posts[index];
+  return posts[i];
 }
 
 function deletePost(id) {
   const posts = readDB();
-  const index = posts.findIndex(p => p.id === id);
-  if (index === -1) return false;
-  posts.splice(index, 1);
+  const i = posts.findIndex(p => p.id === id);
+  if (i === -1) return false;
+  posts.splice(i, 1);
   writeDB(posts);
   return true;
 }
