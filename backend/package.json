@@ -7,6 +7,10 @@
     "start": "node src/index.js",
     "dev": "nodemon src/index.js"
   },
-  "dependencies": {},
-  "devDependencies": {}
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  },
+  "dependencies": {
+    "express": "^5.2.1"
+  }
 }
