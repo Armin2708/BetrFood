@@ -1,5 +1,15 @@
 import React, { useState } from 'react';
-import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
+import SaveCollectionModal from "./SaveCollectionModal";
+import { Collection } from "../context/CollectionsContext";
+import { 
+  View, 
+  Text, 
+  Image, 
+  StyleSheet, 
+  TouchableOpacity,
+  TextInput,
+  Modal
+} from 'react-native';
 
 interface PostProps {
   profilePic: string;
@@ -12,17 +22,21 @@ export default function Post({ profilePic, username, postImage, caption }: PostP
   // TODO: api call to see if user liked/saved post before
   const [liked, setLiked] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
 
   const toggleLike = () => setLiked(!liked);
-  const toggleSave = () => {
-    // TODO: insert api calls
-    if (saved) {
-      
-    }
-    else{
 
-    }
-    setSaved(!saved)
+  const handleSavePress = () => {
+    if (!saved) setModalVisible(true);
+    else setSaved(false);
+  };
+
+  const handleSave = (collection: Collection) => {
+    // TODO: something from the post should be added to the collection
+    setSaved(true);
+    setModalVisible(false);
+
+    console.log(`Saved to ${collection.name}`);
   };
 
   return (
@@ -45,7 +59,7 @@ export default function Post({ profilePic, username, postImage, caption }: PostP
           </Text>
         </TouchableOpacity>
         {/* Save button */}
-        <TouchableOpacity onPress={toggleSave}>
+        <TouchableOpacity onPress={handleSavePress}>
           <Text style={[styles.likeButton, saved && styles.saved]}>
             {saved ? '💙 Saved' : '🤍 Save'}
           </Text>
@@ -57,6 +71,13 @@ export default function Post({ profilePic, username, postImage, caption }: PostP
         <Text style={styles.username}>{username} </Text>
         {caption}
       </Text>
+      
+      {/* Modal */}
+      <SaveCollectionModal
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        onSave={handleSave}
+      />
     </View>
   );
 }
