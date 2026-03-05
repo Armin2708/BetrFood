@@ -6,6 +6,7 @@ import {
   Image,
   TouchableOpacity,
   StyleSheet,
+  RefreshControl,
 } from 'react-native';
 
 type User = {
@@ -16,22 +17,17 @@ type User = {
   isFollowing: boolean;
 };
 
-const initialUsers: User[] = [
-  {
-    id: '1',
-    username: 'johndoe',
-    name: 'John Doe',
-    avatar: 'https://i.pravatar.cc/150?img=1',
-    isFollowing: true,
-  },
-  {
-    id: '2',
-    username: 'janedoe',
-    name: 'Jane Doe',
-    avatar: 'https://i.pravatar.cc/150?img=2',
-    isFollowing: false,
-  },
-];
+
+// Generates random users
+const initialUsers: User[] = Array.from({length:1000}, (_,i) => ({
+  id: i.toString(),
+  username: 'standinUser' + (i+1).toString(),
+  name: 'user' + (i+1).toString(),
+  avatar: `https://picsum.photos/id/${i+80}/60`,
+  isFollowing: true,
+}));
+
+
 
 type UserRowProps = {
   user: User;
@@ -69,8 +65,11 @@ const UserRow: React.FC<UserRowProps> = ({ user, onToggleFollow }) => {
 };
 
 export default function FollowingScreen() {
+  // TODO: replace with api call for user's following list; remove initialUsers array
   const [users, setUsers] = useState<User[]>(initialUsers);
+  const [refreshing, setRefreshing] = useState(false)
 
+  // TODO: requires wiring to backend
   const toggleFollow = (id: string) => {
     setUsers(prev =>
       prev.map(user =>
@@ -81,11 +80,24 @@ export default function FollowingScreen() {
     );
   };
 
+  const onRefresh = () => {
+    setRefreshing(true);
+
+    // TODO: for testing, replace with api call
+    setTimeout(() => {
+      console.log('"reload" complete');
+      setRefreshing(false);
+    }, 1000)
+  };
+
   return (
     <View style={styles.container}>
       <FlatList
         data={users}
         keyExtractor={item => item.id}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
         renderItem={({ item }) => (
           <UserRow user={item} onToggleFollow={toggleFollow} />
         )}
