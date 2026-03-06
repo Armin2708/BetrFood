@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import SaveCollectionModal from "./SaveCollectionModal";
+import * as Clipboard from 'expo-clipboard';
+import { useActionSheet } from '@expo/react-native-action-sheet';
 import { Collection } from "../context/CollectionsContext";
 import { 
   View, 
@@ -7,36 +9,74 @@ import {
   Image, 
   StyleSheet, 
   TouchableOpacity,
-  TextInput,
-  Modal
+  Share,
+  Alert,
 } from 'react-native';
 
 interface PostProps {
+  id?: string;
   profilePic: string;
   username: string;
   postImage: string;
   caption: string;
 }
 
-export default function Post({ profilePic, username, postImage, caption }: PostProps) {
+export default function Post({ id, profilePic, username, postImage, caption }: PostProps) {
   // TODO: api call to see if user liked/saved post before
   const [liked, setLiked] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [modalVisible, setModalVisible] = useState(false);
+  const [collectionModalVisible, setCollectionModalVisible] = useState(false);
+
+  const { showActionSheetWithOptions } = useActionSheet();
 
   const toggleLike = () => setLiked(!liked);
 
   const handleSavePress = () => {
-    if (!saved) setModalVisible(true);
+    if (!saved) setCollectionModalVisible(true);
     else setSaved(false);
   };
 
   const handleSave = (collection: Collection) => {
     // TODO: something from the post should be added to the collection
     setSaved(true);
-    setModalVisible(false);
+    setCollectionModalVisible(false);
 
     console.log(`Saved to ${collection.name}`);
+  };
+
+  const handleExternalShare = async () => {
+    try {
+      await Share.share({
+        message: `Check out this post from ${username}: https://yourapp.com/posts/${id}`, // TODO: replace dummy link with api call for real post link
+      });
+    } catch (error) {
+      Alert.alert('Error', 'Could not share the post.');
+    }
+  };
+
+  const handleCopyLink = async () => {
+    const link = `https://yourapp.com/posts/${id}`; // TODO: replace dummy link with api call for real post link
+    await Clipboard.setStringAsync(link);
+    Alert.alert('Link Copied', 'The post link has been copied to your clipboard.');
+  };
+
+  const showShareMenu = () => {
+    const options = ['Share Externally', 'Copy Link', 'Cancel']
+
+    showActionSheetWithOptions({
+        options,
+        cancelButtonIndex: 2
+      }, (index) => { 
+        switch (index) {
+          // External share
+          case 0:
+            handleExternalShare()
+            break;
+          case 1:
+            handleCopyLink()
+            break 
+        }
+    })
   };
 
   return (
@@ -64,6 +104,10 @@ export default function Post({ profilePic, username, postImage, caption }: PostP
             {saved ? '💙 Saved' : '🤍 Save'}
           </Text>
         </TouchableOpacity>
+        {/* Share button */}
+        <TouchableOpacity onPress={() => showShareMenu()}>
+          <Text style={styles.likeButton}>🔗 Share</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Caption */}
@@ -71,11 +115,11 @@ export default function Post({ profilePic, username, postImage, caption }: PostP
         <Text style={styles.username}>{username} </Text>
         {caption}
       </Text>
-      
-      {/* Modal */}
+
+      {/* Save Modal */}
       <SaveCollectionModal
-        visible={modalVisible}
-        onClose={() => setModalVisible(false)}
+        visible={collectionModalVisible}
+        onClose={() => setCollectionModalVisible(false)}
         onSave={handleSave}
       />
     </View>
