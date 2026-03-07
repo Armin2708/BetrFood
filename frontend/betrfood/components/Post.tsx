@@ -3,6 +3,8 @@ import SaveCollectionModal from "./SaveCollectionModal";
 import * as Clipboard from 'expo-clipboard';
 import { useActionSheet } from '@expo/react-native-action-sheet';
 import { Collection } from "../context/CollectionsContext";
+import { Tag } from '../services/api';
+import TagDisplay from './TagDisplay';
 import { 
   View, 
   Text, 
@@ -19,10 +21,23 @@ interface PostProps {
   username: string;
   postImage: string;
   caption: string;
+  userId?: string;
+  currentUserId?: string;
+  onDeleted?: (postId: string) => void;
+  tags?: Tag[];
 }
 
-export default function Post({ id, profilePic, username, postImage, caption }: PostProps) {
-  // TODO: api call to see if user liked/saved post before
+export default function Post({
+  id,
+  profilePic,
+  username,
+  postImage,
+  caption,
+  userId,
+  currentUserId,
+  onDeleted,
+  tags,
+}: PostProps) {
   const [liked, setLiked] = useState(false);
   const [saved, setSaved] = useState(false);
   const [collectionModalVisible, setCollectionModalVisible] = useState(false);
@@ -95,13 +110,13 @@ export default function Post({ id, profilePic, username, postImage, caption }: P
         {/* Like button */}
         <TouchableOpacity onPress={toggleLike}>
           <Text style={[styles.likeButton, liked && styles.liked]}>
-            {liked ? '❤️ Liked' : '🤍 Like'}
+            {liked ? 'Liked' : 'Like'}
           </Text>
         </TouchableOpacity>
         {/* Save button */}
         <TouchableOpacity onPress={handleSavePress}>
           <Text style={[styles.likeButton, saved && styles.saved]}>
-            {saved ? '💙 Saved' : '🤍 Save'}
+            {saved ? 'Saved' : 'Save'}
           </Text>
         </TouchableOpacity>
         {/* Share button */}
@@ -115,7 +130,10 @@ export default function Post({ id, profilePic, username, postImage, caption }: P
         <Text style={styles.username}>{username} </Text>
         {caption}
       </Text>
-
+      
+      {/* Tags */}
+      {tags && tags.length > 0 && <TagDisplay tags={tags} />}
+      
       {/* Save Modal */}
       <SaveCollectionModal
         visible={collectionModalVisible}
@@ -156,6 +174,7 @@ const styles = StyleSheet.create({
   actions: {
     flexDirection: 'row',
     padding: 10,
+    gap: 16,
   },
   likeButton: {
     fontSize: 16,
