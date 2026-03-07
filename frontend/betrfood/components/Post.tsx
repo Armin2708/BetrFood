@@ -1,7 +1,19 @@
 import React, { useState } from 'react';
-import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
+import SaveCollectionModal from "./SaveCollectionModal";
+import * as Clipboard from 'expo-clipboard';
+import { useActionSheet } from '@expo/react-native-action-sheet';
+import { Collection } from "../context/CollectionsContext";
 import { Tag } from '../services/api';
 import TagDisplay from './TagDisplay';
+import { 
+  View, 
+  Text, 
+  Image, 
+  StyleSheet, 
+  TouchableOpacity,
+  Share,
+  Alert,
+} from 'react-native';
 
 interface PostProps {
   id?: string;
@@ -28,17 +40,58 @@ export default function Post({
 }: PostProps) {
   const [liked, setLiked] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [collectionModalVisible, setCollectionModalVisible] = useState(false);
+
+  const { showActionSheetWithOptions } = useActionSheet();
 
   const toggleLike = () => setLiked(!liked);
-  const toggleSave = () => {
-    // TODO: insert api calls
-    if (saved) {
-      
-    }
-    else{
 
+  const handleSavePress = () => {
+    if (!saved) setCollectionModalVisible(true);
+    else setSaved(false);
+  };
+
+  const handleSave = (collection: Collection) => {
+    // TODO: something from the post should be added to the collection
+    setSaved(true);
+    setCollectionModalVisible(false);
+
+    console.log(`Saved to ${collection.name}`);
+  };
+
+  const handleExternalShare = async () => {
+    try {
+      await Share.share({
+        message: `Check out this post from ${username}: https://yourapp.com/posts/${id}`, // TODO: replace dummy link with api call for real post link
+      });
+    } catch (error) {
+      Alert.alert('Error', 'Could not share the post.');
     }
-    setSaved(!saved)
+  };
+
+  const handleCopyLink = async () => {
+    const link = `https://yourapp.com/posts/${id}`; // TODO: replace dummy link with api call for real post link
+    await Clipboard.setStringAsync(link);
+    Alert.alert('Link Copied', 'The post link has been copied to your clipboard.');
+  };
+
+  const showShareMenu = () => {
+    const options = ['Share Externally', 'Copy Link', 'Cancel']
+
+    showActionSheetWithOptions({
+        options,
+        cancelButtonIndex: 2
+      }, (index) => { 
+        switch (index) {
+          // External share
+          case 0:
+            handleExternalShare()
+            break;
+          case 1:
+            handleCopyLink()
+            break 
+        }
+    })
   };
 
   return (
@@ -61,10 +114,14 @@ export default function Post({
           </Text>
         </TouchableOpacity>
         {/* Save button */}
-        <TouchableOpacity onPress={toggleSave}>
+        <TouchableOpacity onPress={handleSavePress}>
           <Text style={[styles.likeButton, saved && styles.saved]}>
             {saved ? 'Saved' : 'Save'}
           </Text>
+        </TouchableOpacity>
+        {/* Share button */}
+        <TouchableOpacity onPress={() => showShareMenu()}>
+          <Text style={styles.likeButton}>🔗 Share</Text>
         </TouchableOpacity>
       </View>
 
@@ -73,9 +130,16 @@ export default function Post({
         <Text style={styles.username}>{username} </Text>
         {caption}
       </Text>
-
+      
       {/* Tags */}
       {tags && tags.length > 0 && <TagDisplay tags={tags} />}
+      
+      {/* Save Modal */}
+      <SaveCollectionModal
+        visible={collectionModalVisible}
+        onClose={() => setCollectionModalVisible(false)}
+        onSave={handleSave}
+      />
     </View>
   );
 }

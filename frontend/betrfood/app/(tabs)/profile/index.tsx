@@ -1,5 +1,6 @@
 import { View, Text, Pressable, StyleSheet, Image, FlatList, Dimensions } from 'react-native';
-import { useRouter } from 'expo-router'
+import { Stack, useRouter } from 'expo-router'
+import { Ionicons } from "@expo/vector-icons";
 
 const { width } = Dimensions.get('window');
 const ITEM_SIZE = width / 3;
@@ -12,43 +13,56 @@ export default function ProfileScreen() {
   const router = useRouter()
   
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Image
-          source={{ uri: 'https://i.pravatar.cc/150?img=3' }}
-          style={styles.avatar}
-        />
-
-        <View style={styles.statsRow}>
-          <Stat label="Following" value="120" callback={ () => router.push('(tabs)/profile/info/FollowingScreen') }/>
-          <Stat label="Followers" value="1.2K" callback={ () => router.push('(tabs)/profile/info/FollowersScreen') } />
-          <Stat label="Likes" value="8.4K" callback={ () => {} }/>
-        </View>
-      </View>
-
-      {/* Username + Bio */}
-      <View style={styles.userInfo}>
-        <Text style={styles.username}>@yourusername</Text>
-        <Text style={styles.bio}>building cool stuff with expo 🚀</Text>
-      </View>
-
-      {/* Edit Profile Button */}
-      <Pressable style={styles.editButton}>
-        <View>
-          <Text style={styles.editButtonText}>Edit Profile</Text>
-        </View>
-      </Pressable>
-
-      {/* Post Grid */}
-      <FlatList
-        data={mockPosts}
-        keyExtractor={(item) => item.id}
-        numColumns={3}
-        renderItem={() => <View style={styles.gridItem} />}
-        showsVerticalScrollIndicator={false}
+    <>
+      {/* Settings cog */}
+      <Stack.Screen 
+        options={{ 
+          headerRight: () => (
+            <Pressable onPress={() => router.push('/profile/settings')}>
+              <Ionicons name='settings-outline' size={24}/>
+            </Pressable>
+          ),
+        }}
       />
-    </View>
+
+      <View style={styles.container}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Image
+            source={{ uri: 'https://i.pravatar.cc/150?img=3' }}
+            style={styles.avatar}
+          />
+
+          <View style={styles.statsRow}>
+            <Stat label="Following" value="120" callback={ () => router.push('/profile/info/followingScreen') }/>
+            <Stat label="Followers" value="1.2K" callback={ () => router.push('/profile/info/followersScreen') } />
+            <Stat label="Likes" value="8.4K" callback={ () => {} }/>
+          </View>
+        </View>
+
+        {/* Username + Bio */}
+        <View style={styles.userInfo}>
+          <Text style={styles.username}>@yourusername</Text>
+          <Text style={styles.bio}>building cool stuff with expo 🚀</Text>
+        </View>
+
+        {/* Edit Profile Button */}
+        <Pressable style={styles.editButton} onPress={() => router.push("/profile/info/editProfile")}>
+          <View>
+            <Text style={styles.editButtonText}>Edit Profile</Text>
+          </View>
+        </Pressable>
+
+        {/* Post Grid */}
+        <FlatList
+          data={mockPosts}
+          keyExtractor={(item) => item.id}
+          numColumns={3}
+          renderItem={() => <View style={styles.gridItem} />}
+          showsVerticalScrollIndicator={false}
+        />
+      </View>
+    </>
   );
 }
 

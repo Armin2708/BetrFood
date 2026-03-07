@@ -1,10 +1,19 @@
-import { Tabs } from 'expo-router';
+import { Tabs, Redirect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ComponentProps } from 'react';
+import { useContext } from "react";
+import { AuthContext } from "../../context/AuthenticationContext";
 
 type IoniconName = ComponentProps<typeof Ionicons>['name'];
 
 export default function TabsLayout() {
+  const { user } = useContext(AuthContext);
+
+  // if (!user) {
+  //   // Redirect non-logged-in users to login
+  //   return <Redirect href="(auth)/login" />;
+  // }
+
   return (
     <Tabs screenOptions={{ headerShown: false }}>
       <Tabs.Screen
@@ -16,16 +25,6 @@ export default function TabsLayout() {
           ),
         }}
       />
-
-      {/* <Tabs.Screen
-        name="settings"
-        options={{
-          title: 'Settings',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name={'settings' as IoniconName} size={size} color={color} />
-          ),
-        }}
-      /> */}
 
       <Tabs.Screen
         name="profile"
