@@ -1,12 +1,15 @@
 import { CollectionsProvider } from "./CollectionsContext";
+import { AuthProvider } from "./AuthenticationContext";
 import { ActionSheetProvider } from '@expo/react-native-action-sheet'
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <ActionSheetProvider>
-      <CollectionsProvider>
-          {children}
-      </CollectionsProvider>
-    </ActionSheetProvider>
+    <AuthProvider>
+      <ActionSheetProvider>
+        <CollectionsProvider>
+            {children}
+        </CollectionsProvider>
+      </ActionSheetProvider>
+    </AuthProvider>
   );
 }
