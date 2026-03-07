@@ -30,7 +30,16 @@ export default function Post({
   const [saved, setSaved] = useState(false);
 
   const toggleLike = () => setLiked(!liked);
-  const toggleSave = () => setSaved(!saved);
+  const toggleSave = () => {
+    // TODO: insert api calls
+    if (saved) {
+      
+    }
+    else{
+
+    }
+    setSaved(!saved)
+  };
 
   return (
     <View style={styles.container}>
