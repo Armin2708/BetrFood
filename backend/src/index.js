@@ -1,5 +1,5 @@
 const express = require("express");
-const tagsRoutes = require("./routes/tags");
+// const tagsRoutes = require("./routes/tags");
 const userRoutes = require("./routes/users");
 
 const app = express();
@@ -11,7 +11,7 @@ app.get("/", (req, res) => {
   res.json({ message: "BetrFood API" });
 });
 
-app.use("/api/tags", tagsRoutes);
+// app.use("/api/tags", tagsRoutes);
 app.use("/api/users", userRoutes);
 
 app.listen(PORT, () => {
