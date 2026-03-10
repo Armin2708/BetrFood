@@ -25,9 +25,7 @@ const CURRENT_USER_ID = 'current-user';
 export default function HomeScreen() {
   const { user } = useContext(AuthContext);
 
-  // Feed mode — persists within the session via useState
   const [feedMode, setFeedMode] = useState<FeedMode>('for_you');
-
   const [posts, setPosts] = useState<PostType[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -37,8 +35,6 @@ export default function HomeScreen() {
   const nextCursor = useRef<string | null>(null);
   const hasMore = useRef(true);
   const isFetching = useRef(false);
-
-  // ── Fetch a page of the feed ─────────────────────────────────────────────
 
   const loadFeed = useCallback(
     async (opts: {
@@ -74,8 +70,6 @@ export default function HomeScreen() {
     [selectedTagIds, feedMode]
   );
 
-  // ── Reload when screen focuses ───────────────────────────────────────────
-
   useFocusEffect(
     useCallback(() => {
       setLoading(true);
@@ -84,8 +78,6 @@ export default function HomeScreen() {
       loadFeed({ replace: true });
     }, [loadFeed])
   );
-
-  // ── Feed mode toggle ─────────────────────────────────────────────────────
 
   const handleModeChange = (mode: FeedMode) => {
     if (mode === feedMode) return;
@@ -96,8 +88,6 @@ export default function HomeScreen() {
     loadFeed({ mode, replace: true });
   };
 
-  // ── Pull-to-refresh ──────────────────────────────────────────────────────
-
   const onRefresh = () => {
     setRefreshing(true);
     nextCursor.current = null;
@@ -105,15 +95,11 @@ export default function HomeScreen() {
     loadFeed({ replace: true });
   };
 
-  // ── Infinite scroll ──────────────────────────────────────────────────────
-
   const onEndReached = () => {
     if (!hasMore.current || isFetching.current) return;
     setLoadingMore(true);
     loadFeed({ cursor: nextCursor.current });
   };
-
-  // ── Tag filter ───────────────────────────────────────────────────────────
 
   const handleTagFilterChange = (tagIds: number[]) => {
     setSelectedTagIds(tagIds);
@@ -123,13 +109,9 @@ export default function HomeScreen() {
     loadFeed({ tagIds, replace: true });
   };
 
-  // ── Post deleted locally ─────────────────────────────────────────────────
-
   const handlePostDeleted = (postId: string) => {
     setPosts((prev) => prev.filter((p) => p.id !== postId));
   };
-
-  // ── Render ───────────────────────────────────────────────────────────────
 
   return (
     <View style={styles.container}>
@@ -154,7 +136,6 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Tag filter — only shown on For You feed */}
       {feedMode === 'for_you' && (
         <TagFilterBar
           selectedTagIds={selectedTagIds}
@@ -176,17 +157,22 @@ export default function HomeScreen() {
           onEndReached={onEndReached}
           onEndReachedThreshold={0.4}
           renderItem={({ item }) => (
-            <Post
-              id={item.id}
-              profilePic={`https://ui-avatars.com/api/?name=${item.userId}&background=random`}
-              username={item.userId}
-              postImage={getImageUrl(item.imagePath)}
-              caption={item.caption}
-              userId={item.userId}
-              currentUserId={CURRENT_USER_ID}
-              onDeleted={handlePostDeleted}
-              tags={item.tags}
-            />
+            <TouchableOpacity
+              activeOpacity={0.95}
+              onPress={() => router.push(`/feeds/post/${item.id}`)}
+            >
+              <Post
+                id={item.id}
+                profilePic={`https://ui-avatars.com/api/?name=${item.userId}&background=random`}
+                username={item.userId}
+                postImage={getImageUrl(item.imagePath)}
+                caption={item.caption}
+                userId={item.userId}
+                currentUserId={CURRENT_USER_ID}
+                onDeleted={handlePostDeleted}
+                tags={item.tags}
+              />
+            </TouchableOpacity>
           )}
           ListEmptyComponent={
             <View style={styles.empty}>

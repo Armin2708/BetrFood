@@ -1,23 +1,26 @@
-const express = require("express");
+const express = require('express');
+const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 
-// ── Routes ──────────────────────────────────────────────────────────────────
-const feedRouter = require('./routes/feed');
-app.use('/api/feed', feedRouter);
+// Serve uploaded images statically
+app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
-// Add your other existing routers here, e.g.:
-// const postsRouter = require('./routes/posts');
-// const tagsRouter  = require('./routes/tags');
-// app.use('/api/posts', postsRouter);
-// app.use('/api/tags',  tagsRouter);
+// ── Routes ──────────────────────────────────────────────────────────────────
+const postsRouter = require('./routes/posts');
+const tagsRouter  = require('./routes/tags');
+const feedRouter  = require('./routes/feed');
+
+app.use('/api/posts', postsRouter);
+app.use('/api/tags',  tagsRouter);
+app.use('/api/feed',  feedRouter);
 // ────────────────────────────────────────────────────────────────────────────
 
-app.get("/", (req, res) => {
-  res.json({ message: "BetrFood API" });
+app.get('/', (req, res) => {
+  res.json({ message: 'BetrFood API' });
 });
 
 app.listen(PORT, () => {
