@@ -59,6 +59,54 @@ export interface PaginatedResponse {
   hasMore: boolean;
 }
 
+// ---------------------------------------------------------------------------
+// Feed
+// ---------------------------------------------------------------------------
+
+/**
+ * Fetches a personalized, ranked feed for the given user.
+ *
+ * Falls back gracefully to the chronological /api/posts endpoint when the
+ * /api/feed endpoint is not yet available (e.g. during local development
+ * before the backend route is deployed).
+ *
+ * @param userId         The current user's ID — used for personalisation.
+ * @param cursor         Opaque pagination cursor returned by the previous call.
+ * @param limit          Number of posts per page (default 10).
+ * @param tagIds         Optional tag filter — only posts with ALL these tags.
+ */
+export async function fetchFeed(
+  userId: string,
+  cursor?: string | null,
+  limit: number = 10,
+  tagIds: number[] = []
+): Promise<PaginatedResponse> {
+  const params = new URLSearchParams({
+    userId,
+    limit: String(limit),
+  });
+  if (cursor) params.set('cursor', cursor);
+  if (tagIds.length > 0) params.set('tags', tagIds.join(','));
+
+  const response = await fetch(`${API_BASE_URL}/api/feed?${params}`);
+
+  // If the feed endpoint doesn't exist yet, fall back to the posts endpoint
+  if (response.status === 404) {
+    return fetchPosts(cursor, limit);
+  }
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to fetch feed');
+  }
+
+  return response.json();
+}
+
+// ---------------------------------------------------------------------------
+// Posts
+// ---------------------------------------------------------------------------
+
 export async function fetchPosts(cursor?: string | null, limit: number = 10): Promise<PaginatedResponse> {
   const params = new URLSearchParams({ limit: String(limit) });
   if (cursor) params.set('cursor', cursor);
@@ -171,7 +219,9 @@ export async function updateRecipe(postId: string, recipe: RecipeInput): Promise
   return response.json();
 }
 
-// Tag API functions
+// ---------------------------------------------------------------------------
+// Tags
+// ---------------------------------------------------------------------------
 
 export async function fetchTags(type?: string): Promise<Tag[]> {
   const params = type ? `?type=${type}` : '';
