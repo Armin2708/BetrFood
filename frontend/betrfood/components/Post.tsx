@@ -5,11 +5,11 @@ import { useActionSheet } from '@expo/react-native-action-sheet';
 import { Collection } from "../context/CollectionsContext";
 import { Tag } from '../services/api';
 import TagDisplay from './TagDisplay';
-import { 
-  View, 
-  Text, 
-  Image, 
-  StyleSheet, 
+import {
+  View,
+  Text,
+  Image,
+  StyleSheet,
   TouchableOpacity,
   Share,
   Alert,
@@ -25,6 +25,8 @@ interface PostProps {
   currentUserId?: string;
   onDeleted?: (postId: string) => void;
   tags?: Tag[];
+  initialLiked?: boolean;
+  initialLikes?: number;
 }
 
 export default function Post({
@@ -37,14 +39,24 @@ export default function Post({
   currentUserId,
   onDeleted,
   tags,
+  initialLiked = false,
+  initialLikes = 0,
 }: PostProps) {
-  const [liked, setLiked] = useState(false);
+  const [liked, setLiked] = useState(initialLiked);
+  const [likeCount, setLikeCount] = useState(initialLikes);
   const [saved, setSaved] = useState(false);
   const [collectionModalVisible, setCollectionModalVisible] = useState(false);
 
   const { showActionSheetWithOptions } = useActionSheet();
 
-  const toggleLike = () => setLiked(!liked);
+  const toggleLike = () => {
+    if (liked) {
+      setLikeCount((prev) => Math.max(0, prev - 1));
+    } else {
+      setLikeCount((prev) => prev + 1);
+    }
+    setLiked((prev) => !prev);
+  };
 
   const handleSavePress = () => {
     if (!saved) setCollectionModalVisible(true);
@@ -52,17 +64,15 @@ export default function Post({
   };
 
   const handleSave = (collection: Collection) => {
-    // TODO: something from the post should be added to the collection
     setSaved(true);
     setCollectionModalVisible(false);
-
     console.log(`Saved to ${collection.name}`);
   };
 
   const handleExternalShare = async () => {
     try {
       await Share.share({
-        message: `Check out this post from ${username}: https://yourapp.com/posts/${id}`, // TODO: replace dummy link with api call for real post link
+        message: `Check out this post from ${username}: https://yourapp.com/posts/${id}`,
       });
     } catch (error) {
       Alert.alert('Error', 'Could not share the post.');
@@ -70,71 +80,70 @@ export default function Post({
   };
 
   const handleCopyLink = async () => {
-    const link = `https://yourapp.com/posts/${id}`; // TODO: replace dummy link with api call for real post link
+    const link = `https://yourapp.com/posts/${id}`;
     await Clipboard.setStringAsync(link);
     Alert.alert('Link Copied', 'The post link has been copied to your clipboard.');
   };
 
   const showShareMenu = () => {
-    const options = ['Share Externally', 'Copy Link', 'Cancel']
+    const options = ['Share Externally', 'Copy Link', 'Cancel'];
 
-    showActionSheetWithOptions({
+    showActionSheetWithOptions(
+      {
         options,
-        cancelButtonIndex: 2
-      }, (index) => { 
+        cancelButtonIndex: 2,
+      },
+      (index) => {
         switch (index) {
-          // External share
           case 0:
-            handleExternalShare()
+            handleExternalShare();
             break;
           case 1:
-            handleCopyLink()
-            break 
+            handleCopyLink();
+            break;
         }
-    })
+      }
+    );
   };
 
   return (
     <View style={styles.container}>
-      {/* Header: profile picture + username */}
       <View style={styles.header}>
         <Image source={{ uri: profilePic }} style={styles.profilePic} />
         <Text style={styles.username}>{username}</Text>
       </View>
 
-      {/* Post image */}
       <Image source={{ uri: postImage }} style={styles.postImage} />
 
-      {/* Actions */}
       <View style={styles.actions}>
-        {/* Like button */}
-        <TouchableOpacity onPress={toggleLike}>
-          <Text style={[styles.likeButton, liked && styles.liked]}>
-            {liked ? 'Liked' : 'Like'}
+        <TouchableOpacity onPress={toggleLike} style={styles.actionButton}>
+          <Text style={[styles.actionText, liked && styles.liked]}>
+            {liked ? '❤️' : '🤍'} {liked ? 'Liked' : 'Like'}
           </Text>
         </TouchableOpacity>
-        {/* Save button */}
-        <TouchableOpacity onPress={handleSavePress}>
-          <Text style={[styles.likeButton, saved && styles.saved]}>
-            {saved ? 'Saved' : 'Save'}
+
+        <TouchableOpacity onPress={handleSavePress} style={styles.actionButton}>
+          <Text style={[styles.actionText, saved && styles.saved]}>
+            {saved ? '🔖 Saved' : '🔖 Save'}
           </Text>
         </TouchableOpacity>
-        {/* Share button */}
-        <TouchableOpacity onPress={() => showShareMenu()}>
-          <Text style={styles.likeButton}>🔗 Share</Text>
+
+        <TouchableOpacity onPress={showShareMenu} style={styles.actionButton}>
+          <Text style={styles.actionText}>🔗 Share</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Caption */}
+      <Text style={styles.likeCount}>
+        {likeCount} {likeCount === 1 ? 'like' : 'likes'}
+      </Text>
+
       <Text style={styles.caption}>
         <Text style={styles.username}>{username} </Text>
         {caption}
       </Text>
-      
-      {/* Tags */}
+
       {tags && tags.length > 0 && <TagDisplay tags={tags} />}
-      
-      {/* Save Modal */}
+
       <SaveCollectionModal
         visible={collectionModalVisible}
         onClose={() => setCollectionModalVisible(false)}
@@ -173,21 +182,35 @@ const styles = StyleSheet.create({
   },
   actions: {
     flexDirection: 'row',
-    padding: 10,
+    paddingHorizontal: 10,
+    paddingTop: 10,
     gap: 16,
   },
-  likeButton: {
+  actionButton: {
+    paddingVertical: 4,
+  },
+  actionText: {
     fontSize: 16,
     color: '#333',
   },
   liked: {
     color: 'red',
+    fontWeight: '600',
   },
   saved: {
     color: 'blue',
+    fontWeight: '600',
+  },
+  likeCount: {
+    paddingHorizontal: 10,
+    paddingTop: 4,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
   },
   caption: {
     paddingHorizontal: 10,
+    paddingTop: 8,
     paddingBottom: 10,
     fontSize: 14,
     color: '#333',
