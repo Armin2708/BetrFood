@@ -5,6 +5,7 @@ import { useActionSheet } from '@expo/react-native-action-sheet';
 import { Collection } from "../context/CollectionsContext";
 import { Tag } from '../services/api';
 import TagDisplay from './TagDisplay';
+import ImageCarousel from './ImageCarousel';
 import { useRouter } from 'expo-router';
 import {
   View,
@@ -20,7 +21,8 @@ interface PostProps {
   id?: string;
   profilePic: string;
   username: string;
-  postImage: string;
+  postImage: string;        // primary/cover image (backwards compatible)
+  postImages?: string[];    // all images for carousel
   caption: string;
   userId?: string;
   currentUserId?: string;
@@ -33,6 +35,7 @@ export default function Post({
   profilePic,
   username,
   postImage,
+  postImages,
   caption,
   userId,
   currentUserId,
@@ -54,7 +57,6 @@ export default function Post({
   };
 
   const handleSave = (collection: Collection) => {
-    // TODO: something from the post should be added to the collection
     setSaved(true);
     setCollectionModalVisible(false);
     console.log(`Saved to ${collection.name}`);
@@ -86,7 +88,6 @@ export default function Post({
 
   const handleAuthorPress = () => {
     if (!userId) return;
-    // Don't navigate if tapping your own post
     if (userId === currentUserId) {
       router.push('/(tabs)/profile');
     } else {
@@ -94,31 +95,34 @@ export default function Post({
     }
   };
 
+  // Resolve image list: prefer imagePaths array, fall back to single postImage
+  const images = postImages && postImages.length > 0 ? postImages : [postImage];
+
   return (
     <View style={styles.container}>
-      {/* Header: tappable profile picture + username */}
+      {/* Tappable author header */}
       <TouchableOpacity style={styles.header} onPress={handleAuthorPress}>
         <Image source={{ uri: profilePic }} style={styles.profilePic} />
         <Text style={styles.username}>{username}</Text>
       </TouchableOpacity>
 
-      {/* Post image */}
-      <Image source={{ uri: postImage }} style={styles.postImage} />
+      {/* Carousel or single image */}
+      <ImageCarousel images={images} height={300} />
 
       {/* Actions */}
       <View style={styles.actions}>
         <TouchableOpacity onPress={toggleLike}>
-          <Text style={[styles.likeButton, liked && styles.liked]}>
-            {liked ? 'Liked' : 'Like'}
+          <Text style={[styles.actionBtn, liked && styles.liked]}>
+            {liked ? '❤️ Liked' : '🤍 Like'}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={handleSavePress}>
-          <Text style={[styles.likeButton, saved && styles.saved]}>
-            {saved ? 'Saved' : 'Save'}
+          <Text style={[styles.actionBtn, saved && styles.saved]}>
+            {saved ? '🔖 Saved' : '📄 Save'}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={showShareMenu}>
-          <Text style={styles.likeButton}>🔗 Share</Text>
+          <Text style={styles.actionBtn}>🔗 Share</Text>
         </TouchableOpacity>
       </View>
 
@@ -163,25 +167,20 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 16,
   },
-  postImage: {
-    width: '100%',
-    height: 300,
-    backgroundColor: '#eee',
-  },
   actions: {
     flexDirection: 'row',
     padding: 10,
     gap: 16,
   },
-  likeButton: {
-    fontSize: 16,
+  actionBtn: {
+    fontSize: 15,
     color: '#333',
   },
   liked: {
-    color: 'red',
+    color: '#e0245e',
   },
   saved: {
-    color: 'blue',
+    color: '#FF6B35',
   },
   caption: {
     paddingHorizontal: 10,

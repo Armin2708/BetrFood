@@ -8,7 +8,7 @@ const jsonDb = require('../db');
 const router = express.Router();
 
 // ---------------------------------------------------------------------------
-// File upload setup
+// File upload setup — accepts up to 10 images per post
 // ---------------------------------------------------------------------------
 const uploadDir = path.join(__dirname, '..', '..', 'uploads');
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
@@ -20,7 +20,11 @@ const storage = multer.diskStorage({
     cb(null, `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`);
   },
 });
-const upload = multer({ storage });
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 20 * 1024 * 1024 }, // 20MB per image
+});
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -61,8 +65,7 @@ function initializeRecipeTables() {
       postId TEXT NOT NULL UNIQUE,
       cookTime INTEGER,
       servings INTEGER,
-      difficulty TEXT CHECK(difficulty IN ('easy', 'medium', 'hard')) DEFAULT 'easy',
-      FOREIGN KEY (postId) REFERENCES posts(id) ON DELETE CASCADE
+      difficulty TEXT CHECK(difficulty IN ('easy', 'medium', 'hard')) DEFAULT 'easy'
     )
   `);
   db.exec(`
@@ -128,6 +131,38 @@ router.get('/', (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// GET /api/posts/by-tags
+// ---------------------------------------------------------------------------
+router.get('/by-tags', (req, res) => {
+  try {
+    const tagsParam = req.query.tags;
+    if (!tagsParam) return res.status(400).json({ error: 'tags query parameter is required.' });
+
+    const tagIds = tagsParam.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id));
+    if (tagIds.length === 0) return res.status(400).json({ error: 'Invalid tag IDs.' });
+
+    const placeholders = tagIds.map(() => '?').join(',');
+    const matchingPostIds = db.prepare(`
+      SELECT postId FROM post_tags
+      WHERE tagId IN (${placeholders})
+      GROUP BY postId
+      HAVING COUNT(DISTINCT tagId) = ?
+    `).all(...tagIds, tagIds.length).map(r => r.postId);
+
+    const posts = matchingPostIds
+      .map(id => jsonDb.getPostById(id))
+      .filter(Boolean)
+      .map(post => ({ ...post, tags: getTagsForPost(post.id) }));
+
+    posts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    res.json(posts);
+  } catch (error) {
+    console.error('Error filtering posts by tags:', error);
+    res.status(500).json({ error: 'Failed to filter posts.' });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // GET /api/posts/:id — single post with recipe
 // ---------------------------------------------------------------------------
 router.get('/:id', (req, res) => {
@@ -147,15 +182,27 @@ router.get('/:id', (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// POST /api/posts — create post with optional image
+// POST /api/posts — create post with up to 10 images
 // ---------------------------------------------------------------------------
-router.post('/', upload.single('image'), (req, res) => {
+router.post('/', upload.array('images', 10), (req, res) => {
   try {
     const { caption, userId, recipe } = req.body;
     if (!caption) return res.status(400).json({ error: 'Caption is required.' });
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ error: 'At least one image is required.' });
+    }
+    if (req.files.length > 10) {
+      return res.status(400).json({ error: 'Maximum 10 images per post.' });
+    }
 
-    const imagePath = req.file ? `/uploads/${req.file.filename}` : '';
-    const post = jsonDb.createPost({ caption, userId: userId || 'current-user', imagePath });
+    // Store all image paths as a JSON array; first is the cover image
+    const imagePaths = req.files.map(f => `/uploads/${f.filename}`);
+    const post = jsonDb.createPost({
+      caption,
+      userId: userId || 'current-user',
+      imagePath: imagePaths[0],        // primary/cover image (backwards compatible)
+      imagePaths: imagePaths,          // all images
+    });
 
     if (recipe) {
       try {
@@ -203,7 +250,7 @@ router.post('/', upload.single('image'), (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// PUT /api/posts/:id — update caption
+// PUT /api/posts/:id
 // ---------------------------------------------------------------------------
 router.put('/:id', (req, res) => {
   try {
@@ -245,13 +292,10 @@ router.get('/:id/recipe', (req, res) => {
   try {
     const post = jsonDb.getPostById(req.params.id);
     if (!post) return res.status(404).json({ error: 'Post not found.' });
-
     const recipe = getRecipeForPost(req.params.id);
     if (!recipe) return res.status(404).json({ error: 'No recipe for this post.' });
-
     res.json(recipe);
   } catch (error) {
-    console.error('Error fetching recipe:', error);
     res.status(500).json({ error: 'Failed to fetch recipe.' });
   }
 });
@@ -270,49 +314,78 @@ router.put('/:id/recipe', (req, res) => {
     let recipe = db.prepare(`SELECT * FROM recipes WHERE postId = ?`).get(req.params.id);
     if (!recipe) {
       const recipeId = randomUUID();
-      db.prepare(`
-        INSERT INTO recipes (id, postId, cookTime, servings, difficulty)
-        VALUES (?, ?, ?, ?, ?)
-      `).run(recipeId, req.params.id, cookTime || null, servings || null, difficulty || 'easy');
+      db.prepare(`INSERT INTO recipes (id, postId, cookTime, servings, difficulty) VALUES (?, ?, ?, ?, ?)`)
+        .run(recipeId, req.params.id, cookTime || null, servings || null, difficulty || 'easy');
       recipe = db.prepare(`SELECT * FROM recipes WHERE id = ?`).get(recipeId);
     } else {
-      db.prepare(`
-        UPDATE recipes SET cookTime = ?, servings = ?, difficulty = ? WHERE id = ?
-      `).run(cookTime || null, servings || null, difficulty || 'easy', recipe.id);
+      db.prepare(`UPDATE recipes SET cookTime = ?, servings = ?, difficulty = ? WHERE id = ?`)
+        .run(cookTime || null, servings || null, difficulty || 'easy', recipe.id);
     }
 
     if (ingredients) {
       db.prepare(`DELETE FROM recipe_ingredients WHERE recipeId = ?`).run(recipe.id);
-      const insertIng = db.prepare(`
-        INSERT INTO recipe_ingredients (id, recipeId, name, quantity, unit, orderIndex)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `);
-      ingredients.forEach((ing, idx) => {
-        insertIng.run(randomUUID(), recipe.id, ing.name, ing.quantity || null, ing.unit || null, idx);
-      });
+      const insertIng = db.prepare(`INSERT INTO recipe_ingredients (id, recipeId, name, quantity, unit, orderIndex) VALUES (?, ?, ?, ?, ?, ?)`);
+      ingredients.forEach((ing, idx) => insertIng.run(randomUUID(), recipe.id, ing.name, ing.quantity || null, ing.unit || null, idx));
     }
 
     if (steps) {
       db.prepare(`DELETE FROM recipe_steps WHERE recipeId = ?`).run(recipe.id);
-      const insertStep = db.prepare(`
-        INSERT INTO recipe_steps (id, recipeId, stepNumber, instruction)
-        VALUES (?, ?, ?, ?)
-      `);
-      steps.forEach((step, idx) => {
-        insertStep.run(randomUUID(), recipe.id, idx + 1, step.instruction);
-      });
+      const insertStep = db.prepare(`INSERT INTO recipe_steps (id, recipeId, stepNumber, instruction) VALUES (?, ?, ?, ?)`);
+      steps.forEach((step, idx) => insertStep.run(randomUUID(), recipe.id, idx + 1, step.instruction));
     }
 
     res.json(getRecipeForPost(req.params.id));
   } catch (error) {
-    console.error('Error updating recipe:', error);
     res.status(500).json({ error: 'Failed to update recipe.' });
   }
 });
 
 // ---------------------------------------------------------------------------
-// Serve uploaded images
+// Tag routes (delegated from tags router via posts prefix)
 // ---------------------------------------------------------------------------
-router.use('/uploads', express.static(uploadDir));
+router.post('/:id/tags', (req, res) => {
+  const postId = req.params.id;
+  const { tagIds } = req.body;
+  if (!tagIds || !Array.isArray(tagIds) || tagIds.length === 0) {
+    return res.status(400).json({ error: 'tagIds array is required.' });
+  }
+  try {
+    const post = jsonDb.getPostById(postId);
+    if (!post) return res.status(404).json({ error: 'Post not found.' });
+
+    const placeholders = tagIds.map(() => '?').join(',');
+    const existingTags = db.prepare(`SELECT id FROM tags WHERE id IN (${placeholders})`).all(...tagIds);
+    if (existingTags.length !== tagIds.length) {
+      return res.status(400).json({ error: 'One or more tag IDs are invalid.' });
+    }
+
+    const insertTag = db.prepare('INSERT OR IGNORE INTO post_tags (postId, tagId) VALUES (?, ?)');
+    const addTags = db.transaction((ids) => { for (const tagId of ids) insertTag.run(postId, tagId); });
+    addTags(tagIds);
+
+    res.json({ postId, tags: getTagsForPost(postId) });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to add tags.' });
+  }
+});
+
+router.delete('/:id/tags/:tagId', (req, res) => {
+  try {
+    const result = db.prepare('DELETE FROM post_tags WHERE postId = ? AND tagId = ?')
+      .run(req.params.id, parseInt(req.params.tagId));
+    if (result.changes === 0) return res.status(404).json({ error: 'Tag not found on this post.' });
+    res.json({ message: 'Tag removed from post.' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to remove tag.' });
+  }
+});
+
+router.get('/:id/tags', (req, res) => {
+  try {
+    res.json(getTagsForPost(req.params.id));
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch post tags.' });
+  }
+});
 
 module.exports = router;

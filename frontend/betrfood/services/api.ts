@@ -45,7 +45,8 @@ export interface Post {
   id: string;
   userId: string;
   caption: string;
-  imagePath: string;
+  imagePath: string;       // primary/cover image (backwards compatible)
+  imagePaths?: string[];   // all images (carousel)
   createdAt: string;
   updatedAt: string;
   editedAt?: string | null;
@@ -214,21 +215,26 @@ export async function fetchPost(postId: string): Promise<Post> {
   return response.json();
 }
 
+// Accepts one or more image URIs
 export async function createPostApi(
-  imageUri: string,
+  imageUris: string | string[],
   caption: string,
   userId: string = 'current-user',
   recipe?: RecipeInput | null
 ): Promise<Post> {
-  const formData = new FormData();
-  const filename = imageUri.split('/').pop() || 'photo.jpg';
-  const match = /\.(\w+)$/.exec(filename);
-  const type = match ? `image/${match[1]}` : 'image/jpeg';
+  const uris = Array.isArray(imageUris) ? imageUris : [imageUris];
 
-  formData.append('image', { uri: imageUri, name: filename, type } as any);
+  const formData = new FormData();
   formData.append('caption', caption);
   formData.append('userId', userId);
   if (recipe) formData.append('recipe', JSON.stringify(recipe));
+
+  uris.forEach((uri) => {
+    const filename = uri.split('/').pop() || 'photo.jpg';
+    const match = /\.(\w+)$/.exec(filename);
+    const type = match ? `image/${match[1]}` : 'image/jpeg';
+    formData.append('images', { uri, name: filename, type } as any);
+  });
 
   const response = await fetch(`${API_BASE_URL}/api/posts`, {
     method: 'POST',

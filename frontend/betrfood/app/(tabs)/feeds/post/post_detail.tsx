@@ -2,7 +2,6 @@ import React, { useEffect, useState, useContext } from 'react';
 import {
   View,
   Text,
-  Image,
   ScrollView,
   StyleSheet,
   ActivityIndicator,
@@ -16,9 +15,11 @@ import { useActionSheet } from '@expo/react-native-action-sheet';
 import { AuthContext } from '../../../../context/AuthenticationContext';
 import TagDisplay from '../../../../components/TagDisplay';
 import RecipeDisplay from '../../../../components/RecipeDisplay';
+import ImageCarousel from '../../../../components/ImageCarousel';
 import { fetchPost, getImageUrl, Post } from '../../../../services/api';
 import SaveCollectionModal from '../../../../components/SaveCollectionModal';
 import { Collection } from '../../../../context/CollectionsContext';
+import { Image } from 'react-native';
 
 // TODO: replace with real user ID from AuthContext once backend auth is wired up
 const CURRENT_USER_ID = 'current-user';
@@ -46,7 +47,6 @@ export default function PostDetailScreen() {
   const handleSave = (collection: Collection) => {
     setSaved(true);
     setCollectionModalVisible(false);
-    console.log(`Saved to ${collection.name}`);
   };
 
   const handleExternalShare = async () => {
@@ -100,6 +100,11 @@ export default function PostDetailScreen() {
     );
   }
 
+  // Resolve image list
+  const images = post.imagePaths && post.imagePaths.length > 0
+    ? post.imagePaths.map(getImageUrl)
+    : [getImageUrl(post.imagePath)];
+
   return (
     <>
       <Stack.Screen options={{ title: '', headerBackTitle: 'Feed' }} />
@@ -121,12 +126,8 @@ export default function PostDetailScreen() {
           </View>
         </TouchableOpacity>
 
-        {/* Full-resolution post image */}
-        <Image
-          source={{ uri: getImageUrl(post.imagePath) }}
-          style={styles.postImage}
-          resizeMode="cover"
-        />
+        {/* Carousel — full width, square aspect */}
+        <ImageCarousel images={images} height={380} />
 
         {/* Action bar */}
         <View style={styles.actions}>
@@ -221,11 +222,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#999',
     marginTop: 2,
-  },
-  postImage: {
-    width: '100%',
-    aspectRatio: 1,
-    backgroundColor: '#eee',
   },
   actions: {
     flexDirection: 'row',
