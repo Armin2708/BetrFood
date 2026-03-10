@@ -17,7 +17,6 @@ import { AuthContext } from '../../../../context/AuthenticationContext';
 import TagDisplay from '../../../../components/TagDisplay';
 import RecipeDisplay from '../../../../components/RecipeDisplay';
 import { fetchPost, getImageUrl, Post } from '../../../../services/api';
-import { useCollections } from '../../../../context/CollectionsContext';
 import SaveCollectionModal from '../../../../components/SaveCollectionModal';
 import { Collection } from '../../../../context/CollectionsContext';
 
@@ -32,7 +31,6 @@ export default function PostDetailScreen() {
   const [post, setPost] = useState<Post | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
   const [liked, setLiked] = useState(false);
   const [saved, setSaved] = useState(false);
   const [collectionModalVisible, setCollectionModalVisible] = useState(false);
@@ -46,7 +44,6 @@ export default function PostDetailScreen() {
   }, [id]);
 
   const handleSave = (collection: Collection) => {
-    // TODO: wire to backend collections API
     setSaved(true);
     setCollectionModalVisible(false);
     console.log(`Saved to ${collection.name}`);
@@ -54,9 +51,7 @@ export default function PostDetailScreen() {
 
   const handleExternalShare = async () => {
     try {
-      await Share.share({
-        message: `Check out this post: https://yourapp.com/posts/${id}`,
-      });
+      await Share.share({ message: `Check out this post: https://yourapp.com/posts/${id}` });
     } catch {
       Alert.alert('Error', 'Could not share the post.');
     }
@@ -75,6 +70,15 @@ export default function PostDetailScreen() {
         if (index === 1) handleCopyLink();
       }
     );
+  };
+
+  const handleAuthorPress = () => {
+    if (!post) return;
+    if (post.userId === CURRENT_USER_ID) {
+      router.push('/(tabs)/profile');
+    } else {
+      router.push(`/user/${post.userId}`);
+    }
   };
 
   if (loading) {
@@ -99,11 +103,10 @@ export default function PostDetailScreen() {
   return (
     <>
       <Stack.Screen options={{ title: '', headerBackTitle: 'Feed' }} />
-
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
 
-        {/* Author header */}
-        <View style={styles.header}>
+        {/* Tappable author header */}
+        <TouchableOpacity style={styles.header} onPress={handleAuthorPress}>
           <Image
             source={{ uri: `https://ui-avatars.com/api/?name=${post.userId}&background=random` }}
             style={styles.profilePic}
@@ -116,7 +119,7 @@ export default function PostDetailScreen() {
               })}
             </Text>
           </View>
-        </View>
+        </TouchableOpacity>
 
         {/* Full-resolution post image */}
         <Image
@@ -128,12 +131,9 @@ export default function PostDetailScreen() {
         {/* Action bar */}
         <View style={styles.actions}>
           <TouchableOpacity onPress={() => setLiked(!liked)} style={styles.actionButton}>
-            <Text style={[styles.actionIcon, liked && styles.liked]}>
-              {liked ? '❤️' : '🤍'}
-            </Text>
+            <Text style={[styles.actionIcon, liked && styles.liked]}>{liked ? '❤️' : '🤍'}</Text>
             <Text style={[styles.actionLabel, liked && styles.liked]}>Like</Text>
           </TouchableOpacity>
-
           <TouchableOpacity
             onPress={() => saved ? setSaved(false) : setCollectionModalVisible(true)}
             style={styles.actionButton}
@@ -143,7 +143,6 @@ export default function PostDetailScreen() {
               {saved ? 'Saved' : 'Save'}
             </Text>
           </TouchableOpacity>
-
           <TouchableOpacity onPress={showShareMenu} style={styles.actionButton}>
             <Text style={styles.actionIcon}>🔗</Text>
             <Text style={styles.actionLabel}>Share</Text>
@@ -157,9 +156,7 @@ export default function PostDetailScreen() {
         </View>
 
         {/* Tags */}
-        {post.tags && post.tags.length > 0 && (
-          <TagDisplay tags={post.tags} />
-        )}
+        {post.tags && post.tags.length > 0 && <TagDisplay tags={post.tags} />}
 
         {/* Recipe */}
         {post.recipe && <RecipeDisplay recipe={post.recipe} />}

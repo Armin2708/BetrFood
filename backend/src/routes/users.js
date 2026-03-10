@@ -5,7 +5,7 @@ const jsonDb = require('../db');
 const router = express.Router();
 
 // ---------------------------------------------------------------------------
-// Initialize users table
+// Initialize tables
 // ---------------------------------------------------------------------------
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (
@@ -14,9 +14,22 @@ db.exec(`
     displayName TEXT,
     bio TEXT,
     avatarUrl TEXT,
+    isPrivate INTEGER NOT NULL DEFAULT 0,
     createdAt TEXT NOT NULL DEFAULT (datetime('now'))
   )
 `);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS follows (
+    followerId TEXT NOT NULL,
+    followingId TEXT NOT NULL,
+    createdAt TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (followerId, followingId)
+  )
+`);
+
+db.exec(`CREATE INDEX IF NOT EXISTS idx_follows_followerId ON follows(followerId)`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_follows_followingId ON follows(followingId)`);
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -35,26 +48,17 @@ function getTagsForPost(postId) {
 }
 
 function getUserStats(userId) {
-  const posts = jsonDb.getAllPosts().filter((p) => p.userId === userId);
-  const postCount = posts.length;
-
-  // TODO: replace with real follows table queries once that table exists
-  // followerCount: SELECT COUNT(*) FROM follows WHERE followingId = userId
-  // followingCount: SELECT COUNT(*) FROM follows WHERE followerId = userId
-  const followerCount = 0;
-  const followingCount = 0;
-
+  const postCount = jsonDb.getAllPosts().filter((p) => p.userId === userId).length;
+  const followerCount = db.prepare('SELECT COUNT(*) as cnt FROM follows WHERE followingId = ?').get(userId)?.cnt ?? 0;
+  const followingCount = db.prepare('SELECT COUNT(*) as cnt FROM follows WHERE followerId = ?').get(userId)?.cnt ?? 0;
   return { postCount, followerCount, followingCount };
 }
 
 function ensureUser(userId) {
-  const existing = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
-  if (!existing) {
-    db.prepare(`
-      INSERT OR IGNORE INTO users (id, username, displayName, bio, avatarUrl)
-      VALUES (?, ?, ?, ?, ?)
-    `).run(userId, userId, userId, '', '');
-  }
+  db.prepare(`
+    INSERT OR IGNORE INTO users (id, username, displayName, bio, avatarUrl, isPrivate)
+    VALUES (?, ?, ?, ?, ?, 0)
+  `).run(userId, userId, userId, '', '');
   return db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
 }
 
@@ -65,7 +69,7 @@ router.get('/:id', (req, res) => {
   try {
     const user = ensureUser(req.params.id);
     const stats = getUserStats(req.params.id);
-    res.json({ ...user, ...stats });
+    res.json({ ...user, ...stats, isPrivate: user.isPrivate === 1 });
   } catch (error) {
     console.error('Error fetching user:', error);
     res.status(500).json({ error: 'Failed to fetch user.' });
@@ -73,14 +77,13 @@ router.get('/:id', (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// PUT /api/users/:id — update profile (username, displayName, bio, avatarUrl)
+// PUT /api/users/:id — update profile
 // ---------------------------------------------------------------------------
 router.put('/:id', (req, res) => {
   try {
     ensureUser(req.params.id);
-    const { username, displayName, bio, avatarUrl } = req.body;
+    const { username, displayName, bio, avatarUrl, isPrivate } = req.body;
 
-    // Check username uniqueness if changing it
     if (username) {
       const conflict = db.prepare('SELECT id FROM users WHERE username = ? AND id != ?').get(username, req.params.id);
       if (conflict) return res.status(409).json({ error: 'Username already taken.' });
@@ -88,16 +91,24 @@ router.put('/:id', (req, res) => {
 
     db.prepare(`
       UPDATE users
-      SET username = COALESCE(?, username),
+      SET username    = COALESCE(?, username),
           displayName = COALESCE(?, displayName),
-          bio = COALESCE(?, bio),
-          avatarUrl = COALESCE(?, avatarUrl)
+          bio         = COALESCE(?, bio),
+          avatarUrl   = COALESCE(?, avatarUrl),
+          isPrivate   = COALESCE(?, isPrivate)
       WHERE id = ?
-    `).run(username || null, displayName || null, bio || null, avatarUrl || null, req.params.id);
+    `).run(
+      username ?? null,
+      displayName ?? null,
+      bio ?? null,
+      avatarUrl ?? null,
+      isPrivate != null ? (isPrivate ? 1 : 0) : null,
+      req.params.id
+    );
 
     const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.params.id);
     const stats = getUserStats(req.params.id);
-    res.json({ ...user, ...stats });
+    res.json({ ...user, ...stats, isPrivate: user.isPrivate === 1 });
   } catch (error) {
     console.error('Error updating user:', error);
     res.status(500).json({ error: 'Failed to update user.' });
@@ -106,9 +117,23 @@ router.put('/:id', (req, res) => {
 
 // ---------------------------------------------------------------------------
 // GET /api/users/:id/posts — paginated posts by user
+// Respects privacy: private profiles only return posts if requester follows them
 // ---------------------------------------------------------------------------
 router.get('/:id/posts', (req, res) => {
   try {
+    const { requesterId } = req.query;
+    const user = ensureUser(req.params.id);
+    const isOwnProfile = requesterId === req.params.id;
+
+    if (user.isPrivate && !isOwnProfile) {
+      const isFollowing = db.prepare(
+        'SELECT 1 FROM follows WHERE followerId = ? AND followingId = ?'
+      ).get(requesterId, req.params.id);
+      if (!isFollowing) {
+        return res.json({ posts: [], nextCursor: null, hasMore: false, restricted: true });
+      }
+    }
+
     const limit = Math.min(parseInt(req.query.limit) || 12, 50);
     const cursor = req.query.cursor;
 
@@ -132,10 +157,72 @@ router.get('/:id/posts', (req, res) => {
       : null;
 
     const posts = page.map((post) => ({ ...post, tags: getTagsForPost(post.id) }));
-    res.json({ posts, nextCursor, hasMore });
+    res.json({ posts, nextCursor, hasMore, restricted: false });
   } catch (error) {
     console.error('Error fetching user posts:', error);
     res.status(500).json({ error: 'Failed to fetch user posts.' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/users/:id/follow-status?requesterId=xxx
+// ---------------------------------------------------------------------------
+router.get('/:id/follow-status', (req, res) => {
+  try {
+    const { requesterId } = req.query;
+    if (!requesterId) return res.json({ isFollowing: false });
+    const isFollowing = !!db.prepare(
+      'SELECT 1 FROM follows WHERE followerId = ? AND followingId = ?'
+    ).get(requesterId, req.params.id);
+    res.json({ isFollowing });
+  } catch (error) {
+    console.error('Error checking follow status:', error);
+    res.status(500).json({ error: 'Failed to check follow status.' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/users/:id/follow — follow a user
+// Body: { followerId }
+// ---------------------------------------------------------------------------
+router.post('/:id/follow', (req, res) => {
+  try {
+    const { followerId } = req.body;
+    if (!followerId) return res.status(400).json({ error: 'followerId is required.' });
+    if (followerId === req.params.id) return res.status(400).json({ error: 'Cannot follow yourself.' });
+
+    ensureUser(req.params.id);
+    ensureUser(followerId);
+
+    db.prepare(`
+      INSERT OR IGNORE INTO follows (followerId, followingId) VALUES (?, ?)
+    `).run(followerId, req.params.id);
+
+    const stats = getUserStats(req.params.id);
+    res.json({ isFollowing: true, ...stats });
+  } catch (error) {
+    console.error('Error following user:', error);
+    res.status(500).json({ error: 'Failed to follow user.' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// DELETE /api/users/:id/follow — unfollow a user
+// Body: { followerId }
+// ---------------------------------------------------------------------------
+router.delete('/:id/follow', (req, res) => {
+  try {
+    const { followerId } = req.body;
+    if (!followerId) return res.status(400).json({ error: 'followerId is required.' });
+
+    db.prepare('DELETE FROM follows WHERE followerId = ? AND followingId = ?')
+      .run(followerId, req.params.id);
+
+    const stats = getUserStats(req.params.id);
+    res.json({ isFollowing: false, ...stats });
+  } catch (error) {
+    console.error('Error unfollowing user:', error);
+    res.status(500).json({ error: 'Failed to unfollow user.' });
   }
 });
 

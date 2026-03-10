@@ -5,11 +5,12 @@ import { useActionSheet } from '@expo/react-native-action-sheet';
 import { Collection } from "../context/CollectionsContext";
 import { Tag } from '../services/api';
 import TagDisplay from './TagDisplay';
-import { 
-  View, 
-  Text, 
-  Image, 
-  StyleSheet, 
+import { useRouter } from 'expo-router';
+import {
+  View,
+  Text,
+  Image,
+  StyleSheet,
   TouchableOpacity,
   Share,
   Alert,
@@ -38,6 +39,7 @@ export default function Post({
   onDeleted,
   tags,
 }: PostProps) {
+  const router = useRouter();
   const [liked, setLiked] = useState(false);
   const [saved, setSaved] = useState(false);
   const [collectionModalVisible, setCollectionModalVisible] = useState(false);
@@ -55,14 +57,13 @@ export default function Post({
     // TODO: something from the post should be added to the collection
     setSaved(true);
     setCollectionModalVisible(false);
-
     console.log(`Saved to ${collection.name}`);
   };
 
   const handleExternalShare = async () => {
     try {
       await Share.share({
-        message: `Check out this post from ${username}: https://yourapp.com/posts/${id}`, // TODO: replace dummy link with api call for real post link
+        message: `Check out this post from ${username}: https://yourapp.com/posts/${id}`,
       });
     } catch (error) {
       Alert.alert('Error', 'Could not share the post.');
@@ -70,57 +71,53 @@ export default function Post({
   };
 
   const handleCopyLink = async () => {
-    const link = `https://yourapp.com/posts/${id}`; // TODO: replace dummy link with api call for real post link
+    const link = `https://yourapp.com/posts/${id}`;
     await Clipboard.setStringAsync(link);
     Alert.alert('Link Copied', 'The post link has been copied to your clipboard.');
   };
 
   const showShareMenu = () => {
-    const options = ['Share Externally', 'Copy Link', 'Cancel']
+    const options = ['Share Externally', 'Copy Link', 'Cancel'];
+    showActionSheetWithOptions({ options, cancelButtonIndex: 2 }, (index) => {
+      if (index === 0) handleExternalShare();
+      if (index === 1) handleCopyLink();
+    });
+  };
 
-    showActionSheetWithOptions({
-        options,
-        cancelButtonIndex: 2
-      }, (index) => { 
-        switch (index) {
-          // External share
-          case 0:
-            handleExternalShare()
-            break;
-          case 1:
-            handleCopyLink()
-            break 
-        }
-    })
+  const handleAuthorPress = () => {
+    if (!userId) return;
+    // Don't navigate if tapping your own post
+    if (userId === currentUserId) {
+      router.push('/(tabs)/profile');
+    } else {
+      router.push(`/user/${userId}`);
+    }
   };
 
   return (
     <View style={styles.container}>
-      {/* Header: profile picture + username */}
-      <View style={styles.header}>
+      {/* Header: tappable profile picture + username */}
+      <TouchableOpacity style={styles.header} onPress={handleAuthorPress}>
         <Image source={{ uri: profilePic }} style={styles.profilePic} />
         <Text style={styles.username}>{username}</Text>
-      </View>
+      </TouchableOpacity>
 
       {/* Post image */}
       <Image source={{ uri: postImage }} style={styles.postImage} />
 
       {/* Actions */}
       <View style={styles.actions}>
-        {/* Like button */}
         <TouchableOpacity onPress={toggleLike}>
           <Text style={[styles.likeButton, liked && styles.liked]}>
             {liked ? 'Liked' : 'Like'}
           </Text>
         </TouchableOpacity>
-        {/* Save button */}
         <TouchableOpacity onPress={handleSavePress}>
           <Text style={[styles.likeButton, saved && styles.saved]}>
             {saved ? 'Saved' : 'Save'}
           </Text>
         </TouchableOpacity>
-        {/* Share button */}
-        <TouchableOpacity onPress={() => showShareMenu()}>
+        <TouchableOpacity onPress={showShareMenu}>
           <Text style={styles.likeButton}>🔗 Share</Text>
         </TouchableOpacity>
       </View>
@@ -130,10 +127,10 @@ export default function Post({
         <Text style={styles.username}>{username} </Text>
         {caption}
       </Text>
-      
+
       {/* Tags */}
       {tags && tags.length > 0 && <TagDisplay tags={tags} />}
-      
+
       {/* Save Modal */}
       <SaveCollectionModal
         visible={collectionModalVisible}

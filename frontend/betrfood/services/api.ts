@@ -57,6 +57,7 @@ export interface PaginatedResponse {
   posts: Post[];
   nextCursor: string | null;
   hasMore: boolean;
+  restricted?: boolean;
 }
 
 export interface UserProfile {
@@ -65,6 +66,7 @@ export interface UserProfile {
   displayName: string | null;
   bio: string | null;
   avatarUrl: string | null;
+  isPrivate: boolean;
   postCount: number;
   followerCount: number;
   followingCount: number;
@@ -87,7 +89,7 @@ export async function fetchUserProfile(userId: string): Promise<UserProfile> {
 
 export async function updateUserProfile(
   userId: string,
-  updates: { username?: string; displayName?: string; bio?: string; avatarUrl?: string }
+  updates: { username?: string; displayName?: string; bio?: string; avatarUrl?: string; isPrivate?: boolean }
 ): Promise<UserProfile> {
   const response = await fetch(`${API_BASE_URL}/api/users/${userId}`, {
     method: 'PUT',
@@ -104,14 +106,62 @@ export async function updateUserProfile(
 export async function fetchUserPosts(
   userId: string,
   cursor?: string | null,
-  limit: number = 12
+  limit: number = 12,
+  requesterId?: string
 ): Promise<PaginatedResponse> {
   const params = new URLSearchParams({ limit: String(limit) });
   if (cursor) params.set('cursor', cursor);
+  if (requesterId) params.set('requesterId', requesterId);
   const response = await fetch(`${API_BASE_URL}/api/users/${userId}/posts?${params}`);
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.error || 'Failed to fetch user posts');
+  }
+  return response.json();
+}
+
+export async function fetchFollowStatus(
+  userId: string,
+  requesterId: string
+): Promise<{ isFollowing: boolean }> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/users/${userId}/follow-status?requesterId=${requesterId}`
+  );
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to fetch follow status');
+  }
+  return response.json();
+}
+
+export async function followUser(
+  userId: string,
+  followerId: string
+): Promise<{ isFollowing: boolean; followerCount: number }> {
+  const response = await fetch(`${API_BASE_URL}/api/users/${userId}/follow`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ followerId }),
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to follow user');
+  }
+  return response.json();
+}
+
+export async function unfollowUser(
+  userId: string,
+  followerId: string
+): Promise<{ isFollowing: boolean; followerCount: number }> {
+  const response = await fetch(`${API_BASE_URL}/api/users/${userId}/follow`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ followerId }),
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to unfollow user');
   }
   return response.json();
 }
