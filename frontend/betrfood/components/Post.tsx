@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { deletePost } from '../services/api';
+import { RecipeSummary } from './RecipeDisplay';
+import type { Recipe } from '../services/api';
 
 interface PostProps {
   id?: string;
@@ -11,12 +13,13 @@ interface PostProps {
   userId?: string;
   currentUserId?: string;
   editedAt?: string | null;
+  recipe?: Recipe | null;
   onDeleted?: (postId: string) => void;
 }
 
 export default function Post({
   id, profilePic, username, postImage, caption,
-  userId, currentUserId, editedAt, onDeleted,
+  userId, currentUserId, editedAt, recipe, onDeleted,
 }: PostProps) {
   const [liked, setLiked] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -72,6 +75,9 @@ export default function Post({
         <Text style={styles.captionUsername}>{username} </Text>{caption}
       </Text>
       {editedAt && <Text style={styles.editedLabel}>Edited</Text>}
+
+      {/* Recipe summary */}
+      {recipe && <RecipeSummary recipe={recipe} />}
     </View>
   );
 }

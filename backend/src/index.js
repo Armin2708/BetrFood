@@ -2,11 +2,28 @@ const express = require("express");
 const cors = require("cors");
 const path = require("path");
 const postsRouter = require("./routes/posts");
+
 const app = express();
 const PORT = process.env.PORT || 3000;
+
 app.use(cors());
 app.use(express.json());
-app.use("/uploads", express.static(path.join(__dirname, "..", "uploads"), { maxAge: '7d', immutable: true, etag: true, lastModified: true }));
-app.get("/", (req, res) => { res.json({ message: "BetrFood API" }); });
+
+// Serve uploaded images statically with caching
+app.use("/uploads", express.static(path.join(__dirname, "..", "uploads"), {
+  maxAge: '7d',
+  immutable: true,
+  etag: true,
+  lastModified: true,
+}));
+
+app.get("/", (req, res) => {
+  res.json({ message: "BetrFood API" });
+});
+
+// Mount routes
 app.use("/api/posts", postsRouter);
-app.listen(PORT, () => { console.log("Server running on port " + PORT); });
+
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
