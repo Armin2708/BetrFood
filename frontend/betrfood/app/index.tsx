@@ -1,15 +1,22 @@
 import { useContext } from "react";
+import { View, ActivityIndicator } from "react-native";
 import { Redirect } from "expo-router";
 import { AuthContext } from "../context/AuthenticationContext";
 
-
 export default function RootIndex() {
-  const { user } = useContext(AuthContext);
-  console.log(user)
+  const { user, loading } = useContext(AuthContext);
 
-  if (user) {
-    return (<Redirect href="/feeds" />);
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#FF6B35" />
+      </View>
+    );
   }
 
-  return (<Redirect href="/(onboarding)" />);
+  if (user) {
+    return <Redirect href="/feeds" />;
+  }
+
+  return <Redirect href="/(onboarding)" />;
 }
