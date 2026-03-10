@@ -93,4 +93,36 @@ router.delete("/:id/follow", (req, res) => {
   }
 });
 
+// GET /api/users/:id/follow-stats
+router.get("/:id/follow-stats", (req, res) => {
+  const userId = req.params.id;
+
+  try {
+    const followerRow = db
+      .prepare(`
+        SELECT COUNT(*) AS count
+        FROM user_follows
+        WHERE followingId = ?
+      `)
+      .get(userId);
+
+    const followingRow = db
+      .prepare(`
+        SELECT COUNT(*) AS count
+        FROM user_follows
+        WHERE followerId = ?
+      `)
+      .get(userId);
+
+    res.json({
+      userId,
+      followerCount: followerRow.count,
+      followingCount: followingRow.count,
+    });
+  } catch (error) {
+    console.error("Error fetching follow stats:", error);
+    res.status(500).json({ error: "Failed to fetch follow stats." });
+  }
+});
+
 module.exports = router;
