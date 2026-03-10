@@ -59,7 +59,62 @@ export interface PaginatedResponse {
   hasMore: boolean;
 }
 
+export interface UserProfile {
+  id: string;
+  username: string;
+  displayName: string | null;
+  bio: string | null;
+  avatarUrl: string | null;
+  postCount: number;
+  followerCount: number;
+  followingCount: number;
+}
+
 export type FeedMode = 'for_you' | 'following';
+
+// ---------------------------------------------------------------------------
+// Users
+// ---------------------------------------------------------------------------
+
+export async function fetchUserProfile(userId: string): Promise<UserProfile> {
+  const response = await fetch(`${API_BASE_URL}/api/users/${userId}`);
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to fetch user profile');
+  }
+  return response.json();
+}
+
+export async function updateUserProfile(
+  userId: string,
+  updates: { username?: string; displayName?: string; bio?: string; avatarUrl?: string }
+): Promise<UserProfile> {
+  const response = await fetch(`${API_BASE_URL}/api/users/${userId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updates),
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to update user profile');
+  }
+  return response.json();
+}
+
+export async function fetchUserPosts(
+  userId: string,
+  cursor?: string | null,
+  limit: number = 12
+): Promise<PaginatedResponse> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (cursor) params.set('cursor', cursor);
+  const response = await fetch(`${API_BASE_URL}/api/users/${userId}/posts?${params}`);
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to fetch user posts');
+  }
+  return response.json();
+}
 
 // ---------------------------------------------------------------------------
 // Feed
@@ -72,25 +127,16 @@ export async function fetchFeed(
   tagIds: number[] = [],
   mode: FeedMode = 'for_you'
 ): Promise<PaginatedResponse> {
-  const params = new URLSearchParams({
-    userId,
-    limit: String(limit),
-    mode,
-  });
+  const params = new URLSearchParams({ userId, limit: String(limit), mode });
   if (cursor) params.set('cursor', cursor);
   if (tagIds.length > 0) params.set('tags', tagIds.join(','));
 
   const response = await fetch(`${API_BASE_URL}/api/feed?${params}`);
-
-  if (response.status === 404) {
-    return fetchPosts(cursor, limit);
-  }
-
+  if (response.status === 404) return fetchPosts(cursor, limit);
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.error || 'Failed to fetch feed');
   }
-
   return response.json();
 }
 
@@ -129,29 +175,20 @@ export async function createPostApi(
   const match = /\.(\w+)$/.exec(filename);
   const type = match ? `image/${match[1]}` : 'image/jpeg';
 
-  formData.append('image', {
-    uri: imageUri,
-    name: filename,
-    type,
-  } as any);
+  formData.append('image', { uri: imageUri, name: filename, type } as any);
   formData.append('caption', caption);
   formData.append('userId', userId);
-
-  if (recipe) {
-    formData.append('recipe', JSON.stringify(recipe));
-  }
+  if (recipe) formData.append('recipe', JSON.stringify(recipe));
 
   const response = await fetch(`${API_BASE_URL}/api/posts`, {
     method: 'POST',
     body: formData,
     headers: { 'Content-Type': 'multipart/form-data' },
   });
-
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.error || 'Failed to create post');
   }
-
   return response.json();
 }
 

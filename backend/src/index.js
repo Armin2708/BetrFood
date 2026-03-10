@@ -13,10 +13,12 @@ app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 const postsRouter = require('./routes/posts');
 const tagsRouter  = require('./routes/tags');
 const feedRouter  = require('./routes/feed');
+const usersRouter = require('./routes/users');
 
 app.use('/api/posts', postsRouter);
 app.use('/api/tags',  tagsRouter);
 app.use('/api/feed',  feedRouter);
+app.use('/api/users', usersRouter);
 // ────────────────────────────────────────────────────────────────────────────
 
 app.get('/', (req, res) => {
