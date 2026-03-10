@@ -6,6 +6,11 @@ const path = require("path");
 const postsRouter = require("./routes/posts");
 const tagsRouter = require("./routes/tags");
 const userRoutes = require("./routes/users");
+const recipesRouter = require("./routes/recipes");
+const profilesRouter = require("./routes/profiles");
+const adminRouter = require("./routes/admin");
+const rolesRouter = require("./routes/roles");
+const authRouter = require("./routes/auth");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -29,6 +34,11 @@ app.get("/", (req, res) => {
 app.use("/api/posts", postsRouter);
 app.use("/api/tags", tagsRouter);
 app.use("/api/users", userRoutes);
+app.use("/api", recipesRouter);
+app.use("/api/profiles", profilesRouter);
+app.use("/api/admin", adminRouter);
+app.use("/api/roles", rolesRouter);
+app.use("/api/auth", authRouter);
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

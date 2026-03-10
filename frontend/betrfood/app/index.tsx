@@ -4,7 +4,7 @@ import { Redirect } from "expo-router";
 import { AuthContext } from "../context/AuthenticationContext";
 
 export default function RootIndex() {
-  const { user, loading } = useContext(AuthContext);
+  const { user, loading, needsOnboarding } = useContext(AuthContext);
 
   if (loading) {
     return (
@@ -12,6 +12,10 @@ export default function RootIndex() {
         <ActivityIndicator size="large" color="#FF6B35" />
       </View>
     );
+  }
+
+  if (user && needsOnboarding) {
+    return <Redirect href="/(onboarding)/setup" />;
   }
 
   if (user) {

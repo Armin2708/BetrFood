@@ -33,17 +33,9 @@ export default function Signup() {
     setLoading(true);
     try {
       await signup(email, password);
-      router.replace("/feeds");
+      router.replace("/");
     } catch (error: any) {
-      if (error.message === 'VERIFY_EMAIL') {
-        Alert.alert(
-          'Verify Email',
-          'A verification code has been sent to your email. Please verify to continue.',
-          [{ text: 'OK', onPress: () => router.push("/login") }]
-        );
-      } else {
-        Alert.alert('Signup Failed', error.message || 'Something went wrong.');
-      }
+      Alert.alert('Signup Failed', error.message || 'Something went wrong.');
     } finally {
       setLoading(false);
     }

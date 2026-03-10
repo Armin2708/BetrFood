@@ -29,7 +29,7 @@ export default function Login() {
     setLoading(true);
     try {
       await login(email, password);
-      router.replace("/feeds");
+      router.replace("/");
     } catch (error: any) {
       Alert.alert('Login Failed', error.message || 'Something went wrong.');
     } finally {

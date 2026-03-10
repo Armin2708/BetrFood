@@ -1,29 +1,30 @@
-import React, { createContext, useState, useEffect, ReactNode } from "react";
+import React, { createContext, useState, useEffect, useCallback, useRef, ReactNode } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
-const CLERK_PUBLISHABLE_KEY = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY || '';
-// Extract the Clerk Frontend API domain from the publishable key
-const CLERK_FRONTEND_API = (() => {
-  try {
-    const encoded = CLERK_PUBLISHABLE_KEY.replace('pk_test_', '').replace('pk_live_', '').replace(/\$$/, '');
-    const decoded = atob(encoded);
-    return `https://${decoded}`;
-  } catch {
-    return '';
-  }
-})();
+import {
+  setAuthToken,
+  fetchMyProfile,
+  fetchMyRole,
+  apiLogin,
+  apiSignup,
+  apiRefreshToken,
+  apiLogout,
+} from "../services/api";
 
 type User = {
   id: string;
   email: string;
   firstName?: string;
   lastName?: string;
+  role?: string;
 };
 
 type AuthContextType = {
   user: User | null;
   token: string | null;
   loading: boolean;
+  needsOnboarding: boolean;
+  setNeedsOnboarding: (value: boolean) => void;
+  refreshRole: () => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -33,6 +34,9 @@ export const AuthContext = createContext<AuthContextType>({
   user: null,
   token: null,
   loading: true,
+  needsOnboarding: false,
+  setNeedsOnboarding: () => {},
+  refreshRole: async () => {},
   login: async () => {},
   signup: async () => {},
   logout: async () => {},
@@ -42,168 +46,208 @@ type AuthProviderProps = {
   children: ReactNode;
 };
 
-const TOKEN_KEY = 'betrfood_session_token';
-const SESSION_ID_KEY = 'betrfood_session_id';
+const TOKEN_KEY = "betrfood_session_token";
+const SESSION_ID_KEY = "betrfood_session_id";
+const USER_KEY = "betrfood_user";
+
+// Refresh token 10 seconds before the ~60s Clerk expiry
+const TOKEN_REFRESH_INTERVAL = 50_000;
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [needsOnboarding, setNeedsOnboarding] = useState(false);
+  const refreshTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Restore session on mount
   useEffect(() => {
     restoreSession();
+    return () => stopTokenRefresh();
   }, []);
 
+  /**
+   * Start automatic token refresh interval.
+   */
+  function startTokenRefresh(sessionId: string) {
+    stopTokenRefresh();
+    refreshTimerRef.current = setInterval(async () => {
+      try {
+        const newToken = await apiRefreshToken(sessionId);
+        setToken(newToken);
+        setAuthToken(newToken);
+        await AsyncStorage.setItem(TOKEN_KEY, newToken);
+      } catch {
+        // Session expired - force logout
+        stopTokenRefresh();
+        await AsyncStorage.multiRemove([TOKEN_KEY, SESSION_ID_KEY, USER_KEY]);
+        setUser(null);
+        setToken(null);
+        setAuthToken(null);
+      }
+    }, TOKEN_REFRESH_INTERVAL);
+  }
+
+  function stopTokenRefresh() {
+    if (refreshTimerRef.current) {
+      clearInterval(refreshTimerRef.current);
+      refreshTimerRef.current = null;
+    }
+  }
+
+  /**
+   * Check if the user has completed onboarding.
+   */
+  async function checkOnboardingStatus() {
+    try {
+      const profile = await fetchMyProfile();
+      setNeedsOnboarding(!profile.onboardingCompleted);
+    } catch {
+      // Profile doesn't exist yet - needs onboarding
+      setNeedsOnboarding(true);
+    }
+  }
+
+  /**
+   * Fetch the user's role from the backend.
+   */
+  async function loadUserRole(userData: User): Promise<User> {
+    try {
+      const { role } = await fetchMyRole();
+      return { ...userData, role };
+    } catch {
+      return { ...userData, role: "user" };
+    }
+  }
+
+  /**
+   * Re-fetch the role without re-login.
+   */
+  const refreshRole = useCallback(async () => {
+    if (!user) return;
+    try {
+      const { role } = await fetchMyRole();
+      setUser((prev) => (prev ? { ...prev, role } : prev));
+    } catch {
+      // Keep existing role
+    }
+  }, [user]);
+
+  /**
+   * Restore session from AsyncStorage.
+   * Gets a fresh token using the saved sessionId (old token is likely expired).
+   */
   async function restoreSession() {
     try {
-      const savedToken = await AsyncStorage.getItem(TOKEN_KEY);
       const savedSessionId = await AsyncStorage.getItem(SESSION_ID_KEY);
-      if (savedToken && savedSessionId) {
-        // Verify the token is still valid by fetching user info
-        const userData = await fetchClerkUser(savedToken);
-        if (userData) {
-          setUser(userData);
-          setToken(savedToken);
-        } else {
-          // Token expired, clear storage
-          await AsyncStorage.multiRemove([TOKEN_KEY, SESSION_ID_KEY]);
-        }
+      const savedUser = await AsyncStorage.getItem(USER_KEY);
+
+      if (savedSessionId && savedUser) {
+        // Get a fresh token (the saved one is likely expired)
+        const freshToken = await apiRefreshToken(savedSessionId);
+
+        setAuthToken(freshToken);
+        setToken(freshToken);
+        await AsyncStorage.setItem(TOKEN_KEY, freshToken);
+
+        const userData: User = JSON.parse(savedUser);
+        const userWithRole = await loadUserRole(userData);
+        setUser(userWithRole);
+
+        await checkOnboardingStatus();
+        startTokenRefresh(savedSessionId);
       }
-    } catch (error) {
-      console.error('Error restoring session:', error);
+    } catch {
+      // Session expired or invalid - clear everything
+      await AsyncStorage.multiRemove([TOKEN_KEY, SESSION_ID_KEY, USER_KEY]);
     } finally {
       setLoading(false);
     }
   }
 
-  async function fetchClerkUser(sessionToken: string): Promise<User | null> {
-    try {
-      const res = await fetch(`${CLERK_FRONTEND_API}/v1/me`, {
-        headers: { Authorization: `Bearer ${sessionToken}` },
-      });
-      if (!res.ok) return null;
-      const data = await res.json();
-      return {
-        id: data.id,
-        email: data.email_addresses?.[0]?.email_address || '',
-        firstName: data.first_name || undefined,
-        lastName: data.last_name || undefined,
-      };
-    } catch {
-      return null;
-    }
-  }
-
   const login = async (email: string, password: string) => {
-    // Step 1: Create a sign-in attempt
-    const signInRes = await fetch(`${CLERK_FRONTEND_API}/v1/client/sign_ins`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        identifier: email,
-        password,
-        strategy: 'password',
-      }),
-    });
+    const result = await apiLogin(email, password);
 
-    const signInData = await signInRes.json();
+    const userData: User = {
+      id: result.user.id,
+      email: result.user.email,
+      firstName: result.user.firstName || undefined,
+      lastName: result.user.lastName || undefined,
+    };
 
-    if (!signInRes.ok) {
-      const msg = signInData.errors?.[0]?.long_message || signInData.errors?.[0]?.message || 'Login failed';
-      throw new Error(msg);
-    }
+    // Save session
+    await AsyncStorage.setItem(TOKEN_KEY, result.token);
+    await AsyncStorage.setItem(SESSION_ID_KEY, result.sessionId);
+    await AsyncStorage.setItem(USER_KEY, JSON.stringify(userData));
 
-    // Extract session token from the client response
-    const sessionToken = signInData.client?.sessions?.[0]?.last_active_token?.jwt;
-    const sessionId = signInData.client?.sessions?.[0]?.id;
+    setAuthToken(result.token);
+    setToken(result.token);
 
-    if (!sessionToken) {
-      // If the sign-in needs more steps (like 2FA), handle that
-      if (signInData.response?.status === 'needs_second_factor') {
-        throw new Error('Two-factor authentication required. Not yet supported.');
-      }
-      throw new Error('Login succeeded but no session token received.');
-    }
+    const userWithRole = await loadUserRole(userData);
+    setUser(userWithRole);
 
-    await AsyncStorage.setItem(TOKEN_KEY, sessionToken);
-    await AsyncStorage.setItem(SESSION_ID_KEY, sessionId);
-
-    const userData = await fetchClerkUser(sessionToken);
-    setUser(userData || { id: signInData.response?.id || '', email });
-    setToken(sessionToken);
+    await checkOnboardingStatus();
+    startTokenRefresh(result.sessionId);
   };
 
   const signup = async (email: string, password: string) => {
-    // Step 1: Create a sign-up
-    const signUpRes = await fetch(`${CLERK_FRONTEND_API}/v1/client/sign_ups`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email_address: email,
-        password,
-      }),
-    });
+    const result = await apiSignup(email, password);
 
-    const signUpData = await signUpRes.json();
+    const userData: User = {
+      id: result.user.id,
+      email: result.user.email,
+      firstName: result.user.firstName || undefined,
+      lastName: result.user.lastName || undefined,
+    };
 
-    if (!signUpRes.ok) {
-      const msg = signUpData.errors?.[0]?.long_message || signUpData.errors?.[0]?.message || 'Signup failed';
-      throw new Error(msg);
-    }
+    // Save session
+    await AsyncStorage.setItem(TOKEN_KEY, result.token);
+    await AsyncStorage.setItem(SESSION_ID_KEY, result.sessionId);
+    await AsyncStorage.setItem(USER_KEY, JSON.stringify(userData));
 
-    // Check if email verification is needed
-    const status = signUpData.response?.status;
-    if (status === 'missing_requirements') {
-      // Email verification might be required
-      const verifications = signUpData.response?.verifications;
-      if (verifications?.email_address?.status === 'unverified') {
-        // Prepare email verification
-        await fetch(`${CLERK_FRONTEND_API}/v1/client/sign_ups/${signUpData.response.id}/prepare_verification`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ strategy: 'email_code' }),
-        });
-        throw new Error('VERIFY_EMAIL');
-      }
-    }
+    setAuthToken(result.token);
+    setToken(result.token);
 
-    // If sign-up auto-completes (no verification required)
-    const sessionToken = signUpData.client?.sessions?.[0]?.last_active_token?.jwt;
-    const sessionId = signUpData.client?.sessions?.[0]?.id;
+    const userWithRole = await loadUserRole(userData);
+    setUser(userWithRole);
 
-    if (sessionToken) {
-      await AsyncStorage.setItem(TOKEN_KEY, sessionToken);
-      await AsyncStorage.setItem(SESSION_ID_KEY, sessionId);
-
-      const userData = await fetchClerkUser(sessionToken);
-      setUser(userData || { id: signUpData.response?.id || '', email });
-      setToken(sessionToken);
-    } else {
-      throw new Error('Account created. Please check your email for verification.');
-    }
+    setNeedsOnboarding(true);
+    startTokenRefresh(result.sessionId);
   };
 
   const logout = async () => {
+    stopTokenRefresh();
+
     try {
       const sessionId = await AsyncStorage.getItem(SESSION_ID_KEY);
-      if (token && sessionId) {
-        await fetch(`${CLERK_FRONTEND_API}/v1/client/sessions/${sessionId}/revoke`, {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}` },
-        });
+      if (sessionId) {
+        await apiLogout(sessionId);
       }
-    } catch (error) {
-      console.error('Error revoking session:', error);
+    } catch {
+      // Best-effort revocation
     }
 
-    await AsyncStorage.multiRemove([TOKEN_KEY, SESSION_ID_KEY]);
+    await AsyncStorage.multiRemove([TOKEN_KEY, SESSION_ID_KEY, USER_KEY]);
     setUser(null);
     setToken(null);
+    setNeedsOnboarding(false);
+    setAuthToken(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, signup, logout }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        token,
+        loading,
+        needsOnboarding,
+        setNeedsOnboarding,
+        refreshRole,
+        login,
+        signup,
+        logout,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

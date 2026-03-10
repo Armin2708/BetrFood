@@ -1,5 +1,7 @@
 const express = require('express');
 const supabase = require('../db/supabase');
+// RBAC middleware available for future role-gated tag operations:
+// const { requireRole, requireMinRole } = require('../middleware/rbac');
 
 const router = express.Router();
 
