@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import SaveCollectionModal from "./SaveCollectionModal";
+import ReportModal from "./ReportModal";
 import * as Clipboard from 'expo-clipboard';
 import { useActionSheet } from '@expo/react-native-action-sheet';
 import { Collection } from "../context/CollectionsContext";
@@ -49,6 +50,7 @@ export default function Post({
   const [liked, setLiked] = useState(false);
   const [saved, setSaved] = useState(false);
   const [collectionModalVisible, setCollectionModalVisible] = useState(false);
+  const [reportModalVisible, setReportModalVisible] = useState(false);
   const { showActionSheetWithOptions } = useActionSheet();
 
   const handleSave = (collection: Collection) => {
@@ -79,24 +81,52 @@ export default function Post({
     );
   };
 
+  // Three-dot options menu — shows Report for other users' posts
+  const showOptionsMenu = () => {
+    const isOwnPost = userId === currentUserId;
+    if (isOwnPost) {
+      // Own post options (can be expanded later e.g. Edit, Delete)
+      showActionSheetWithOptions(
+        { options: ['Cancel'], cancelButtonIndex: 0 },
+        () => {}
+      );
+    } else {
+      showActionSheetWithOptions(
+        {
+          options: ['Report', 'Cancel'],
+          cancelButtonIndex: 1,
+          destructiveButtonIndex: 0,
+        },
+        (index) => {
+          if (index === 0) setReportModalVisible(true);
+        }
+      );
+    }
+  };
+
   const handleAuthorPress = () => {
     if (!userId) return;
     if (userId === currentUserId) router.push('/(tabs)/profile');
     else router.push(`/user/${userId}`);
   };
 
-  // Resolve media: video takes priority over images
   const images = postImages && postImages.length > 0 ? postImages : postImage ? [postImage] : [];
 
   return (
     <View style={styles.container}>
-      {/* Tappable author header */}
-      <TouchableOpacity style={styles.header} onPress={handleAuthorPress}>
-        <Image source={{ uri: profilePic }} style={styles.profilePic} />
-        <Text style={styles.username}>{username}</Text>
-      </TouchableOpacity>
 
-      {/* Media: video or image carousel */}
+      {/* Header: avatar + username + three-dot menu */}
+      <View style={styles.headerRow}>
+        <TouchableOpacity style={styles.headerLeft} onPress={handleAuthorPress}>
+          <Image source={{ uri: profilePic }} style={styles.profilePic} />
+          <Text style={styles.username}>{username}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.optionsBtn} onPress={showOptionsMenu}>
+          <Text style={styles.optionsDots}>⋯</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Media */}
       {videoUrl ? (
         <VideoPlayer uri={videoUrl} height={300} autoplay showControls={false} />
       ) : (
@@ -130,6 +160,14 @@ export default function Post({
         onClose={() => setCollectionModalVisible(false)}
         onSave={handleSave}
       />
+
+      {id && (
+        <ReportModal
+          visible={reportModalVisible}
+          postId={id}
+          onClose={() => setReportModalVisible(false)}
+        />
+      )}
     </View>
   );
 }
@@ -141,10 +179,16 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderColor: '#ddd',
   },
-  header: {
+  headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
   },
   profilePic: {
     width: 40,
@@ -155,6 +199,15 @@ const styles = StyleSheet.create({
   username: {
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  optionsBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  optionsDots: {
+    fontSize: 20,
+    color: '#555',
+    letterSpacing: 1,
   },
   actions: {
     flexDirection: 'row',

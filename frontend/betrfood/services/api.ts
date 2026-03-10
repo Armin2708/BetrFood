@@ -45,10 +45,10 @@ export interface Post {
   id: string;
   userId: string;
   caption: string;
-  imagePath: string;        // primary/cover image (backwards compatible)
-  imagePaths?: string[];    // all images for carousel
-  videoPath?: string | null;  // uploaded video file path
-  videoType?: string | null;  // mime type e.g. video/mp4
+  imagePath: string;
+  imagePaths?: string[];
+  videoPath?: string | null;
+  videoType?: string | null;
   createdAt: string;
   updatedAt: string;
   editedAt?: string | null;
@@ -73,6 +73,18 @@ export interface UserProfile {
   postCount: number;
   followerCount: number;
   followingCount: number;
+}
+
+export interface Report {
+  id: string;
+  postId: string;
+  reporterId: string;
+  reason: string;
+  description: string | null;
+  status: 'pending' | 'reviewed' | 'actioned' | 'dismissed';
+  createdAt: string;
+  reviewedAt: string | null;
+  reviewedBy: string | null;
 }
 
 export type FeedMode = 'for_you' | 'following';
@@ -141,6 +153,25 @@ export async function unfollowUser(userId: string, followerId: string): Promise<
 }
 
 // ---------------------------------------------------------------------------
+// Reports
+// ---------------------------------------------------------------------------
+
+export async function submitReport(data: {
+  postId: string;
+  reporterId: string;
+  reason: string;
+  description?: string | null;
+}): Promise<Report> {
+  const response = await fetch(`${API_BASE_URL}/api/reports`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) { const e = await response.json(); throw new Error(e.error || 'Failed to submit report'); }
+  return response.json();
+}
+
+// ---------------------------------------------------------------------------
 // Feed
 // ---------------------------------------------------------------------------
 
@@ -178,7 +209,6 @@ export async function fetchPost(postId: string): Promise<Post> {
   return response.json();
 }
 
-// Accepts images array and/or a single video URI
 export async function createPostApi(
   imageUris: string[],
   caption: string,
@@ -191,7 +221,6 @@ export async function createPostApi(
   formData.append('userId', userId);
   if (recipe) formData.append('recipe', JSON.stringify(recipe));
 
-  // Append images
   imageUris.forEach((uri) => {
     const filename = uri.split('/').pop() || 'photo.jpg';
     const match = /\.(\w+)$/.exec(filename);
@@ -199,7 +228,6 @@ export async function createPostApi(
     formData.append('images', { uri, name: filename, type } as any);
   });
 
-  // Append video
   if (videoUri) {
     const filename = videoUri.split('/').pop() || 'video.mp4';
     const match = /\.(\w+)$/.exec(filename);
