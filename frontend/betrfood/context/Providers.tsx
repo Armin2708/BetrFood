@@ -1,15 +1,29 @@
+import React, { useContext, useEffect } from "react";
 import { CollectionsProvider } from "./CollectionsContext";
-import { AuthProvider } from "./AuthenticationContext";
-import { ActionSheetProvider } from '@expo/react-native-action-sheet'
+import { AuthProvider, AuthContext } from "./AuthenticationContext";
+import { ActionSheetProvider } from '@expo/react-native-action-sheet';
+import { setAuthToken } from "../services/api";
+
+function AuthTokenSync({ children }: { children: React.ReactNode }) {
+  const { token } = useContext(AuthContext);
+
+  useEffect(() => {
+    setAuthToken(token);
+  }, [token]);
+
+  return <>{children}</>;
+}
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
     <AuthProvider>
-      <ActionSheetProvider>
-        <CollectionsProvider>
+      <AuthTokenSync>
+        <ActionSheetProvider>
+          <CollectionsProvider>
             {children}
-        </CollectionsProvider>
-      </ActionSheetProvider>
+          </CollectionsProvider>
+        </ActionSheetProvider>
+      </AuthTokenSync>
     </AuthProvider>
   );
 }

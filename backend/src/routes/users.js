@@ -1,53 +1,30 @@
 const express = require("express");
-const db = require("../db/database");
+const supabase = require("../db/supabase");
+const { requireAuth } = require("../middleware/auth");
 
 const router = express.Router();
 
-function initializeFollowTable() {
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS user_follows (
-      followerId TEXT NOT NULL,
-      followingId TEXT NOT NULL,
-      PRIMARY KEY (followerId, followingId)
-    )
-  `);
-
-  db.exec(`
-    CREATE INDEX IF NOT EXISTS idx_user_follows_followerId
-    ON user_follows(followerId)
-  `);
-
-  db.exec(`
-    CREATE INDEX IF NOT EXISTS idx_user_follows_followingId
-    ON user_follows(followingId)
-  `);
-}
-
-initializeFollowTable();
-
-// POST /api/users/:id/follow
-router.post("/:id/follow", (req, res) => {
+// POST /api/users/:id/follow (auth required)
+router.post("/:id/follow", requireAuth, async (req, res) => {
   const followingId = req.params.id;
-  const { followerId } = req.body;
-
-  if (!followerId) {
-    return res.status(400).json({ error: "followerId is required." });
-  }
+  const followerId = req.userId;
 
   if (followerId === followingId) {
     return res.status(400).json({ error: "Users cannot follow themselves." });
   }
 
   try {
-    const result = db
-      .prepare(`
-        INSERT OR IGNORE INTO user_follows (followerId, followingId)
-        VALUES (?, ?)
-      `)
-      .run(followerId, followingId);
+    const { data, error } = await supabase
+      .from("user_follows")
+      .insert({ follower_id: followerId, following_id: followingId })
+      .select()
+      .single();
 
-    if (result.changes === 0) {
-      return res.status(409).json({ error: "Already following this user." });
+    if (error) {
+      if (error.code === '23505') {
+        return res.status(409).json({ error: "Already following this user." });
+      }
+      throw error;
     }
 
     res.json({
@@ -61,26 +38,19 @@ router.post("/:id/follow", (req, res) => {
   }
 });
 
-// DELETE /api/users/:id/follow
-router.delete("/:id/follow", (req, res) => {
+// DELETE /api/users/:id/follow (auth required)
+router.delete("/:id/follow", requireAuth, async (req, res) => {
   const followingId = req.params.id;
-  const { followerId } = req.body;
-
-  if (!followerId) {
-    return res.status(400).json({ error: "followerId is required." });
-  }
+  const followerId = req.userId;
 
   try {
-    const result = db
-      .prepare(`
-        DELETE FROM user_follows
-        WHERE followerId = ? AND followingId = ?
-      `)
-      .run(followerId, followingId);
+    const { data, error, count } = await supabase
+      .from("user_follows")
+      .delete()
+      .eq("follower_id", followerId)
+      .eq("following_id", followingId);
 
-    if (result.changes === 0) {
-      return res.status(404).json({ error: "Follow relationship not found." });
-    }
+    if (error) throw error;
 
     res.json({
       message: "User unfollowed successfully.",
@@ -94,30 +64,27 @@ router.delete("/:id/follow", (req, res) => {
 });
 
 // GET /api/users/:id/follow-stats
-router.get("/:id/follow-stats", (req, res) => {
+router.get("/:id/follow-stats", async (req, res) => {
   const userId = req.params.id;
 
   try {
-    const followerRow = db
-      .prepare(`
-        SELECT COUNT(*) AS count
-        FROM user_follows
-        WHERE followingId = ?
-      `)
-      .get(userId);
+    const { count: followerCount, error: e1 } = await supabase
+      .from("user_follows")
+      .select("*", { count: "exact", head: true })
+      .eq("following_id", userId);
 
-    const followingRow = db
-      .prepare(`
-        SELECT COUNT(*) AS count
-        FROM user_follows
-        WHERE followerId = ?
-      `)
-      .get(userId);
+    const { count: followingCount, error: e2 } = await supabase
+      .from("user_follows")
+      .select("*", { count: "exact", head: true })
+      .eq("follower_id", userId);
+
+    if (e1) throw e1;
+    if (e2) throw e2;
 
     res.json({
       userId,
-      followerCount: followerRow.count,
-      followingCount: followingRow.count,
+      followerCount: followerCount || 0,
+      followingCount: followingCount || 0,
     });
   } catch (error) {
     console.error("Error fetching follow stats:", error);

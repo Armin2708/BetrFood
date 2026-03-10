@@ -3,6 +3,21 @@ import { Platform } from 'react-native';
 const LOCAL_IP = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || `http://${LOCAL_IP}:3000`;
 
+// Token storage - set by AuthContext
+let _authToken: string | null = null;
+
+export function setAuthToken(token: string | null) {
+  _authToken = token;
+}
+
+function authHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {};
+  if (_authToken) {
+    headers['Authorization'] = `Bearer ${_authToken}`;
+  }
+  return headers;
+}
+
 export interface RecipeIngredient {
   id: string;
   name: string;
@@ -62,7 +77,9 @@ export interface PaginatedResponse {
 export async function fetchPosts(cursor?: string | null, limit: number = 10): Promise<PaginatedResponse> {
   const params = new URLSearchParams({ limit: String(limit) });
   if (cursor) params.set('cursor', cursor);
-  const response = await fetch(`${API_BASE_URL}/api/posts?${params}`);
+  const response = await fetch(`${API_BASE_URL}/api/posts?${params}`, {
+    headers: authHeaders(),
+  });
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.error || 'Failed to fetch posts');
@@ -71,7 +88,9 @@ export async function fetchPosts(cursor?: string | null, limit: number = 10): Pr
 }
 
 export async function fetchPost(postId: string): Promise<Post> {
-  const response = await fetch(`${API_BASE_URL}/api/posts/${postId}`);
+  const response = await fetch(`${API_BASE_URL}/api/posts/${postId}`, {
+    headers: authHeaders(),
+  });
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.error || 'Failed to fetch post');
@@ -82,7 +101,6 @@ export async function fetchPost(postId: string): Promise<Post> {
 export async function createPostApi(
   imageUri: string,
   caption: string,
-  userId: string = 'current-user',
   recipe?: RecipeInput | null
 ): Promise<Post> {
   const formData = new FormData();
@@ -96,7 +114,6 @@ export async function createPostApi(
     type,
   } as any);
   formData.append('caption', caption);
-  formData.append('userId', userId);
 
   if (recipe) {
     formData.append('recipe', JSON.stringify(recipe));
@@ -105,7 +122,10 @@ export async function createPostApi(
   const response = await fetch(`${API_BASE_URL}/api/posts`, {
     method: 'POST',
     body: formData,
-    headers: { 'Content-Type': 'multipart/form-data' },
+    headers: {
+      'Content-Type': 'multipart/form-data',
+      ...authHeaders(),
+    },
   });
 
   if (!response.ok) {
@@ -120,10 +140,10 @@ export function getImageUrl(imagePath: string): string {
   return `${API_BASE_URL}${imagePath}`;
 }
 
-export async function deletePost(postId: string, userId: string): Promise<{ message: string }> {
+export async function deletePost(postId: string): Promise<{ message: string }> {
   const response = await fetch(`${API_BASE_URL}/api/posts/${postId}`, {
     method: 'DELETE',
-    headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
   });
   if (!response.ok) {
     const error = await response.json();
@@ -134,12 +154,11 @@ export async function deletePost(postId: string, userId: string): Promise<{ mess
 
 export async function updatePost(
   postId: string,
-  userId: string,
   updates: { caption?: string }
 ): Promise<Post> {
   const response = await fetch(`${API_BASE_URL}/api/posts/${postId}`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify(updates),
   });
   if (!response.ok) {
@@ -150,7 +169,9 @@ export async function updatePost(
 }
 
 export async function fetchRecipe(postId: string): Promise<Recipe> {
-  const response = await fetch(`${API_BASE_URL}/api/posts/${postId}/recipe`);
+  const response = await fetch(`${API_BASE_URL}/api/posts/${postId}/recipe`, {
+    headers: authHeaders(),
+  });
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.error || 'Failed to fetch recipe');
@@ -161,7 +182,7 @@ export async function fetchRecipe(postId: string): Promise<Recipe> {
 export async function updateRecipe(postId: string, recipe: RecipeInput): Promise<Recipe> {
   const response = await fetch(`${API_BASE_URL}/api/posts/${postId}/recipe`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify(recipe),
   });
   if (!response.ok) {
@@ -175,7 +196,9 @@ export async function updateRecipe(postId: string, recipe: RecipeInput): Promise
 
 export async function fetchTags(type?: string): Promise<Tag[]> {
   const params = type ? `?type=${type}` : '';
-  const response = await fetch(`${API_BASE_URL}/api/tags${params}`);
+  const response = await fetch(`${API_BASE_URL}/api/tags${params}`, {
+    headers: authHeaders(),
+  });
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.error || 'Failed to fetch tags');
@@ -184,9 +207,9 @@ export async function fetchTags(type?: string): Promise<Tag[]> {
 }
 
 export async function addTagsToPost(postId: string, tagIds: number[]): Promise<{ postId: string; tags: Tag[] }> {
-  const response = await fetch(`${API_BASE_URL}/api/posts/${postId}/tags`, {
+  const response = await fetch(`${API_BASE_URL}/api/tags/posts/${postId}/tags`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ tagIds }),
   });
   if (!response.ok) {
@@ -197,8 +220,9 @@ export async function addTagsToPost(postId: string, tagIds: number[]): Promise<{
 }
 
 export async function removeTagFromPost(postId: string, tagId: number): Promise<{ message: string }> {
-  const response = await fetch(`${API_BASE_URL}/api/posts/${postId}/tags/${tagId}`, {
+  const response = await fetch(`${API_BASE_URL}/api/tags/posts/${postId}/tags/${tagId}`, {
     method: 'DELETE',
+    headers: authHeaders(),
   });
   if (!response.ok) {
     const error = await response.json();
@@ -208,7 +232,9 @@ export async function removeTagFromPost(postId: string, tagId: number): Promise<
 }
 
 export async function fetchPostTags(postId: string): Promise<Tag[]> {
-  const response = await fetch(`${API_BASE_URL}/api/posts/${postId}/tags`);
+  const response = await fetch(`${API_BASE_URL}/api/tags/posts/${postId}/tags`, {
+    headers: authHeaders(),
+  });
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.error || 'Failed to fetch post tags');
@@ -217,7 +243,9 @@ export async function fetchPostTags(postId: string): Promise<Tag[]> {
 }
 
 export async function fetchPostsByTags(tagIds: number[]): Promise<Post[]> {
-  const response = await fetch(`${API_BASE_URL}/api/posts/by-tags?tags=${tagIds.join(',')}`);
+  const response = await fetch(`${API_BASE_URL}/api/tags/posts/by-tags?tags=${tagIds.join(',')}`, {
+    headers: authHeaders(),
+  });
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.error || 'Failed to filter posts');

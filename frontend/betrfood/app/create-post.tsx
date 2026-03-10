@@ -45,7 +45,7 @@ export default function CreatePostScreen() {
     }
     setLoading(true);
     try {
-      await createPostApi(image, caption, 'current-user');
+      await createPostApi(image, caption);
       Alert.alert('Success', 'Your post has been published!', [
         { text: 'OK', onPress: () => router.back() },
       ]);

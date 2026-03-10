@@ -16,7 +16,7 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { fetchPost, updatePost, getImageUrl } from '../services/api';
 
 export default function EditPostScreen() {
-  const { postId, userId } = useLocalSearchParams<{ postId: string; userId: string }>();
+  const { postId } = useLocalSearchParams<{ postId: string }>();
 
   const [caption, setCaption] = useState('');
   const [imagePath, setImagePath] = useState('');
@@ -43,11 +43,11 @@ export default function EditPostScreen() {
   }
 
   async function handleSave() {
-    if (!postId || !userId) return;
+    if (!postId) return;
 
     setSaving(true);
     try {
-      await updatePost(postId, userId, { caption });
+      await updatePost(postId, { caption });
       Alert.alert('Success', 'Post updated successfully.', [
         { text: 'OK', onPress: () => router.back() },
       ]);

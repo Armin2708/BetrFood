@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useContext } from 'react';
 import {
   View,
   FlatList,
@@ -12,19 +12,19 @@ import { useFocusEffect, router } from 'expo-router';
 import Post from '../../../components/Post';
 import PostSkeleton from '../../../components/PostSkeleton';
 import TagFilterBar from '../../../components/TagFilterBar';
+import { AuthContext } from '../../../context/AuthenticationContext';
 import {
   fetchPosts,
   fetchPostsByTags,
   fetchPostTags,
   getImageUrl,
   Post as PostType,
-  Tag,
 } from '../../../services/api';
 
-const CURRENT_USER_ID = 'current-user';
 const PAGE_LIMIT = 10;
 
 export default function HomeScreen() {
+  const { user } = useContext(AuthContext);
   const [posts, setPosts] = useState<PostType[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -165,9 +165,10 @@ export default function HomeScreen() {
             postImage={getImageUrl(item.imagePath)}
             caption={item.caption}
             userId={item.userId}
-            currentUserId={CURRENT_USER_ID}
+            currentUserId={user?.id}
             onDeleted={handlePostDeleted}
             tags={item.tags}
+            editedAt={item.editedAt}
           />
         )}
         ListFooterComponent={

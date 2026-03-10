@@ -1,8 +1,10 @@
+require('dotenv').config();
+
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
 const postsRouter = require("./routes/posts");
-// const tagsRoutes = require("./routes/tags");
+const tagsRouter = require("./routes/tags");
 const userRoutes = require("./routes/users");
 
 const app = express();
@@ -25,7 +27,7 @@ app.get("/", (req, res) => {
 
 // Mount routes
 app.use("/api/posts", postsRouter);
-// app.use("/api/tags", tagsRoutes);
+app.use("/api/tags", tagsRouter);
 app.use("/api/users", userRoutes);
 
 app.listen(PORT, () => {

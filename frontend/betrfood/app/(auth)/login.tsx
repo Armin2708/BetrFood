@@ -1,11 +1,12 @@
-import { 
-  View, 
-  Text, 
-  TextInput, 
-  Pressable, 
+import {
+  View,
+  Text,
+  TextInput,
+  Pressable,
   StyleSheet,
   TouchableOpacity,
-  ActivityIndicator
+  ActivityIndicator,
+  Alert,
 } from "react-native";
 import { useState, useContext } from "react";
 import { AuthContext } from "../../context/AuthenticationContext";
@@ -17,11 +18,23 @@ export default function Login() {
 
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
-  const [loading, setLoading] = useState<boolean>(false)
+  const [loading, setLoading] = useState<boolean>(false);
 
-  const handleLogin = () => {
-    login(email, password);
-    router.replace("/feeds");
+  const handleLogin = async () => {
+    if (!email || !password) {
+      Alert.alert('Error', 'Please enter email and password.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await login(email, password);
+      router.replace("/feeds");
+    } catch (error: any) {
+      Alert.alert('Login Failed', error.message || 'Something went wrong.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -31,6 +44,9 @@ export default function Login() {
       <TextInput
         placeholder="Email"
         onChangeText={setEmail}
+        value={email}
+        autoCapitalize="none"
+        keyboardType="email-address"
         style={styles.input}
       />
 
@@ -38,6 +54,7 @@ export default function Login() {
         placeholder="Password"
         secureTextEntry
         onChangeText={setPassword}
+        value={password}
         style={styles.input}
       />
 
@@ -57,7 +74,7 @@ export default function Login() {
         style={styles.button}
         onPress={() => router.push("/signup")}
       >
-        <Text style={styles.buttonText}>Create Account</Text>    
+        <Text style={styles.buttonText}>Create Account</Text>
       </TouchableOpacity>
 
       <Pressable onPress={() => router.push("/resetPassword")}>
@@ -92,6 +109,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 8,
     alignItems: "center",
+    marginBottom: 12,
   },
   buttonText: {
     color: "#fff",

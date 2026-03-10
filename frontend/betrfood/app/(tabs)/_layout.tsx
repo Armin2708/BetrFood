@@ -7,12 +7,11 @@ import { AuthContext } from "../../context/AuthenticationContext";
 type IoniconName = ComponentProps<typeof Ionicons>['name'];
 
 export default function TabsLayout() {
-  const { user } = useContext(AuthContext);
+  const { user, loading } = useContext(AuthContext);
 
-  // if (!user) {
-  //   // Redirect non-logged-in users to login
-  //   return <Redirect href="(auth)/login" />;
-  // }
+  if (!loading && !user) {
+    return <Redirect href="/(auth)/login" />;
+  }
 
   return (
     <Tabs screenOptions={{ headerShown: false }}>

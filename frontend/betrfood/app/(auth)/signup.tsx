@@ -1,10 +1,11 @@
-import { 
+import {
   View,
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  StyleSheet, 
-  ActivityIndicator 
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
 import { useState, useContext } from "react";
 import { AuthContext } from "../../context/AuthenticationContext";
@@ -16,11 +17,36 @@ export default function Signup() {
 
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
-  const [loading, setLoading] = useState<boolean>(false)
+  const [loading, setLoading] = useState<boolean>(false);
 
-  const handleSignup = () => {
-    signup(email, password);
-    router.replace("/feeds");
+  const handleSignup = async () => {
+    if (!email || !password) {
+      Alert.alert('Error', 'Please enter email and password.');
+      return;
+    }
+
+    if (password.length < 8) {
+      Alert.alert('Error', 'Password must be at least 8 characters.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await signup(email, password);
+      router.replace("/feeds");
+    } catch (error: any) {
+      if (error.message === 'VERIFY_EMAIL') {
+        Alert.alert(
+          'Verify Email',
+          'A verification code has been sent to your email. Please verify to continue.',
+          [{ text: 'OK', onPress: () => router.push("/login") }]
+        );
+      } else {
+        Alert.alert('Signup Failed', error.message || 'Something went wrong.');
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -30,6 +56,9 @@ export default function Signup() {
       <TextInput
         placeholder="Email"
         onChangeText={setEmail}
+        value={email}
+        autoCapitalize="none"
+        keyboardType="email-address"
         style={styles.input}
       />
 
@@ -37,6 +66,7 @@ export default function Signup() {
         placeholder="Password"
         secureTextEntry
         onChangeText={setPassword}
+        value={password}
         style={styles.input}
       />
 
@@ -56,9 +86,8 @@ export default function Signup() {
         style={styles.button}
         onPress={() => router.back()}
       >
-        <Text style={styles.buttonText}>Back to Login</Text>    
+        <Text style={styles.buttonText}>Back to Login</Text>
       </TouchableOpacity>
-
     </View>
   );
 }
@@ -88,6 +117,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 8,
     alignItems: "center",
+    marginBottom: 12,
   },
   buttonText: {
     color: "#fff",

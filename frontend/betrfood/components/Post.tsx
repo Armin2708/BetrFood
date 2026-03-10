@@ -3,9 +3,8 @@ import SaveCollectionModal from "./SaveCollectionModal";
 import * as Clipboard from 'expo-clipboard';
 import { useActionSheet } from '@expo/react-native-action-sheet';
 import { Collection } from "../context/CollectionsContext";
-import { Tag } from '../services/api';
+import { Tag, deletePost } from '../services/api';
 import TagDisplay from './TagDisplay';
-import { deletePost } from '../services/api';
 import {
   View,
   Text,
@@ -76,14 +75,14 @@ export default function Post({
   };
 
   const handleDelete = () => {
-    if (!id || !currentUserId) return;
+    if (!id) return;
     Alert.alert('Delete Post', 'Are you sure?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete', style: 'destructive',
         onPress: async () => {
           try {
-            await deletePost(id, currentUserId);
+            await deletePost(id);
             if (onDeleted) onDeleted(id);
           } catch (error: any) {
             Alert.alert('Error', error.message || 'Failed to delete post.');
