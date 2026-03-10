@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import { UserPreferences } from '../constants/preferenceData';
 
 const LOCAL_IP = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || `http://${LOCAL_IP}:3000`;
@@ -70,6 +71,7 @@ export interface UserProfile {
   bio: string | null;
   avatarUrl: string | null;
   isPrivate: boolean;
+  preferences: UserPreferences;
   postCount: number;
   followerCount: number;
   followingCount: number;
@@ -101,7 +103,7 @@ export async function fetchUserProfile(userId: string): Promise<UserProfile> {
 
 export async function updateUserProfile(
   userId: string,
-  updates: { username?: string; displayName?: string; bio?: string; avatarUrl?: string; isPrivate?: boolean }
+  updates: { username?: string; displayName?: string | null; bio?: string | null; avatarUrl?: string; isPrivate?: boolean }
 ): Promise<UserProfile> {
   const response = await fetch(`${API_BASE_URL}/api/users/${userId}`, {
     method: 'PUT',
@@ -109,6 +111,22 @@ export async function updateUserProfile(
     body: JSON.stringify(updates),
   });
   if (!response.ok) { const e = await response.json(); throw new Error(e.error || 'Failed to update user profile'); }
+  return response.json();
+}
+
+export async function fetchUserPreferences(userId: string): Promise<UserPreferences> {
+  const response = await fetch(`${API_BASE_URL}/api/users/${userId}/preferences`);
+  if (!response.ok) { const e = await response.json(); throw new Error(e.error || 'Failed to fetch preferences'); }
+  return response.json();
+}
+
+export async function updateUserPreferences(userId: string, preferences: UserPreferences): Promise<UserPreferences> {
+  const response = await fetch(`${API_BASE_URL}/api/users/${userId}/preferences`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(preferences),
+  });
+  if (!response.ok) { const e = await response.json(); throw new Error(e.error || 'Failed to update preferences'); }
   return response.json();
 }
 

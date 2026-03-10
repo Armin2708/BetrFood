@@ -15,9 +15,15 @@ db.exec(`
     bio TEXT,
     avatarUrl TEXT,
     isPrivate INTEGER NOT NULL DEFAULT 0,
+    preferences TEXT NOT NULL DEFAULT '{}',
     createdAt TEXT NOT NULL DEFAULT (datetime('now'))
   )
 `);
+
+// Add preferences column to existing databases that don't have it yet
+try {
+  db.exec(`ALTER TABLE users ADD COLUMN preferences TEXT NOT NULL DEFAULT '{}'`);
+} catch (_) { /* column already exists */ }
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS follows (
@@ -34,6 +40,14 @@ db.exec(`CREATE INDEX IF NOT EXISTS idx_follows_followingId ON follows(following
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+function parsePreferences(raw) {
+  try {
+    return JSON.parse(raw || '{}');
+  } catch {
+    return {};
+  }
+}
+
 function getTagsForPost(postId) {
   try {
     return db.prepare(`
@@ -56,20 +70,29 @@ function getUserStats(userId) {
 
 function ensureUser(userId) {
   db.prepare(`
-    INSERT OR IGNORE INTO users (id, username, displayName, bio, avatarUrl, isPrivate)
-    VALUES (?, ?, ?, ?, ?, 0)
+    INSERT OR IGNORE INTO users (id, username, displayName, bio, avatarUrl, isPrivate, preferences)
+    VALUES (?, ?, ?, ?, ?, 0, '{}')
   `).run(userId, userId, userId, '', '');
   return db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
 }
 
+function formatUser(user, stats = {}) {
+  return {
+    ...user,
+    ...stats,
+    isPrivate: user.isPrivate === 1,
+    preferences: parsePreferences(user.preferences),
+  };
+}
+
 // ---------------------------------------------------------------------------
-// GET /api/users/:id — user profile + stats
+// GET /api/users/:id
 // ---------------------------------------------------------------------------
 router.get('/:id', (req, res) => {
   try {
     const user = ensureUser(req.params.id);
     const stats = getUserStats(req.params.id);
-    res.json({ ...user, ...stats, isPrivate: user.isPrivate === 1 });
+    res.json(formatUser(user, stats));
   } catch (error) {
     console.error('Error fetching user:', error);
     res.status(500).json({ error: 'Failed to fetch user.' });
@@ -77,7 +100,7 @@ router.get('/:id', (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// PUT /api/users/:id — update profile
+// PUT /api/users/:id — update profile fields
 // ---------------------------------------------------------------------------
 router.put('/:id', (req, res) => {
   try {
@@ -108,7 +131,7 @@ router.put('/:id', (req, res) => {
 
     const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.params.id);
     const stats = getUserStats(req.params.id);
-    res.json({ ...user, ...stats, isPrivate: user.isPrivate === 1 });
+    res.json(formatUser(user, stats));
   } catch (error) {
     console.error('Error updating user:', error);
     res.status(500).json({ error: 'Failed to update user.' });
@@ -116,8 +139,45 @@ router.put('/:id', (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// GET /api/users/:id/posts — paginated posts by user
-// Respects privacy: private profiles only return posts if requester follows them
+// GET /api/users/:id/preferences
+// ---------------------------------------------------------------------------
+router.get('/:id/preferences', (req, res) => {
+  try {
+    const user = ensureUser(req.params.id);
+    res.json(parsePreferences(user.preferences));
+  } catch (error) {
+    console.error('Error fetching preferences:', error);
+    res.status(500).json({ error: 'Failed to fetch preferences.' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// PUT /api/users/:id/preferences
+// ---------------------------------------------------------------------------
+router.put('/:id/preferences', (req, res) => {
+  try {
+    ensureUser(req.params.id);
+    const { cuisines, skillLevel, cookTime, equipment } = req.body;
+
+    const preferences = {
+      cuisines: Array.isArray(cuisines) ? cuisines : [],
+      skillLevel: skillLevel || null,
+      cookTime: cookTime || null,
+      equipment: Array.isArray(equipment) ? equipment : [],
+    };
+
+    db.prepare('UPDATE users SET preferences = ? WHERE id = ?')
+      .run(JSON.stringify(preferences), req.params.id);
+
+    res.json(preferences);
+  } catch (error) {
+    console.error('Error updating preferences:', error);
+    res.status(500).json({ error: 'Failed to update preferences.' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/users/:id/posts
 // ---------------------------------------------------------------------------
 router.get('/:id/posts', (req, res) => {
   try {
@@ -165,7 +225,7 @@ router.get('/:id/posts', (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// GET /api/users/:id/follow-status?requesterId=xxx
+// GET /api/users/:id/follow-status
 // ---------------------------------------------------------------------------
 router.get('/:id/follow-status', (req, res) => {
   try {
@@ -176,14 +236,12 @@ router.get('/:id/follow-status', (req, res) => {
     ).get(requesterId, req.params.id);
     res.json({ isFollowing });
   } catch (error) {
-    console.error('Error checking follow status:', error);
     res.status(500).json({ error: 'Failed to check follow status.' });
   }
 });
 
 // ---------------------------------------------------------------------------
-// POST /api/users/:id/follow — follow a user
-// Body: { followerId }
+// POST /api/users/:id/follow
 // ---------------------------------------------------------------------------
 router.post('/:id/follow', (req, res) => {
   try {
@@ -194,21 +252,18 @@ router.post('/:id/follow', (req, res) => {
     ensureUser(req.params.id);
     ensureUser(followerId);
 
-    db.prepare(`
-      INSERT OR IGNORE INTO follows (followerId, followingId) VALUES (?, ?)
-    `).run(followerId, req.params.id);
+    db.prepare(`INSERT OR IGNORE INTO follows (followerId, followingId) VALUES (?, ?)`)
+      .run(followerId, req.params.id);
 
     const stats = getUserStats(req.params.id);
     res.json({ isFollowing: true, ...stats });
   } catch (error) {
-    console.error('Error following user:', error);
     res.status(500).json({ error: 'Failed to follow user.' });
   }
 });
 
 // ---------------------------------------------------------------------------
-// DELETE /api/users/:id/follow — unfollow a user
-// Body: { followerId }
+// DELETE /api/users/:id/follow
 // ---------------------------------------------------------------------------
 router.delete('/:id/follow', (req, res) => {
   try {
@@ -221,7 +276,6 @@ router.delete('/:id/follow', (req, res) => {
     const stats = getUserStats(req.params.id);
     res.json({ isFollowing: false, ...stats });
   } catch (error) {
-    console.error('Error unfollowing user:', error);
     res.status(500).json({ error: 'Failed to unfollow user.' });
   }
 });
