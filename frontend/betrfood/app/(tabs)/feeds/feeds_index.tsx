@@ -37,22 +37,10 @@ export default function HomeScreen() {
   const isFetching = useRef(false);
 
   const loadFeed = useCallback(
-    async (opts: {
-      tagIds?: number[];
-      cursor?: string | null;
-      replace?: boolean;
-      mode?: FeedMode;
-    }) => {
-      const {
-        tagIds = selectedTagIds,
-        cursor = null,
-        replace = false,
-        mode = feedMode,
-      } = opts;
-
+    async (opts: { tagIds?: number[]; cursor?: string | null; replace?: boolean; mode?: FeedMode }) => {
+      const { tagIds = selectedTagIds, cursor = null, replace = false, mode = feedMode } = opts;
       if (isFetching.current) return;
       isFetching.current = true;
-
       try {
         const result = await fetchFeed(CURRENT_USER_ID, cursor, 10, tagIds, mode);
         setPosts((prev) => (replace ? result.posts : [...prev, ...result.posts]));
@@ -122,25 +110,18 @@ export default function HomeScreen() {
           style={[styles.toggleButton, feedMode === 'for_you' && styles.toggleButtonActive]}
           onPress={() => handleModeChange('for_you')}
         >
-          <Text style={[styles.toggleText, feedMode === 'for_you' && styles.toggleTextActive]}>
-            For You
-          </Text>
+          <Text style={[styles.toggleText, feedMode === 'for_you' && styles.toggleTextActive]}>For You</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.toggleButton, feedMode === 'following' && styles.toggleButtonActive]}
           onPress={() => handleModeChange('following')}
         >
-          <Text style={[styles.toggleText, feedMode === 'following' && styles.toggleTextActive]}>
-            Following
-          </Text>
+          <Text style={[styles.toggleText, feedMode === 'following' && styles.toggleTextActive]}>Following</Text>
         </TouchableOpacity>
       </View>
 
       {feedMode === 'for_you' && (
-        <TagFilterBar
-          selectedTagIds={selectedTagIds}
-          onFilterChange={handleTagFilterChange}
-        />
+        <TagFilterBar selectedTagIds={selectedTagIds} onFilterChange={handleTagFilterChange} />
       )}
 
       {loading ? (
@@ -151,9 +132,7 @@ export default function HomeScreen() {
         <FlatList
           data={posts}
           keyExtractor={(item) => item.id}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FF6B35" />
-          }
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FF6B35" />}
           onEndReached={onEndReached}
           onEndReachedThreshold={0.4}
           renderItem={({ item }) => (
@@ -165,7 +144,9 @@ export default function HomeScreen() {
                 id={item.id}
                 profilePic={`https://ui-avatars.com/api/?name=${item.userId}&background=random`}
                 username={item.userId}
-                postImage={getImageUrl(item.imagePath)}
+                postImage={item.imagePath ? getImageUrl(item.imagePath) : ''}
+                postImages={item.imagePaths?.map(getImageUrl)}
+                videoUrl={item.videoPath ? getImageUrl(item.videoPath) : null}
                 caption={item.caption}
                 userId={item.userId}
                 currentUserId={CURRENT_USER_ID}
@@ -199,10 +180,7 @@ export default function HomeScreen() {
         />
       )}
 
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => router.push('/create-post')}
-      >
+      <TouchableOpacity style={styles.fab} onPress={() => router.push('/create-post')}>
         <Text style={styles.fabText}>+</Text>
       </TouchableOpacity>
     </View>
@@ -210,10 +188,7 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
+  container: { flex: 1, backgroundColor: '#f5f5f5' },
   toggleContainer: {
     flexDirection: 'row',
     backgroundColor: '#fff',
@@ -227,46 +202,15 @@ const styles = StyleSheet.create({
     borderBottomWidth: 2,
     borderBottomColor: 'transparent',
   },
-  toggleButtonActive: {
-    borderBottomColor: '#FF6B35',
-  },
-  toggleText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#999',
-  },
-  toggleTextActive: {
-    color: '#FF6B35',
-  },
-  center: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  empty: {
-    alignItems: 'center',
-    padding: 40,
-    gap: 8,
-  },
-  emptyTitle: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#555',
-  },
-  emptyText: {
-    fontSize: 14,
-    color: '#999',
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  emptyList: {
-    flexGrow: 1,
-    justifyContent: 'center',
-  },
-  footer: {
-    paddingVertical: 20,
-    alignItems: 'center',
-  },
+  toggleButtonActive: { borderBottomColor: '#FF6B35' },
+  toggleText: { fontSize: 15, fontWeight: '600', color: '#999' },
+  toggleTextActive: { color: '#FF6B35' },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  empty: { alignItems: 'center', padding: 40, gap: 8 },
+  emptyTitle: { fontSize: 17, fontWeight: '600', color: '#555' },
+  emptyText: { fontSize: 14, color: '#999', textAlign: 'center', lineHeight: 20 },
+  emptyList: { flexGrow: 1, justifyContent: 'center' },
+  footer: { paddingVertical: 20, alignItems: 'center' },
   fab: {
     position: 'absolute',
     bottom: 24,
@@ -283,10 +227,5 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 5,
   },
-  fabText: {
-    color: '#fff',
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginTop: -2,
-  },
+  fabText: { color: '#fff', fontSize: 28, fontWeight: 'bold', marginTop: -2 },
 });

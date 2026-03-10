@@ -8,7 +8,7 @@ const jsonDb = require('../db');
 const router = express.Router();
 
 // ---------------------------------------------------------------------------
-// File upload setup — accepts up to 10 images per post
+// File upload — images (up to 10) + single video
 // ---------------------------------------------------------------------------
 const uploadDir = path.join(__dirname, '..', '..', 'uploads');
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
@@ -21,10 +21,23 @@ const storage = multer.diskStorage({
   },
 });
 
+const fileFilter = (req, file, cb) => {
+  const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'video/mp4', 'video/quicktime', 'video/mov'];
+  if (allowed.includes(file.mimetype)) cb(null, true);
+  else cb(new Error(`Unsupported file type: ${file.mimetype}`), false);
+};
+
 const upload = multer({
   storage,
-  limits: { fileSize: 20 * 1024 * 1024 }, // 20MB per image
+  fileFilter,
+  limits: { fileSize: 200 * 1024 * 1024 }, // 200MB max per file
 });
+
+// Accept: up to 10 images OR 1 video
+const uploadFields = upload.fields([
+  { name: 'images', maxCount: 10 },
+  { name: 'video', maxCount: 1 },
+]);
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -93,7 +106,7 @@ function initializeRecipeTables() {
 initializeRecipeTables();
 
 // ---------------------------------------------------------------------------
-// GET /api/posts — paginated list
+// GET /api/posts
 // ---------------------------------------------------------------------------
 router.get('/', (req, res) => {
   try {
@@ -118,12 +131,7 @@ router.get('/', (req, res) => {
       ? Buffer.from(JSON.stringify({ id: page[page.length - 1].id })).toString('base64')
       : null;
 
-    const posts = page.map((post) => ({
-      ...post,
-      tags: getTagsForPost(post.id),
-    }));
-
-    res.json({ posts, nextCursor, hasMore });
+    res.json({ posts: page.map(p => ({ ...p, tags: getTagsForPost(p.id) })), nextCursor, hasMore });
   } catch (error) {
     console.error('Error fetching posts:', error);
     res.status(500).json({ error: 'Failed to fetch posts.' });
@@ -157,92 +165,86 @@ router.get('/by-tags', (req, res) => {
     posts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     res.json(posts);
   } catch (error) {
-    console.error('Error filtering posts by tags:', error);
     res.status(500).json({ error: 'Failed to filter posts.' });
   }
 });
 
 // ---------------------------------------------------------------------------
-// GET /api/posts/:id — single post with recipe
+// GET /api/posts/:id
 // ---------------------------------------------------------------------------
 router.get('/:id', (req, res) => {
   try {
     const post = jsonDb.getPostById(req.params.id);
     if (!post) return res.status(404).json({ error: 'Post not found.' });
-
-    res.json({
-      ...post,
-      tags: getTagsForPost(post.id),
-      recipe: getRecipeForPost(post.id),
-    });
+    res.json({ ...post, tags: getTagsForPost(post.id), recipe: getRecipeForPost(post.id) });
   } catch (error) {
-    console.error('Error fetching post:', error);
     res.status(500).json({ error: 'Failed to fetch post.' });
   }
 });
 
 // ---------------------------------------------------------------------------
-// POST /api/posts — create post with up to 10 images
+// POST /api/posts — create post with images or video
 // ---------------------------------------------------------------------------
-router.post('/', upload.array('images', 10), (req, res) => {
+router.post('/', uploadFields, (req, res) => {
   try {
     const { caption, userId, recipe } = req.body;
     if (!caption) return res.status(400).json({ error: 'Caption is required.' });
-    if (!req.files || req.files.length === 0) {
-      return res.status(400).json({ error: 'At least one image is required.' });
+
+    const imageFiles = req.files?.images || [];
+    const videoFiles = req.files?.video || [];
+
+    if (imageFiles.length === 0 && videoFiles.length === 0) {
+      return res.status(400).json({ error: 'At least one image or a video is required.' });
     }
-    if (req.files.length > 10) {
+    if (imageFiles.length > 10) {
       return res.status(400).json({ error: 'Maximum 10 images per post.' });
     }
 
-    // Store all image paths as a JSON array; first is the cover image
-    const imagePaths = req.files.map(f => `/uploads/${f.filename}`);
+    // Build image paths
+    const imagePaths = imageFiles.map(f => `/uploads/${f.filename}`);
+
+    // Build video path
+    let videoPath = null;
+    let videoType = null;
+    if (videoFiles.length > 0) {
+      videoPath = `/uploads/${videoFiles[0].filename}`;
+      videoType = videoFiles[0].mimetype;
+      // TODO: trigger async transcoding job here (e.g. Cloudinary, AWS MediaConvert)
+      // e.g. await transcodeVideo(videoPath);
+    }
+
     const post = jsonDb.createPost({
       caption,
       userId: userId || 'current-user',
-      imagePath: imagePaths[0],        // primary/cover image (backwards compatible)
-      imagePaths: imagePaths,          // all images
+      imagePath: imagePaths[0] || '',
+      imagePaths,
+      videoPath,
+      videoType,
     });
 
+    // Save recipe if provided
     if (recipe) {
       try {
         const recipeData = typeof recipe === 'string' ? JSON.parse(recipe) : recipe;
         const { randomUUID } = require('crypto');
         const recipeId = randomUUID();
-        db.prepare(`
-          INSERT INTO recipes (id, postId, cookTime, servings, difficulty)
-          VALUES (?, ?, ?, ?, ?)
-        `).run(recipeId, post.id, recipeData.cookTime || null, recipeData.servings || null, recipeData.difficulty || 'easy');
+        db.prepare(`INSERT INTO recipes (id, postId, cookTime, servings, difficulty) VALUES (?, ?, ?, ?, ?)`)
+          .run(recipeId, post.id, recipeData.cookTime || null, recipeData.servings || null, recipeData.difficulty || 'easy');
 
         if (recipeData.ingredients?.length) {
-          const insertIngredient = db.prepare(`
-            INSERT INTO recipe_ingredients (id, recipeId, name, quantity, unit, orderIndex)
-            VALUES (?, ?, ?, ?, ?, ?)
-          `);
-          recipeData.ingredients.forEach((ing, idx) => {
-            insertIngredient.run(randomUUID(), recipeId, ing.name, ing.quantity || null, ing.unit || null, idx);
-          });
+          const ins = db.prepare(`INSERT INTO recipe_ingredients (id, recipeId, name, quantity, unit, orderIndex) VALUES (?, ?, ?, ?, ?, ?)`);
+          recipeData.ingredients.forEach((ing, idx) => ins.run(randomUUID(), recipeId, ing.name, ing.quantity || null, ing.unit || null, idx));
         }
-
         if (recipeData.steps?.length) {
-          const insertStep = db.prepare(`
-            INSERT INTO recipe_steps (id, recipeId, stepNumber, instruction)
-            VALUES (?, ?, ?, ?)
-          `);
-          recipeData.steps.forEach((step, idx) => {
-            insertStep.run(randomUUID(), recipeId, idx + 1, step.instruction);
-          });
+          const ins = db.prepare(`INSERT INTO recipe_steps (id, recipeId, stepNumber, instruction) VALUES (?, ?, ?, ?)`);
+          recipeData.steps.forEach((step, idx) => ins.run(randomUUID(), recipeId, idx + 1, step.instruction));
         }
       } catch (e) {
         console.error('Failed to save recipe:', e);
       }
     }
 
-    res.status(201).json({
-      ...post,
-      tags: [],
-      recipe: getRecipeForPost(post.id),
-    });
+    res.status(201).json({ ...post, tags: [], recipe: getRecipeForPost(post.id) });
   } catch (error) {
     console.error('Error creating post:', error);
     res.status(500).json({ error: 'Failed to create post.' });
@@ -258,11 +260,9 @@ router.put('/:id', (req, res) => {
     const post = jsonDb.getPostById(req.params.id);
     if (!post) return res.status(404).json({ error: 'Post not found.' });
     if (post.userId !== userId) return res.status(403).json({ error: 'Forbidden.' });
-
     const updated = jsonDb.updatePost(req.params.id, { caption: req.body.caption });
     res.json({ ...updated, tags: getTagsForPost(updated.id), recipe: getRecipeForPost(updated.id) });
   } catch (error) {
-    console.error('Error updating post:', error);
     res.status(500).json({ error: 'Failed to update post.' });
   }
 });
@@ -276,17 +276,15 @@ router.delete('/:id', (req, res) => {
     const post = jsonDb.getPostById(req.params.id);
     if (!post) return res.status(404).json({ error: 'Post not found.' });
     if (post.userId !== userId) return res.status(403).json({ error: 'Forbidden.' });
-
     jsonDb.deletePost(req.params.id);
     res.json({ message: 'Post deleted.' });
   } catch (error) {
-    console.error('Error deleting post:', error);
     res.status(500).json({ error: 'Failed to delete post.' });
   }
 });
 
 // ---------------------------------------------------------------------------
-// GET /api/posts/:id/recipe
+// Recipe routes
 // ---------------------------------------------------------------------------
 router.get('/:id/recipe', (req, res) => {
   try {
@@ -300,17 +298,12 @@ router.get('/:id/recipe', (req, res) => {
   }
 });
 
-// ---------------------------------------------------------------------------
-// PUT /api/posts/:id/recipe
-// ---------------------------------------------------------------------------
 router.put('/:id/recipe', (req, res) => {
   try {
     const post = jsonDb.getPostById(req.params.id);
     if (!post) return res.status(404).json({ error: 'Post not found.' });
-
     const { randomUUID } = require('crypto');
     const { cookTime, servings, difficulty, ingredients, steps } = req.body;
-
     let recipe = db.prepare(`SELECT * FROM recipes WHERE postId = ?`).get(req.params.id);
     if (!recipe) {
       const recipeId = randomUUID();
@@ -321,19 +314,16 @@ router.put('/:id/recipe', (req, res) => {
       db.prepare(`UPDATE recipes SET cookTime = ?, servings = ?, difficulty = ? WHERE id = ?`)
         .run(cookTime || null, servings || null, difficulty || 'easy', recipe.id);
     }
-
     if (ingredients) {
       db.prepare(`DELETE FROM recipe_ingredients WHERE recipeId = ?`).run(recipe.id);
-      const insertIng = db.prepare(`INSERT INTO recipe_ingredients (id, recipeId, name, quantity, unit, orderIndex) VALUES (?, ?, ?, ?, ?, ?)`);
-      ingredients.forEach((ing, idx) => insertIng.run(randomUUID(), recipe.id, ing.name, ing.quantity || null, ing.unit || null, idx));
+      const ins = db.prepare(`INSERT INTO recipe_ingredients (id, recipeId, name, quantity, unit, orderIndex) VALUES (?, ?, ?, ?, ?, ?)`);
+      ingredients.forEach((ing, idx) => ins.run(randomUUID(), recipe.id, ing.name, ing.quantity || null, ing.unit || null, idx));
     }
-
     if (steps) {
       db.prepare(`DELETE FROM recipe_steps WHERE recipeId = ?`).run(recipe.id);
-      const insertStep = db.prepare(`INSERT INTO recipe_steps (id, recipeId, stepNumber, instruction) VALUES (?, ?, ?, ?)`);
-      steps.forEach((step, idx) => insertStep.run(randomUUID(), recipe.id, idx + 1, step.instruction));
+      const ins = db.prepare(`INSERT INTO recipe_steps (id, recipeId, stepNumber, instruction) VALUES (?, ?, ?, ?)`);
+      steps.forEach((step, idx) => ins.run(randomUUID(), recipe.id, idx + 1, step.instruction));
     }
-
     res.json(getRecipeForPost(req.params.id));
   } catch (error) {
     res.status(500).json({ error: 'Failed to update recipe.' });
@@ -341,29 +331,21 @@ router.put('/:id/recipe', (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// Tag routes (delegated from tags router via posts prefix)
+// Tag routes
 // ---------------------------------------------------------------------------
 router.post('/:id/tags', (req, res) => {
-  const postId = req.params.id;
   const { tagIds } = req.body;
-  if (!tagIds || !Array.isArray(tagIds) || tagIds.length === 0) {
+  if (!tagIds || !Array.isArray(tagIds) || tagIds.length === 0)
     return res.status(400).json({ error: 'tagIds array is required.' });
-  }
   try {
-    const post = jsonDb.getPostById(postId);
+    const post = jsonDb.getPostById(req.params.id);
     if (!post) return res.status(404).json({ error: 'Post not found.' });
-
     const placeholders = tagIds.map(() => '?').join(',');
-    const existingTags = db.prepare(`SELECT id FROM tags WHERE id IN (${placeholders})`).all(...tagIds);
-    if (existingTags.length !== tagIds.length) {
-      return res.status(400).json({ error: 'One or more tag IDs are invalid.' });
-    }
-
-    const insertTag = db.prepare('INSERT OR IGNORE INTO post_tags (postId, tagId) VALUES (?, ?)');
-    const addTags = db.transaction((ids) => { for (const tagId of ids) insertTag.run(postId, tagId); });
-    addTags(tagIds);
-
-    res.json({ postId, tags: getTagsForPost(postId) });
+    const existing = db.prepare(`SELECT id FROM tags WHERE id IN (${placeholders})`).all(...tagIds);
+    if (existing.length !== tagIds.length) return res.status(400).json({ error: 'One or more tag IDs are invalid.' });
+    const ins = db.prepare('INSERT OR IGNORE INTO post_tags (postId, tagId) VALUES (?, ?)');
+    db.transaction((ids) => { for (const tagId of ids) ins.run(req.params.id, tagId); })(tagIds);
+    res.json({ postId: req.params.id, tags: getTagsForPost(req.params.id) });
   } catch (error) {
     res.status(500).json({ error: 'Failed to add tags.' });
   }

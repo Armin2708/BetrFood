@@ -2,7 +2,6 @@ const fs = require('fs');
 const path = require('path');
 const { randomUUID } = require('crypto');
 
-// Store posts in a JSON file in the `data` folder
 const dataDir = path.join(__dirname, '..', '..', 'data');
 if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
@@ -38,11 +37,16 @@ function createPost(data) {
     id: randomUUID(),
     userId: data.userId || 'current-user',
     caption: data.caption || '',
-    imagePath: data.imagePath || '',
+    // Images
+    imagePath: data.imagePath || '',         // primary/cover image (backwards compatible)
+    imagePaths: data.imagePaths || [],       // all images for carousel
+    // Video
+    videoPath: data.videoPath || null,       // path to uploaded video file
+    videoType: data.videoType || null,       // mime type e.g. video/mp4
+    // TODO: add transcodedVideoPath here when CDN/transcoding is wired up
     createdAt: now,
     updatedAt: now,
     editedAt: null,
-    recipe: data.recipe || null,
   };
   posts.unshift(post);
   writePosts(posts);

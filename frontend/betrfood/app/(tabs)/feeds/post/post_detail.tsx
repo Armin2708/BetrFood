@@ -2,6 +2,7 @@ import React, { useEffect, useState, useContext } from 'react';
 import {
   View,
   Text,
+  Image,
   ScrollView,
   StyleSheet,
   ActivityIndicator,
@@ -16,10 +17,10 @@ import { AuthContext } from '../../../../context/AuthenticationContext';
 import TagDisplay from '../../../../components/TagDisplay';
 import RecipeDisplay from '../../../../components/RecipeDisplay';
 import ImageCarousel from '../../../../components/ImageCarousel';
+import VideoPlayer from '../../../../components/VideoPlayer';
 import { fetchPost, getImageUrl, Post } from '../../../../services/api';
 import SaveCollectionModal from '../../../../components/SaveCollectionModal';
 import { Collection } from '../../../../context/CollectionsContext';
-import { Image } from 'react-native';
 
 // TODO: replace with real user ID from AuthContext once backend auth is wired up
 const CURRENT_USER_ID = 'current-user';
@@ -74,19 +75,12 @@ export default function PostDetailScreen() {
 
   const handleAuthorPress = () => {
     if (!post) return;
-    if (post.userId === CURRENT_USER_ID) {
-      router.push('/(tabs)/profile');
-    } else {
-      router.push(`/user/${post.userId}`);
-    }
+    if (post.userId === CURRENT_USER_ID) router.push('/(tabs)/profile');
+    else router.push(`/user/${post.userId}`);
   };
 
   if (loading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#FF6B35" />
-      </View>
-    );
+    return <View style={styles.center}><ActivityIndicator size="large" color="#FF6B35" /></View>;
   }
 
   if (error || !post) {
@@ -100,10 +94,11 @@ export default function PostDetailScreen() {
     );
   }
 
-  // Resolve image list
+  // Resolve media
+  const videoUrl = post.videoPath ? getImageUrl(post.videoPath) : null;
   const images = post.imagePaths && post.imagePaths.length > 0
     ? post.imagePaths.map(getImageUrl)
-    : [getImageUrl(post.imagePath)];
+    : post.imagePath ? [getImageUrl(post.imagePath)] : [];
 
   return (
     <>
@@ -126,8 +121,12 @@ export default function PostDetailScreen() {
           </View>
         </TouchableOpacity>
 
-        {/* Carousel — full width, square aspect */}
-        <ImageCarousel images={images} height={380} />
+        {/* Media: video or carousel */}
+        {videoUrl ? (
+          <VideoPlayer uri={videoUrl} height={400} autoplay={false} showControls />
+        ) : (
+          <ImageCarousel images={images} height={380} />
+        )}
 
         {/* Action bar */}
         <View style={styles.actions}>
@@ -140,9 +139,7 @@ export default function PostDetailScreen() {
             style={styles.actionButton}
           >
             <Text style={styles.actionIcon}>{saved ? '🔖' : '📄'}</Text>
-            <Text style={[styles.actionLabel, saved && styles.savedLabel]}>
-              {saved ? 'Saved' : 'Save'}
-            </Text>
+            <Text style={[styles.actionLabel, saved && styles.savedLabel]}>{saved ? 'Saved' : 'Save'}</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={showShareMenu} style={styles.actionButton}>
             <Text style={styles.actionIcon}>🔗</Text>
@@ -174,55 +171,16 @@ export default function PostDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  content: {
-    paddingBottom: 40,
-  },
-  center: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  errorText: {
-    fontSize: 16,
-    color: '#999',
-    marginBottom: 16,
-  },
-  backButton: {
-    backgroundColor: '#FF6B35',
-    paddingHorizontal: 24,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  backButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 14,
-    gap: 10,
-  },
-  profilePic: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-  },
-  username: {
-    fontWeight: '700',
-    fontSize: 15,
-    color: '#222',
-  },
-  timestamp: {
-    fontSize: 12,
-    color: '#999',
-    marginTop: 2,
-  },
+  container: { flex: 1, backgroundColor: '#fff' },
+  content: { paddingBottom: 40 },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
+  errorText: { fontSize: 16, color: '#999', marginBottom: 16 },
+  backButton: { backgroundColor: '#FF6B35', paddingHorizontal: 24, paddingVertical: 10, borderRadius: 8 },
+  backButtonText: { color: '#fff', fontWeight: '600' },
+  header: { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 10 },
+  profilePic: { width: 44, height: 44, borderRadius: 22 },
+  username: { fontWeight: '700', fontSize: 15, color: '#222' },
+  timestamp: { fontSize: 12, color: '#999', marginTop: 2 },
   actions: {
     flexDirection: 'row',
     paddingHorizontal: 16,
@@ -231,40 +189,12 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderColor: '#f0f0f0',
   },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  actionIcon: {
-    fontSize: 20,
-  },
-  actionLabel: {
-    fontSize: 14,
-    color: '#555',
-    fontWeight: '500',
-  },
-  liked: {
-    color: '#e0245e',
-  },
-  savedLabel: {
-    color: '#FF6B35',
-  },
-  captionContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  captionUsername: {
-    fontWeight: '700',
-    fontSize: 14,
-    color: '#222',
-  },
-  caption: {
-    fontSize: 14,
-    color: '#333',
-    lineHeight: 20,
-    flex: 1,
-  },
+  actionButton: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  actionIcon: { fontSize: 20 },
+  actionLabel: { fontSize: 14, color: '#555', fontWeight: '500' },
+  liked: { color: '#e0245e' },
+  savedLabel: { color: '#FF6B35' },
+  captionContainer: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 16, paddingVertical: 12 },
+  captionUsername: { fontWeight: '700', fontSize: 14, color: '#222' },
+  caption: { fontSize: 14, color: '#333', lineHeight: 20, flex: 1 },
 });

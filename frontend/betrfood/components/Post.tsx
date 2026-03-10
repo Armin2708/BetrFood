@@ -6,6 +6,7 @@ import { Collection } from "../context/CollectionsContext";
 import { Tag } from '../services/api';
 import TagDisplay from './TagDisplay';
 import ImageCarousel from './ImageCarousel';
+import VideoPlayer from './VideoPlayer';
 import { useRouter } from 'expo-router';
 import {
   View,
@@ -21,8 +22,9 @@ interface PostProps {
   id?: string;
   profilePic: string;
   username: string;
-  postImage: string;        // primary/cover image (backwards compatible)
-  postImages?: string[];    // all images for carousel
+  postImage: string;
+  postImages?: string[];
+  videoUrl?: string | null;
   caption: string;
   userId?: string;
   currentUserId?: string;
@@ -36,6 +38,7 @@ export default function Post({
   username,
   postImage,
   postImages,
+  videoUrl,
   caption,
   userId,
   currentUserId,
@@ -46,57 +49,44 @@ export default function Post({
   const [liked, setLiked] = useState(false);
   const [saved, setSaved] = useState(false);
   const [collectionModalVisible, setCollectionModalVisible] = useState(false);
-
   const { showActionSheetWithOptions } = useActionSheet();
-
-  const toggleLike = () => setLiked(!liked);
-
-  const handleSavePress = () => {
-    if (!saved) setCollectionModalVisible(true);
-    else setSaved(false);
-  };
 
   const handleSave = (collection: Collection) => {
     setSaved(true);
     setCollectionModalVisible(false);
-    console.log(`Saved to ${collection.name}`);
   };
 
   const handleExternalShare = async () => {
     try {
-      await Share.share({
-        message: `Check out this post from ${username}: https://yourapp.com/posts/${id}`,
-      });
-    } catch (error) {
+      await Share.share({ message: `Check out this post from ${username}: https://yourapp.com/posts/${id}` });
+    } catch {
       Alert.alert('Error', 'Could not share the post.');
     }
   };
 
   const handleCopyLink = async () => {
-    const link = `https://yourapp.com/posts/${id}`;
-    await Clipboard.setStringAsync(link);
+    await Clipboard.setStringAsync(`https://yourapp.com/posts/${id}`);
     Alert.alert('Link Copied', 'The post link has been copied to your clipboard.');
   };
 
   const showShareMenu = () => {
-    const options = ['Share Externally', 'Copy Link', 'Cancel'];
-    showActionSheetWithOptions({ options, cancelButtonIndex: 2 }, (index) => {
-      if (index === 0) handleExternalShare();
-      if (index === 1) handleCopyLink();
-    });
+    showActionSheetWithOptions(
+      { options: ['Share Externally', 'Copy Link', 'Cancel'], cancelButtonIndex: 2 },
+      (index) => {
+        if (index === 0) handleExternalShare();
+        if (index === 1) handleCopyLink();
+      }
+    );
   };
 
   const handleAuthorPress = () => {
     if (!userId) return;
-    if (userId === currentUserId) {
-      router.push('/(tabs)/profile');
-    } else {
-      router.push(`/user/${userId}`);
-    }
+    if (userId === currentUserId) router.push('/(tabs)/profile');
+    else router.push(`/user/${userId}`);
   };
 
-  // Resolve image list: prefer imagePaths array, fall back to single postImage
-  const images = postImages && postImages.length > 0 ? postImages : [postImage];
+  // Resolve media: video takes priority over images
+  const images = postImages && postImages.length > 0 ? postImages : postImage ? [postImage] : [];
 
   return (
     <View style={styles.container}>
@@ -106,20 +96,20 @@ export default function Post({
         <Text style={styles.username}>{username}</Text>
       </TouchableOpacity>
 
-      {/* Carousel or single image */}
-      <ImageCarousel images={images} height={300} />
+      {/* Media: video or image carousel */}
+      {videoUrl ? (
+        <VideoPlayer uri={videoUrl} height={300} autoplay showControls={false} />
+      ) : (
+        <ImageCarousel images={images} height={300} />
+      )}
 
       {/* Actions */}
       <View style={styles.actions}>
-        <TouchableOpacity onPress={toggleLike}>
-          <Text style={[styles.actionBtn, liked && styles.liked]}>
-            {liked ? '❤️ Liked' : '🤍 Like'}
-          </Text>
+        <TouchableOpacity onPress={() => setLiked(!liked)}>
+          <Text style={[styles.actionBtn, liked && styles.liked]}>{liked ? '❤️ Liked' : '🤍 Like'}</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={handleSavePress}>
-          <Text style={[styles.actionBtn, saved && styles.saved]}>
-            {saved ? '🔖 Saved' : '📄 Save'}
-          </Text>
+        <TouchableOpacity onPress={() => saved ? setSaved(false) : setCollectionModalVisible(true)}>
+          <Text style={[styles.actionBtn, saved && styles.saved]}>{saved ? '🔖 Saved' : '📄 Save'}</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={showShareMenu}>
           <Text style={styles.actionBtn}>🔗 Share</Text>
@@ -135,7 +125,6 @@ export default function Post({
       {/* Tags */}
       {tags && tags.length > 0 && <TagDisplay tags={tags} />}
 
-      {/* Save Modal */}
       <SaveCollectionModal
         visible={collectionModalVisible}
         onClose={() => setCollectionModalVisible(false)}
@@ -176,12 +165,8 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#333',
   },
-  liked: {
-    color: '#e0245e',
-  },
-  saved: {
-    color: '#FF6B35',
-  },
+  liked: { color: '#e0245e' },
+  saved: { color: '#FF6B35' },
   caption: {
     paddingHorizontal: 10,
     paddingBottom: 10,
