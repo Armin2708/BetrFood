@@ -2,6 +2,8 @@ const express = require("express");
 const cors = require("cors");
 const path = require("path");
 const postsRouter = require("./routes/posts");
+// const tagsRoutes = require("./routes/tags");
+const userRoutes = require("./routes/users");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -23,6 +25,8 @@ app.get("/", (req, res) => {
 
 // Mount routes
 app.use("/api/posts", postsRouter);
+// app.use("/api/tags", tagsRoutes);
+app.use("/api/users", userRoutes);
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

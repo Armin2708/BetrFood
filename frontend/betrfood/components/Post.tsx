@@ -1,8 +1,20 @@
 import React, { useState } from 'react';
-import { View, Text, Image, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import SaveCollectionModal from "./SaveCollectionModal";
+import * as Clipboard from 'expo-clipboard';
+import { useActionSheet } from '@expo/react-native-action-sheet';
+import { Collection } from "../context/CollectionsContext";
+import { Tag } from '../services/api';
+import TagDisplay from './TagDisplay';
 import { deletePost } from '../services/api';
-import { RecipeSummary } from './RecipeDisplay';
-import type { Recipe } from '../services/api';
+import {
+  View,
+  Text,
+  Image,
+  StyleSheet,
+  TouchableOpacity,
+  Share,
+  Alert,
+} from 'react-native';
 
 interface PostProps {
   id?: string;
@@ -13,18 +25,55 @@ interface PostProps {
   userId?: string;
   currentUserId?: string;
   editedAt?: string | null;
-  recipe?: Recipe | null;
   onDeleted?: (postId: string) => void;
+  tags?: Tag[];
+  initialLiked?: boolean;
+  initialLikes?: number;
 }
 
 export default function Post({
-  id, profilePic, username, postImage, caption,
-  userId, currentUserId, editedAt, recipe, onDeleted,
+  id,
+  profilePic,
+  username,
+  postImage,
+  caption,
+  userId,
+  currentUserId,
+  editedAt,
+  onDeleted,
+  tags,
+  initialLiked = false,
+  initialLikes = 0,
 }: PostProps) {
-  const [liked, setLiked] = useState(false);
+  const [liked, setLiked] = useState(initialLiked);
+  const [likeCount, setLikeCount] = useState(initialLikes);
   const [saved, setSaved] = useState(false);
+  const [collectionModalVisible, setCollectionModalVisible] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
+
+  const { showActionSheetWithOptions } = useActionSheet();
+
   const isOwner = currentUserId && userId && currentUserId === userId;
+
+  const toggleLike = () => {
+    if (liked) {
+      setLikeCount((prev) => Math.max(0, prev - 1));
+    } else {
+      setLikeCount((prev) => prev + 1);
+    }
+    setLiked((prev) => !prev);
+  };
+
+  const handleSavePress = () => {
+    if (!saved) setCollectionModalVisible(true);
+    else setSaved(false);
+  };
+
+  const handleSave = (collection: Collection) => {
+    setSaved(true);
+    setCollectionModalVisible(false);
+    console.log(`Saved to ${collection.name}`);
+  };
 
   const handleDelete = () => {
     if (!id || !currentUserId) return;
@@ -42,6 +91,43 @@ export default function Post({
         },
       },
     ]);
+  };
+
+  const handleExternalShare = async () => {
+    try {
+      await Share.share({
+        message: `Check out this post from ${username}: https://yourapp.com/posts/${id}`,
+      });
+    } catch (error) {
+      Alert.alert('Error', 'Could not share the post.');
+    }
+  };
+
+  const handleCopyLink = async () => {
+    const link = `https://yourapp.com/posts/${id}`;
+    await Clipboard.setStringAsync(link);
+    Alert.alert('Link Copied', 'The post link has been copied to your clipboard.');
+  };
+
+  const showShareMenu = () => {
+    const options = ['Share Externally', 'Copy Link', 'Cancel'];
+
+    showActionSheetWithOptions(
+      {
+        options,
+        cancelButtonIndex: 2,
+      },
+      (index) => {
+        switch (index) {
+          case 0:
+            handleExternalShare();
+            break;
+          case 1:
+            handleCopyLink();
+            break;
+        }
+      }
+    );
   };
 
   return (
@@ -62,22 +148,43 @@ export default function Post({
           </TouchableOpacity>
         </View>
       )}
+
       <Image source={{ uri: postImage }} style={styles.postImage} />
+
       <View style={styles.actions}>
-        <TouchableOpacity onPress={() => setLiked(!liked)}>
-          <Text style={[styles.actionButton, liked && styles.liked]}>{liked ? 'Liked' : 'Like'}</Text>
+        <TouchableOpacity onPress={toggleLike} style={styles.actionButton}>
+          <Text style={[styles.actionText, liked && styles.liked]}>
+            {liked ? '❤️' : '🤍'} {liked ? 'Liked' : 'Like'}
+          </Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => setSaved(!saved)}>
-          <Text style={[styles.actionButton, saved && styles.saved]}>{saved ? 'Saved' : 'Save'}</Text>
+
+        <TouchableOpacity onPress={handleSavePress} style={styles.actionButton}>
+          <Text style={[styles.actionText, saved && styles.saved]}>
+            {saved ? '🔖 Saved' : '🔖 Save'}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={showShareMenu} style={styles.actionButton}>
+          <Text style={styles.actionText}>🔗 Share</Text>
         </TouchableOpacity>
       </View>
+
+      <Text style={styles.likeCount}>
+        {likeCount} {likeCount === 1 ? 'like' : 'likes'}
+      </Text>
+
       <Text style={styles.caption}>
         <Text style={styles.captionUsername}>{username} </Text>{caption}
       </Text>
       {editedAt && <Text style={styles.editedLabel}>Edited</Text>}
 
-      {/* Recipe summary */}
-      {recipe && <RecipeSummary recipe={recipe} />}
+      {tags && tags.length > 0 && <TagDisplay tags={tags} />}
+
+      <SaveCollectionModal
+        visible={collectionModalVisible}
+        onClose={() => setCollectionModalVisible(false)}
+        onSave={handleSave}
+      />
     </View>
   );
 }
@@ -97,11 +204,13 @@ const styles = StyleSheet.create({
   menuItem: { padding: 12 },
   deleteText: { color: '#e74c3c', fontSize: 16, fontWeight: '600' },
   postImage: { width: '100%', height: 300, backgroundColor: '#eee' },
-  actions: { flexDirection: 'row', padding: 10, gap: 16 },
-  actionButton: { fontSize: 16, color: '#333' },
-  liked: { color: 'red' },
-  saved: { color: 'blue' },
-  caption: { paddingHorizontal: 10, paddingBottom: 4, fontSize: 14, color: '#333' },
+  actions: { flexDirection: 'row', paddingHorizontal: 10, paddingTop: 10, gap: 16 },
+  actionButton: { paddingVertical: 4 },
+  actionText: { fontSize: 16, color: '#333' },
+  liked: { color: 'red', fontWeight: '600' },
+  saved: { color: 'blue', fontWeight: '600' },
+  likeCount: { paddingHorizontal: 10, paddingTop: 4, fontSize: 14, fontWeight: '600', color: '#333' },
+  caption: { paddingHorizontal: 10, paddingTop: 8, paddingBottom: 4, fontSize: 14, color: '#333' },
   captionUsername: { fontWeight: 'bold' },
   editedLabel: { paddingHorizontal: 10, paddingBottom: 10, fontSize: 12, color: '#999', fontStyle: 'italic' },
 });

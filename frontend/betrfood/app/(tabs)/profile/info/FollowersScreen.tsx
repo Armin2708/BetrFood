@@ -6,6 +6,7 @@ import {
   Image,
   TouchableOpacity,
   StyleSheet,
+  RefreshControl,
 } from 'react-native';
 
 type Follower = {
@@ -16,22 +17,15 @@ type Follower = {
   isFollowingBack: boolean;
 };
 
-const initialFollowers: Follower[] = [
-  {
-    id: '1',
-    username: 'alexsmith',
-    name: 'Alex Smith',
-    avatar: 'https://i.pravatar.cc/150?img=3',
-    isFollowingBack: false,
-  },
-  {
-    id: '2',
-    username: 'emilyj',
-    name: 'Emily Johnson',
-    avatar: 'https://i.pravatar.cc/150?img=4',
-    isFollowingBack: true,
-  },
-];
+const initialFollowers: Follower[] = Array.from({length: 1000}, (_, i) => ({
+  id: i.toString(),
+  username: 'standinUser' + (i+1).toString(),
+  name: 'user' + (i+1).toString(),
+  avatar: `https://picsum.photos/id/${i+40}/60`,
+  isFollowingBack: i%4 === 0,
+})
+
+);
 
 type FollowerRowProps = {
   follower: Follower;
@@ -84,6 +78,7 @@ const FollowerRow: React.FC<FollowerRowProps> = ({
 
 export default function FollowersScreen() {
   const [followers, setFollowers] = useState<Follower[]>(initialFollowers);
+  const [refreshing, setRefreshing] = useState(false)
 
   const toggleFollowBack = (id: string) => {
     setFollowers(prev =>
@@ -99,11 +94,24 @@ export default function FollowersScreen() {
     setFollowers(prev => prev.filter(f => f.id !== id));
   };
 
+  const onRefresh = () => {
+    setRefreshing(true);
+
+    // TODO: for testing, replace with api call
+    setTimeout(() => {
+      console.log('"reload" complete');
+      setRefreshing(false);
+    }, 1000)
+  };
+
   return (
     <View style={styles.container}>
       <FlatList
         data={followers}
         keyExtractor={item => item.id}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh}/>
+        }
         renderItem={({ item }) => (
           <FollowerRow
             follower={item}
