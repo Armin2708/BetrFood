@@ -50,6 +50,7 @@ export interface Post {
   imagePaths?: string[];
   videoPath?: string | null;
   videoType?: string | null;
+  isDraft?: boolean;
   createdAt: string;
   updatedAt: string;
   editedAt?: string | null;
@@ -262,6 +263,64 @@ export async function createPostApi(
   if (!response.ok) { const e = await response.json(); throw new Error(e.error || 'Failed to create post'); }
   return response.json();
 }
+
+// ---------------------------------------------------------------------------
+// Drafts
+// ---------------------------------------------------------------------------
+
+export async function saveDraft(
+  imageUris: string[],
+  caption: string,
+  userId: string = 'current-user',
+  videoUri?: string
+): Promise<Post> {
+  const formData = new FormData();
+  formData.append('caption', caption);
+  formData.append('userId', userId);
+  formData.append('isDraft', 'true');
+
+  imageUris.forEach((uri) => {
+    const filename = uri.split('/').pop() || 'photo.jpg';
+    const match = /\.(\w+)$/.exec(filename);
+    const type = match ? `image/${match[1]}` : 'image/jpeg';
+    formData.append('images', { uri, name: filename, type } as any);
+  });
+
+  if (videoUri) {
+    const filename = videoUri.split('/').pop() || 'video.mp4';
+    const match = /\.(\w+)$/.exec(filename);
+    const ext = match ? match[1].toLowerCase() : 'mp4';
+    const type = ext === 'mov' ? 'video/quicktime' : `video/${ext}`;
+    formData.append('video', { uri: videoUri, name: filename, type } as any);
+  }
+
+  const response = await fetch(`${API_BASE_URL}/api/posts`, {
+    method: 'POST',
+    body: formData,
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  if (!response.ok) { const e = await response.json(); throw new Error(e.error || 'Failed to save draft'); }
+  return response.json();
+}
+
+export async function fetchDrafts(userId: string): Promise<Post[]> {
+  const response = await fetch(`${API_BASE_URL}/api/posts/drafts?userId=${userId}`);
+  if (!response.ok) { const e = await response.json(); throw new Error(e.error || 'Failed to fetch drafts'); }
+  return response.json();
+}
+
+export async function publishDraft(postId: string, userId: string): Promise<Post> {
+  const response = await fetch(`${API_BASE_URL}/api/posts/${postId}/publish`, {
+    method: 'POST',
+    headers: { 'x-user-id': userId },
+  });
+  if (!response.ok) { const e = await response.json(); throw new Error(e.error || 'Failed to publish draft'); }
+  return response.json();
+}
+
+// ---------------------------------------------------------------------------
+// Shared post helpers
+// ---------------------------------------------------------------------------
 
 export function getImageUrl(imagePath: string): string {
   return `${API_BASE_URL}${imagePath}`;
