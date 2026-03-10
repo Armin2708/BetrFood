@@ -1,12 +1,14 @@
 import { useContext } from "react";
 import { View, ActivityIndicator } from "react-native";
 import { Redirect } from "expo-router";
+import { useAuth } from "@clerk/clerk-expo";
 import { AuthContext } from "../context/AuthenticationContext";
 
 export default function RootIndex() {
-  const { user, loading, needsOnboarding } = useContext(AuthContext);
+  const { isSignedIn, isLoaded } = useAuth();
+  const { loading, needsOnboarding } = useContext(AuthContext);
 
-  if (loading) {
+  if (!isLoaded || loading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" color="#FF6B35" />
@@ -14,13 +16,13 @@ export default function RootIndex() {
     );
   }
 
-  if (user && needsOnboarding) {
+  if (isSignedIn && needsOnboarding) {
     return <Redirect href="/(onboarding)/setup" />;
   }
 
-  if (user) {
+  if (isSignedIn) {
     return <Redirect href="/feeds" />;
   }
 
-  return <Redirect href="/(onboarding)" />;
+  return <Redirect href="/(auth)/login" />;
 }

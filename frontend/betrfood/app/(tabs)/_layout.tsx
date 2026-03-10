@@ -1,15 +1,14 @@
 import { Tabs, Redirect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ComponentProps } from 'react';
-import { useContext } from "react";
-import { AuthContext } from "../../context/AuthenticationContext";
+import { useAuth } from "@clerk/clerk-expo";
 
 type IoniconName = ComponentProps<typeof Ionicons>['name'];
 
 export default function TabsLayout() {
-  const { user, loading } = useContext(AuthContext);
+  const { isSignedIn, isLoaded } = useAuth();
 
-  if (!loading && !user) {
+  if (isLoaded && !isSignedIn) {
     return <Redirect href="/(auth)/login" />;
   }
 

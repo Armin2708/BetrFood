@@ -1,14 +1,6 @@
-import React, { createContext, useState, useEffect, useCallback, useRef, ReactNode } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import {
-  setAuthToken,
-  fetchMyProfile,
-  fetchMyRole,
-  apiLogin,
-  apiSignup,
-  apiRefreshToken,
-  apiLogout,
-} from "../services/api";
+import React, { createContext, useState, useEffect, useCallback, ReactNode } from "react";
+import { useAuth, useUser } from "@clerk/clerk-expo";
+import { setAuthToken, fetchMyProfile, fetchMyRole } from "../services/api";
 
 type User = {
   id: string;
@@ -25,9 +17,6 @@ type AuthContextType = {
   needsOnboarding: boolean;
   setNeedsOnboarding: (value: boolean) => void;
   refreshRole: () => Promise<void>;
-  login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, password: string) => Promise<void>;
-  logout: () => Promise<void>;
 };
 
 export const AuthContext = createContext<AuthContextType>({
@@ -37,92 +26,91 @@ export const AuthContext = createContext<AuthContextType>({
   needsOnboarding: false,
   setNeedsOnboarding: () => {},
   refreshRole: async () => {},
-  login: async () => {},
-  signup: async () => {},
-  logout: async () => {},
 });
 
 type AuthProviderProps = {
   children: ReactNode;
 };
 
-const TOKEN_KEY = "betrfood_session_token";
-const SESSION_ID_KEY = "betrfood_session_id";
-const USER_KEY = "betrfood_user";
-
-// Refresh token 10 seconds before the ~60s Clerk expiry
-const TOKEN_REFRESH_INTERVAL = 50_000;
-
 export function AuthProvider({ children }: AuthProviderProps) {
+  const { isSignedIn, isLoaded: authLoaded, getToken } = useAuth();
+  const { user: clerkUser, isLoaded: userLoaded } = useUser();
+
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
-  const refreshTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Restore session on mount
+  // Sync Clerk auth state to our context
   useEffect(() => {
-    restoreSession();
-    return () => stopTokenRefresh();
-  }, []);
+    if (!authLoaded || !userLoaded) return;
 
-  /**
-   * Start automatic token refresh interval.
-   */
-  function startTokenRefresh(sessionId: string) {
-    stopTokenRefresh();
-    refreshTimerRef.current = setInterval(async () => {
+    if (isSignedIn && clerkUser) {
+      syncUser();
+    } else {
+      setUser(null);
+      setToken(null);
+      setAuthToken(null);
+      setNeedsOnboarding(false);
+      setLoading(false);
+    }
+  }, [isSignedIn, authLoaded, userLoaded, clerkUser?.id]);
+
+  async function syncUser() {
+    try {
+      // Get a fresh JWT from Clerk (auto-managed, no manual refresh needed)
+      const jwt = await getToken();
+      setToken(jwt);
+      setAuthToken(jwt);
+
+      const userData: User = {
+        id: clerkUser!.id,
+        email: clerkUser!.emailAddresses?.[0]?.emailAddress || "",
+        firstName: clerkUser!.firstName || undefined,
+        lastName: clerkUser!.lastName || undefined,
+      };
+
+      // Load role from backend
       try {
-        const newToken = await apiRefreshToken(sessionId);
-        setToken(newToken);
-        setAuthToken(newToken);
-        await AsyncStorage.setItem(TOKEN_KEY, newToken);
+        const { role } = await fetchMyRole();
+        userData.role = role;
       } catch {
-        // Session expired - force logout
-        stopTokenRefresh();
-        await AsyncStorage.multiRemove([TOKEN_KEY, SESSION_ID_KEY, USER_KEY]);
-        setUser(null);
-        setToken(null);
-        setAuthToken(null);
+        userData.role = "user";
       }
-    }, TOKEN_REFRESH_INTERVAL);
-  }
 
-  function stopTokenRefresh() {
-    if (refreshTimerRef.current) {
-      clearInterval(refreshTimerRef.current);
-      refreshTimerRef.current = null;
+      setUser(userData);
+
+      // Check onboarding status
+      try {
+        const profile = await fetchMyProfile();
+        setNeedsOnboarding(!profile.onboardingCompleted);
+      } catch {
+        setNeedsOnboarding(true);
+      }
+    } catch (error) {
+      console.error("Error syncing user:", error);
+    } finally {
+      setLoading(false);
     }
   }
 
-  /**
-   * Check if the user has completed onboarding.
-   */
-  async function checkOnboardingStatus() {
-    try {
-      const profile = await fetchMyProfile();
-      setNeedsOnboarding(!profile.onboardingCompleted);
-    } catch {
-      // Profile doesn't exist yet - needs onboarding
-      setNeedsOnboarding(true);
-    }
-  }
+  // Keep the API token fresh (Clerk tokens expire in ~60s)
+  useEffect(() => {
+    if (!isSignedIn) return;
 
-  /**
-   * Fetch the user's role from the backend.
-   */
-  async function loadUserRole(userData: User): Promise<User> {
-    try {
-      const { role } = await fetchMyRole();
-      return { ...userData, role };
-    } catch {
-      return { ...userData, role: "user" };
-    }
-  }
+    const interval = setInterval(async () => {
+      try {
+        const freshToken = await getToken();
+        setToken(freshToken);
+        setAuthToken(freshToken);
+      } catch {
+        // Token refresh failed - Clerk will handle re-auth
+      }
+    }, 50_000);
 
-  /**
-   * Re-fetch the role without re-login.
-   */
+    return () => clearInterval(interval);
+  }, [isSignedIn, getToken]);
+
   const refreshRole = useCallback(async () => {
     if (!user) return;
     try {
@@ -133,107 +121,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }, [user]);
 
-  /**
-   * Restore session from AsyncStorage.
-   * Gets a fresh token using the saved sessionId (old token is likely expired).
-   */
-  async function restoreSession() {
-    try {
-      const savedSessionId = await AsyncStorage.getItem(SESSION_ID_KEY);
-      const savedUser = await AsyncStorage.getItem(USER_KEY);
-
-      if (savedSessionId && savedUser) {
-        // Get a fresh token (the saved one is likely expired)
-        const freshToken = await apiRefreshToken(savedSessionId);
-
-        setAuthToken(freshToken);
-        setToken(freshToken);
-        await AsyncStorage.setItem(TOKEN_KEY, freshToken);
-
-        const userData: User = JSON.parse(savedUser);
-        const userWithRole = await loadUserRole(userData);
-        setUser(userWithRole);
-
-        await checkOnboardingStatus();
-        startTokenRefresh(savedSessionId);
-      }
-    } catch {
-      // Session expired or invalid - clear everything
-      await AsyncStorage.multiRemove([TOKEN_KEY, SESSION_ID_KEY, USER_KEY]);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  const login = async (email: string, password: string) => {
-    const result = await apiLogin(email, password);
-
-    const userData: User = {
-      id: result.user.id,
-      email: result.user.email,
-      firstName: result.user.firstName || undefined,
-      lastName: result.user.lastName || undefined,
-    };
-
-    // Save session
-    await AsyncStorage.setItem(TOKEN_KEY, result.token);
-    await AsyncStorage.setItem(SESSION_ID_KEY, result.sessionId);
-    await AsyncStorage.setItem(USER_KEY, JSON.stringify(userData));
-
-    setAuthToken(result.token);
-    setToken(result.token);
-
-    const userWithRole = await loadUserRole(userData);
-    setUser(userWithRole);
-
-    await checkOnboardingStatus();
-    startTokenRefresh(result.sessionId);
-  };
-
-  const signup = async (email: string, password: string) => {
-    const result = await apiSignup(email, password);
-
-    const userData: User = {
-      id: result.user.id,
-      email: result.user.email,
-      firstName: result.user.firstName || undefined,
-      lastName: result.user.lastName || undefined,
-    };
-
-    // Save session
-    await AsyncStorage.setItem(TOKEN_KEY, result.token);
-    await AsyncStorage.setItem(SESSION_ID_KEY, result.sessionId);
-    await AsyncStorage.setItem(USER_KEY, JSON.stringify(userData));
-
-    setAuthToken(result.token);
-    setToken(result.token);
-
-    const userWithRole = await loadUserRole(userData);
-    setUser(userWithRole);
-
-    setNeedsOnboarding(true);
-    startTokenRefresh(result.sessionId);
-  };
-
-  const logout = async () => {
-    stopTokenRefresh();
-
-    try {
-      const sessionId = await AsyncStorage.getItem(SESSION_ID_KEY);
-      if (sessionId) {
-        await apiLogout(sessionId);
-      }
-    } catch {
-      // Best-effort revocation
-    }
-
-    await AsyncStorage.multiRemove([TOKEN_KEY, SESSION_ID_KEY, USER_KEY]);
-    setUser(null);
-    setToken(null);
-    setNeedsOnboarding(false);
-    setAuthToken(null);
-  };
-
   return (
     <AuthContext.Provider
       value={{
@@ -243,9 +130,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
         needsOnboarding,
         setNeedsOnboarding,
         refreshRole,
-        login,
-        signup,
-        logout,
       }}
     >
       {children}
