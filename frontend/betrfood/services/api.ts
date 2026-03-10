@@ -114,6 +114,23 @@ export interface AuditLogEntry {
 }
 
 // ---------------------------------------------------------------------------
+// Auth — Account Deletion
+// ---------------------------------------------------------------------------
+
+export async function deleteAccount(token: string, password: string): Promise<{ message: string }> {
+  const response = await fetch(`${API_BASE_URL}/api/auth/account`, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ password }),
+  });
+  if (!response.ok) { const e = await response.json(); throw new Error(e.error || 'Failed to delete account.'); }
+  return response.json();
+}
+
+// ---------------------------------------------------------------------------
 // Admin
 // ---------------------------------------------------------------------------
 
