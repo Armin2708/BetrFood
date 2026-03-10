@@ -38,12 +38,13 @@ function createPost(data) {
     userId: data.userId || 'current-user',
     caption: data.caption || '',
     // Images
-    imagePath: data.imagePath || '',         // primary/cover image (backwards compatible)
-    imagePaths: data.imagePaths || [],       // all images for carousel
+    imagePath: data.imagePath || '',
+    imagePaths: data.imagePaths || [],
     // Video
-    videoPath: data.videoPath || null,       // path to uploaded video file
-    videoType: data.videoType || null,       // mime type e.g. video/mp4
-    // TODO: add transcodedVideoPath here when CDN/transcoding is wired up
+    videoPath: data.videoPath || null,
+    videoType: data.videoType || null,
+    // Draft status — drafts are not visible to other users
+    isDraft: data.isDraft === true,
     createdAt: now,
     updatedAt: now,
     editedAt: null,

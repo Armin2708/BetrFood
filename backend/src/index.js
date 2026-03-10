@@ -10,7 +10,8 @@ app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
 // ── Routes ──────────────────────────────────────────────────────────────────
-const authRouter    = require('./routes/auth');
+const { router: authRouter } = require('./routes/auth');
+const adminRouter   = require('./routes/admin');
 const postsRouter   = require('./routes/posts');
 const tagsRouter    = require('./routes/tags');
 const feedRouter    = require('./routes/feed');
@@ -18,6 +19,7 @@ const usersRouter   = require('./routes/users');
 const reportsRouter = require('./routes/reports');
 
 app.use('/api/auth',    authRouter);
+app.use('/api/admin',   adminRouter);
 app.use('/api/posts',   postsRouter);
 app.use('/api/tags',    tagsRouter);
 app.use('/api/feed',    feedRouter);

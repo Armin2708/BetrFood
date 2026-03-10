@@ -13,9 +13,15 @@ db.exec(`
     email TEXT NOT NULL UNIQUE,
     username TEXT NOT NULL UNIQUE,
     passwordHash TEXT NOT NULL,
+    role TEXT NOT NULL DEFAULT 'user' CHECK(role IN ('user', 'moderator', 'admin')),
     createdAt TEXT NOT NULL DEFAULT (datetime('now'))
   )
 `);
+
+// Add role column to existing databases that don't have it yet
+try {
+  db.exec(`ALTER TABLE auth_users ADD COLUMN role TEXT NOT NULL DEFAULT 'user' CHECK(role IN ('user', 'moderator', 'admin'))`);
+} catch (_) { /* column already exists */ }
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS sessions (
@@ -41,7 +47,6 @@ function generateToken() {
 }
 
 function tokenExpiresAt() {
-  // Sessions last 30 days
   const d = new Date();
   d.setDate(d.getDate() + 30);
   return d.toISOString();
@@ -49,7 +54,7 @@ function tokenExpiresAt() {
 
 function getUserFromToken(token) {
   const session = db.prepare(`
-    SELECT s.*, u.id as userId, u.email, u.username
+    SELECT s.*, u.id as userId, u.email, u.username, u.role
     FROM sessions s
     JOIN auth_users u ON u.id = s.userId
     WHERE s.token = ? AND s.expiresAt > datetime('now')
@@ -62,6 +67,30 @@ function extractToken(req) {
   if (auth && auth.startsWith('Bearer ')) return auth.slice(7);
   return null;
 }
+
+// ---------------------------------------------------------------------------
+// Middleware — exported for use in other routes
+// ---------------------------------------------------------------------------
+
+// Attach user to req if token is valid
+function authenticate(req, res, next) {
+  const token = extractToken(req);
+  if (!token) return res.status(401).json({ error: 'Authentication required.' });
+  const session = getUserFromToken(token);
+  if (!session) return res.status(401).json({ error: 'Invalid or expired session.' });
+  req.user = { id: session.userId, email: session.email, username: session.username, role: session.role };
+  next();
+}
+
+// Allow only admins
+function requireAdmin(req, res, next) {
+  if (!req.user) return res.status(401).json({ error: 'Authentication required.' });
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin access required.' });
+  next();
+}
+
+module.exports.authenticate = authenticate;
+module.exports.requireAdmin = requireAdmin;
 
 // ---------------------------------------------------------------------------
 // POST /api/auth/signup
@@ -84,11 +113,10 @@ router.post('/signup', (req, res) => {
     const passwordHash = hashPassword(password);
 
     db.prepare(`
-      INSERT INTO auth_users (id, email, username, passwordHash)
-      VALUES (?, ?, ?, ?)
+      INSERT INTO auth_users (id, email, username, passwordHash, role)
+      VALUES (?, ?, ?, ?, 'user')
     `).run(id, email.toLowerCase().trim(), username.trim(), passwordHash);
 
-    // Also ensure a users profile row exists
     try {
       db.prepare(`
         INSERT OR IGNORE INTO users (id, username, displayName, bio, avatarUrl, isPrivate)
@@ -103,7 +131,7 @@ router.post('/signup', (req, res) => {
 
     res.status(201).json({
       token,
-      user: { id, email: email.toLowerCase().trim(), username: username.trim() },
+      user: { id, email: email.toLowerCase().trim(), username: username.trim(), role: 'user' },
     });
   } catch (error) {
     console.error('Signup error:', error);
@@ -128,7 +156,6 @@ router.post('/login', (req, res) => {
       return res.status(401).json({ error: 'Invalid email or password.' });
     }
 
-    // Invalidate old sessions for this user (one active session at a time)
     db.prepare('DELETE FROM sessions WHERE userId = ?').run(user.id);
 
     const token = generateToken();
@@ -138,7 +165,7 @@ router.post('/login', (req, res) => {
 
     res.json({
       token,
-      user: { id: user.id, email: user.email, username: user.username },
+      user: { id: user.id, email: user.email, username: user.username, role: user.role },
     });
   } catch (error) {
     console.error('Login error:', error);
@@ -147,7 +174,7 @@ router.post('/login', (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// GET /api/auth/me — validate token and return current user
+// GET /api/auth/me
 // ---------------------------------------------------------------------------
 router.get('/me', (req, res) => {
   try {
@@ -157,7 +184,7 @@ router.get('/me', (req, res) => {
     const session = getUserFromToken(token);
     if (!session) return res.status(401).json({ error: 'Invalid or expired session.' });
 
-    res.json({ id: session.userId, email: session.email, username: session.username });
+    res.json({ id: session.userId, email: session.email, username: session.username, role: session.role });
   } catch (error) {
     console.error('Auth me error:', error);
     res.status(500).json({ error: 'Failed to validate session.' });
@@ -165,7 +192,7 @@ router.get('/me', (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// POST /api/auth/logout — invalidate token
+// POST /api/auth/logout
 // ---------------------------------------------------------------------------
 router.post('/logout', (req, res) => {
   try {
@@ -180,4 +207,4 @@ router.post('/logout', (req, res) => {
   }
 });
 
-module.exports = router;
+module.exports.router = router;

@@ -92,6 +92,77 @@ export interface Report {
 
 export type FeedMode = 'for_you' | 'following';
 
+export type UserRole = 'user' | 'moderator' | 'admin';
+
+export interface AdminUser {
+  id: string;
+  email: string;
+  username: string;
+  role: UserRole;
+  createdAt: string;
+}
+
+export interface AuditLogEntry {
+  id: string;
+  adminId: string;
+  adminUsername: string;
+  targetUserId: string;
+  targetUsername: string;
+  previousRole: string;
+  newRole: string;
+  createdAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// Admin
+// ---------------------------------------------------------------------------
+
+export async function fetchAdminUsers(
+  token: string,
+  search?: string,
+  page: number = 1,
+  limit: number = 20
+): Promise<{ users: AdminUser[]; total: number; page: number; limit: number }> {
+  const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+  if (search) params.set('search', search);
+  const response = await fetch(`${API_BASE_URL}/api/admin/users?${params}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) { const e = await response.json(); throw new Error(e.error || 'Failed to fetch users.'); }
+  return response.json();
+}
+
+export async function updateUserRole(
+  token: string,
+  userId: string,
+  role: UserRole
+): Promise<{ user: AdminUser; audit: { previousRole: string; newRole: string; changedBy: string } }> {
+  const response = await fetch(`${API_BASE_URL}/api/admin/users/${userId}/role`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ role }),
+  });
+  if (!response.ok) { const e = await response.json(); throw new Error(e.error || 'Failed to update role.'); }
+  return response.json();
+}
+
+export async function fetchRoleAuditLog(
+  token: string,
+  userId?: string,
+  adminId?: string,
+  page: number = 1,
+  limit: number = 20
+): Promise<{ entries: AuditLogEntry[]; total: number; page: number; limit: number }> {
+  const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+  if (userId) params.set('userId', userId);
+  if (adminId) params.set('adminId', adminId);
+  const response = await fetch(`${API_BASE_URL}/api/admin/audit-log?${params}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) { const e = await response.json(); throw new Error(e.error || 'Failed to fetch audit log.'); }
+  return response.json();
+}
+
 // ---------------------------------------------------------------------------
 // Users
 // ---------------------------------------------------------------------------
