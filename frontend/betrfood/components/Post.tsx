@@ -14,6 +14,7 @@ import {
   TouchableOpacity,
   Share,
   Alert,
+  Animated,
 } from 'react-native';
 
 interface PostProps {
@@ -29,6 +30,26 @@ interface PostProps {
   tags?: Tag[];
   initialLiked?: boolean;
   initialLikes?: number;
+}
+
+const BASE_URL = 'http://localhost:3000/api';
+
+async function likePost(postId: string): Promise<{ likes: number }> {
+  const res = await fetch(`${BASE_URL}/posts/${postId}/like`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  if (!res.ok) throw new Error('Failed to like post');
+  return res.json();
+}
+
+async function unlikePost(postId: string): Promise<{ likes: number }> {
+  const res = await fetch(`${BASE_URL}/posts/${postId}/like`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  if (!res.ok) throw new Error('Failed to unlike post');
+  return res.json();
 }
 
 export default function Post({
@@ -47,6 +68,7 @@ export default function Post({
 }: PostProps) {
   const [liked, setLiked] = useState(initialLiked);
   const [likeCount, setLikeCount] = useState(initialLikes);
+  const [likeLoading, setLikeLoading] = useState(false);
   const [saved, setSaved] = useState(false);
   const [collectionModalVisible, setCollectionModalVisible] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
@@ -58,8 +80,10 @@ export default function Post({
     }
   }, [id]);
 
+  const scaleAnim = React.useRef(new Animated.Value(1)).current;
   const { showActionSheetWithOptions } = useActionSheet();
 
+<<<<<<< HEAD
   const isOwner = currentUserId && userId && currentUserId === userId;
 
   const toggleLike = () => {
@@ -67,8 +91,37 @@ export default function Post({
       setLikeCount((prev) => Math.max(0, prev - 1));
     } else {
       setLikeCount((prev) => prev + 1);
+=======
+  const toggleLike = async () => {
+    if (!id || likeLoading) return;
+
+    const prevLiked = liked;
+    const prevCount = likeCount;
+    const newLiked = !liked;
+
+    // Optimistic update
+    setLiked(newLiked);
+    setLikeCount((prev) => (newLiked ? prev + 1 : Math.max(0, prev - 1)));
+
+    // Bounce animation
+    Animated.sequence([
+      Animated.spring(scaleAnim, { toValue: 1.4, useNativeDriver: true, speed: 50 }),
+      Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, speed: 50 }),
+    ]).start();
+
+    setLikeLoading(true);
+    try {
+      const data = newLiked ? await likePost(id) : await unlikePost(id);
+      setLikeCount(data.likes);
+    } catch {
+      // Rollback on failure
+      setLiked(prevLiked);
+      setLikeCount(prevCount);
+      Alert.alert('Error', 'Could not update like. Please try again.');
+    } finally {
+      setLikeLoading(false);
+>>>>>>> 7669fc0 (save local changes before pulling)
     }
-    setLiked((prev) => !prev);
   };
 
   const handleSavePress = () => {
@@ -105,7 +158,7 @@ export default function Post({
       await Share.share({
         message: `Check out this post from ${username}: https://yourapp.com/posts/${id}`,
       });
-    } catch (error) {
+    } catch {
       Alert.alert('Error', 'Could not share the post.');
     }
   };
@@ -118,23 +171,10 @@ export default function Post({
 
   const showShareMenu = () => {
     const options = ['Share Externally', 'Copy Link', 'Cancel'];
-
-    showActionSheetWithOptions(
-      {
-        options,
-        cancelButtonIndex: 2,
-      },
-      (index) => {
-        switch (index) {
-          case 0:
-            handleExternalShare();
-            break;
-          case 1:
-            handleCopyLink();
-            break;
-        }
-      }
-    );
+    showActionSheetWithOptions({ options, cancelButtonIndex: 2 }, (index) => {
+      if (index === 0) handleExternalShare();
+      if (index === 1) handleCopyLink();
+    });
   };
 
   return (
@@ -159,10 +199,21 @@ export default function Post({
       <Image source={{ uri: postImage }} style={styles.postImage} />
 
       <View style={styles.actions}>
-        <TouchableOpacity onPress={toggleLike} style={styles.actionButton}>
-          <Text style={[styles.actionText, liked && styles.liked]}>
+        <TouchableOpacity
+          onPress={toggleLike}
+          style={styles.actionButton}
+          disabled={likeLoading}
+          activeOpacity={0.7}
+        >
+          <Animated.Text
+            style={[
+              styles.actionText,
+              liked && styles.liked,
+              { transform: [{ scale: scaleAnim }] },
+            ]}
+          >
             {liked ? '❤️' : '🤍'} {liked ? 'Liked' : 'Like'}
-          </Text>
+          </Animated.Text>
         </TouchableOpacity>
 
         <TouchableOpacity onPress={handleSavePress} style={styles.actionButton}>
@@ -210,6 +261,7 @@ const styles = StyleSheet.create({
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2,
     shadowRadius: 4, elevation: 5, zIndex: 10, minWidth: 120,
   },
+<<<<<<< HEAD
   menuItem: { padding: 12 },
   deleteText: { color: '#e74c3c', fontSize: 16, fontWeight: '600' },
   postImage: { width: '100%', height: 300, backgroundColor: '#eee' },
@@ -223,3 +275,6 @@ const styles = StyleSheet.create({
   captionUsername: { fontWeight: 'bold' },
   editedLabel: { paddingHorizontal: 10, paddingBottom: 10, fontSize: 12, color: '#999', fontStyle: 'italic' },
 });
+=======
+});
+>>>>>>> 7669fc0 (save local changes before pulling)

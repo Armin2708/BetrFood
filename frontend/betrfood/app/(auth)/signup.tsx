@@ -5,6 +5,10 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  Image,
   Alert,
 } from "react-native";
 import { useState, useCallback } from "react";
@@ -21,6 +25,7 @@ export default function Signup() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [pendingVerification, setPendingVerification] = useState(false);
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
@@ -33,6 +38,10 @@ export default function Signup() {
     }
     if (password.length < 8) {
       Alert.alert("Error", "Password must be at least 8 characters.");
+      return;
+    }
+    if (password !== confirmPassword) {
+      Alert.alert("Error", "Passwords don't match.");
       return;
     }
 
@@ -124,14 +133,14 @@ export default function Signup() {
         />
 
         <TouchableOpacity
-          style={styles.button}
+          style={styles.signUpButton}
           onPress={handleVerify}
           disabled={loading}
         >
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.buttonText}>Verify</Text>
+            <Text style={styles.signUpButtonText}>Verify</Text>
           )}
         </TouchableOpacity>
       </View>
@@ -139,75 +148,137 @@ export default function Signup() {
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Create Account</Text>
-      <Text style={styles.subtitle}>Sign up to get started</Text>
-
-      {/* OAuth Buttons */}
-      <TouchableOpacity
-        style={styles.oauthButton}
-        onPress={() => handleOAuth("oauth_google")}
-        disabled={loading}
+    <KeyboardAvoidingView
+      style={{ flex: 1, backgroundColor: "#fff" }}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.oauthButtonText}>Continue with Google</Text>
-      </TouchableOpacity>
+        {/* Logo */}
+        <View style={styles.logoContainer}>
+          <Image
+            source={require("../../assets/images/Logo.png")}
+            style={{ width: 80, height: 80 }}
+            resizeMode="contain"
+          />
+        </View>
 
-      <TouchableOpacity
-        style={[styles.oauthButton, styles.appleButton]}
-        onPress={() => handleOAuth("oauth_apple")}
-        disabled={loading}
-      >
-        <Text style={[styles.oauthButtonText, styles.appleButtonText]}>
-          Continue with Apple
+        {/* Header */}
+        <Text style={styles.title}>Create an Account</Text>
+        <Text style={styles.subtitle}>
+          Sign up with your social media account or email address
         </Text>
-      </TouchableOpacity>
 
-      <View style={styles.divider}>
-        <View style={styles.dividerLine} />
-        <Text style={styles.dividerText}>or</Text>
-        <View style={styles.dividerLine} />
-      </View>
+        {/* Social Buttons */}
+        <View style={styles.socialRow}>
+          <TouchableOpacity
+            style={styles.socialButton}
+            onPress={() => handleOAuth("oauth_google")}
+            disabled={loading}
+          >
+            <Image
+              source={{ uri: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/768px-Google_%22G%22_logo.svg.png" }}
+              style={{ width: 22, height: 22 }}
+              resizeMode="contain"
+            />
+          </TouchableOpacity>
 
-      {/* Email/Password */}
-      <TextInput
-        placeholder="Email"
-        onChangeText={setEmail}
-        value={email}
-        autoCapitalize="none"
-        keyboardType="email-address"
-        style={styles.input}
-      />
+          <TouchableOpacity
+            style={styles.socialButton}
+            onPress={() => handleOAuth("oauth_apple")}
+            disabled={loading}
+          >
+            <Text style={{ fontSize: 22 }}>&#63743;</Text>
+          </TouchableOpacity>
+        </View>
 
-      <TextInput
-        placeholder="Password"
-        secureTextEntry
-        onChangeText={setPassword}
-        value={password}
-        style={styles.input}
-      />
+        {/* Divider */}
+        <View style={styles.dividerRow}>
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerText}>or</Text>
+          <View style={styles.dividerLine} />
+        </View>
 
-      <TouchableOpacity
-        style={styles.button}
-        onPress={handleSignup}
-        disabled={loading}
-      >
-        {loading ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.buttonText}>Sign Up</Text>
-        )}
-      </TouchableOpacity>
+        {/* Email */}
+        <Text style={styles.label}>Email</Text>
+        <View style={styles.inputWrapper}>
+          <TextInput
+            placeholder="Enter your email"
+            placeholderTextColor="#9CA3AF"
+            onChangeText={setEmail}
+            value={email}
+            style={styles.input}
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
+        </View>
 
-      <TouchableOpacity
-        style={styles.linkButton}
-        onPress={() => router.back()}
-      >
-        <Text style={styles.linkText}>
-          Already have an account?{" "}
-          <Text style={styles.linkBold}>Sign In</Text>
-        </Text>
-      </TouchableOpacity>
-    </View>
+        {/* Password */}
+        <Text style={styles.label}>Password</Text>
+        <View style={styles.inputWrapper}>
+          <TextInput
+            placeholder="Create a password"
+            placeholderTextColor="#9CA3AF"
+            onChangeText={setPassword}
+            value={password}
+            style={styles.input}
+            secureTextEntry
+            autoCapitalize="none"
+          />
+        </View>
+
+        {/* Confirm Password */}
+        <Text style={styles.label}>Confirm Password</Text>
+        <View style={styles.inputWrapper}>
+          <TextInput
+            placeholder="Confirm your password"
+            placeholderTextColor="#9CA3AF"
+            onChangeText={setConfirmPassword}
+            value={confirmPassword}
+            style={styles.input}
+            secureTextEntry
+            autoCapitalize="none"
+          />
+        </View>
+
+        {/* Sign Up Button */}
+        <TouchableOpacity
+          style={[styles.signUpButton, loading && { opacity: 0.75 }]}
+          onPress={handleSignup}
+          disabled={loading}
+          activeOpacity={0.85}
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.signUpButtonText}>Sign Up</Text>
+          )}
+        </TouchableOpacity>
+
+        {/* Footer */}
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>By signing up, you agree to our </Text>
+          <TouchableOpacity>
+            <Text style={styles.footerLink}>Terms & Conditions</Text>
+          </TouchableOpacity>
+          <Text style={styles.footerText}> and </Text>
+          <TouchableOpacity>
+            <Text style={styles.footerLink}>Privacy Policy</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Back to Login */}
+        <TouchableOpacity onPress={() => router.back()} style={styles.backLink}>
+          <Text style={styles.backLinkText}>
+            Already have an account? <Text style={styles.footerLink}>Log in</Text>
+          </Text>
+        </TouchableOpacity>
+
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -218,84 +289,123 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: "#fff",
   },
-  title: {
-    fontSize: 28,
-    fontWeight: "bold",
-    marginBottom: 4,
-    color: "#333",
-  },
-  subtitle: {
-    fontSize: 16,
-    color: "#666",
-    marginBottom: 24,
-  },
-  oauthButton: {
-    padding: 14,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#ddd",
-    alignItems: "center",
-    marginBottom: 12,
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: 24,
+    paddingTop: 60,
+    paddingBottom: 40,
     backgroundColor: "#fff",
   },
-  oauthButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#333",
+  logoContainer: {
+    alignItems: "center",
+    marginBottom: 20,
   },
-  appleButton: {
-    backgroundColor: "#000",
-    borderColor: "#000",
+  title: {
+    fontSize: 26,
+    fontWeight: "700",
+    color: "#111827",
+    marginBottom: 6,
+    letterSpacing: -0.4,
   },
-  appleButtonText: {
-    color: "#fff",
+  subtitle: {
+    fontSize: 14,
+    color: "#9CA3AF",
+    marginBottom: 24,
+    lineHeight: 20,
   },
-  divider: {
+  socialRow: {
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 20,
+  },
+  socialButton: {
+    flex: 1,
+    height: 52,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: "#E5E7EB",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#fff",
+  },
+  dividerRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginVertical: 20,
+    marginBottom: 20,
+    gap: 10,
   },
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: "#ddd",
+    backgroundColor: "#F3F4F6",
   },
   dividerText: {
-    paddingHorizontal: 16,
-    color: "#999",
+    fontSize: 13,
+    color: "#9CA3AF",
+    fontWeight: "500",
+  },
+  label: {
     fontSize: 14,
+    fontWeight: "600",
+    color: "#374151",
+    marginBottom: 6,
+  },
+  inputWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1.5,
+    borderColor: "#E5E7EB",
+    borderRadius: 14,
+    backgroundColor: "#F9FAFB",
+    paddingHorizontal: 14,
+    marginBottom: 12,
   },
   input: {
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 8,
-    padding: 14,
-    marginBottom: 12,
-    fontSize: 16,
+    height: 52,
+    fontSize: 15,
+    color: "#1F2937",
+    flex: 1,
   },
-  button: {
-    backgroundColor: "#FF6B35",
-    padding: 16,
-    borderRadius: 8,
+  signUpButton: {
+    backgroundColor: "#4AC55E",
+    borderRadius: 16,
+    height: 56,
     alignItems: "center",
-    marginBottom: 12,
-    marginTop: 4,
+    justifyContent: "center",
+    marginTop: 20,
+    shadowColor: "#4AC55E",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 5,
   },
-  buttonText: {
+  signUpButtonText: {
     color: "#fff",
-    fontWeight: "600",
     fontSize: 16,
+    fontWeight: "700",
+    letterSpacing: 0.2,
   },
-  linkButton: {
-    alignItems: "center",
-    padding: 8,
+  footer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    marginTop: 20,
   },
-  linkText: {
-    color: "#666",
-    fontSize: 14,
+  footerText: {
+    fontSize: 12,
+    color: "#9CA3AF",
   },
-  linkBold: {
-    color: "#FF6B35",
+  footerLink: {
+    fontSize: 12,
+    color: "#4AC55E",
     fontWeight: "600",
+  },
+  backLink: {
+    alignItems: "center",
+    marginTop: 12,
+  },
+  backLinkText: {
+    fontSize: 13,
+    color: "#9CA3AF",
   },
 });

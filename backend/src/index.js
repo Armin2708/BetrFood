@@ -11,6 +11,7 @@ const profilesRouter = require("./routes/profiles");
 const adminRouter = require("./routes/admin");
 const rolesRouter = require("./routes/roles");
 const authRouter = require("./routes/auth");
+const likesRouter = require("./routes/likes");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -39,6 +40,7 @@ app.use("/api/profiles", profilesRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/roles", rolesRouter);
 app.use("/api/auth", authRouter);
+app.use("/api/posts", likesRouter);
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
