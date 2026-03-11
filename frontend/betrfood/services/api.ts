@@ -18,6 +18,66 @@ function authHeaders(): Record<string, string> {
   return headers;
 }
 
+// Auth API functions (routed through backend to avoid Clerk CAPTCHA)
+
+export interface AuthResponse {
+  token: string;
+  sessionId: string;
+  user: {
+    id: string;
+    email: string;
+    firstName: string | null;
+    lastName: string | null;
+  };
+}
+
+export async function apiLogin(email: string, password: string): Promise<AuthResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error || 'Login failed');
+  }
+  return data;
+}
+
+export async function apiSignup(email: string, password: string, firstName?: string, lastName?: string): Promise<AuthResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/auth/signup`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password, firstName, lastName }),
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error || 'Signup failed');
+  }
+  return data;
+}
+
+export async function apiRefreshToken(sessionId: string): Promise<string> {
+  const response = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sessionId }),
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error || 'Token refresh failed');
+  }
+  return data.token;
+}
+
+export async function apiLogout(sessionId: string): Promise<void> {
+  await fetch(`${API_BASE_URL}/api/auth/logout`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sessionId }),
+  }).catch(() => {});
+}
+
 export interface RecipeIngredient {
   id: string;
   name: string;
@@ -179,6 +239,19 @@ export async function fetchRecipe(postId: string): Promise<Recipe> {
   return response.json();
 }
 
+export async function createRecipe(postId: string, recipe: RecipeInput): Promise<Recipe> {
+  const response = await fetch(`${API_BASE_URL}/api/posts/${postId}/recipe`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify(recipe),
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to create recipe');
+  }
+  return response.json();
+}
+
 export async function updateRecipe(postId: string, recipe: RecipeInput): Promise<Recipe> {
   const response = await fetch(`${API_BASE_URL}/api/posts/${postId}/recipe`, {
     method: 'PUT',
@@ -249,6 +322,86 @@ export async function fetchPostsByTags(tagIds: number[]): Promise<Post[]> {
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.error || 'Failed to filter posts');
+  }
+  return response.json();
+}
+
+// Profile API functions
+
+export interface UserProfile {
+  id: string;
+  displayName: string | null;
+  username: string | null;
+  avatarUrl: string | null;
+  bio: string | null;
+  dietaryPreferences: number[];
+  onboardingCompleted: boolean;
+}
+
+export async function fetchMyProfile(): Promise<UserProfile> {
+  const response = await fetch(`${API_BASE_URL}/api/profiles/me`, {
+    headers: authHeaders(),
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to fetch profile');
+  }
+  return response.json();
+}
+
+export async function updateMyProfile(updates: Partial<UserProfile>): Promise<UserProfile> {
+  const response = await fetch(`${API_BASE_URL}/api/profiles/me`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify(updates),
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to update profile');
+  }
+  return response.json();
+}
+
+export async function completeOnboarding(): Promise<UserProfile> {
+  const response = await fetch(`${API_BASE_URL}/api/profiles/me/complete-onboarding`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to complete onboarding');
+  }
+  return response.json();
+}
+
+export async function checkUsername(username: string): Promise<{ available: boolean }> {
+  const response = await fetch(`${API_BASE_URL}/api/profiles/check-username/${encodeURIComponent(username)}`, {
+    headers: authHeaders(),
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to check username');
+  }
+  return response.json();
+}
+
+// Role API functions
+
+export async function fetchMyRole(): Promise<{ role: string }> {
+  const response = await fetch(`${API_BASE_URL}/api/roles/me`, {
+    headers: authHeaders(),
+  });
+  if (!response.ok) return { role: 'user' };
+  return response.json();
+}
+
+export async function fetchUserProfile(userId: string): Promise<UserProfile> {
+  const response = await fetch(`${API_BASE_URL}/api/profiles/${encodeURIComponent(userId)}`, {
+    headers: authHeaders(),
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to fetch user profile');
   }
   return response.json();
 }

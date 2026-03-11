@@ -1,10 +1,24 @@
+import { ClerkProvider, ClerkLoaded } from "@clerk/clerk-expo";
+import { tokenCache } from "@clerk/clerk-expo/token-cache";
+import { Slot } from "expo-router";
 import Providers from "../context/Providers";
-import { Stack } from "expo-router";
+
+const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!;
+
+if (!publishableKey) {
+  throw new Error(
+    "Missing EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY in .env"
+  );
+}
 
 export default function RootLayout() {
   return (
-    <Providers>
-      <Stack screenOptions={{ headerShown: false }}/>
-    </Providers>
-  )
+    <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
+      <ClerkLoaded>
+        <Providers>
+          <Slot />
+        </Providers>
+      </ClerkLoaded>
+    </ClerkProvider>
+  );
 }

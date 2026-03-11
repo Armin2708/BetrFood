@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import SaveCollectionModal from "./SaveCollectionModal";
 import * as Clipboard from 'expo-clipboard';
 import { useActionSheet } from '@expo/react-native-action-sheet';
 import { Collection } from "../context/CollectionsContext";
-import { Tag, deletePost } from '../services/api';
+import { Tag, Recipe, deletePost, fetchRecipe } from '../services/api';
 import TagDisplay from './TagDisplay';
+import RecipeDisplay from './RecipeDisplay';
 import {
   View,
   Text,
@@ -71,6 +72,13 @@ export default function Post({
   const [saved, setSaved] = useState(false);
   const [collectionModalVisible, setCollectionModalVisible] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
+  const [recipe, setRecipe] = useState<Recipe | null>(null);
+
+  useEffect(() => {
+    if (id) {
+      fetchRecipe(id).then(setRecipe).catch(() => {});
+    }
+  }, [id]);
 
   const scaleAnim = React.useRef(new Animated.Value(1)).current;
   const { showActionSheetWithOptions } = useActionSheet();
@@ -229,6 +237,8 @@ export default function Post({
       {editedAt && <Text style={styles.editedLabel}>Edited</Text>}
 
       {tags && tags.length > 0 && <TagDisplay tags={tags} />}
+
+      {recipe && <RecipeDisplay recipe={recipe} />}
 
       <SaveCollectionModal
         visible={collectionModalVisible}

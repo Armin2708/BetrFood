@@ -11,81 +11,141 @@ import {
   Image,
   Alert,
 } from "react-native";
-import { useState, useContext } from "react";
-import { AuthContext } from "../../context/AuthenticationContext";
+import { useState, useCallback } from "react";
 import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
-import * as Google from "expo-auth-session/providers/google";
+import { useSignUp, useSSO } from "@clerk/clerk-expo";
 import * as WebBrowser from "expo-web-browser";
 
 WebBrowser.maybeCompleteAuthSession();
 
 export default function Signup() {
   const router = useRouter();
-  const { signup } = useContext(AuthContext);
-  const [username, setUsername] = useState<string>("");
-  const [email, setEmail] = useState<string>("");
-  const [password, setPassword] = useState<string>("");
-  const [confirmPassword, setConfirmPassword] = useState<string>("");
-  const [showPassword, setShowPassword] = useState<boolean>(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState<boolean>(false);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [googleLoading, setGoogleLoading] = useState<boolean>(false);
-  const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const { signUp, setActive, isLoaded } = useSignUp();
+  const { startSSOFlow } = useSSO();
 
-  const [_request, _response, promptAsync] = Google.useAuthRequest({
-    iosClientId: "YOUR_IOS_CLIENT_ID",
-    androidClientId: "YOUR_ANDROID_CLIENT_ID",
-    webClientId: "YOUR_WEB_CLIENT_ID",
-  });
-
-  const handleGoogleSignIn = async () => {
-    setGoogleLoading(true);
-    try {
-      const result = await promptAsync();
-      if (result.type === "success") {
-        const { authentication } = result;
-        router.replace("/(onboarding)");
-      } else if (result.type !== "cancel") {
-        setErrors({ general: "Google Sign-In failed. Please try again." });
-      }
-    } catch (e) {
-      setErrors({ general: "Google Sign-In failed. Please try again." });
-    } finally {
-      setGoogleLoading(false);
-    }
-  };
-
-  const handleAppleSignIn = () => {
-    Alert.alert("Coming Soon", "Apple Sign-In will be available once authentication is set up.", [{ text: "OK" }]);
-  };
-
-  const handleFacebookSignIn = () => {
-    Alert.alert("Coming Soon", "Facebook Sign-In will be available once authentication is set up.", [{ text: "OK" }]);
-  };
-
-  const validate = (): boolean => {
-    const newErrors: { [key: string]: string } = {};
-    if (!username.trim()) newErrors.username = "Username is required";
-    if (!email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) newErrors.email = "Enter a valid email";
-    if (password.length < 8) newErrors.password = "Minimum 8 characters";
-    if (password !== confirmPassword) newErrors.confirmPassword = "Passwords don't match";
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [pendingVerification, setPendingVerification] = useState(false);
+  const [code, setCode] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleSignup = async () => {
-    if (!validate()) return;
+    if (!isLoaded || !signUp) return;
+    if (!email || !password) {
+      Alert.alert("Error", "Please enter email and password.");
+      return;
+    }
+    if (password.length < 8) {
+      Alert.alert("Error", "Password must be at least 8 characters.");
+      return;
+    }
+    if (password !== confirmPassword) {
+      Alert.alert("Error", "Passwords don't match.");
+      return;
+    }
+
     setLoading(true);
     try {
-      await signup(email, password);
-      router.replace("/(onboarding)");
-    } catch (e) {
-      setErrors({ general: "Sign up failed. Please try again." });
+      await signUp.create({
+        emailAddress: email,
+        password,
+      });
+
+      await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
+      setPendingVerification(true);
+    } catch (error: any) {
+      const msg =
+        error.errors?.[0]?.longMessage ||
+        error.errors?.[0]?.message ||
+        error.message ||
+        "Signup failed";
+      Alert.alert("Signup Failed", msg);
     } finally {
       setLoading(false);
     }
   };
+
+  const handleVerify = async () => {
+    if (!isLoaded || !signUp) return;
+    setLoading(true);
+    try {
+      const result = await signUp.attemptEmailAddressVerification({ code });
+
+      if (result.status === "complete") {
+        await setActive({ session: result.createdSessionId });
+        router.replace("/");
+      } else {
+        Alert.alert("Error", "Verification incomplete. Please try again.");
+      }
+    } catch (error: any) {
+      const msg =
+        error.errors?.[0]?.longMessage ||
+        error.errors?.[0]?.message ||
+        error.message ||
+        "Verification failed";
+      Alert.alert("Verification Failed", msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOAuth = useCallback(
+    async (strategy: "oauth_google" | "oauth_apple") => {
+      if (!isLoaded) return;
+      setLoading(true);
+      try {
+        const { createdSessionId, setActive: setActiveSession } =
+          await startSSOFlow({ strategy });
+
+        if (createdSessionId) {
+          await setActiveSession!({ session: createdSessionId });
+          router.replace("/");
+        }
+      } catch (error: any) {
+        const msg =
+          error.errors?.[0]?.longMessage ||
+          error.errors?.[0]?.message ||
+          error.message ||
+          "OAuth sign-up failed";
+        Alert.alert("Sign Up Failed", msg);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [isLoaded, startSSOFlow]
+  );
+
+  if (pendingVerification) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.title}>Verify Email</Text>
+        <Text style={styles.subtitle}>
+          We sent a verification code to {email}
+        </Text>
+
+        <TextInput
+          placeholder="Verification code"
+          onChangeText={setCode}
+          value={code}
+          keyboardType="number-pad"
+          style={styles.input}
+        />
+
+        <TouchableOpacity
+          style={styles.signUpButton}
+          onPress={handleVerify}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.signUpButtonText}>Verify</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <KeyboardAvoidingView
@@ -114,34 +174,25 @@ export default function Signup() {
 
         {/* Social Buttons */}
         <View style={styles.socialRow}>
-
-          {/* Google — fully wired */}
           <TouchableOpacity
             style={styles.socialButton}
-            onPress={handleGoogleSignIn}
-            disabled={googleLoading}
+            onPress={() => handleOAuth("oauth_google")}
+            disabled={loading}
           >
-            {googleLoading ? (
-              <ActivityIndicator size="small" color="#EA4335" />
-            ) : (
-              <Image
-                source={{ uri: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/768px-Google_%22G%22_logo.svg.png" }}
-                style={{ width: 22, height: 22 }}
-                resizeMode="contain"
-              />
-            )}
+            <Image
+              source={{ uri: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/768px-Google_%22G%22_logo.svg.png" }}
+              style={{ width: 22, height: 22 }}
+              resizeMode="contain"
+            />
           </TouchableOpacity>
 
-          {/* Apple — UI ready, Supabase wiring TODO */}
-          <TouchableOpacity style={styles.socialButton} onPress={handleAppleSignIn}>
-            <Ionicons name="logo-apple" size={22} color="#000" />
+          <TouchableOpacity
+            style={styles.socialButton}
+            onPress={() => handleOAuth("oauth_apple")}
+            disabled={loading}
+          >
+            <Text style={{ fontSize: 22 }}>&#63743;</Text>
           </TouchableOpacity>
-
-          {/* Facebook — UI ready, Supabase wiring TODO */}
-          <TouchableOpacity style={styles.socialButton} onPress={handleFacebookSignIn}>
-            <Ionicons name="logo-facebook" size={22} color="#1877F2" />
-          </TouchableOpacity>
-
         </View>
 
         {/* Divider */}
@@ -151,23 +202,9 @@ export default function Signup() {
           <View style={styles.dividerLine} />
         </View>
 
-        {/* Username */}
-        <Text style={styles.label}>Username</Text>
-        <View style={[styles.inputWrapper, errors.username ? styles.inputError : null]}>
-          <TextInput
-            placeholder="Choose a username"
-            placeholderTextColor="#9CA3AF"
-            onChangeText={setUsername}
-            value={username}
-            style={styles.input}
-            autoCapitalize="none"
-          />
-        </View>
-        {errors.username ? <Text style={styles.errorText}>{errors.username}</Text> : null}
-
         {/* Email */}
         <Text style={styles.label}>Email</Text>
-        <View style={[styles.inputWrapper, errors.email ? styles.inputError : null]}>
+        <View style={styles.inputWrapper}>
           <TextInput
             placeholder="Enter your email"
             placeholderTextColor="#9CA3AF"
@@ -178,58 +215,34 @@ export default function Signup() {
             autoCapitalize="none"
           />
         </View>
-        {errors.email ? <Text style={styles.errorText}>{errors.email}</Text> : null}
 
         {/* Password */}
         <Text style={styles.label}>Password</Text>
-        <View style={[styles.inputWrapper, errors.password ? styles.inputError : null]}>
+        <View style={styles.inputWrapper}>
           <TextInput
             placeholder="Create a password"
             placeholderTextColor="#9CA3AF"
             onChangeText={setPassword}
             value={password}
-            style={[styles.input, { flex: 1 }]}
-            secureTextEntry={!showPassword}
+            style={styles.input}
+            secureTextEntry
             autoCapitalize="none"
           />
-          <TouchableOpacity onPress={() => setShowPassword((p) => !p)} style={styles.eyeBtn}>
-            <Ionicons
-              name={showPassword ? "eye-outline" : "eye-off-outline"}
-              size={20}
-              color="#9CA3AF"
-            />
-          </TouchableOpacity>
         </View>
-        {errors.password ? <Text style={styles.errorText}>{errors.password}</Text> : null}
 
         {/* Confirm Password */}
         <Text style={styles.label}>Confirm Password</Text>
-        <View style={[styles.inputWrapper, errors.confirmPassword ? styles.inputError : null]}>
+        <View style={styles.inputWrapper}>
           <TextInput
             placeholder="Confirm your password"
             placeholderTextColor="#9CA3AF"
             onChangeText={setConfirmPassword}
             value={confirmPassword}
-            style={[styles.input, { flex: 1 }]}
-            secureTextEntry={!showConfirmPassword}
+            style={styles.input}
+            secureTextEntry
             autoCapitalize="none"
           />
-          <TouchableOpacity onPress={() => setShowConfirmPassword((p) => !p)} style={styles.eyeBtn}>
-            <Ionicons
-              name={showConfirmPassword ? "eye-outline" : "eye-off-outline"}
-              size={20}
-              color="#9CA3AF"
-            />
-          </TouchableOpacity>
         </View>
-        {errors.confirmPassword ? <Text style={styles.errorText}>{errors.confirmPassword}</Text> : null}
-
-        {/* General error */}
-        {errors.general ? (
-          <Text style={[styles.errorText, { textAlign: "center", marginTop: 4 }]}>
-            {errors.general}
-          </Text>
-        ) : null}
 
         {/* Sign Up Button */}
         <TouchableOpacity
@@ -270,6 +283,12 @@ export default function Signup() {
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: 24,
+    justifyContent: "center",
+    backgroundColor: "#fff",
+  },
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 24,
@@ -339,27 +358,13 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     backgroundColor: "#F9FAFB",
     paddingHorizontal: 14,
-    marginBottom: 4,
-  },
-  inputError: {
-    borderColor: "#F87171",
-    backgroundColor: "#FEF2F2",
+    marginBottom: 12,
   },
   input: {
     height: 52,
     fontSize: 15,
     color: "#1F2937",
     flex: 1,
-  },
-  eyeBtn: {
-    paddingLeft: 8,
-    paddingVertical: 4,
-  },
-  errorText: {
-    fontSize: 12,
-    color: "#EF4444",
-    marginBottom: 10,
-    paddingLeft: 4,
   },
   signUpButton: {
     backgroundColor: "#4AC55E",

@@ -1,18 +1,15 @@
-import { useContext } from "react";
 import { View, Text, StyleSheet, Pressable } from "react-native";
 import { useRouter } from "expo-router"
 import { Ionicons } from "@expo/vector-icons";
-import { AuthContext } from "../../../../context/AuthenticationContext";
+import { useClerk } from "@clerk/clerk-expo";
 
 export default function Settings() {
   const router = useRouter()
-  const { logout } = useContext(AuthContext);
+  const { signOut } = useClerk();
 
-  // TODO
-  const handleLogout = () => {
-
-    logout()
-    router.replace("/")
+  const handleLogout = async () => {
+    await signOut();
+    router.replace("/");
   }
 
   return (

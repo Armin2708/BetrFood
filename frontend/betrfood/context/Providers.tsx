@@ -1,7 +1,7 @@
 import React, { useContext, useEffect } from "react";
 import { CollectionsProvider } from "./CollectionsContext";
 import { AuthProvider, AuthContext } from "./AuthenticationContext";
-import { ActionSheetProvider } from '@expo/react-native-action-sheet';
+import { ActionSheetProvider } from "@expo/react-native-action-sheet";
 import { setAuthToken } from "../services/api";
 
 function AuthTokenSync({ children }: { children: React.ReactNode }) {
@@ -19,9 +19,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     <AuthProvider>
       <AuthTokenSync>
         <ActionSheetProvider>
-          <CollectionsProvider>
-            {children}
-          </CollectionsProvider>
+          <CollectionsProvider>{children}</CollectionsProvider>
         </ActionSheetProvider>
       </AuthTokenSync>
     </AuthProvider>
