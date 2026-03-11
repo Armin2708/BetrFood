@@ -83,15 +83,8 @@ export default function Post({
   const scaleAnim = React.useRef(new Animated.Value(1)).current;
   const { showActionSheetWithOptions } = useActionSheet();
 
-<<<<<<< HEAD
   const isOwner = currentUserId && userId && currentUserId === userId;
 
-  const toggleLike = () => {
-    if (liked) {
-      setLikeCount((prev) => Math.max(0, prev - 1));
-    } else {
-      setLikeCount((prev) => prev + 1);
-=======
   const toggleLike = async () => {
     if (!id || likeLoading) return;
 
@@ -120,7 +113,6 @@ export default function Post({
       Alert.alert('Error', 'Could not update like. Please try again.');
     } finally {
       setLikeLoading(false);
->>>>>>> 7669fc0 (save local changes before pulling)
     }
   };
 
@@ -261,7 +253,6 @@ const styles = StyleSheet.create({
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2,
     shadowRadius: 4, elevation: 5, zIndex: 10, minWidth: 120,
   },
-<<<<<<< HEAD
   menuItem: { padding: 12 },
   deleteText: { color: '#e74c3c', fontSize: 16, fontWeight: '600' },
   postImage: { width: '100%', height: 300, backgroundColor: '#eee' },
@@ -275,6 +266,3 @@ const styles = StyleSheet.create({
   captionUsername: { fontWeight: 'bold' },
   editedLabel: { paddingHorizontal: 10, paddingBottom: 10, fontSize: 12, color: '#999', fontStyle: 'italic' },
 });
-=======
-});
->>>>>>> 7669fc0 (save local changes before pulling)
