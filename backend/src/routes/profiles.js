@@ -13,6 +13,7 @@ function formatProfile(row) {
     bio: row.bio,
     dietaryPreferences: row.dietary_preferences || [],
     onboardingCompleted: row.onboarding_completed,
+    verified: row.verified || false,
   };
 }
 
@@ -45,8 +46,9 @@ router.get('/check-username/:username', async (req, res) => {
   }
 });
 
-// GET /api/profiles/me - Get current user's profile
+// GET /api/profiles/me - Get current user's profile (auto-provisions if missing)
 router.get('/me', requireAuth, async (req, res) => {
+  console.log('[PROFILE] GET /me for user:', req.userId);
   try {
     const { data, error } = await supabase
       .from('user_profiles')
@@ -57,12 +59,26 @@ router.get('/me', requireAuth, async (req, res) => {
     if (error) throw error;
 
     if (!data) {
-      return res.status(404).json({ error: 'Profile not found.' });
+      console.log('[PROFILE] No profile found, auto-provisioning for:', req.userId);
+      // Auto-provision profile for new users (e.g. first OAuth sign-in)
+      const { data: newProfile, error: createError } = await supabase
+        .from('user_profiles')
+        .insert({ id: req.userId, onboarding_completed: false })
+        .select('*')
+        .single();
+
+      if (createError) {
+        console.error('[PROFILE] ✗ Auto-provision failed:', createError);
+        throw createError;
+      }
+      console.log('[PROFILE] ✓ Auto-provisioned profile:', newProfile.id);
+      return res.json(formatProfile(newProfile));
     }
 
+    console.log('[PROFILE] ✓ Found existing profile:', data.id);
     return res.json(formatProfile(data));
   } catch (error) {
-    console.error('Error fetching profile:', error);
+    console.error('[PROFILE] ✗ Error:', error);
     return res.status(500).json({ error: 'Failed to fetch profile.' });
   }
 });
@@ -146,6 +162,47 @@ router.post('/me/complete-onboarding', requireAuth, async (req, res) => {
   } catch (error) {
     console.error('Error completing onboarding:', error);
     return res.status(500).json({ error: 'Failed to complete onboarding.' });
+  }
+});
+
+// DELETE /api/profiles/me - Delete own account (auth required)
+router.delete('/me', requireAuth, async (req, res) => {
+  try {
+    // Delete related data
+    await supabase.from('user_preferences').delete().eq('user_id', req.userId);
+    await supabase.from('user_follows').delete().eq('follower_id', req.userId);
+    await supabase.from('user_follows').delete().eq('following_id', req.userId);
+    await supabase.from('user_blocks').delete().eq('blocker_id', req.userId);
+    await supabase.from('user_blocks').delete().eq('blocked_id', req.userId);
+    await supabase.from('user_mutes').delete().eq('muter_id', req.userId);
+    await supabase.from('user_mutes').delete().eq('muted_id', req.userId);
+    await supabase.from('likes').delete().eq('user_id', req.userId);
+    await supabase.from('reports').delete().eq('reporter_id', req.userId);
+
+    // Delete collections and collection_posts
+    const { data: collections } = await supabase
+      .from('collections')
+      .select('id')
+      .eq('user_id', req.userId);
+
+    if (collections && collections.length > 0) {
+      const collectionIds = collections.map(c => c.id);
+      await supabase.from('collection_posts').delete().in('collection_id', collectionIds);
+      await supabase.from('collections').delete().eq('user_id', req.userId);
+    }
+
+    // Delete user profile
+    const { error } = await supabase
+      .from('user_profiles')
+      .delete()
+      .eq('id', req.userId);
+
+    if (error) throw error;
+
+    res.json({ message: 'Account deleted successfully.' });
+  } catch (error) {
+    console.error('Error deleting account:', error);
+    res.status(500).json({ error: 'Failed to delete account.' });
   }
 });
 

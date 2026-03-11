@@ -1,15 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, Image, StyleSheet,
   Alert, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createPostApi, RecipeInput, addTagsToPost } from '../services/api';
 import TagSelector from '../components/TagSelector';
 
 const MAX_CAPTION_LENGTH = 500;
 const DIFFICULTY_OPTIONS: Array<'easy' | 'medium' | 'hard'> = ['easy', 'medium', 'hard'];
+const DRAFTS_STORAGE_KEY = 'drafts';
 
 interface IngredientField {
   name: string;
@@ -21,7 +23,21 @@ interface StepField {
   instruction: string;
 }
 
+export interface Draft {
+  id: string;
+  caption: string;
+  selectedTagIds: number[];
+  showRecipe: boolean;
+  cookTime: string;
+  servings: string;
+  difficulty: 'easy' | 'medium' | 'hard';
+  ingredients: IngredientField[];
+  steps: StepField[];
+  timestamp: number;
+}
+
 export default function CreatePostScreen() {
+  const { draftId } = useLocalSearchParams<{ draftId?: string }>();
   const [image, setImage] = useState<string | null>(null);
   const [caption, setCaption] = useState('');
   const [loading, setLoading] = useState(false);
@@ -38,6 +54,70 @@ export default function CreatePostScreen() {
     { name: '', quantity: '', unit: '' },
   ]);
   const [steps, setSteps] = useState<StepField[]>([{ instruction: '' }]);
+
+  // Load draft if draftId is provided
+  useEffect(() => {
+    if (draftId) {
+      loadDraft(draftId);
+    }
+  }, [draftId]);
+
+  const loadDraft = async (id: string) => {
+    try {
+      const raw = await AsyncStorage.getItem(DRAFTS_STORAGE_KEY);
+      if (!raw) return;
+      const drafts: Draft[] = JSON.parse(raw);
+      const draft = drafts.find((d) => d.id === id);
+      if (!draft) return;
+      setCaption(draft.caption);
+      setSelectedTagIds(draft.selectedTagIds);
+      setShowRecipe(draft.showRecipe);
+      setCookTime(draft.cookTime);
+      setServings(draft.servings);
+      setDifficulty(draft.difficulty);
+      setIngredients(draft.ingredients.length > 0 ? draft.ingredients : [{ name: '', quantity: '', unit: '' }]);
+      setSteps(draft.steps.length > 0 ? draft.steps : [{ instruction: '' }]);
+    } catch (error) {
+      console.error('Failed to load draft:', error);
+    }
+  };
+
+  const saveDraft = async () => {
+    if (!caption.trim() && !showRecipe && selectedTagIds.length === 0) {
+      Alert.alert('Empty draft', 'Please add some content before saving a draft.');
+      return;
+    }
+    try {
+      const raw = await AsyncStorage.getItem(DRAFTS_STORAGE_KEY);
+      const drafts: Draft[] = raw ? JSON.parse(raw) : [];
+
+      const newDraft: Draft = {
+        id: draftId || `draft_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+        caption,
+        selectedTagIds,
+        showRecipe,
+        cookTime,
+        servings,
+        difficulty,
+        ingredients,
+        steps,
+        timestamp: Date.now(),
+      };
+
+      // If editing an existing draft, replace it
+      const existingIndex = drafts.findIndex((d) => d.id === newDraft.id);
+      if (existingIndex >= 0) {
+        drafts[existingIndex] = newDraft;
+      } else {
+        drafts.unshift(newDraft);
+      }
+
+      await AsyncStorage.setItem(DRAFTS_STORAGE_KEY, JSON.stringify(drafts));
+      Alert.alert('Draft saved', 'Your draft has been saved.');
+    } catch (error) {
+      Alert.alert('Error', 'Failed to save draft.');
+    }
+  };
 
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -135,8 +215,20 @@ export default function CreatePostScreen() {
         await addTagsToPost(post.id, selectedTagIds);
       }
 
+      // If this was a draft, remove it after successful post
+      if (draftId) {
+        try {
+          const raw = await AsyncStorage.getItem(DRAFTS_STORAGE_KEY);
+          if (raw) {
+            const drafts: Draft[] = JSON.parse(raw);
+            const filtered = drafts.filter((d) => d.id !== draftId);
+            await AsyncStorage.setItem(DRAFTS_STORAGE_KEY, JSON.stringify(filtered));
+          }
+        } catch {}
+      }
+
       Alert.alert('Success', 'Your post has been published!', [
-        { text: 'OK', onPress: () => router.back() },
+        { text: 'OK', onPress: () => router.replace('/feeds') },
       ]);
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Something went wrong');
@@ -149,14 +241,27 @@ export default function CreatePostScreen() {
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <ScrollView contentContainerStyle={styles.scroll}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()}>
+          <TouchableOpacity onPress={() => router.replace('/feeds')}>
             <Text style={styles.cancelText}>Cancel</Text>
           </TouchableOpacity>
           <Text style={styles.title}>New Post</Text>
-          <TouchableOpacity onPress={submitPost} disabled={loading || !image}>
-            <Text style={[styles.postText, (!image || loading) && styles.disabledText]}>Post</Text>
-          </TouchableOpacity>
+          <View style={styles.headerRight}>
+            <TouchableOpacity onPress={saveDraft} style={styles.draftButton}>
+              <Text style={styles.draftButtonText}>Save Draft</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={submitPost} disabled={loading || !image}>
+              <Text style={[styles.postText, (!image || loading) && styles.disabledText]}>Post</Text>
+            </TouchableOpacity>
+          </View>
         </View>
+
+        {/* Drafts link */}
+        <TouchableOpacity
+          style={styles.draftsLink}
+          onPress={() => router.push('/drafts')}
+        >
+          <Text style={styles.draftsLinkText}>View Drafts</Text>
+        </TouchableOpacity>
 
         <View style={styles.imageSection}>
           {image ? (
@@ -343,10 +448,37 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, paddingTop: 60, paddingBottom: 16,
     borderBottomWidth: 1, borderColor: '#eee',
   },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
   cancelText: { fontSize: 16, color: '#666' },
   title: { fontSize: 18, fontWeight: 'bold' },
   postText: { fontSize: 16, fontWeight: 'bold', color: '#FF6B35' },
   disabledText: { color: '#ccc' },
+  draftButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#FF6B35',
+  },
+  draftButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#FF6B35',
+  },
+  draftsLink: {
+    alignSelf: 'flex-end',
+    paddingHorizontal: 16,
+    paddingTop: 8,
+  },
+  draftsLinkText: {
+    fontSize: 14,
+    color: '#FF6B35',
+    fontWeight: '500',
+  },
   imageSection: { alignItems: 'center', paddingVertical: 20 },
   previewImage: { width: 300, height: 300, borderRadius: 12, backgroundColor: '#eee' },
   changeText: { textAlign: 'center', color: '#999', marginTop: 8, fontSize: 14 },

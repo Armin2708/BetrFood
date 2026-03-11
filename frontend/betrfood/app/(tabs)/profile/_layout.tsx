@@ -1,9 +1,5 @@
-import { Stack, useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons'
-import { Pressable } from 'react-native';
+import { Stack } from 'expo-router';
 
 export default function ProfileStack() {
-  const router = useRouter()
-
-  return <Stack />;
+  return <Stack screenOptions={{ headerShown: false }} />;
 }

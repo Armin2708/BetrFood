@@ -1,39 +1,55 @@
 const express = require('express');
 const router = express.Router();
-const { createClient } = require('@supabase/supabase-js');
-
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+const supabase = require('../db/supabase');
+const { requireAuth } = require('../middleware/auth');
 
 // POST /posts/:id/like
-router.post('/:id/like', async (req, res) => {
-  const { id } = req.params;
-  const userId = req.auth.userId; // from Clerk middleware
+router.post('/:id/like', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.userId;
 
-  await supabase.from('likes').insert({ post_id: id, user_id: userId });
+    const { error: insertError } = await supabase
+      .from('likes')
+      .insert({ post_id: id, user_id: userId });
 
-  const { count } = await supabase
-    .from('likes')
-    .select('*', { count: 'exact', head: true })
-    .eq('post_id', id);
+    if (insertError && insertError.code !== '23505') {
+      // 23505 = unique violation (already liked), ignore that
+      throw insertError;
+    }
 
-  res.json({ likes: count });
+    const { count } = await supabase
+      .from('likes')
+      .select('*', { count: 'exact', head: true })
+      .eq('post_id', id);
+
+    res.json({ likes: count });
+  } catch (error) {
+    console.error('Error liking post:', error);
+    res.status(500).json({ error: 'Failed to like post.' });
+  }
 });
 
 // DELETE /posts/:id/like
-router.delete('/:id/like', async (req, res) => {
-  const { id } = req.params;
-  const userId = req.auth.userId;
+router.delete('/:id/like', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.userId;
 
-  await supabase.from('likes').delete()
-    .eq('post_id', id)
-    .eq('user_id', userId);
+    await supabase.from('likes').delete()
+      .eq('post_id', id)
+      .eq('user_id', userId);
 
-  const { count } = await supabase
-    .from('likes')
-    .select('*', { count: 'exact', head: true })
-    .eq('post_id', id);
+    const { count } = await supabase
+      .from('likes')
+      .select('*', { count: 'exact', head: true })
+      .eq('post_id', id);
 
-  res.json({ likes: count });
+    res.json({ likes: count });
+  } catch (error) {
+    console.error('Error unliking post:', error);
+    res.status(500).json({ error: 'Failed to unlike post.' });
+  }
 });
 
 module.exports = router;

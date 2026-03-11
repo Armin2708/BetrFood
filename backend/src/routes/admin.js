@@ -143,4 +143,45 @@ router.get('/stats', requireMinRole('moderator'), async (req, res) => {
   }
 });
 
+/**
+ * PATCH /api/admin/users/:userId/verify
+ * Set a user's verified status. Admin only.
+ * Body: { verified: true | false }
+ */
+router.patch('/users/:userId/verify', requireRole('admin'), async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { verified } = req.body;
+
+    if (typeof verified !== 'boolean') {
+      return res.status(400).json({ error: 'Field "verified" must be a boolean.' });
+    }
+
+    // Check the target user exists
+    const { data: existingProfile, error: fetchError } = await supabase
+      .from('user_profiles')
+      .select('id')
+      .eq('id', userId)
+      .single();
+
+    if (fetchError || !existingProfile) {
+      return res.status(404).json({ error: 'User profile not found.' });
+    }
+
+    const { data: updated, error: updateError } = await supabase
+      .from('user_profiles')
+      .update({ verified, updated_at: new Date().toISOString() })
+      .eq('id', userId)
+      .select()
+      .single();
+
+    if (updateError) throw updateError;
+
+    res.json(updated);
+  } catch (err) {
+    console.error('Error updating user verified status:', err);
+    res.status(500).json({ error: 'Failed to update user verified status.' });
+  }
+});
+
 module.exports = router;

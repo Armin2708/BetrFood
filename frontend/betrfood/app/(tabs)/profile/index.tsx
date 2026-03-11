@@ -1,32 +1,48 @@
 import { View, Text, Pressable, StyleSheet, Image, FlatList, Dimensions, ActivityIndicator } from 'react-native';
 import { Stack, useRouter } from 'expo-router'
 import { Ionicons } from "@expo/vector-icons";
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback, useContext } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { fetchMyProfile, UserProfile } from '../../../services/api';
+import { AuthContext } from '../../../context/AuthenticationContext';
+import { fetchMyProfile, fetchFollowStats, fetchPosts, getImageUrl, UserProfile, Post as PostType } from '../../../services/api';
 
 const { width } = Dimensions.get('window');
 const ITEM_SIZE = width / 3;
 
-const mockPosts = Array.from({ length: 18 }).map((_, i) => ({
-  id: i.toString(),
-}));
-
 export default function ProfileScreen() {
   const router = useRouter();
+  const { user } = useContext(AuthContext);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [followStats, setFollowStats] = useState({ followerCount: 0, followingCount: 0 });
+  const [userPosts, setUserPosts] = useState<PostType[]>([]);
 
   const loadProfile = useCallback(async () => {
+    if (!user) return;
     try {
       const data = await fetchMyProfile();
       setProfile(data);
+
+      // Load follow stats
+      if (data.id) {
+        fetchFollowStats(data.id)
+          .then(stats => setFollowStats(stats))
+          .catch(() => {});
+      }
+
+      // Load user's posts
+      fetchPosts(null, 50)
+        .then(result => {
+          const myPosts = result.posts.filter(p => p.userId === data.id);
+          setUserPosts(myPosts);
+        })
+        .catch(() => {});
     } catch (error) {
       console.error('Failed to load profile:', error);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user]);
 
   useFocusEffect(
     useCallback(() => {
@@ -56,6 +72,13 @@ export default function ProfileScreen() {
       />
 
       <View style={styles.container}>
+        {/* Settings icon */}
+        <View style={styles.settingsRow}>
+          <Pressable onPress={() => router.push('/profile/settings')} style={styles.settingsButton}>
+            <Ionicons name="settings-outline" size={24} color="#333" />
+          </Pressable>
+        </View>
+
         {/* Header */}
         <View style={styles.header}>
           {profile?.avatarUrl ? (
@@ -67,16 +90,19 @@ export default function ProfileScreen() {
           )}
 
           <View style={styles.statsRow}>
-            <Stat label="Following" value="0" callback={ () => router.push('/profile/info/followingScreen') }/>
-            <Stat label="Followers" value="0" callback={ () => router.push('/profile/info/followersScreen') } />
-            <Stat label="Likes" value="0" callback={ () => {} }/>
+            <Stat label="Following" value={String(followStats.followingCount)} callback={ () => router.push('/profile/info/followingScreen') }/>
+            <Stat label="Followers" value={String(followStats.followerCount)} callback={ () => router.push('/profile/info/followersScreen') } />
+            <Stat label="Posts" value={String(userPosts.length)} callback={ () => {} }/>
           </View>
         </View>
 
         {/* Username + Bio */}
         <View style={styles.userInfo}>
           {profile?.displayName ? (
-            <Text style={styles.displayName}>{profile.displayName}</Text>
+            <View style={styles.displayNameRow}>
+              <Text style={styles.displayName}>{profile.displayName}</Text>
+              {profile.verified && <Text style={styles.verifiedBadge}>{'\u2713'}</Text>}
+            </View>
           ) : null}
           <Text style={styles.username}>
             {profile?.username ? `@${profile.username}` : '@unknown'}
@@ -93,13 +119,30 @@ export default function ProfileScreen() {
           </View>
         </Pressable>
 
+        {/* Collections Button */}
+        <Pressable style={styles.collectionsButton} onPress={() => router.push("/profile/collections")}>
+          <Ionicons name="folder-outline" size={18} color="#4CAF50" />
+          <Text style={styles.collectionsButtonText}>Collections</Text>
+          <Ionicons name="chevron-forward" size={16} color="#ccc" />
+        </Pressable>
+
         {/* Post Grid */}
         <FlatList
-          data={mockPosts}
+          data={userPosts}
           keyExtractor={(item) => item.id}
           numColumns={3}
-          renderItem={() => <View style={styles.gridItem} />}
+          renderItem={({ item }) => (
+            <Image
+              source={{ uri: getImageUrl(item.imagePath) }}
+              style={styles.gridItem}
+            />
+          )}
           showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            <View style={styles.emptyGrid}>
+              <Text style={styles.emptyText}>No posts yet</Text>
+            </View>
+          }
         />
       </View>
     </>
@@ -121,6 +164,15 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
+  },
+  settingsRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    paddingHorizontal: 16,
+    paddingTop: 8,
+  },
+  settingsButton: {
+    padding: 8,
   },
   header: {
     flexDirection: 'row',
@@ -157,10 +209,20 @@ const styles = StyleSheet.create({
   userInfo: {
     paddingHorizontal: 20,
   },
+  displayNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   displayName: {
     color: '#000',
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  verifiedBadge: {
+    color: '#1DA1F2',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginLeft: 4,
   },
   username: {
     color: '#555',
@@ -183,11 +245,38 @@ const styles = StyleSheet.create({
     color: '#000',
     fontWeight: '500',
   },
+  collectionsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 20,
+    marginBottom: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    borderRadius: 8,
+    backgroundColor: '#fafafa',
+  },
+  collectionsButtonText: {
+    flex: 1,
+    marginLeft: 10,
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#333',
+  },
   gridItem: {
     width: ITEM_SIZE,
     height: ITEM_SIZE,
     backgroundColor: '#eee',
     borderWidth: 0.5,
     borderColor: '#fff',
+  },
+  emptyGrid: {
+    alignItems: 'center',
+    padding: 40,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#999',
   },
 });

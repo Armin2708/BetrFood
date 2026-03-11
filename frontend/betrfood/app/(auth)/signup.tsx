@@ -13,12 +13,286 @@ import {
 } from "react-native";
 import { useState, useCallback } from "react";
 import { useRouter } from "expo-router";
-import { useSignUp, useSSO } from "@clerk/clerk-expo";
+import { useSignIn, useSignUp, useSSO } from "@clerk/clerk-expo";
+import { Ionicons } from "@expo/vector-icons";
 import * as WebBrowser from "expo-web-browser";
 
 WebBrowser.maybeCompleteAuthSession();
 
 export default function Signup() {
+  if (Platform.OS === "web") {
+    return <WebSignup />;
+  }
+  return <NativeSignup />;
+}
+
+function WebSignup() {
+  const router = useRouter();
+  const { signUp, setActive, isLoaded } = useSignUp();
+  const { signIn } = useSignIn();
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [pendingVerification, setPendingVerification] = useState(false);
+  const [code, setCode] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSignup = async () => {
+    if (!isLoaded || !signUp) return;
+    if (!email || !password) {
+      window.alert("Please enter email and password.");
+      return;
+    }
+    if (password.length < 8) {
+      window.alert("Password must be at least 8 characters.");
+      return;
+    }
+    if (password !== confirmPassword) {
+      window.alert("Passwords don't match.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await signUp.create({ emailAddress: email, password });
+      await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
+      setPendingVerification(true);
+    } catch (error: any) {
+      const msg =
+        error.errors?.[0]?.longMessage ||
+        error.errors?.[0]?.message ||
+        error.message ||
+        "Signup failed";
+      window.alert(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerify = async () => {
+    if (!isLoaded || !signUp) return;
+    setLoading(true);
+    try {
+      const result = await signUp.attemptEmailAddressVerification({ code });
+      if (result.status === "complete") {
+        await setActive({ session: result.createdSessionId });
+        router.replace("/");
+      } else {
+        window.alert("Verification incomplete. Please try again.");
+      }
+    } catch (error: any) {
+      const msg =
+        error.errors?.[0]?.longMessage ||
+        error.errors?.[0]?.message ||
+        error.message ||
+        "Verification failed";
+      window.alert(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOAuth = async (strategy: "oauth_google" | "oauth_apple") => {
+    if (!isLoaded || !signIn) return;
+    setLoading(true);
+    try {
+      const result = await signIn.create({
+        strategy,
+        redirectUrl: window.location.origin + "/sso-callback",
+        actionCompleteRedirectUrl: window.location.origin + "/",
+      });
+
+      const verificationUrl =
+        result.firstFactorVerification?.externalVerificationRedirectURL;
+
+      if (!verificationUrl) {
+        throw new Error("No OAuth redirect URL returned from Clerk");
+      }
+
+      const popup = window.open(
+        verificationUrl.toString(),
+        "clerk-oauth",
+        "width=500,height=600,left=200,top=100"
+      );
+
+      if (!popup) {
+        throw new Error("Popup blocked. Please allow popups for this site.");
+      }
+
+      const pollInterval = setInterval(async () => {
+        try {
+          if (popup.closed) {
+            clearInterval(pollInterval);
+            const updatedSignIn = await signIn.reload();
+            if (updatedSignIn.status === "complete") {
+              await setActive!({ session: updatedSignIn.createdSessionId });
+              router.replace("/");
+            } else {
+              setLoading(false);
+            }
+          }
+        } catch {
+          clearInterval(pollInterval);
+          setLoading(false);
+        }
+      }, 500);
+    } catch (error: any) {
+      console.error("OAuth error:", error);
+      const msg =
+        error.errors?.[0]?.longMessage ||
+        error.errors?.[0]?.message ||
+        error.message ||
+        "OAuth sign-up failed";
+      window.alert(msg);
+      setLoading(false);
+    }
+  };
+
+  if (pendingVerification) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.title}>Verify Email</Text>
+        <Text style={styles.subtitle}>
+          We sent a verification code to {email}
+        </Text>
+        <TextInput
+          placeholder="Verification code"
+          onChangeText={setCode}
+          value={code}
+          keyboardType="number-pad"
+          style={styles.input}
+        />
+        <TouchableOpacity
+          style={styles.signUpButton}
+          onPress={handleVerify}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.signUpButtonText}>Verify</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  return (
+    <ScrollView
+      contentContainerStyle={styles.scrollContent}
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
+    >
+      <View style={styles.logoContainer}>
+        <Image
+          source={require("../../assets/images/Logo.png")}
+          style={{ width: 80, height: 80 }}
+          resizeMode="contain"
+        />
+      </View>
+
+      <Text style={styles.title}>Create an Account</Text>
+      <Text style={styles.subtitle}>
+        Sign up with your social media account or email address
+      </Text>
+
+      <View style={styles.socialRow}>
+        <TouchableOpacity
+          style={styles.socialButton}
+          onPress={() => handleOAuth("oauth_google")}
+          disabled={loading}
+        >
+          <Ionicons name="logo-google" size={22} color="#EA4335" />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.socialButton}
+          onPress={() => handleOAuth("oauth_apple")}
+          disabled={loading}
+        >
+          <Ionicons name="logo-apple" size={22} color="#000" />
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.dividerRow}>
+        <View style={styles.dividerLine} />
+        <Text style={styles.dividerText}>or</Text>
+        <View style={styles.dividerLine} />
+      </View>
+
+      <Text style={styles.label}>Email</Text>
+      <View style={styles.inputWrapper}>
+        <TextInput
+          placeholder="Enter your email"
+          placeholderTextColor="#9CA3AF"
+          onChangeText={setEmail}
+          value={email}
+          style={styles.input}
+          keyboardType="email-address"
+          autoCapitalize="none"
+        />
+      </View>
+
+      <Text style={styles.label}>Password</Text>
+      <View style={styles.inputWrapper}>
+        <TextInput
+          placeholder="Create a password"
+          placeholderTextColor="#9CA3AF"
+          onChangeText={setPassword}
+          value={password}
+          style={styles.input}
+          secureTextEntry
+          autoCapitalize="none"
+        />
+      </View>
+
+      <Text style={styles.label}>Confirm Password</Text>
+      <View style={styles.inputWrapper}>
+        <TextInput
+          placeholder="Confirm your password"
+          placeholderTextColor="#9CA3AF"
+          onChangeText={setConfirmPassword}
+          value={confirmPassword}
+          style={styles.input}
+          secureTextEntry
+          autoCapitalize="none"
+        />
+      </View>
+
+      <TouchableOpacity
+        style={[styles.signUpButton, loading && { opacity: 0.75 }]}
+        onPress={handleSignup}
+        disabled={loading}
+        activeOpacity={0.85}
+      >
+        {loading ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text style={styles.signUpButtonText}>Sign Up</Text>
+        )}
+      </TouchableOpacity>
+
+      <View style={styles.footer}>
+        <Text style={styles.footerText}>By signing up, you agree to our </Text>
+        <TouchableOpacity>
+          <Text style={styles.footerLink}>Terms & Conditions</Text>
+        </TouchableOpacity>
+        <Text style={styles.footerText}> and </Text>
+        <TouchableOpacity>
+          <Text style={styles.footerLink}>Privacy Policy</Text>
+        </TouchableOpacity>
+      </View>
+
+      <TouchableOpacity onPress={() => router.back()} style={styles.backLink}>
+        <Text style={styles.backLinkText}>
+          Already have an account? <Text style={styles.footerLink}>Log in</Text>
+        </Text>
+      </TouchableOpacity>
+    </ScrollView>
+  );
+}
+
+function NativeSignup() {
   const router = useRouter();
   const { signUp, setActive, isLoaded } = useSignUp();
   const { startSSOFlow } = useSSO();
@@ -103,6 +377,7 @@ export default function Signup() {
           router.replace("/");
         }
       } catch (error: any) {
+        console.error("OAuth error:", error);
         const msg =
           error.errors?.[0]?.longMessage ||
           error.errors?.[0]?.message ||
@@ -179,11 +454,7 @@ export default function Signup() {
             onPress={() => handleOAuth("oauth_google")}
             disabled={loading}
           >
-            <Image
-              source={{ uri: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/768px-Google_%22G%22_logo.svg.png" }}
-              style={{ width: 22, height: 22 }}
-              resizeMode="contain"
-            />
+            <Ionicons name="logo-google" size={22} color="#EA4335" />
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -191,7 +462,7 @@ export default function Signup() {
             onPress={() => handleOAuth("oauth_apple")}
             disabled={loading}
           >
-            <Text style={{ fontSize: 22 }}>&#63743;</Text>
+            <Ionicons name="logo-apple" size={22} color="#000" />
           </TouchableOpacity>
         </View>
 

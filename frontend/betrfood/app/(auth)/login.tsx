@@ -6,6 +6,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
+  Platform,
   Alert,
 } from "react-native";
 import { useState, useCallback } from "react";
@@ -16,33 +17,39 @@ import * as WebBrowser from "expo-web-browser";
 WebBrowser.maybeCompleteAuthSession();
 
 export default function Login() {
+  if (Platform.OS === "web") {
+    return <WebLogin />;
+  }
+  return <NativeLogin />;
+}
+
+function WebLogin() {
   const router = useRouter();
   const { signIn, setActive, isLoaded } = useSignIn();
-  const { startSSOFlow } = useSSO();
-
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [pendingSecondFactor, setPendingSecondFactor] = useState(false);
+  const [code, setCode] = useState("");
 
   const handleLogin = async () => {
     if (!isLoaded || !signIn) return;
     if (!email || !password) {
-      Alert.alert("Error", "Please enter email and password.");
+      window.alert("Please enter email and password.");
       return;
     }
 
     setLoading(true);
     try {
-      const result = await signIn.create({
-        identifier: email,
-        password,
-      });
-
+      const result = await signIn.create({ identifier: email, password });
       if (result.status === "complete") {
         await setActive({ session: result.createdSessionId });
         router.replace("/");
+      } else if (result.status === "needs_second_factor") {
+        await signIn.prepareSecondFactor({ strategy: "email_code" });
+        setPendingSecondFactor(true);
       } else {
-        Alert.alert("Error", "Additional verification steps required.");
+        window.alert("Additional verification steps required.");
       }
     } catch (error: any) {
       const msg =
@@ -50,44 +57,129 @@ export default function Login() {
         error.errors?.[0]?.message ||
         error.message ||
         "Login failed";
-      Alert.alert("Login Failed", msg);
+      window.alert(msg);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleOAuth = useCallback(
-    async (strategy: "oauth_google" | "oauth_apple") => {
-      if (!isLoaded) return;
-      setLoading(true);
-      try {
-        const { createdSessionId, setActive: setActiveSession } =
-          await startSSOFlow({ strategy });
-
-        if (createdSessionId) {
-          await setActiveSession!({ session: createdSessionId });
-          router.replace("/");
-        }
-      } catch (error: any) {
-        const msg =
-          error.errors?.[0]?.longMessage ||
-          error.errors?.[0]?.message ||
-          error.message ||
-          "OAuth sign-in failed";
-        Alert.alert("Sign In Failed", msg);
-      } finally {
-        setLoading(false);
+  const handleVerifySecondFactor = async () => {
+    if (!isLoaded || !signIn) return;
+    setLoading(true);
+    try {
+      const result = await signIn.attemptSecondFactor({ strategy: "email_code", code });
+      if (result.status === "complete") {
+        await setActive({ session: result.createdSessionId });
+        router.replace("/");
+      } else {
+        window.alert("Verification incomplete. Please try again.");
       }
-    },
-    [isLoaded, startSSOFlow]
-  );
+    } catch (error: any) {
+      const msg =
+        error.errors?.[0]?.longMessage ||
+        error.errors?.[0]?.message ||
+        error.message ||
+        "Verification failed";
+      window.alert(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOAuth = async (strategy: "oauth_google" | "oauth_apple") => {
+    if (!isLoaded || !signIn) return;
+    setLoading(true);
+    try {
+      // Create the OAuth sign-in and get the redirect URL
+      const result = await signIn.create({
+        strategy,
+        redirectUrl: window.location.origin + "/sso-callback",
+        actionCompleteRedirectUrl: window.location.origin + "/",
+      });
+
+      const verificationUrl =
+        result.firstFactorVerification?.externalVerificationRedirectURL;
+
+      if (!verificationUrl) {
+        throw new Error("No OAuth redirect URL returned from Clerk");
+      }
+
+      // Open OAuth in a popup window
+      const popup = window.open(
+        verificationUrl.toString(),
+        "clerk-oauth",
+        "width=500,height=600,left=200,top=100"
+      );
+
+      if (!popup) {
+        throw new Error("Popup blocked. Please allow popups for this site.");
+      }
+
+      // Poll for popup close and check auth status
+      const pollInterval = setInterval(async () => {
+        try {
+          if (popup.closed) {
+            clearInterval(pollInterval);
+            // Reload the sign-in to check if it completed
+            const updatedSignIn = await signIn.reload();
+            if (updatedSignIn.status === "complete") {
+              await setActive({ session: updatedSignIn.createdSessionId });
+              router.replace("/");
+            } else {
+              setLoading(false);
+            }
+          }
+        } catch {
+          clearInterval(pollInterval);
+          setLoading(false);
+        }
+      }, 500);
+    } catch (error: any) {
+      console.error("OAuth error:", error);
+      const msg =
+        error.errors?.[0]?.longMessage ||
+        error.errors?.[0]?.message ||
+        error.message ||
+        "OAuth sign-in failed";
+      window.alert(msg);
+      setLoading(false);
+    }
+  };
+
+  if (pendingSecondFactor) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.title}>Verify Your Identity</Text>
+        <Text style={styles.subtitle}>
+          We sent a verification code to {email}
+        </Text>
+        <TextInput
+          placeholder="Verification code"
+          onChangeText={setCode}
+          value={code}
+          keyboardType="number-pad"
+          style={styles.input}
+        />
+        <TouchableOpacity
+          style={styles.button}
+          onPress={handleVerifySecondFactor}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.buttonText}>Verify</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Welcome Back</Text>
       <Text style={styles.subtitle}>Sign in to your account</Text>
 
-      {/* OAuth Buttons */}
       <TouchableOpacity
         style={styles.oauthButton}
         onPress={() => handleOAuth("oauth_google")}
@@ -112,7 +204,205 @@ export default function Login() {
         <View style={styles.dividerLine} />
       </View>
 
-      {/* Email/Password */}
+      <TextInput
+        placeholder="Email"
+        onChangeText={setEmail}
+        value={email}
+        autoCapitalize="none"
+        keyboardType="email-address"
+        style={styles.input}
+      />
+
+      <TextInput
+        placeholder="Password"
+        secureTextEntry
+        onChangeText={setPassword}
+        value={password}
+        style={styles.input}
+      />
+
+      <TouchableOpacity
+        style={styles.button}
+        onPress={handleLogin}
+        disabled={loading}
+      >
+        {loading ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text style={styles.buttonText}>Sign In</Text>
+        )}
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.linkButton}
+        onPress={() => router.push("/signup")}
+      >
+        <Text style={styles.linkText}>
+          Don't have an account? <Text style={styles.linkBold}>Sign Up</Text>
+        </Text>
+      </TouchableOpacity>
+
+      <Pressable onPress={() => router.push("/resetPassword")}>
+        <Text style={styles.forgotPasswordText}>Forgot password?</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+function NativeLogin() {
+  const router = useRouter();
+  const { signIn, setActive, isLoaded } = useSignIn();
+  const { startSSOFlow } = useSSO();
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [pendingSecondFactor, setPendingSecondFactor] = useState(false);
+  const [code, setCode] = useState("");
+
+  const handleLogin = async () => {
+    if (!isLoaded || !signIn) return;
+    if (!email || !password) {
+      Alert.alert("Error", "Please enter email and password.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const result = await signIn.create({
+        identifier: email,
+        password,
+      });
+
+      if (result.status === "complete") {
+        await setActive({ session: result.createdSessionId });
+        router.replace("/");
+      } else if (result.status === "needs_second_factor") {
+        await signIn.prepareSecondFactor({ strategy: "email_code" });
+        setPendingSecondFactor(true);
+      } else {
+        Alert.alert("Error", "Additional verification steps required.");
+      }
+    } catch (error: any) {
+      const msg =
+        error.errors?.[0]?.longMessage ||
+        error.errors?.[0]?.message ||
+        error.message ||
+        "Login failed";
+      Alert.alert("Login Failed", msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifySecondFactor = async () => {
+    if (!isLoaded || !signIn) return;
+    setLoading(true);
+    try {
+      const result = await signIn.attemptSecondFactor({ strategy: "email_code", code });
+      if (result.status === "complete") {
+        await setActive({ session: result.createdSessionId });
+        router.replace("/");
+      } else {
+        Alert.alert("Error", "Verification incomplete. Please try again.");
+      }
+    } catch (error: any) {
+      const msg =
+        error.errors?.[0]?.longMessage ||
+        error.errors?.[0]?.message ||
+        error.message ||
+        "Verification failed";
+      Alert.alert("Verification Failed", msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOAuth = useCallback(
+    async (strategy: "oauth_google" | "oauth_apple") => {
+      if (!isLoaded) return;
+      setLoading(true);
+      try {
+        const { createdSessionId, setActive: setActiveSession } =
+          await startSSOFlow({ strategy });
+
+        if (createdSessionId) {
+          await setActiveSession!({ session: createdSessionId });
+          router.replace("/");
+        }
+      } catch (error: any) {
+        console.error("OAuth error:", error);
+        const msg =
+          error.errors?.[0]?.longMessage ||
+          error.errors?.[0]?.message ||
+          error.message ||
+          "OAuth sign-in failed";
+        Alert.alert("Sign In Failed", msg);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [isLoaded, startSSOFlow]
+  );
+
+  if (pendingSecondFactor) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.title}>Verify Your Identity</Text>
+        <Text style={styles.subtitle}>
+          We sent a verification code to {email}
+        </Text>
+        <TextInput
+          placeholder="Verification code"
+          onChangeText={setCode}
+          value={code}
+          keyboardType="number-pad"
+          style={styles.input}
+        />
+        <TouchableOpacity
+          style={styles.button}
+          onPress={handleVerifySecondFactor}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.buttonText}>Verify</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>Welcome Back</Text>
+      <Text style={styles.subtitle}>Sign in to your account</Text>
+
+      <TouchableOpacity
+        style={styles.oauthButton}
+        onPress={() => handleOAuth("oauth_google")}
+        disabled={loading}
+      >
+        <Text style={styles.oauthButtonText}>Continue with Google</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[styles.oauthButton, styles.appleButton]}
+        onPress={() => handleOAuth("oauth_apple")}
+        disabled={loading}
+      >
+        <Text style={[styles.oauthButtonText, styles.appleButtonText]}>
+          Continue with Apple
+        </Text>
+      </TouchableOpacity>
+
+      <View style={styles.divider}>
+        <View style={styles.dividerLine} />
+        <Text style={styles.dividerText}>or</Text>
+        <View style={styles.dividerLine} />
+      </View>
+
       <TextInput
         placeholder="Email"
         onChangeText={setEmail}
@@ -163,6 +453,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 24,
     justifyContent: "center",
+    alignItems: "center",
     backgroundColor: "#fff",
   },
   title: {
@@ -170,11 +461,13 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginBottom: 4,
     color: "#333",
+    alignSelf: "flex-start",
   },
   subtitle: {
     fontSize: 16,
     color: "#666",
     marginBottom: 24,
+    alignSelf: "flex-start",
   },
   oauthButton: {
     padding: 14,
@@ -184,6 +477,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 12,
     backgroundColor: "#fff",
+    width: "100%",
   },
   oauthButtonText: {
     fontSize: 16,
@@ -201,6 +495,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginVertical: 20,
+    width: "100%",
   },
   dividerLine: {
     flex: 1,
@@ -219,6 +514,7 @@ const styles = StyleSheet.create({
     padding: 14,
     marginBottom: 12,
     fontSize: 16,
+    width: "100%",
   },
   button: {
     backgroundColor: "#FF6B35",
@@ -227,6 +523,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 12,
     marginTop: 4,
+    width: "100%",
   },
   buttonText: {
     color: "#fff",

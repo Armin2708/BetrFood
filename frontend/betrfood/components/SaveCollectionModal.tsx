@@ -20,24 +20,17 @@ export default function SaveCollectionModal({
   onSave,
 }: Props) {
   const { collections, addCollection } = useCollections();
-  const [newCollection, setNewCollection] = useState<Collection>(
-    {
-        id: "",
-        name: "",
-        posts: []
-    });
+  const [newName, setNewName] = useState("");
 
-  const createCollection = () => {
-    // Ignores request if name was left empty
-    if (!newCollection.name.trim()) return;
-
-    addCollection(newCollection);
-    onSave(newCollection);
-    setNewCollection({
-        id: "",
-        name: "",
-        posts: []
-    });
+  const handleCreate = async () => {
+    if (!newName.trim()) return;
+    try {
+      const created = await addCollection(newName.trim());
+      onSave(created);
+      setNewName("");
+    } catch (error) {
+      console.error("Failed to create collection:", error);
+    }
   };
 
   return (
@@ -60,16 +53,8 @@ export default function SaveCollectionModal({
 
           <TextInput
             placeholder="New collection..."
-            value={newCollection.name}
-            // Updates the name property of the collection to be added
-            onChangeText={(text) => { 
-                setNewCollection((prev) => (
-                    {
-                      ...prev,
-                      name: text
-                    })) 
-                }
-            }
+            value={newName}
+            onChangeText={setNewName}
             style={{
               borderWidth: 1,
               borderColor: "#ddd",
@@ -80,7 +65,7 @@ export default function SaveCollectionModal({
           />
 
           <TouchableOpacity
-            onPress={createCollection}
+            onPress={handleCreate}
             style={{
               backgroundColor: "#007AFF",
               padding: 10,

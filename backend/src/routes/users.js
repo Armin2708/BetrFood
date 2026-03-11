@@ -27,6 +27,28 @@ router.post("/:id/follow", requireAuth, async (req, res) => {
       throw error;
     }
 
+    // Create a notification for the followed user
+    try {
+      // Fetch follower's profile for the notification data
+      const { data: followerProfile } = await supabase
+        .from("user_profiles")
+        .select("username")
+        .eq("id", followerId)
+        .maybeSingle();
+
+      await supabase.from("notifications").insert({
+        user_id: followingId,
+        type: "new_follower",
+        data: {
+          followerId,
+          followerUsername: followerProfile?.username || null,
+        },
+      });
+    } catch (notifError) {
+      // Log but don't fail the follow action if notification fails
+      console.error("Error creating follow notification:", notifError);
+    }
+
     res.json({
       message: "User followed successfully.",
       followerId,
@@ -89,6 +111,30 @@ router.get("/:id/follow-stats", async (req, res) => {
   } catch (error) {
     console.error("Error fetching follow stats:", error);
     res.status(500).json({ error: "Failed to fetch follow stats." });
+  }
+});
+
+// GET /api/users/:id/follow-status (auth required)
+router.get("/:id/follow-status", requireAuth, async (req, res) => {
+  const targetUserId = req.params.id;
+  const currentUserId = req.userId;
+
+  try {
+    const { data, error } = await supabase
+      .from("user_follows")
+      .select("id")
+      .eq("follower_id", currentUserId)
+      .eq("following_id", targetUserId)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    res.json({
+      isFollowing: !!data,
+    });
+  } catch (error) {
+    console.error("Error checking follow status:", error);
+    res.status(500).json({ error: "Failed to check follow status." });
   }
 });
 

@@ -1,5 +1,6 @@
 import React, { useRef, useState } from "react";
 import { useRouter } from "expo-router"
+import { useSignIn } from "@clerk/clerk-expo";
 import {
   View,
   Text,
@@ -8,6 +9,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  Platform,
   NativeSyntheticEvent,
   TextInputKeyPressEventData,
 } from "react-native";
@@ -15,6 +17,7 @@ import {
 export default function VerificationCodeScreen() {
   const [code, setCode] = useState<string[]>(["", "", "", "", "", ""]);
   const [loading, setLoading] = useState<boolean>(false);
+  const { signIn, isLoaded } = useSignIn();
 
   const inputs = useRef<Array<TextInput | null>>([]);
 
@@ -39,15 +42,57 @@ export default function VerificationCodeScreen() {
     }
   };
 
-  // TODO
-  const handleVerify = () => {
-
-    router.push('/resetPassword/setNewPassword')
+  const showError = (msg: string) => {
+    if (Platform.OS === 'web') {
+      window.alert(msg);
+    } else {
+      Alert.alert('Error', msg);
+    }
   };
 
-  // TODO
-  const resendCode = (): void => {
-    Alert.alert("Code Sent", "A new verification code was sent.");
+  const handleVerify = async () => {
+    if (!isLoaded) return;
+    const codeString = code.join('');
+    if (codeString.length !== 6) {
+      showError('Please enter the full 6-digit code.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const result = await signIn.attemptFirstFactor({
+        strategy: 'reset_password_email_code',
+        code: codeString,
+      });
+
+      if (result.status === 'needs_new_password') {
+        router.push('/resetPassword/setNewPassword');
+      } else {
+        showError('Unexpected status. Please try again.');
+      }
+    } catch (error: any) {
+      const msg = error.errors?.[0]?.longMessage || error.errors?.[0]?.message || error.message || 'Invalid verification code.';
+      showError(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resendCode = async () => {
+    if (!isLoaded) return;
+    try {
+      await signIn.prepareFirstFactor({
+        strategy: 'reset_password_email_code',
+      });
+      if (Platform.OS === 'web') {
+        window.alert('A new verification code was sent.');
+      } else {
+        Alert.alert('Code Sent', 'A new verification code was sent.');
+      }
+    } catch (error: any) {
+      const msg = error.errors?.[0]?.longMessage || error.errors?.[0]?.message || error.message || 'Failed to resend code.';
+      showError(msg);
+    }
   };
 
   return (

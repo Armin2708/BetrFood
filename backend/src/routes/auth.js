@@ -46,7 +46,7 @@ function clerkApi(method, path, body) {
  */
 router.post('/signup', async (req, res) => {
   try {
-    const { email, password, firstName, lastName } = req.body;
+    const { email, password, firstName, lastName, username } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password are required.' });
@@ -62,6 +62,7 @@ router.post('/signup', async (req, res) => {
       password,
       first_name: firstName || undefined,
       last_name: lastName || undefined,
+      username: username || undefined,
     });
 
     if (createResult.status !== 200) {

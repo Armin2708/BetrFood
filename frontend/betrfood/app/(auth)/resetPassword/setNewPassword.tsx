@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useRouter } from 'expo-router'
+import { useSignIn } from "@clerk/clerk-expo";
 import {
   View,
   Text,
@@ -7,6 +8,8 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
+  Alert,
+  Platform,
 } from "react-native";
 
 export default function NewPasswordScreen() {
@@ -14,13 +17,44 @@ export default function NewPasswordScreen() {
   const [confirmPassword, setConfirmPassword] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
   const [showPassword, setShowPassword] = useState<boolean>(false);
+  const { signIn, setActive, isLoaded } = useSignIn();
 
   const router = useRouter()
 
-  // TODO
-  const handleSetPassword = () => {
+  const showError = (msg: string) => {
+    if (Platform.OS === 'web') {
+      window.alert(msg);
+    } else {
+      Alert.alert('Error', msg);
+    }
+  };
 
-    router.push('/resetPassword/resetConfirmation')
+  const handleSetPassword = async () => {
+    if (!isLoaded) return;
+    if (!password.trim()) {
+      showError('Please enter a new password.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      showError('Passwords do not match.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const result = await signIn.resetPassword({ password });
+
+      if (result.status === 'complete' && result.createdSessionId) {
+        await setActive({ session: result.createdSessionId });
+      }
+
+      router.push('/resetPassword/resetConfirmation');
+    } catch (error: any) {
+      const msg = error.errors?.[0]?.longMessage || error.errors?.[0]?.message || error.message || 'Failed to reset password.';
+      showError(msg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

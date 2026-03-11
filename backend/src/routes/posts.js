@@ -74,13 +74,75 @@ router.get('/', async (req, res) => {
       ? resultPosts[resultPosts.length - 1].id
       : null;
 
-    // Map to camelCase for frontend compatibility
-    const mapped = resultPosts.map(mapPost);
+    // Enrich with profile data and comment counts, map to camelCase
+    const enriched = await enrichPostsWithProfiles(resultPosts);
+    const withCounts = await enrichPostsWithCommentCounts(enriched);
+    const mapped = withCounts.map(mapPost);
 
     res.json({ posts: mapped, nextCursor, hasMore });
   } catch (error) {
     console.error('Error fetching posts:', error);
     res.status(500).json({ error: 'Failed to fetch posts.' });
+  }
+});
+
+// GET /api/posts/following - Feed of posts from followed users (auth required)
+router.get('/following', requireAuth, async (req, res) => {
+  try {
+    const limit = Math.min(Math.max(parseInt(req.query.limit) || 10, 1), 50);
+    const cursor = req.query.cursor || null;
+
+    // Get list of users the current user follows
+    const { data: follows, error: followError } = await supabase
+      .from('user_follows')
+      .select('following_id')
+      .eq('follower_id', req.userId);
+
+    if (followError) throw followError;
+
+    if (!follows || follows.length === 0) {
+      return res.json({ posts: [], nextCursor: null, hasMore: false });
+    }
+
+    const followingIds = follows.map(f => f.following_id);
+
+    let query = supabase
+      .from('posts')
+      .select('*')
+      .in('user_id', followingIds)
+      .order('created_at', { ascending: false })
+      .limit(limit + 1);
+
+    if (cursor) {
+      const { data: cursorPost } = await supabase
+        .from('posts')
+        .select('created_at')
+        .eq('id', cursor)
+        .single();
+
+      if (!cursorPost) {
+        return res.json({ posts: [], nextCursor: null, hasMore: false });
+      }
+      query = query.lt('created_at', cursorPost.created_at);
+    }
+
+    const { data: posts, error } = await query;
+    if (error) throw error;
+
+    const hasMore = posts.length > limit;
+    const resultPosts = hasMore ? posts.slice(0, limit) : posts;
+    const nextCursor = hasMore && resultPosts.length > 0
+      ? resultPosts[resultPosts.length - 1].id
+      : null;
+
+    const enriched = await enrichPostsWithProfiles(resultPosts);
+    const withCounts = await enrichPostsWithCommentCounts(enriched);
+    const mapped = withCounts.map(mapPost);
+
+    res.json({ posts: mapped, nextCursor, hasMore });
+  } catch (error) {
+    console.error('Error fetching following feed:', error);
+    res.status(500).json({ error: 'Failed to fetch following feed.' });
   }
 });
 
@@ -94,7 +156,9 @@ router.get('/:id', async (req, res) => {
       .single();
 
     if (error || !post) return res.status(404).json({ error: 'Post not found' });
-    res.json(mapPost(post));
+    const [enriched] = await enrichPostsWithProfiles([post]);
+    const [withCount] = await enrichPostsWithCommentCounts([enriched]);
+    res.json(mapPost(withCount));
   } catch (error) {
     console.error('Error fetching post:', error);
     res.status(500).json({ error: 'Failed to fetch post.' });
@@ -278,8 +342,59 @@ router.delete('/:id', requireAuth, async (req, res) => {
   }
 });
 
+// Enrich posts with user profile data (display_name, username, avatar_url)
+async function enrichPostsWithProfiles(posts) {
+  if (!posts || posts.length === 0) return posts;
+
+  const userIds = [...new Set(posts.map(p => p.user_id))];
+  const { data: profiles } = await supabase
+    .from('user_profiles')
+    .select('id, display_name, username, avatar_url')
+    .in('id', userIds);
+
+  const profileMap = {};
+  if (profiles) {
+    for (const p of profiles) {
+      profileMap[p.id] = p;
+    }
+  }
+
+  return posts.map(post => {
+    post._profile = profileMap[post.user_id] || null;
+    return post;
+  });
+}
+
+// Enrich posts with comment counts
+async function enrichPostsWithCommentCounts(posts) {
+  if (!posts || posts.length === 0) return posts;
+
+  const postIds = posts.map(p => p.id);
+
+  // Fetch comment counts for all posts in batch
+  const countPromises = postIds.map(async (postId) => {
+    const { count } = await supabase
+      .from('comments')
+      .select('*', { count: 'exact', head: true })
+      .eq('post_id', postId);
+    return { postId, count: count || 0 };
+  });
+
+  const counts = await Promise.all(countPromises);
+  const countMap = {};
+  for (const { postId, count } of counts) {
+    countMap[postId] = count;
+  }
+
+  return posts.map(post => {
+    post._commentCount = countMap[post.id] || 0;
+    return post;
+  });
+}
+
 // Map Supabase snake_case to camelCase for frontend
 function mapPost(post) {
+  const profile = post._profile || {};
   return {
     id: post.id,
     userId: post.user_id,
@@ -288,6 +403,10 @@ function mapPost(post) {
     createdAt: post.created_at,
     updatedAt: post.updated_at,
     editedAt: post.edited_at || null,
+    displayName: profile.display_name || null,
+    username: profile.username || null,
+    avatarUrl: profile.avatar_url || null,
+    commentCount: post._commentCount || 0,
   };
 }
 

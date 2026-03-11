@@ -3,7 +3,7 @@ import SaveCollectionModal from "./SaveCollectionModal";
 import * as Clipboard from 'expo-clipboard';
 import { useActionSheet } from '@expo/react-native-action-sheet';
 import { Collection } from "../context/CollectionsContext";
-import { Tag, Recipe, deletePost, fetchRecipe } from '../services/api';
+import { Tag, Recipe, deletePost, fetchRecipe, likePost, unlikePost, reportContent } from '../services/api';
 import TagDisplay from './TagDisplay';
 import RecipeDisplay from './RecipeDisplay';
 import {
@@ -16,6 +16,7 @@ import {
   Alert,
   Animated,
 } from 'react-native';
+import { router } from 'expo-router';
 
 interface PostProps {
   id?: string;
@@ -30,26 +31,7 @@ interface PostProps {
   tags?: Tag[];
   initialLiked?: boolean;
   initialLikes?: number;
-}
-
-const BASE_URL = 'http://localhost:3000/api';
-
-async function likePost(postId: string): Promise<{ likes: number }> {
-  const res = await fetch(`${BASE_URL}/posts/${postId}/like`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-  });
-  if (!res.ok) throw new Error('Failed to like post');
-  return res.json();
-}
-
-async function unlikePost(postId: string): Promise<{ likes: number }> {
-  const res = await fetch(`${BASE_URL}/posts/${postId}/like`, {
-    method: 'DELETE',
-    headers: { 'Content-Type': 'application/json' },
-  });
-  if (!res.ok) throw new Error('Failed to unlike post');
-  return res.json();
+  verified?: boolean;
 }
 
 export default function Post({
@@ -65,13 +47,13 @@ export default function Post({
   tags,
   initialLiked = false,
   initialLikes = 0,
+  verified = false,
 }: PostProps) {
   const [liked, setLiked] = useState(initialLiked);
   const [likeCount, setLikeCount] = useState(initialLikes);
   const [likeLoading, setLikeLoading] = useState(false);
   const [saved, setSaved] = useState(false);
   const [collectionModalVisible, setCollectionModalVisible] = useState(false);
-  const [menuVisible, setMenuVisible] = useState(false);
   const [recipe, setRecipe] = useState<Recipe | null>(null);
 
   useEffect(() => {
@@ -161,6 +143,46 @@ export default function Post({
     Alert.alert('Link Copied', 'The post link has been copied to your clipboard.');
   };
 
+  const handleReport = () => {
+    if (!id) return;
+    const reasons = ['Spam', 'Inappropriate', 'Harassment', 'Other'];
+    Alert.alert('Report Post', 'Select a reason:', [
+      ...reasons.map((reason) => ({
+        text: reason,
+        onPress: async () => {
+          try {
+            await reportContent('post', id, reason);
+            Alert.alert('Report Submitted', 'Thank you for your report. We will review it shortly.');
+          } catch (error: any) {
+            Alert.alert('Error', error.message || 'Failed to submit report.');
+          }
+        },
+      })),
+      { text: 'Cancel', style: 'cancel' as const },
+    ]);
+  };
+
+  const showPostMenu = () => {
+    if (isOwner) {
+      const options = ['Delete', 'Report', 'Cancel'];
+      showActionSheetWithOptions(
+        { options, cancelButtonIndex: 2, destructiveButtonIndex: 0 },
+        (index) => {
+          if (index === 0) handleDelete();
+          if (index === 1) handleReport();
+        }
+      );
+    } else {
+      const options = ['Report', 'Cancel'];
+      showActionSheetWithOptions(
+        { options, cancelButtonIndex: 1, destructiveButtonIndex: 0 },
+        (index) => {
+          if (index === 0) handleReport();
+        }
+      );
+    }
+  };
+
   const showShareMenu = () => {
     const options = ['Share Externally', 'Copy Link', 'Cancel'];
     showActionSheetWithOptions({ options, cancelButtonIndex: 2 }, (index) => {
@@ -172,23 +194,26 @@ export default function Post({
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Image source={{ uri: profilePic }} style={styles.profilePic} />
-        <Text style={styles.username}>{username}</Text>
-        {isOwner && (
-          <TouchableOpacity style={styles.menuButton} onPress={() => setMenuVisible(!menuVisible)}>
-            <Text style={styles.menuDots}>...</Text>
-          </TouchableOpacity>
-        )}
+        <TouchableOpacity
+          style={styles.headerUserInfo}
+          onPress={() => userId && router.push(`/user-profile?userId=${userId}`)}
+          activeOpacity={0.7}
+        >
+          <Image source={{ uri: profilePic }} style={styles.profilePic} />
+          <Text style={styles.username}>{username}</Text>
+          {verified && <Text style={styles.verifiedBadge}>{'\u2713'}</Text>}
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.menuButton} onPress={showPostMenu}>
+          <Text style={styles.menuDots}>...</Text>
+        </TouchableOpacity>
       </View>
-      {menuVisible && isOwner && (
-        <View style={styles.menu}>
-          <TouchableOpacity style={styles.menuItem} onPress={() => { setMenuVisible(false); handleDelete(); }}>
-            <Text style={styles.deleteText}>Delete</Text>
-          </TouchableOpacity>
-        </View>
-      )}
 
-      <Image source={{ uri: postImage }} style={styles.postImage} />
+      <TouchableOpacity
+        activeOpacity={0.9}
+        onPress={() => id && router.push(`/post-detail?postId=${id}`)}
+      >
+        <Image source={{ uri: postImage }} style={styles.postImage} />
+      </TouchableOpacity>
 
       <View style={styles.actions}>
         <TouchableOpacity
@@ -223,9 +248,14 @@ export default function Post({
         {likeCount} {likeCount === 1 ? 'like' : 'likes'}
       </Text>
 
-      <Text style={styles.caption}>
-        <Text style={styles.captionUsername}>{username} </Text>{caption}
-      </Text>
+      <TouchableOpacity
+        activeOpacity={0.8}
+        onPress={() => id && router.push(`/post-detail?postId=${id}`)}
+      >
+        <Text style={styles.caption}>
+          <Text style={styles.captionUsername}>{username} </Text>{caption}
+        </Text>
+      </TouchableOpacity>
       {editedAt && <Text style={styles.editedLabel}>Edited</Text>}
 
       {tags && tags.length > 0 && <TagDisplay tags={tags} />}
@@ -244,17 +274,11 @@ export default function Post({
 const styles = StyleSheet.create({
   container: { marginVertical: 10, backgroundColor: '#fff', borderBottomWidth: 1, borderColor: '#ddd' },
   header: { flexDirection: 'row', alignItems: 'center', padding: 10 },
+  headerUserInfo: { flexDirection: 'row', alignItems: 'center', flex: 1 },
   profilePic: { width: 40, height: 40, borderRadius: 20, marginRight: 10 },
   username: { fontWeight: 'bold', fontSize: 16, flex: 1 },
   menuButton: { padding: 8 },
   menuDots: { fontSize: 20, fontWeight: 'bold', color: '#333' },
-  menu: {
-    position: 'absolute', top: 50, right: 10, backgroundColor: '#fff', borderRadius: 8,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2,
-    shadowRadius: 4, elevation: 5, zIndex: 10, minWidth: 120,
-  },
-  menuItem: { padding: 12 },
-  deleteText: { color: '#e74c3c', fontSize: 16, fontWeight: '600' },
   postImage: { width: '100%', height: 300, backgroundColor: '#eee' },
   actions: { flexDirection: 'row', paddingHorizontal: 10, paddingTop: 10, gap: 16 },
   actionButton: { paddingVertical: 4 },
@@ -264,5 +288,6 @@ const styles = StyleSheet.create({
   likeCount: { paddingHorizontal: 10, paddingTop: 4, fontSize: 14, fontWeight: '600', color: '#333' },
   caption: { paddingHorizontal: 10, paddingTop: 8, paddingBottom: 4, fontSize: 14, color: '#333' },
   captionUsername: { fontWeight: 'bold' },
+  verifiedBadge: { color: '#1DA1F2', fontSize: 16, fontWeight: 'bold', marginLeft: 4 },
   editedLabel: { paddingHorizontal: 10, paddingBottom: 10, fontSize: 12, color: '#999', fontStyle: 'italic' },
 });

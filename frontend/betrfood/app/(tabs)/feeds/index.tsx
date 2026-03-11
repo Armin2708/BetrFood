@@ -17,6 +17,7 @@ import {
   fetchPosts,
   fetchPostsByTags,
   fetchPostTags,
+  fetchFollowingFeed,
   getImageUrl,
   Post as PostType,
 } from '../../../services/api';
@@ -33,6 +34,7 @@ export default function HomeScreen() {
   const [hasMore, setHasMore] = useState(true);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
+  const [feedType, setFeedType] = useState<'forYou' | 'following'>('forYou');
 
   const loadPostsWithTags = useCallback(async (rawPosts: PostType[]) => {
     return Promise.all(
@@ -47,7 +49,7 @@ export default function HomeScreen() {
     );
   }, []);
 
-  const loadPosts = useCallback(async (tagIds: number[] = []) => {
+  const loadPosts = useCallback(async (tagIds: number[] = [], feed: 'forYou' | 'following' = 'forYou') => {
     setError(null);
     try {
       if (tagIds.length > 0) {
@@ -56,6 +58,12 @@ export default function HomeScreen() {
         setPosts(postsWithTags);
         setHasMore(false);
         setNextCursor(null);
+      } else if (feed === 'following') {
+        const data = await fetchFollowingFeed(null, PAGE_LIMIT);
+        const postsWithTags = await loadPostsWithTags(data.posts);
+        setPosts(postsWithTags);
+        setNextCursor(data.nextCursor);
+        setHasMore(data.hasMore);
       } else {
         const data = await fetchPosts(null, PAGE_LIMIT);
         const postsWithTags = await loadPostsWithTags(data.posts);
@@ -72,7 +80,9 @@ export default function HomeScreen() {
     if (loadingMore || !hasMore || !nextCursor || selectedTagIds.length > 0) return;
     setLoadingMore(true);
     try {
-      const data = await fetchPosts(nextCursor, PAGE_LIMIT);
+      const data = feedType === 'following'
+        ? await fetchFollowingFeed(nextCursor, PAGE_LIMIT)
+        : await fetchPosts(nextCursor, PAGE_LIMIT);
       const postsWithTags = await loadPostsWithTags(data.posts);
       setPosts(prev => [...prev, ...postsWithTags]);
       setNextCursor(data.nextCursor);
@@ -82,19 +92,19 @@ export default function HomeScreen() {
     } finally {
       setLoadingMore(false);
     }
-  }, [loadingMore, hasMore, nextCursor, selectedTagIds, loadPostsWithTags]);
+  }, [loadingMore, hasMore, nextCursor, selectedTagIds, feedType, loadPostsWithTags]);
 
   const fetchInitial = useCallback(async () => {
     setLoading(true);
-    await loadPosts(selectedTagIds);
+    await loadPosts(selectedTagIds, feedType);
     setLoading(false);
-  }, [loadPosts, selectedTagIds]);
+  }, [loadPosts, selectedTagIds, feedType]);
 
   const refresh = useCallback(async () => {
     setRefreshing(true);
-    await loadPosts(selectedTagIds);
+    await loadPosts(selectedTagIds, feedType);
     setRefreshing(false);
-  }, [loadPosts, selectedTagIds]);
+  }, [loadPosts, selectedTagIds, feedType]);
 
   useFocusEffect(
     useCallback(() => {
@@ -111,7 +121,15 @@ export default function HomeScreen() {
   const handleTagFilterChange = (tagIds: number[]) => {
     setSelectedTagIds(tagIds);
     setLoading(true);
-    loadPosts(tagIds).then(() => setLoading(false));
+    loadPosts(tagIds, feedType).then(() => setLoading(false));
+  };
+
+  const handleFeedTypeChange = (type: 'forYou' | 'following') => {
+    if (type === feedType) return;
+    setFeedType(type);
+    setSelectedTagIds([]);
+    setLoading(true);
+    loadPosts([], type).then(() => setLoading(false));
   };
 
   const handlePostDeleted = (postId: string) => {
@@ -123,7 +141,7 @@ export default function HomeScreen() {
       <View style={styles.container}>
         <TagFilterBar
           selectedTagIds={selectedTagIds}
-          onSelectionChange={handleTagFilterChange}
+          onFilterChange={handleTagFilterChange}
         />
         <PostSkeleton />
         <PostSkeleton />
@@ -145,9 +163,23 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
+      <View style={styles.feedToggle}>
+        <TouchableOpacity
+          style={[styles.feedToggleTab, feedType === 'forYou' && styles.feedToggleActive]}
+          onPress={() => handleFeedTypeChange('forYou')}
+        >
+          <Text style={[styles.feedToggleText, feedType === 'forYou' && styles.feedToggleTextActive]}>For You</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.feedToggleTab, feedType === 'following' && styles.feedToggleActive]}
+          onPress={() => handleFeedTypeChange('following')}
+        >
+          <Text style={[styles.feedToggleText, feedType === 'following' && styles.feedToggleTextActive]}>Following</Text>
+        </TouchableOpacity>
+      </View>
       <TagFilterBar
         selectedTagIds={selectedTagIds}
-        onSelectionChange={handleTagFilterChange}
+        onFilterChange={handleTagFilterChange}
       />
       <FlatList
         data={posts}
@@ -160,8 +192,8 @@ export default function HomeScreen() {
         renderItem={({ item }) => (
           <Post
             id={item.id}
-            profilePic={`https://ui-avatars.com/api/?name=${item.userId}&background=random`}
-            username={item.userId}
+            profilePic={item.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.displayName || item.username || item.userId)}&background=random`}
+            username={item.displayName || item.username || item.userId}
             postImage={getImageUrl(item.imagePath)}
             caption={item.caption}
             userId={item.userId}
@@ -205,6 +237,30 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f5f5f5' },
+  feedToggle: {
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  feedToggleTab: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  feedToggleActive: {
+    borderBottomWidth: 2,
+    borderBottomColor: '#FF6B35',
+  },
+  feedToggleText: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#999',
+  },
+  feedToggleTextActive: {
+    color: '#FF6B35',
+    fontWeight: '600',
+  },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
   errorText: { fontSize: 16, color: '#e74c3c', textAlign: 'center', marginBottom: 16 },
   retryButton: { backgroundColor: '#FF6B35', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 },

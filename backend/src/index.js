@@ -12,6 +12,13 @@ const adminRouter = require("./routes/admin");
 const rolesRouter = require("./routes/roles");
 const authRouter = require("./routes/auth");
 const likesRouter = require("./routes/likes");
+const commentsRouter = require("./routes/comments");
+const reportsRouter = require("./routes/reports");
+const collectionsRouter = require("./routes/collections");
+const savesRouter = require("./routes/saves");
+const preferencesRouter = require("./routes/preferences");
+const blocksRouter = require("./routes/blocks");
+const notificationsRouter = require("./routes/notifications");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -41,6 +48,14 @@ app.use("/api/admin", adminRouter);
 app.use("/api/roles", rolesRouter);
 app.use("/api/auth", authRouter);
 app.use("/api/posts", likesRouter);
+app.use("/api/posts", commentsRouter);
+app.use("/api/comments", commentsRouter);
+app.use("/api/reports", reportsRouter);
+app.use("/api/collections", collectionsRouter);
+app.use("/api/posts", savesRouter);
+app.use("/api/preferences", preferencesRouter);
+app.use("/api/users", blocksRouter);
+app.use("/api/notifications", notificationsRouter);
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

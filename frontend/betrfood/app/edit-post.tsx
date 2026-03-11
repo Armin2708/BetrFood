@@ -81,7 +81,7 @@ export default function EditPostScreen() {
       }
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to load post.');
-      router.back();
+      router.replace('/feeds');
     } finally {
       setLoading(false);
     }
@@ -147,7 +147,7 @@ export default function EditPostScreen() {
   }
 
   function handleCancel() {
-    router.back();
+    router.replace('/feeds');
   }
 
   if (loading) {

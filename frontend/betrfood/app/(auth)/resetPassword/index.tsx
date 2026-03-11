@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useRouter } from "expo-router"
+import { useSignIn } from "@clerk/clerk-expo";
 import {
   View,
   Text,
@@ -8,18 +9,44 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
+  Platform,
 } from "react-native";
 
 export default function ResetPasswordScreen() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
+  const { signIn, isLoaded } = useSignIn();
 
   const router = useRouter()
 
-  // TODO
-  const handleResetPassword = () => {
-    
-    router.push("/resetPassword/verificationCode")
+  const showError = (msg: string) => {
+    if (Platform.OS === 'web') {
+      window.alert(msg);
+    } else {
+      Alert.alert('Error', msg);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!isLoaded) return;
+    if (!email.trim()) {
+      showError('Please enter your email address.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await signIn.create({
+        strategy: 'reset_password_email_code',
+        identifier: email.trim(),
+      });
+      router.push("/resetPassword/verificationCode");
+    } catch (error: any) {
+      const msg = error.errors?.[0]?.longMessage || error.errors?.[0]?.message || error.message || 'Failed to send reset code.';
+      showError(msg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
