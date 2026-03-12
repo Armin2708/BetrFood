@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Recipe } from '../services/api';
+import { colors, DIFFICULTY_COLORS } from '../constants/theme';
 
 interface RecipeDisplayProps {
   recipe: Recipe;
@@ -15,11 +16,7 @@ export default function RecipeDisplay({ recipe }: RecipeDisplayProps) {
     hard: 'Hard',
   };
 
-  const difficultyColor = {
-    easy: '#4CAF50',
-    medium: '#FF9800',
-    hard: '#F44336',
-  };
+  const difficultyColor = DIFFICULTY_COLORS;
 
   return (
     <View style={styles.container}>
@@ -27,6 +24,9 @@ export default function RecipeDisplay({ recipe }: RecipeDisplayProps) {
         style={styles.header}
         onPress={() => setExpanded(!expanded)}
         activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel={expanded ? 'Collapse recipe' : 'Expand recipe'}
+        accessibilityState={{ expanded }}
       >
         <Text style={styles.headerTitle}>Recipe</Text>
         <Text style={styles.expandIcon}>{expanded ? '−' : '+'}</Text>
@@ -106,9 +106,9 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 4,
     borderRadius: 10,
-    backgroundColor: '#FFF8F0',
+    backgroundColor: colors.recipeBackground,
     borderWidth: 1,
-    borderColor: '#FFE0C2',
+    borderColor: colors.recipeBorder,
     overflow: 'hidden',
   },
   header: {
@@ -121,12 +121,12 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#FF6B35',
+    color: colors.primary,
   },
   expandIcon: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#FF6B35',
+    color: colors.primary,
   },
   content: {
     paddingHorizontal: 14,
@@ -143,19 +143,19 @@ const styles = StyleSheet.create({
   },
   metaLabel: {
     fontSize: 11,
-    color: '#999',
+    color: colors.textQuaternary,
     textTransform: 'uppercase',
     marginBottom: 2,
   },
   metaValue: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#333',
+    color: colors.textPrimary,
   },
   difficultyBadge: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.white,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 4,
@@ -167,7 +167,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 15,
     fontWeight: 'bold',
-    color: '#333',
+    color: colors.textPrimary,
     marginBottom: 8,
   },
   ingredientRow: {
@@ -177,7 +177,7 @@ const styles = StyleSheet.create({
   },
   bullet: {
     fontSize: 16,
-    color: '#FF6B35',
+    color: colors.primary,
     marginRight: 8,
     lineHeight: 20,
   },
@@ -196,7 +196,7 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: '#FF6B35',
+    backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 10,
@@ -205,7 +205,7 @@ const styles = StyleSheet.create({
   stepNumberText: {
     fontSize: 13,
     fontWeight: 'bold',
-    color: '#fff',
+    color: colors.white,
   },
   stepText: {
     fontSize: 14,

@@ -74,9 +74,10 @@ router.get('/', async (req, res) => {
       ? resultPosts[resultPosts.length - 1].id
       : null;
 
-    // Enrich with profile data and comment counts, map to camelCase
+    // Enrich with profile data, tags, and comment counts, map to camelCase
     const enriched = await enrichPostsWithProfiles(resultPosts);
-    const withCounts = await enrichPostsWithCommentCounts(enriched);
+    const withTags = await enrichPostsWithTags(enriched);
+    const withCounts = await enrichPostsWithCommentCounts(withTags);
     const mapped = withCounts.map(mapPost);
 
     res.json({ posts: mapped, nextCursor, hasMore });
@@ -136,13 +137,39 @@ router.get('/following', requireAuth, async (req, res) => {
       : null;
 
     const enriched = await enrichPostsWithProfiles(resultPosts);
-    const withCounts = await enrichPostsWithCommentCounts(enriched);
+    const withTags = await enrichPostsWithTags(enriched);
+    const withCounts = await enrichPostsWithCommentCounts(withTags);
     const mapped = withCounts.map(mapPost);
 
     res.json({ posts: mapped, nextCursor, hasMore });
   } catch (error) {
     console.error('Error fetching following feed:', error);
     res.status(500).json({ error: 'Failed to fetch following feed.' });
+  }
+});
+
+// GET /api/posts/user/:userId - get posts by a specific user
+router.get('/user/:userId', async (req, res) => {
+  try {
+    const limit = Math.min(Math.max(parseInt(req.query.limit) || 30, 1), 50);
+    const { data: posts, error } = await supabase
+      .from('posts')
+      .select('*')
+      .eq('user_id', req.params.userId)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (error) throw error;
+
+    const enriched = await enrichPostsWithProfiles(posts || []);
+    const withTags = await enrichPostsWithTags(enriched);
+    const withCounts = await enrichPostsWithCommentCounts(withTags);
+    const mapped = withCounts.map(mapPost);
+
+    res.json({ posts: mapped });
+  } catch (error) {
+    console.error('Error fetching user posts:', error);
+    res.status(500).json({ error: 'Failed to fetch user posts.' });
   }
 });
 
@@ -157,7 +184,8 @@ router.get('/:id', async (req, res) => {
 
     if (error || !post) return res.status(404).json({ error: 'Post not found' });
     const [enriched] = await enrichPostsWithProfiles([post]);
-    const [withCount] = await enrichPostsWithCommentCounts([enriched]);
+    const [withTags] = await enrichPostsWithTags([enriched]);
+    const [withCount] = await enrichPostsWithCommentCounts([withTags]);
     res.json(mapPost(withCount));
   } catch (error) {
     console.error('Error fetching post:', error);
@@ -365,6 +393,38 @@ async function enrichPostsWithProfiles(posts) {
   });
 }
 
+// Enrich posts with tags (batch fetch for all posts in one query)
+async function enrichPostsWithTags(posts) {
+  if (!posts || posts.length === 0) return posts;
+
+  const postIds = posts.map(p => p.id);
+
+  const { data: postTags, error } = await supabase
+    .from('post_tags')
+    .select('post_id, tag_id, tags(id, name, type)')
+    .in('post_id', postIds);
+
+  if (error) {
+    console.error('Error fetching tags for posts:', error);
+    return posts.map(post => { post._tags = []; return post; });
+  }
+
+  const tagMap = {};
+  if (postTags) {
+    for (const pt of postTags) {
+      if (!tagMap[pt.post_id]) tagMap[pt.post_id] = [];
+      if (pt.tags) {
+        tagMap[pt.post_id].push(pt.tags);
+      }
+    }
+  }
+
+  return posts.map(post => {
+    post._tags = tagMap[post.id] || [];
+    return post;
+  });
+}
+
 // Enrich posts with comment counts
 async function enrichPostsWithCommentCounts(posts) {
   if (!posts || posts.length === 0) return posts;
@@ -407,6 +467,7 @@ function mapPost(post) {
     username: profile.username || null,
     avatarUrl: profile.avatar_url || null,
     commentCount: post._commentCount || 0,
+    tags: (post._tags || []).map(t => ({ id: t.id, name: t.name, type: t.type })),
   };
 }
 

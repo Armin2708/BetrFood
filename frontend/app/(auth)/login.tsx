@@ -8,6 +8,8 @@ import {
   ActivityIndicator,
   Platform,
   Alert,
+  KeyboardAvoidingView,
+  ScrollView,
 } from "react-native";
 import { useState, useCallback } from "react";
 import { useRouter } from "expo-router";
@@ -155,104 +157,137 @@ function WebLogin() {
 
   if (pendingSecondFactor) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.title}>Verify Your Identity</Text>
-        <Text style={styles.subtitle}>
-          We sent a verification code to {email}
-        </Text>
-        <TextInput
-          placeholder="Verification code"
-          onChangeText={setCode}
-          value={code}
-          keyboardType="number-pad"
-          style={styles.input}
-        />
-        <TouchableOpacity
-          style={styles.button}
-          onPress={handleVerifySecondFactor}
-          disabled={loading}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView
+          contentContainerStyle={styles.container}
+          keyboardShouldPersistTaps="handled"
+          bounces={false}
         >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>Verify</Text>
-          )}
-        </TouchableOpacity>
-      </View>
+          <Text style={styles.title} accessibilityRole="header">Verify Your Identity</Text>
+          <Text style={styles.subtitle}>
+            We sent a verification code to {email}
+          </Text>
+          <TextInput
+            placeholder="Verification code"
+            onChangeText={setCode}
+            value={code}
+            keyboardType="number-pad"
+            style={styles.input}
+            accessibilityLabel="Verification code"
+          />
+          <TouchableOpacity
+            style={styles.button}
+            onPress={handleVerifySecondFactor}
+            disabled={loading}
+            accessibilityRole="button"
+            accessibilityLabel="Verify code"
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.buttonText}>Verify</Text>
+            )}
+          </TouchableOpacity>
+        </ScrollView>
+      </KeyboardAvoidingView>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Welcome Back</Text>
-      <Text style={styles.subtitle}>Sign in to your account</Text>
-
-      <TouchableOpacity
-        style={styles.oauthButton}
-        onPress={() => handleOAuth("oauth_google")}
-        disabled={loading}
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+      <ScrollView
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
+        bounces={false}
       >
-        <Text style={styles.oauthButtonText}>Continue with Google</Text>
-      </TouchableOpacity>
+        <Text style={styles.title} accessibilityRole="header">Welcome Back</Text>
+        <Text style={styles.subtitle}>Sign in to your account</Text>
 
-      <TouchableOpacity
-        style={[styles.oauthButton, styles.appleButton]}
-        onPress={() => handleOAuth("oauth_apple")}
-        disabled={loading}
-      >
-        <Text style={[styles.oauthButtonText, styles.appleButtonText]}>
-          Continue with Apple
-        </Text>
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.oauthButton}
+          onPress={() => handleOAuth("oauth_google")}
+          disabled={loading}
+          accessibilityRole="button"
+          accessibilityLabel="Continue with Google"
+        >
+          <Text style={styles.oauthButtonText}>Continue with Google</Text>
+        </TouchableOpacity>
 
-      <View style={styles.divider}>
-        <View style={styles.dividerLine} />
-        <Text style={styles.dividerText}>or</Text>
-        <View style={styles.dividerLine} />
-      </View>
+        <TouchableOpacity
+          style={[styles.oauthButton, styles.appleButton]}
+          onPress={() => handleOAuth("oauth_apple")}
+          disabled={loading}
+          accessibilityRole="button"
+          accessibilityLabel="Continue with Apple"
+        >
+          <Text style={[styles.oauthButtonText, styles.appleButtonText]}>
+            Continue with Apple
+          </Text>
+        </TouchableOpacity>
 
-      <TextInput
-        placeholder="Email"
-        onChangeText={setEmail}
-        value={email}
-        autoCapitalize="none"
-        keyboardType="email-address"
-        style={styles.input}
-      />
+        <View style={styles.divider}>
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerText}>or</Text>
+          <View style={styles.dividerLine} />
+        </View>
 
-      <TextInput
-        placeholder="Password"
-        secureTextEntry
-        onChangeText={setPassword}
-        value={password}
-        style={styles.input}
-      />
+        <TextInput
+          placeholder="Email"
+          onChangeText={setEmail}
+          value={email}
+          autoCapitalize="none"
+          keyboardType="email-address"
+          style={styles.input}
+          accessibilityLabel="Email address"
+          accessibilityHint="Enter your email"
+        />
 
-      <TouchableOpacity
-        style={styles.button}
-        onPress={handleLogin}
-        disabled={loading}
-      >
-        {loading ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.buttonText}>Sign In</Text>
-        )}
-      </TouchableOpacity>
+        <TextInput
+          placeholder="Password"
+          secureTextEntry
+          onChangeText={setPassword}
+          value={password}
+          style={styles.input}
+          accessibilityLabel="Password"
+          accessibilityHint="Enter your password"
+        />
 
-      <TouchableOpacity
-        style={styles.linkButton}
-        onPress={() => router.push("/signup")}
-      >
-        <Text style={styles.linkText}>
-          Don't have an account? <Text style={styles.linkBold}>Sign Up</Text>
-        </Text>
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.button}
+          onPress={handleLogin}
+          disabled={loading}
+          accessibilityRole="button"
+          accessibilityLabel="Sign in"
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.buttonText}>Sign In</Text>
+          )}
+        </TouchableOpacity>
 
-      <Pressable onPress={() => router.push("/resetPassword")}>
-        <Text style={styles.forgotPasswordText}>Forgot password?</Text>
-      </Pressable>
-    </View>
+        <TouchableOpacity
+          style={styles.linkButton}
+          onPress={() => router.push("/signup")}
+          accessibilityRole="link"
+          accessibilityLabel="Don't have an account? Sign up"
+        >
+          <Text style={styles.linkText}>
+            Don't have an account? <Text style={styles.linkBold}>Sign Up</Text>
+          </Text>
+        </TouchableOpacity>
+
+        <Pressable onPress={() => router.push("/resetPassword")} accessibilityRole="link" accessibilityLabel="Forgot password">
+          <Text style={styles.forgotPasswordText}>Forgot password?</Text>
+        </Pressable>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -379,110 +414,143 @@ function NativeLogin() {
 
   if (pendingSecondFactor) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.title}>Verify Your Identity</Text>
-        <Text style={styles.subtitle}>
-          We sent a verification code to {email}
-        </Text>
-        <TextInput
-          placeholder="Verification code"
-          onChangeText={setCode}
-          value={code}
-          keyboardType="number-pad"
-          style={styles.input}
-        />
-        <TouchableOpacity
-          style={styles.button}
-          onPress={handleVerifySecondFactor}
-          disabled={loading}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView
+          contentContainerStyle={styles.container}
+          keyboardShouldPersistTaps="handled"
+          bounces={false}
         >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>Verify</Text>
-          )}
-        </TouchableOpacity>
-      </View>
+          <Text style={styles.title} accessibilityRole="header">Verify Your Identity</Text>
+          <Text style={styles.subtitle}>
+            We sent a verification code to {email}
+          </Text>
+          <TextInput
+            placeholder="Verification code"
+            onChangeText={setCode}
+            value={code}
+            keyboardType="number-pad"
+            style={styles.input}
+            accessibilityLabel="Verification code"
+          />
+          <TouchableOpacity
+            style={styles.button}
+            onPress={handleVerifySecondFactor}
+            disabled={loading}
+            accessibilityRole="button"
+            accessibilityLabel="Verify code"
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.buttonText}>Verify</Text>
+            )}
+          </TouchableOpacity>
+        </ScrollView>
+      </KeyboardAvoidingView>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Welcome Back</Text>
-      <Text style={styles.subtitle}>Sign in to your account</Text>
-
-      <TouchableOpacity
-        style={styles.oauthButton}
-        onPress={() => handleOAuth("oauth_google")}
-        disabled={loading}
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+      <ScrollView
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
+        bounces={false}
       >
-        <Text style={styles.oauthButtonText}>Continue with Google</Text>
-      </TouchableOpacity>
+        <Text style={styles.title} accessibilityRole="header">Welcome Back</Text>
+        <Text style={styles.subtitle}>Sign in to your account</Text>
 
-      <TouchableOpacity
-        style={[styles.oauthButton, styles.appleButton]}
-        onPress={() => handleOAuth("oauth_apple")}
-        disabled={loading}
-      >
-        <Text style={[styles.oauthButtonText, styles.appleButtonText]}>
-          Continue with Apple
-        </Text>
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.oauthButton}
+          onPress={() => handleOAuth("oauth_google")}
+          disabled={loading}
+          accessibilityRole="button"
+          accessibilityLabel="Continue with Google"
+        >
+          <Text style={styles.oauthButtonText}>Continue with Google</Text>
+        </TouchableOpacity>
 
-      <View style={styles.divider}>
-        <View style={styles.dividerLine} />
-        <Text style={styles.dividerText}>or</Text>
-        <View style={styles.dividerLine} />
-      </View>
+        <TouchableOpacity
+          style={[styles.oauthButton, styles.appleButton]}
+          onPress={() => handleOAuth("oauth_apple")}
+          disabled={loading}
+          accessibilityRole="button"
+          accessibilityLabel="Continue with Apple"
+        >
+          <Text style={[styles.oauthButtonText, styles.appleButtonText]}>
+            Continue with Apple
+          </Text>
+        </TouchableOpacity>
 
-      <TextInput
-        placeholder="Email"
-        onChangeText={setEmail}
-        value={email}
-        autoCapitalize="none"
-        keyboardType="email-address"
-        style={styles.input}
-      />
+        <View style={styles.divider}>
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerText}>or</Text>
+          <View style={styles.dividerLine} />
+        </View>
 
-      <TextInput
-        placeholder="Password"
-        secureTextEntry
-        onChangeText={setPassword}
-        value={password}
-        style={styles.input}
-      />
+        <TextInput
+          placeholder="Email"
+          onChangeText={setEmail}
+          value={email}
+          autoCapitalize="none"
+          keyboardType="email-address"
+          style={styles.input}
+          accessibilityLabel="Email address"
+          accessibilityHint="Enter your email"
+        />
 
-      <TouchableOpacity
-        style={styles.button}
-        onPress={handleLogin}
-        disabled={loading}
-      >
-        {loading ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.buttonText}>Sign In</Text>
-        )}
-      </TouchableOpacity>
+        <TextInput
+          placeholder="Password"
+          secureTextEntry
+          onChangeText={setPassword}
+          value={password}
+          style={styles.input}
+          accessibilityLabel="Password"
+          accessibilityHint="Enter your password"
+        />
 
-      <TouchableOpacity
-        style={styles.linkButton}
-        onPress={() => router.push("/signup")}
-      >
-        <Text style={styles.linkText}>
-          Don't have an account? <Text style={styles.linkBold}>Sign Up</Text>
-        </Text>
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.button}
+          onPress={handleLogin}
+          disabled={loading}
+          accessibilityRole="button"
+          accessibilityLabel="Sign in"
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.buttonText}>Sign In</Text>
+          )}
+        </TouchableOpacity>
 
-      <Pressable onPress={() => router.push("/resetPassword")}>
-        <Text style={styles.forgotPasswordText}>Forgot password?</Text>
-      </Pressable>
-    </View>
+        <TouchableOpacity
+          style={styles.linkButton}
+          onPress={() => router.push("/signup")}
+          accessibilityRole="link"
+          accessibilityLabel="Don't have an account? Sign up"
+        >
+          <Text style={styles.linkText}>
+            Don't have an account? <Text style={styles.linkBold}>Sign Up</Text>
+          </Text>
+        </TouchableOpacity>
+
+        <Pressable onPress={() => router.push("/resetPassword")} accessibilityRole="link" accessibilityLabel="Forgot password">
+          <Text style={styles.forgotPasswordText}>Forgot password?</Text>
+        </Pressable>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flexGrow: 1,
     padding: 24,
     justifyContent: "center",
     alignItems: "center",

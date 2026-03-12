@@ -34,9 +34,11 @@ import {
   Tag,
   Comment,
 } from '../services/api';
+import { Ionicons } from '@expo/vector-icons';
 import { AuthContext } from '../context/AuthenticationContext';
 import TagDisplay from '../components/TagDisplay';
 import RecipeDisplay from '../components/RecipeDisplay';
+import { colors } from '../constants/theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -226,7 +228,7 @@ export default function PostDetailScreen() {
   const handleExternalShare = async () => {
     try {
       await Share.share({
-        message: `Check out this post from ${post?.username || 'BetrFood'}: https://yourapp.com/posts/${postId}`,
+        message: `Check out this post from ${post?.username || 'BetrFood'}: betrfood://posts/${postId}`,
       });
     } catch {
       Alert.alert('Error', 'Could not share the post.');
@@ -234,7 +236,7 @@ export default function PostDetailScreen() {
   };
 
   const handleCopyLink = async () => {
-    const link = `https://yourapp.com/posts/${postId}`;
+    const link = `betrfood://posts/${postId}`;
     await Clipboard.setStringAsync(link);
     Alert.alert('Link Copied', 'The post link has been copied to your clipboard.');
   };
@@ -297,7 +299,7 @@ export default function PostDetailScreen() {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#FF6B35" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -346,13 +348,15 @@ export default function PostDetailScreen() {
 
             {/* Comment actions */}
             <View style={styles.commentActions}>
-              <TouchableOpacity onPress={() => handleReply(comment)} style={styles.commentActionBtn}>
+              <TouchableOpacity onPress={() => handleReply(comment)} style={styles.commentActionBtn} accessibilityRole="button" accessibilityLabel={`Reply to ${comment.displayName || comment.username || 'user'}`}>
                 <Text style={styles.commentActionText}>Reply</Text>
               </TouchableOpacity>
               {isCommentOwner && (
                 <TouchableOpacity
                   onPress={() => handleDeleteComment(comment.id)}
                   style={styles.commentActionBtn}
+                  accessibilityRole="button"
+                  accessibilityLabel="Delete comment"
                 >
                   <Text style={[styles.commentActionText, styles.commentDeleteText]}>Delete</Text>
                 </TouchableOpacity>
@@ -377,13 +381,13 @@ export default function PostDetailScreen() {
     >
       {/* Header bar */}
       <View style={styles.headerBar}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Text style={styles.backArrow}>{'<'}</Text>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton} accessibilityRole="button" accessibilityLabel="Go back">
+          <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Post</Text>
+        <Text style={styles.headerTitle} accessibilityRole="header">Post</Text>
         {isOwner ? (
-          <TouchableOpacity onPress={showOwnerMenu} style={styles.moreButton}>
-            <Text style={styles.moreButtonText}>...</Text>
+          <TouchableOpacity onPress={showOwnerMenu} style={styles.moreButton} accessibilityRole="button" accessibilityLabel="Post options">
+            <Ionicons name="ellipsis-horizontal" size={22} color={colors.textPrimary} />
           </TouchableOpacity>
         ) : (
           <View style={styles.moreButton} />
@@ -393,7 +397,7 @@ export default function PostDetailScreen() {
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {/* Full-width image */}
         {imageUri ? (
-          <Image source={{ uri: imageUri }} style={styles.postImage} resizeMode="cover" />
+          <Image source={{ uri: imageUri }} style={styles.postImage} resizeMode="cover" accessibilityLabel={`Photo by ${post.displayName || post.username || 'user'}`} />
         ) : null}
 
         {/* Author info */}
@@ -436,6 +440,9 @@ export default function PostDetailScreen() {
             style={styles.actionButton}
             disabled={likeLoading}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={liked ? 'Unlike' : 'Like'}
+            accessibilityState={{ selected: liked }}
           >
             <Animated.Text
               style={[
@@ -448,7 +455,7 @@ export default function PostDetailScreen() {
             </Animated.Text>
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={showShareMenu} style={styles.actionButton}>
+          <TouchableOpacity onPress={showShareMenu} style={styles.actionButton} accessibilityRole="button" accessibilityLabel="Share">
             <Text style={styles.actionText}>{'\uD83D\uDD17'} Share</Text>
           </TouchableOpacity>
         </View>
@@ -493,7 +500,7 @@ export default function PostDetailScreen() {
           {commentsLoading && (
             <ActivityIndicator
               size="small"
-              color="#FF6B35"
+              color={colors.primary}
               style={styles.commentsLoader}
             />
           )}
@@ -502,6 +509,8 @@ export default function PostDetailScreen() {
             <TouchableOpacity
               onPress={handleLoadMoreComments}
               style={styles.loadMoreButton}
+              accessibilityRole="button"
+              accessibilityLabel="Load more comments"
             >
               <Text style={styles.loadMoreText}>Load more comments</Text>
             </TouchableOpacity>
@@ -526,11 +535,13 @@ export default function PostDetailScreen() {
             ref={commentInputRef}
             style={styles.commentInput}
             placeholder="Add a comment..."
-            placeholderTextColor="#999"
+            placeholderTextColor={colors.placeholder}
             value={commentText}
             onChangeText={setCommentText}
             multiline
             maxLength={1000}
+            accessibilityLabel="Write a comment"
+            accessibilityHint="Type your comment and press send"
           />
           <TouchableOpacity
             onPress={handleSubmitComment}
@@ -539,9 +550,11 @@ export default function PostDetailScreen() {
               styles.sendButton,
               (!commentText.trim() || submittingComment) && styles.sendButtonDisabled,
             ]}
+            accessibilityRole="button"
+            accessibilityLabel="Send comment"
           >
             {submittingComment ? (
-              <ActivityIndicator size="small" color="#fff" />
+              <ActivityIndicator size="small" color={colors.white} />
             ) : (
               <Text style={styles.sendButtonText}>Send</Text>
             )}
@@ -555,27 +568,27 @@ export default function PostDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.backgroundPrimary,
   },
   centered: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: colors.backgroundPrimary,
   },
   errorText: {
     fontSize: 16,
-    color: '#666',
+    color: colors.textSecondary,
     marginBottom: 16,
   },
   backButtonFallback: {
     paddingVertical: 10,
     paddingHorizontal: 24,
-    backgroundColor: '#FF6B35',
+    backgroundColor: colors.primary,
     borderRadius: 8,
   },
   backButtonFallbackText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -584,11 +597,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 56,
+    paddingTop: 8,
     paddingBottom: 12,
-    backgroundColor: '#fff',
+    backgroundColor: colors.backgroundPrimary,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: colors.borderLight,
   },
   backButton: {
     width: 40,
@@ -596,26 +609,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  backArrow: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-  },
   headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
+    color: colors.textPrimary,
   },
   moreButton: {
     width: 40,
     height: 40,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  moreButtonText: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#333',
   },
   scrollView: {
     flex: 1,
@@ -626,7 +629,7 @@ const styles = StyleSheet.create({
   postImage: {
     width: SCREEN_WIDTH,
     height: SCREEN_WIDTH,
-    backgroundColor: '#eee',
+    backgroundColor: colors.borderLight,
   },
   authorRow: {
     flexDirection: 'row',
@@ -639,17 +642,17 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: 22,
     marginRight: 12,
-    backgroundColor: '#eee',
+    backgroundColor: colors.borderLight,
   },
   avatarPlaceholder: {
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FF6B35',
+    backgroundColor: colors.primary,
   },
   avatarPlaceholderText: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#fff',
+    color: colors.white,
   },
   authorInfo: {
     flex: 1,
@@ -657,16 +660,16 @@ const styles = StyleSheet.create({
   displayName: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#333',
+    color: colors.textPrimary,
   },
   usernameText: {
     fontSize: 14,
-    color: '#888',
+    color: colors.textTertiary,
     marginTop: 1,
   },
   caption: {
     fontSize: 15,
-    color: '#333',
+    color: colors.textPrimary,
     lineHeight: 22,
     paddingHorizontal: 16,
     paddingBottom: 12,
@@ -680,17 +683,17 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     gap: 20,
     borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
+    borderTopColor: colors.backgroundTertiary,
   },
   actionButton: {
     paddingVertical: 8,
   },
   actionText: {
     fontSize: 16,
-    color: '#333',
+    color: colors.textPrimary,
   },
   likedText: {
-    color: 'red',
+    color: colors.liked,
     fontWeight: '600',
   },
   likeCount: {
@@ -699,7 +702,7 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
     fontSize: 14,
     fontWeight: '600',
-    color: '#333',
+    color: colors.textPrimary,
   },
   recipeSection: {
     marginTop: 4,
@@ -709,16 +712,16 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 8,
     borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
+    borderTopColor: colors.backgroundTertiary,
     marginTop: 8,
   },
   timestampText: {
     fontSize: 12,
-    color: '#999',
+    color: colors.textQuaternary,
   },
   editedText: {
     fontSize: 12,
-    color: '#999',
+    color: colors.textQuaternary,
     fontStyle: 'italic',
     marginTop: 2,
   },
@@ -728,18 +731,18 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 8,
     borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
+    borderTopColor: colors.backgroundTertiary,
     marginTop: 8,
   },
   commentsHeader: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#333',
+    color: colors.textPrimary,
     marginBottom: 12,
   },
   noCommentsText: {
     fontSize: 14,
-    color: '#999',
+    color: colors.textQuaternary,
     textAlign: 'center',
     paddingVertical: 20,
   },
@@ -752,17 +755,17 @@ const styles = StyleSheet.create({
     height: 32,
     borderRadius: 16,
     marginRight: 10,
-    backgroundColor: '#eee',
+    backgroundColor: colors.borderLight,
   },
   commentAvatarPlaceholder: {
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FF6B35',
+    backgroundColor: colors.primary,
   },
   commentAvatarText: {
     fontSize: 13,
     fontWeight: 'bold',
-    color: '#fff',
+    color: colors.white,
   },
   commentBody: {
     flex: 1,
@@ -775,16 +778,16 @@ const styles = StyleSheet.create({
   commentUsername: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#333',
+    color: colors.textPrimary,
     marginRight: 8,
   },
   commentTime: {
     fontSize: 12,
-    color: '#999',
+    color: colors.textQuaternary,
   },
   commentContent: {
     fontSize: 14,
-    color: '#333',
+    color: colors.textPrimary,
     lineHeight: 20,
   },
   commentActions: {
@@ -793,15 +796,18 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   commentActionBtn: {
-    paddingVertical: 2,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    minHeight: 44,
+    justifyContent: 'center',
   },
   commentActionText: {
     fontSize: 12,
-    color: '#888',
+    color: colors.textTertiary,
     fontWeight: '500',
   },
   commentDeleteText: {
-    color: '#e74c3c',
+    color: colors.delete,
   },
   commentsLoader: {
     paddingVertical: 12,
@@ -812,14 +818,14 @@ const styles = StyleSheet.create({
   },
   loadMoreText: {
     fontSize: 14,
-    color: '#FF6B35',
+    color: colors.primary,
     fontWeight: '600',
   },
   // Comment input bar
   commentInputContainer: {
     borderTopWidth: 1,
-    borderTopColor: '#eee',
-    backgroundColor: '#fff',
+    borderTopColor: colors.borderLight,
+    backgroundColor: colors.backgroundPrimary,
     paddingBottom: Platform.OS === 'ios' ? 24 : 8,
   },
   replyIndicator: {
@@ -828,19 +834,19 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: '#f8f8f8',
+    backgroundColor: colors.backgroundSubtle,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: colors.borderLight,
   },
   replyIndicatorText: {
     fontSize: 13,
-    color: '#666',
+    color: colors.textSecondary,
     flex: 1,
     marginRight: 8,
   },
   replyCancel: {
     fontSize: 13,
-    color: '#FF6B35',
+    color: colors.primary,
     fontWeight: '600',
   },
   commentInputRow: {
@@ -853,16 +859,16 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 36,
     maxHeight: 100,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.backgroundSecondary,
     borderRadius: 18,
     paddingHorizontal: 14,
     paddingVertical: 8,
     fontSize: 14,
-    color: '#333',
+    color: colors.textPrimary,
     marginRight: 8,
   },
   sendButton: {
-    backgroundColor: '#FF6B35',
+    backgroundColor: colors.primary,
     borderRadius: 18,
     paddingHorizontal: 16,
     paddingVertical: 9,
@@ -871,10 +877,10 @@ const styles = StyleSheet.create({
     minWidth: 56,
   },
   sendButtonDisabled: {
-    backgroundColor: '#ccc',
+    backgroundColor: colors.border,
   },
   sendButtonText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 14,
     fontWeight: '600',
   },

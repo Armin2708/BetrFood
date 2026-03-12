@@ -1,10 +1,10 @@
-import { View, Text, Pressable, StyleSheet, Image, FlatList, Dimensions, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Image, FlatList, Dimensions, ActivityIndicator, RefreshControl } from 'react-native';
 import { Stack, useRouter } from 'expo-router'
 import { Ionicons } from "@expo/vector-icons";
 import { useState, useCallback, useContext } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { AuthContext } from '../../../context/AuthenticationContext';
-import { fetchMyProfile, fetchFollowStats, fetchPosts, getImageUrl, UserProfile, Post as PostType } from '../../../services/api';
+import { fetchMyProfile, fetchFollowStats, fetchUserPosts, getImageUrl, UserProfile, Post as PostType } from '../../../services/api';
 
 const { width } = Dimensions.get('window');
 const ITEM_SIZE = width / 3;
@@ -16,6 +16,7 @@ export default function ProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [followStats, setFollowStats] = useState({ followerCount: 0, followingCount: 0 });
   const [userPosts, setUserPosts] = useState<PostType[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
 
   const loadProfile = useCallback(async () => {
     if (!user) return;
@@ -30,12 +31,9 @@ export default function ProfileScreen() {
           .catch(() => {});
       }
 
-      // Load user's posts
-      fetchPosts(null, 50)
-        .then(result => {
-          const myPosts = result.posts.filter(p => p.userId === data.id);
-          setUserPosts(myPosts);
-        })
+      // Load user's posts using dedicated endpoint
+      fetchUserPosts(data.id)
+        .then(result => setUserPosts(result.posts))
         .catch(() => {});
     } catch (error) {
       console.error('Failed to load profile:', error);
@@ -43,6 +41,12 @@ export default function ProfileScreen() {
       setLoading(false);
     }
   }, [user]);
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadProfile();
+    setRefreshing(false);
+  }, [loadProfile]);
 
   useFocusEffect(
     useCallback(() => {
@@ -64,7 +68,7 @@ export default function ProfileScreen() {
       <Stack.Screen
         options={{
           headerRight: () => (
-            <Pressable onPress={() => router.push('/profile/settings')}>
+            <Pressable onPress={() => router.push('/profile/settings')} accessibilityRole="button" accessibilityLabel="Settings">
               <Ionicons name='settings-outline' size={24}/>
             </Pressable>
           ),
@@ -72,17 +76,10 @@ export default function ProfileScreen() {
       />
 
       <View style={styles.container}>
-        {/* Settings icon */}
-        <View style={styles.settingsRow}>
-          <Pressable onPress={() => router.push('/profile/settings')} style={styles.settingsButton}>
-            <Ionicons name="settings-outline" size={24} color="#333" />
-          </Pressable>
-        </View>
-
         {/* Header */}
         <View style={styles.header}>
           {profile?.avatarUrl ? (
-            <Image source={{ uri: profile.avatarUrl }} style={styles.avatar} />
+            <Image source={{ uri: profile.avatarUrl }} style={styles.avatar} accessibilityLabel={`${profile?.displayName || 'User'}'s profile photo`} />
           ) : (
             <View style={[styles.avatar, styles.avatarFallback]}>
               <Ionicons name="person" size={40} color="#999" />
@@ -113,14 +110,14 @@ export default function ProfileScreen() {
         </View>
 
         {/* Edit Profile Button */}
-        <Pressable style={styles.editButton} onPress={() => router.push("/profile/info/editProfile")}>
+        <Pressable style={styles.editButton} onPress={() => router.push("/profile/info/editProfile")} accessibilityRole="button" accessibilityLabel="Edit profile">
           <View>
             <Text style={styles.editButtonText}>Edit Profile</Text>
           </View>
         </Pressable>
 
         {/* Collections Button */}
-        <Pressable style={styles.collectionsButton} onPress={() => router.push("/profile/collections")}>
+        <Pressable style={styles.collectionsButton} onPress={() => router.push("/profile/collections")} accessibilityRole="button" accessibilityLabel="View collections">
           <Ionicons name="folder-outline" size={18} color="#4CAF50" />
           <Text style={styles.collectionsButtonText}>Collections</Text>
           <Ionicons name="chevron-forward" size={16} color="#ccc" />
@@ -132,12 +129,16 @@ export default function ProfileScreen() {
           keyExtractor={(item) => item.id}
           numColumns={3}
           renderItem={({ item }) => (
-            <Image
-              source={{ uri: getImageUrl(item.imagePath) }}
-              style={styles.gridItem}
-            />
+            <Pressable onPress={() => router.push(`/post-detail?postId=${item.id}`)}>
+              <Image
+                source={{ uri: getImageUrl(item.imagePath) }}
+                style={styles.gridItem}
+                accessibilityLabel={item.caption || 'Post image'}
+              />
+            </Pressable>
           )}
           showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
           ListEmptyComponent={
             <View style={styles.emptyGrid}>
               <Text style={styles.emptyText}>No posts yet</Text>
@@ -152,7 +153,7 @@ export default function ProfileScreen() {
 function Stat({ label, value, callback }: { label: string; value: string; callback: () => void }) {
   return (
     <View style={styles.statItem}>
-      <Pressable onPress={ callback }>
+      <Pressable onPress={ callback } accessibilityLabel={`${value} ${label}`}>
         <Text style={styles.statValue}>{value}</Text>
         <Text style={styles.statLabel}>{label}</Text>
         </Pressable>
@@ -164,15 +165,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
-  },
-  settingsRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    paddingHorizontal: 16,
-    paddingTop: 8,
-  },
-  settingsButton: {
-    padding: 8,
   },
   header: {
     flexDirection: 'row',

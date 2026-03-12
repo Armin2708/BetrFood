@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import SaveCollectionModal from "./SaveCollectionModal";
 import * as Clipboard from 'expo-clipboard';
 import { useActionSheet } from '@expo/react-native-action-sheet';
+import { Ionicons } from '@expo/vector-icons';
 import { Collection } from "../context/CollectionsContext";
 import { Tag, Recipe, deletePost, fetchRecipe, likePost, unlikePost, reportContent } from '../services/api';
 import TagDisplay from './TagDisplay';
 import RecipeDisplay from './RecipeDisplay';
+import { colors } from '../constants/theme';
 import {
   View,
   Text,
@@ -130,7 +132,7 @@ export default function Post({
   const handleExternalShare = async () => {
     try {
       await Share.share({
-        message: `Check out this post from ${username}: https://yourapp.com/posts/${id}`,
+        message: `Check out this post from ${username}: betrfood://posts/${id}`,
       });
     } catch {
       Alert.alert('Error', 'Could not share the post.');
@@ -138,7 +140,7 @@ export default function Post({
   };
 
   const handleCopyLink = async () => {
-    const link = `https://yourapp.com/posts/${id}`;
+    const link = `betrfood://posts/${id}`;
     await Clipboard.setStringAsync(link);
     Alert.alert('Link Copied', 'The post link has been copied to your clipboard.');
   };
@@ -192,25 +194,28 @@ export default function Post({
   };
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} accessible={true} accessibilityLabel={`Post by ${username}`}>
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.headerUserInfo}
           onPress={() => userId && router.push(`/user-profile?userId=${userId}`)}
           activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel={`View ${username}'s profile`}
         >
           <Image source={{ uri: profilePic }} style={styles.profilePic} />
           <Text style={styles.username}>{username}</Text>
           {verified && <Text style={styles.verifiedBadge}>{'\u2713'}</Text>}
         </TouchableOpacity>
-        <TouchableOpacity style={styles.menuButton} onPress={showPostMenu}>
-          <Text style={styles.menuDots}>...</Text>
+        <TouchableOpacity style={styles.menuButton} onPress={showPostMenu} accessibilityRole="button" accessibilityLabel="Post options">
+          <Ionicons name="ellipsis-horizontal" size={20} color={colors.textPrimary} />
         </TouchableOpacity>
       </View>
 
       <TouchableOpacity
         activeOpacity={0.9}
         onPress={() => id && router.push(`/post-detail?postId=${id}`)}
+        accessibilityLabel={`Post by ${username}: ${caption?.substring(0, 80) || 'photo'}`}
       >
         <Image source={{ uri: postImage }} style={styles.postImage} />
       </TouchableOpacity>
@@ -221,6 +226,9 @@ export default function Post({
           style={styles.actionButton}
           disabled={likeLoading}
           activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel={liked ? `Unlike post, ${likeCount} likes` : `Like post, ${likeCount} likes`}
+          accessibilityState={{ selected: liked }}
         >
           <Animated.Text
             style={[
@@ -233,24 +241,31 @@ export default function Post({
           </Animated.Text>
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={handleSavePress} style={styles.actionButton}>
+        <TouchableOpacity
+          onPress={handleSavePress}
+          style={styles.actionButton}
+          accessibilityRole="button"
+          accessibilityLabel={saved ? 'Remove from saved' : 'Save post'}
+          accessibilityState={{ selected: saved }}
+        >
           <Text style={[styles.actionText, saved && styles.saved]}>
             {saved ? '🔖 Saved' : '🔖 Save'}
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={showShareMenu} style={styles.actionButton}>
+        <TouchableOpacity onPress={showShareMenu} style={styles.actionButton} accessibilityRole="button" accessibilityLabel="Share post">
           <Text style={styles.actionText}>🔗 Share</Text>
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.likeCount}>
+      <Text style={styles.likeCount} accessibilityLabel={`${likeCount} ${likeCount === 1 ? 'like' : 'likes'}`}>
         {likeCount} {likeCount === 1 ? 'like' : 'likes'}
       </Text>
 
       <TouchableOpacity
         activeOpacity={0.8}
         onPress={() => id && router.push(`/post-detail?postId=${id}`)}
+        accessibilityLabel={`${username}: ${caption}`}
       >
         <Text style={styles.caption}>
           <Text style={styles.captionUsername}>{username} </Text>{caption}
@@ -272,22 +287,21 @@ export default function Post({
 }
 
 const styles = StyleSheet.create({
-  container: { marginVertical: 10, backgroundColor: '#fff', borderBottomWidth: 1, borderColor: '#ddd' },
+  container: { marginVertical: 10, backgroundColor: colors.backgroundPrimary, borderBottomWidth: 1, borderColor: colors.border },
   header: { flexDirection: 'row', alignItems: 'center', padding: 10 },
   headerUserInfo: { flexDirection: 'row', alignItems: 'center', flex: 1 },
   profilePic: { width: 40, height: 40, borderRadius: 20, marginRight: 10 },
   username: { fontWeight: 'bold', fontSize: 16, flex: 1 },
   menuButton: { padding: 8 },
-  menuDots: { fontSize: 20, fontWeight: 'bold', color: '#333' },
-  postImage: { width: '100%', height: 300, backgroundColor: '#eee' },
+  postImage: { width: '100%', aspectRatio: 4 / 3, backgroundColor: colors.borderLight },
   actions: { flexDirection: 'row', paddingHorizontal: 10, paddingTop: 10, gap: 16 },
   actionButton: { paddingVertical: 4 },
-  actionText: { fontSize: 16, color: '#333' },
-  liked: { color: 'red', fontWeight: '600' },
-  saved: { color: 'blue', fontWeight: '600' },
-  likeCount: { paddingHorizontal: 10, paddingTop: 4, fontSize: 14, fontWeight: '600', color: '#333' },
-  caption: { paddingHorizontal: 10, paddingTop: 8, paddingBottom: 4, fontSize: 14, color: '#333' },
+  actionText: { fontSize: 16, color: colors.textPrimary },
+  liked: { color: colors.liked, fontWeight: '600' },
+  saved: { color: colors.info, fontWeight: '600' },
+  likeCount: { paddingHorizontal: 10, paddingTop: 4, fontSize: 14, fontWeight: '600', color: colors.textPrimary },
+  caption: { paddingHorizontal: 10, paddingTop: 8, paddingBottom: 4, fontSize: 14, color: colors.textPrimary },
   captionUsername: { fontWeight: 'bold' },
-  verifiedBadge: { color: '#1DA1F2', fontSize: 16, fontWeight: 'bold', marginLeft: 4 },
-  editedLabel: { paddingHorizontal: 10, paddingBottom: 10, fontSize: 12, color: '#999', fontStyle: 'italic' },
+  verifiedBadge: { color: colors.verified, fontSize: 16, fontWeight: 'bold', marginLeft: 4 },
+  editedLabel: { paddingHorizontal: 10, paddingBottom: 10, fontSize: 12, color: colors.textQuaternary, fontStyle: 'italic' },
 });

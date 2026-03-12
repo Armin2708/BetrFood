@@ -1,17 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
 import { fetchTags, Tag } from '../services/api';
+import { TAG_TYPE_COLORS, colors } from '../constants/theme';
 
 interface TagFilterBarProps {
   selectedTagIds: number[];
   onFilterChange: (tagIds: number[]) => void;
 }
-
-const TYPE_COLORS: Record<string, string> = {
-  cuisine: '#FF6B35',
-  meal: '#4CAF50',
-  dietary: '#2196F3',
-};
 
 export default function TagFilterBar({ selectedTagIds, onFilterChange }: TagFilterBarProps) {
   const [tags, setTags] = useState<Tag[]>([]);
@@ -39,7 +34,7 @@ export default function TagFilterBar({ selectedTagIds, onFilterChange }: TagFilt
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="small" color="#FF6B35" />
+        <ActivityIndicator size="small" color={colors.primary} />
       </View>
     );
   }
@@ -52,13 +47,13 @@ export default function TagFilterBar({ selectedTagIds, onFilterChange }: TagFilt
         contentContainerStyle={styles.scrollContent}
       >
         {selectedTagIds.length > 0 && (
-          <TouchableOpacity style={styles.clearButton} onPress={clearFilters}>
+          <TouchableOpacity style={styles.clearButton} onPress={clearFilters} accessibilityRole="button" accessibilityLabel="Clear all tag filters">
             <Text style={styles.clearText}>Clear</Text>
           </TouchableOpacity>
         )}
         {tags.map(tag => {
           const isSelected = selectedTagIds.includes(tag.id);
-          const color = TYPE_COLORS[tag.type] || '#999';
+          const color = TAG_TYPE_COLORS[tag.type] || '#999';
           return (
             <TouchableOpacity
               key={tag.id}
@@ -66,14 +61,17 @@ export default function TagFilterBar({ selectedTagIds, onFilterChange }: TagFilt
                 styles.filterChip,
                 isSelected
                   ? { backgroundColor: color, borderColor: color }
-                  : { borderColor: '#ddd' },
+                  : { borderColor: colors.border },
               ]}
               onPress={() => toggleTag(tag.id)}
+              accessibilityRole="button"
+              accessibilityLabel={`${isSelected ? 'Remove' : 'Add'} ${tag.name} filter`}
+              accessibilityState={{ selected: isSelected }}
             >
               <Text
                 style={[
                   styles.filterChipText,
-                  isSelected ? { color: '#fff' } : { color: '#666' },
+                  isSelected ? { color: colors.white } : { color: colors.textSecondary },
                 ]}
               >
                 {tag.name}
@@ -88,9 +86,9 @@ export default function TagFilterBar({ selectedTagIds, onFilterChange }: TagFilt
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.backgroundPrimary,
     borderBottomWidth: 1,
-    borderColor: '#eee',
+    borderColor: colors.borderLight,
   },
   loadingContainer: {
     padding: 12,
@@ -105,11 +103,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: colors.backgroundTertiary,
   },
   clearText: {
     fontSize: 13,
-    color: '#666',
+    color: colors.textSecondary,
     fontWeight: '600',
   },
   filterChip: {

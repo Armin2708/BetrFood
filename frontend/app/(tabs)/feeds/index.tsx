@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useContext } from 'react';
+import React, { useState, useCallback, useContext, useRef } from 'react';
 import {
   View,
   FlatList,
@@ -16,7 +16,6 @@ import { AuthContext } from '../../../context/AuthenticationContext';
 import {
   fetchPosts,
   fetchPostsByTags,
-  fetchPostTags,
   fetchFollowingFeed,
   getImageUrl,
   Post as PostType,
@@ -36,45 +35,29 @@ export default function HomeScreen() {
   const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
   const [feedType, setFeedType] = useState<'forYou' | 'following'>('forYou');
 
-  const loadPostsWithTags = useCallback(async (rawPosts: PostType[]) => {
-    return Promise.all(
-      rawPosts.map(async (post) => {
-        try {
-          const tags = await fetchPostTags(post.id);
-          return { ...post, tags };
-        } catch {
-          return post;
-        }
-      })
-    );
-  }, []);
-
   const loadPosts = useCallback(async (tagIds: number[] = [], feed: 'forYou' | 'following' = 'forYou') => {
     setError(null);
     try {
       if (tagIds.length > 0) {
         const filteredPosts = await fetchPostsByTags(tagIds);
-        const postsWithTags = await loadPostsWithTags(filteredPosts);
-        setPosts(postsWithTags);
+        setPosts(filteredPosts);
         setHasMore(false);
         setNextCursor(null);
       } else if (feed === 'following') {
         const data = await fetchFollowingFeed(null, PAGE_LIMIT);
-        const postsWithTags = await loadPostsWithTags(data.posts);
-        setPosts(postsWithTags);
+        setPosts(data.posts);
         setNextCursor(data.nextCursor);
         setHasMore(data.hasMore);
       } else {
         const data = await fetchPosts(null, PAGE_LIMIT);
-        const postsWithTags = await loadPostsWithTags(data.posts);
-        setPosts(postsWithTags);
+        setPosts(data.posts);
         setNextCursor(data.nextCursor);
         setHasMore(data.hasMore);
       }
     } catch (err: any) {
       setError(err.message || 'Something went wrong');
     }
-  }, [loadPostsWithTags]);
+  }, []);
 
   const loadMore = useCallback(async () => {
     if (loadingMore || !hasMore || !nextCursor || selectedTagIds.length > 0) return;
@@ -83,8 +66,7 @@ export default function HomeScreen() {
       const data = feedType === 'following'
         ? await fetchFollowingFeed(nextCursor, PAGE_LIMIT)
         : await fetchPosts(nextCursor, PAGE_LIMIT);
-      const postsWithTags = await loadPostsWithTags(data.posts);
-      setPosts(prev => [...prev, ...postsWithTags]);
+      setPosts(prev => [...prev, ...data.posts]);
       setNextCursor(data.nextCursor);
       setHasMore(data.hasMore);
     } catch (err: any) {
@@ -92,7 +74,7 @@ export default function HomeScreen() {
     } finally {
       setLoadingMore(false);
     }
-  }, [loadingMore, hasMore, nextCursor, selectedTagIds, feedType, loadPostsWithTags]);
+  }, [loadingMore, hasMore, nextCursor, selectedTagIds, feedType]);
 
   const fetchInitial = useCallback(async () => {
     setLoading(true);
@@ -106,9 +88,14 @@ export default function HomeScreen() {
     setRefreshing(false);
   }, [loadPosts, selectedTagIds, feedType]);
 
+  const hasLoadedRef = useRef(false);
+
   useFocusEffect(
     useCallback(() => {
-      fetchInitial();
+      if (!hasLoadedRef.current) {
+        hasLoadedRef.current = true;
+        fetchInitial();
+      }
     }, [fetchInitial])
   );
 
@@ -154,7 +141,7 @@ export default function HomeScreen() {
     return (
       <View style={styles.center}>
         <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={fetchInitial}>
+        <TouchableOpacity style={styles.retryButton} onPress={fetchInitial} accessibilityRole="button" accessibilityLabel="Retry loading feed">
           <Text style={styles.retryText}>Retry</Text>
         </TouchableOpacity>
       </View>
@@ -167,12 +154,16 @@ export default function HomeScreen() {
         <TouchableOpacity
           style={[styles.feedToggleTab, feedType === 'forYou' && styles.feedToggleActive]}
           onPress={() => handleFeedTypeChange('forYou')}
+          accessibilityRole="tab"
+          accessibilityState={{ selected: feedType === 'forYou' }}
         >
           <Text style={[styles.feedToggleText, feedType === 'forYou' && styles.feedToggleTextActive]}>For You</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.feedToggleTab, feedType === 'following' && styles.feedToggleActive]}
           onPress={() => handleFeedTypeChange('following')}
+          accessibilityRole="tab"
+          accessibilityState={{ selected: feedType === 'following' }}
         >
           <Text style={[styles.feedToggleText, feedType === 'following' && styles.feedToggleTextActive]}>Following</Text>
         </TouchableOpacity>
@@ -228,6 +219,8 @@ export default function HomeScreen() {
       <TouchableOpacity
         style={styles.fab}
         onPress={() => router.push('/create-post')}
+        accessibilityRole="button"
+        accessibilityLabel="Create new post"
       >
         <Text style={styles.fabText}>+</Text>
       </TouchableOpacity>

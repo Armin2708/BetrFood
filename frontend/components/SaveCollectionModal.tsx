@@ -5,8 +5,10 @@ import {
   Text,
   TouchableOpacity,
   TextInput,
+  StyleSheet,
 } from "react-native";
 import { Collection, useCollections } from "../context/CollectionsContext";
+import { colors } from "../constants/theme";
 
 type Props = {
   visible: boolean;
@@ -35,9 +37,9 @@ export default function SaveCollectionModal({
 
   return (
     <Modal visible={visible} animationType="slide" transparent>
-      <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.4)" }}>
-        <View style={{ backgroundColor: "white", padding: 20, borderTopLeftRadius: 20, borderTopRightRadius: 20 }}>
-          <Text style={{ fontWeight: "bold", fontSize: 18 }}>
+      <View style={styles.overlay}>
+        <View style={styles.sheet}>
+          <Text style={styles.title} accessibilityRole="header">
             Save to Collection
           </Text>
 
@@ -45,7 +47,9 @@ export default function SaveCollectionModal({
             <TouchableOpacity
               key={collection.id}
               onPress={() => onSave(collection)}
-              style={{ paddingVertical: 12 }}
+              style={styles.collectionItem}
+              accessibilityRole="button"
+              accessibilityLabel={`Save to ${collection.name}`}
             >
               <Text>{collection.name}</Text>
             </TouchableOpacity>
@@ -55,30 +59,21 @@ export default function SaveCollectionModal({
             placeholder="New collection..."
             value={newName}
             onChangeText={setNewName}
-            style={{
-              borderWidth: 1,
-              borderColor: "#ddd",
-              borderRadius: 8,
-              padding: 10,
-              marginTop: 10,
-            }}
+            style={styles.input}
+            accessibilityLabel="New collection name"
           />
 
           <TouchableOpacity
             onPress={handleCreate}
-            style={{
-              backgroundColor: "#007AFF",
-              padding: 10,
-              borderRadius: 8,
-              marginTop: 10,
-              alignItems: "center",
-            }}
+            style={styles.createButton}
+            accessibilityRole="button"
+            accessibilityLabel="Create collection and save"
           >
-            <Text style={{ color: "white" }}>Create + Save</Text>
+            <Text style={styles.createButtonText}>Create + Save</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={onClose}>
-            <Text style={{ textAlign: "center", marginTop: 10, color: "gray" }}>
+          <TouchableOpacity onPress={onClose} accessibilityRole="button" accessibilityLabel="Cancel">
+            <Text style={styles.cancelText}>
               Cancel
             </Text>
           </TouchableOpacity>
@@ -87,3 +82,46 @@ export default function SaveCollectionModal({
     </Modal>
   );
 }
+
+const styles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: colors.overlay,
+  },
+  sheet: {
+    backgroundColor: colors.backgroundPrimary,
+    padding: 20,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+  },
+  title: {
+    fontWeight: "bold",
+    fontSize: 18,
+  },
+  collectionItem: {
+    paddingVertical: 12,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+    padding: 10,
+    marginTop: 10,
+  },
+  createButton: {
+    backgroundColor: colors.primary,
+    padding: 10,
+    borderRadius: 8,
+    marginTop: 10,
+    alignItems: "center",
+  },
+  createButtonText: {
+    color: colors.white,
+  },
+  cancelText: {
+    textAlign: "center",
+    marginTop: 10,
+    color: colors.textTertiary,
+  },
+});

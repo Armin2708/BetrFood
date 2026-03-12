@@ -1,16 +1,11 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Tag } from '../services/api';
+import { TAG_TYPE_COLORS } from '../constants/theme';
 
 interface TagDisplayProps {
   tags: Tag[];
 }
-
-const TYPE_COLORS: Record<string, string> = {
-  cuisine: '#FF6B35',
-  meal: '#4CAF50',
-  dietary: '#2196F3',
-};
 
 export default function TagDisplay({ tags }: TagDisplayProps) {
   if (!tags || tags.length === 0) return null;
@@ -18,7 +13,7 @@ export default function TagDisplay({ tags }: TagDisplayProps) {
   return (
     <View style={styles.container}>
       {tags.map(tag => {
-        const color = TYPE_COLORS[tag.type] || '#999';
+        const color = TAG_TYPE_COLORS[tag.type] || '#999';
         return (
           <View key={tag.id} style={[styles.tag, { borderColor: color }]}>
             <Text style={[styles.tagText, { color }]}>{tag.name}</Text>

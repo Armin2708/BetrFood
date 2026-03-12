@@ -111,6 +111,13 @@ export async function fetchPosts(cursor?: string | null, limit: number = 10): Pr
   return response.json();
 }
 
+export async function fetchUserPosts(userId: string, limit: number = 30): Promise<{ posts: Post[] }> {
+  const headers = await authHeaders();
+  const res = await fetch(`${API_BASE_URL}/api/posts/user/${userId}?limit=${limit}`, { headers });
+  if (!res.ok) throw new Error('Failed to fetch user posts');
+  return res.json();
+}
+
 export async function fetchPost(postId: string): Promise<Post> {
   const response = await fetch(`${API_BASE_URL}/api/posts/${postId}`, {
     headers: await authHeaders(),
