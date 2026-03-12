@@ -13,7 +13,6 @@ async function requireAuth(req, res, next) {
   }
 
   const token = authHeader.split(' ')[1];
-  console.log('[AUTH] Token received:', token.substring(0, 20) + '...');
 
   try {
     const payload = await verifyToken(token, {

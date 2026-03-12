@@ -1,7 +1,40 @@
 const express = require('express');
+const https = require('https');
 const router = express.Router();
 const supabase = require('../db/supabase');
 const { requireAuth } = require('../middleware/auth');
+
+const CLERK_SECRET_KEY = process.env.CLERK_SECRET_KEY;
+
+/**
+ * Delete a user from Clerk via Backend API.
+ */
+function deleteClerkUser(userId) {
+  return new Promise((resolve, reject) => {
+    const options = {
+      hostname: 'api.clerk.com',
+      path: '/v1/users/' + userId,
+      method: 'DELETE',
+      headers: {
+        'Authorization': 'Bearer ' + CLERK_SECRET_KEY,
+        'Content-Type': 'application/json',
+      },
+    };
+    const req = https.request(options, (res) => {
+      let b = '';
+      res.on('data', (chunk) => (b += chunk));
+      res.on('end', () => {
+        try {
+          resolve({ status: res.statusCode, data: JSON.parse(b) });
+        } catch {
+          resolve({ status: res.statusCode, data: b });
+        }
+      });
+    });
+    req.on('error', reject);
+    req.end();
+  });
+}
 
 // Helper: convert DB row to API response
 function formatProfile(row) {
@@ -178,6 +211,9 @@ router.delete('/me', requireAuth, async (req, res) => {
     await supabase.from('user_mutes').delete().eq('muted_id', req.userId);
     await supabase.from('likes').delete().eq('user_id', req.userId);
     await supabase.from('reports').delete().eq('reporter_id', req.userId);
+    await supabase.from('comments').delete().eq('user_id', req.userId);
+    await supabase.from('notifications').delete().eq('user_id', req.userId);
+    await supabase.from('notifications').delete().eq('actor_id', req.userId);
 
     // Delete collections and collection_posts
     const { data: collections } = await supabase
@@ -191,6 +227,29 @@ router.delete('/me', requireAuth, async (req, res) => {
       await supabase.from('collections').delete().eq('user_id', req.userId);
     }
 
+    // Delete user's posts (and their related data)
+    const { data: posts } = await supabase
+      .from('posts')
+      .select('id')
+      .eq('user_id', req.userId);
+
+    if (posts && posts.length > 0) {
+      const postIds = posts.map(p => p.id);
+      await supabase.from('likes').delete().in('post_id', postIds);
+      await supabase.from('comments').delete().in('post_id', postIds);
+      await supabase.from('collection_posts').delete().in('post_id', postIds);
+      await supabase.from('reports').delete().in('post_id', postIds);
+      await supabase.from('post_tags').delete().in('post_id', postIds);
+      await supabase.from('recipe_ingredients').delete().in('recipe_id',
+        (await supabase.from('recipes').select('id').in('post_id', postIds)).data?.map(r => r.id) || []
+      );
+      await supabase.from('recipe_steps').delete().in('recipe_id',
+        (await supabase.from('recipes').select('id').in('post_id', postIds)).data?.map(r => r.id) || []
+      );
+      await supabase.from('recipes').delete().in('post_id', postIds);
+      await supabase.from('posts').delete().eq('user_id', req.userId);
+    }
+
     // Delete user profile
     const { error } = await supabase
       .from('user_profiles')
@@ -198,6 +257,13 @@ router.delete('/me', requireAuth, async (req, res) => {
       .eq('id', req.userId);
 
     if (error) throw error;
+
+    // Delete the user from Clerk
+    try {
+      await deleteClerkUser(req.userId);
+    } catch (clerkErr) {
+      console.error('Failed to delete Clerk user (profile already deleted):', clerkErr);
+    }
 
     res.json({ message: 'Account deleted successfully.' });
   } catch (error) {

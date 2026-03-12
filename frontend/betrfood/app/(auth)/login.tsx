@@ -129,8 +129,14 @@ function WebLogin() {
               setLoading(false);
             }
           }
-        } catch {
+        } catch (pollError: any) {
           clearInterval(pollInterval);
+          const pollMsg =
+            pollError.errors?.[0]?.longMessage ||
+            pollError.errors?.[0]?.message ||
+            pollError.message ||
+            "OAuth sign-in could not be completed";
+          window.alert(pollMsg);
           setLoading(false);
         }
       }, 500);

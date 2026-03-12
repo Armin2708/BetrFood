@@ -79,17 +79,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
         lastName: clerkUser!.lastName || undefined,
       };
 
-      // Load role from backend
-      try {
-        const { role } = await fetchMyRole();
-        userData.role = role;
-      } catch {
-        userData.role = "user";
-      }
-
-      setUser(userData);
-
-      // Check onboarding status (also auto-provisions Supabase profile)
+      // Fetch profile first (auto-provisions in Supabase if missing),
+      // then fetch role so the profile row exists for the role query.
       try {
         console.log("[AuthContext] Fetching profile (auto-provisions in Supabase)...");
         const profile = await fetchMyProfile();
@@ -99,6 +90,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
         console.error("[AuthContext] Profile fetch failed:", err);
         setNeedsOnboarding(true);
       }
+
+      // Load role from backend (profile now exists)
+      try {
+        const { role } = await fetchMyRole();
+        userData.role = role;
+      } catch {
+        userData.role = "user";
+      }
+
+      setUser(userData);
     } catch (error) {
       console.error("[AuthContext] Error syncing user:", error);
     } finally {

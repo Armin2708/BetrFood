@@ -23,7 +23,7 @@ async function getUserRole(userId) {
     .from('user_profiles')
     .select('role')
     .eq('id', userId)
-    .single();
+    .maybeSingle();
 
   if (error || !data) {
     // No profile row yet — default role
