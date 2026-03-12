@@ -380,12 +380,6 @@ function NativeSignup() {
           await setActiveSession!({ session: createdSessionId });
           router.replace("/");
         } else if (ssoSignUp) {
-          if (ssoSignUp.status === "missing_requirements" && ssoSignUp.missingFields?.includes("username")) {
-            const emailPrefix = ssoSignUp.emailAddress?.split("@")[0] || "user";
-            const tempUsername = `${emailPrefix}${Math.floor(Math.random() * 10000)}`;
-            await ssoSignUp.update({ username: tempUsername });
-          }
-
           const latest = ssoSignUp.status === "complete" ? ssoSignUp : await ssoSignUp.reload();
           if (latest.status === "complete" && latest.createdSessionId) {
             await setActiveSession!({ session: latest.createdSessionId });

@@ -376,16 +376,7 @@ function NativeLogin() {
           router.replace("/");
         } else if (signUp) {
           // New user — Clerk transferred signIn → signUp.
-          // If username is required but missing (Google doesn't provide one),
-          // generate a temporary one so sign-up can complete.
-          // The user can change it during onboarding.
-          if (signUp.status === "missing_requirements" && signUp.missingFields?.includes("username")) {
-            const emailPrefix = signUp.emailAddress?.split("@")[0] || "user";
-            const tempUsername = `${emailPrefix}${Math.floor(Math.random() * 10000)}`;
-            await signUp.update({ username: tempUsername });
-          }
-
-          // After filling missing fields, check if sign-up completed
+          // Username will be set during onboarding.
           const latest = signUp.status === "complete" ? signUp : await signUp.reload();
           if (latest.status === "complete" && latest.createdSessionId) {
             await setActiveSession!({ session: latest.createdSessionId });
