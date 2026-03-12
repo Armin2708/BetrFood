@@ -20,7 +20,7 @@ export default function ResetSuccessScreen() {
         Your password has been updated. You can now log in with your new password.
       </Text>
 
-      <TouchableOpacity style={styles.button} onPress={() => router.dismissTo('/login')}>
+      <TouchableOpacity style={styles.button} onPress={() => router.dismissTo('/(auth)/login')}>
         <Text style={styles.buttonText}>Go to Login</Text>
       </TouchableOpacity>
     </View>

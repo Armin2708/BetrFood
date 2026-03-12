@@ -1,20 +1,21 @@
 import { useEffect } from "react";
 import { View, ActivityIndicator } from "react-native";
 import { useClerk } from "@clerk/clerk-expo";
+import { useRouter } from "expo-router";
 
 export default function SSOCallback() {
   const clerk = useClerk();
+  const router = useRouter();
 
   useEffect(() => {
     if (!clerk.loaded) return;
 
     clerk.handleRedirectCallback({
-      afterSignInUrl: "/",
-      afterSignUpUrl: "/",
-      redirectUrl: "/",
+      signInFallbackRedirectUrl: "/",
+      signUpFallbackRedirectUrl: "/",
     }).catch((error) => {
       console.error("SSO callback error:", error);
-      window.location.href = "/(auth)/login";
+      router.replace("/(auth)/login");
     });
   }, [clerk.loaded]);
 

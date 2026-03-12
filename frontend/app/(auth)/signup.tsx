@@ -15,6 +15,7 @@ import { useState, useCallback } from "react";
 import { useRouter } from "expo-router";
 import { useSignIn, useSignUp, useSSO } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
+import * as AuthSession from "expo-auth-session";
 import * as WebBrowser from "expo-web-browser";
 
 WebBrowser.maybeCompleteAuthSession();
@@ -369,15 +370,35 @@ function NativeSignup() {
       if (!isLoaded) return;
       setLoading(true);
       try {
-        const { createdSessionId, setActive: setActiveSession } =
-          await startSSOFlow({ strategy });
+        const { createdSessionId, setActive: setActiveSession, signUp: ssoSignUp, signIn: ssoSignIn } =
+          await startSSOFlow({
+            strategy,
+            redirectUrl: AuthSession.makeRedirectUri({ scheme: "betrfood" }),
+          });
 
         if (createdSessionId) {
           await setActiveSession!({ session: createdSessionId });
           router.replace("/");
+        } else if (ssoSignUp) {
+          if (ssoSignUp.status === "missing_requirements" && ssoSignUp.missingFields?.includes("username")) {
+            const emailPrefix = ssoSignUp.emailAddress?.split("@")[0] || "user";
+            const tempUsername = `${emailPrefix}${Math.floor(Math.random() * 10000)}`;
+            await ssoSignUp.update({ username: tempUsername });
+          }
+
+          const latest = ssoSignUp.status === "complete" ? ssoSignUp : await ssoSignUp.reload();
+          if (latest.status === "complete" && latest.createdSessionId) {
+            await setActiveSession!({ session: latest.createdSessionId });
+            router.replace("/");
+          } else {
+            console.log("[OAuth] signUp still incomplete:", latest.status, latest.missingFields);
+            Alert.alert("Sign Up Incomplete", "Could not complete account creation. Please try signing up with email.");
+          }
+        } else {
+          Alert.alert("Sign Up Incomplete", "Additional verification steps may be required.");
         }
       } catch (error: any) {
-        console.error("OAuth error:", error);
+        console.error("OAuth error:", JSON.stringify(error, null, 2));
         const msg =
           error.errors?.[0]?.longMessage ||
           error.errors?.[0]?.message ||

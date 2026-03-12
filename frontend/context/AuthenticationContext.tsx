@@ -51,8 +51,53 @@ export function AuthProvider({ children }: AuthProviderProps) {
     if (!authLoaded || !userLoaded) return;
 
     if (isSignedIn && clerkUser) {
-      setTokenGetter(() => getToken());
-      syncUser();
+      // Pass getToken directly — no wrapper closure needed.
+      // Clerk's getToken() already returns a fresh JWT on each call.
+      setTokenGetter(getToken);
+
+      // Inline syncUser to avoid stale closure issues
+      (async () => {
+        try {
+          console.log("[AuthContext] syncUser called, getting token...");
+          const jwt = await getToken();
+          console.log("[AuthContext] Got token:", jwt ? "yes" : "no");
+          setToken(jwt);
+          setAuthToken(jwt);
+
+          const userData: User = {
+            id: clerkUser.id,
+            email: clerkUser.emailAddresses?.[0]?.emailAddress || "",
+            firstName: clerkUser.firstName || undefined,
+            lastName: clerkUser.lastName || undefined,
+          };
+
+          // Fetch profile first (auto-provisions in Supabase if missing),
+          // then fetch role so the profile row exists for the role query.
+          try {
+            console.log("[AuthContext] Fetching profile (auto-provisions in Supabase)...");
+            const profile = await fetchMyProfile();
+            console.log("[AuthContext] Profile fetched:", profile);
+            setNeedsOnboarding(!profile.onboardingCompleted);
+          } catch (err) {
+            console.error("[AuthContext] Profile fetch failed:", err);
+            setNeedsOnboarding(true);
+          }
+
+          // Load role from backend (profile now exists)
+          try {
+            const { role } = await fetchMyRole();
+            userData.role = role;
+          } catch {
+            userData.role = "user";
+          }
+
+          setUser(userData);
+        } catch (error) {
+          console.error("[AuthContext] Error syncing user:", error);
+        } finally {
+          setLoading(false);
+        }
+      })();
     } else {
       setUser(null);
       setToken(null);
@@ -61,68 +106,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setNeedsOnboarding(false);
       setLoading(false);
     }
-  }, [isSignedIn, authLoaded, userLoaded, clerkUser?.id]);
-
-  async function syncUser() {
-    try {
-      console.log("[AuthContext] syncUser called, getting token...");
-      // Get a fresh JWT from Clerk (auto-managed, no manual refresh needed)
-      const jwt = await getToken();
-      console.log("[AuthContext] Got token:", jwt ? "yes" : "no");
-      setToken(jwt);
-      setAuthToken(jwt);
-
-      const userData: User = {
-        id: clerkUser!.id,
-        email: clerkUser!.emailAddresses?.[0]?.emailAddress || "",
-        firstName: clerkUser!.firstName || undefined,
-        lastName: clerkUser!.lastName || undefined,
-      };
-
-      // Fetch profile first (auto-provisions in Supabase if missing),
-      // then fetch role so the profile row exists for the role query.
-      try {
-        console.log("[AuthContext] Fetching profile (auto-provisions in Supabase)...");
-        const profile = await fetchMyProfile();
-        console.log("[AuthContext] Profile fetched:", profile);
-        setNeedsOnboarding(!profile.onboardingCompleted);
-      } catch (err) {
-        console.error("[AuthContext] Profile fetch failed:", err);
-        setNeedsOnboarding(true);
-      }
-
-      // Load role from backend (profile now exists)
-      try {
-        const { role } = await fetchMyRole();
-        userData.role = role;
-      } catch {
-        userData.role = "user";
-      }
-
-      setUser(userData);
-    } catch (error) {
-      console.error("[AuthContext] Error syncing user:", error);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  // Keep the API token fresh (Clerk tokens expire in ~60s)
-  useEffect(() => {
-    if (!isSignedIn) return;
-
-    const interval = setInterval(async () => {
-      try {
-        const freshToken = await getToken();
-        setToken(freshToken);
-        setAuthToken(freshToken);
-      } catch {
-        // Token refresh failed - Clerk will handle re-auth
-      }
-    }, 50_000);
-
-    return () => clearInterval(interval);
-  }, [isSignedIn, getToken]);
+  }, [isSignedIn, authLoaded, userLoaded, clerkUser?.id, getToken]);
 
   const refreshRole = useCallback(async () => {
     if (!user) return;

@@ -46,9 +46,10 @@ export default function NewPasswordScreen() {
 
       if (result.status === 'complete' && result.createdSessionId) {
         await setActive({ session: result.createdSessionId });
+        router.push('/resetPassword/resetConfirmation');
+      } else {
+        showError('Password reset incomplete. Additional verification may be required.');
       }
-
-      router.push('/resetPassword/resetConfirmation');
     } catch (error: any) {
       const msg = error.errors?.[0]?.longMessage || error.errors?.[0]?.message || error.message || 'Failed to reset password.';
       showError(msg);

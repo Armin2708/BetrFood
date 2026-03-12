@@ -2,7 +2,7 @@
  * Run this script once to create the Supabase tables.
  * Usage: node src/db/migrate.js
  */
-require('dotenv').config({ path: require('path').join(__dirname, '..', '..', '.env') });
+require('dotenv').config({ path: require('path').join(__dirname, '..', '..', '..env') });
 const supabase = require('./supabase');
 
 async function migrate() {

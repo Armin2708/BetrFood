@@ -81,8 +81,12 @@ export default function VerificationCodeScreen() {
   const resendCode = async () => {
     if (!isLoaded) return;
     try {
+      const emailFactor = signIn.supportedFirstFactors?.find(
+        (f: any) => f.strategy === 'reset_password_email_code'
+      ) as any;
       await signIn.prepareFirstFactor({
         strategy: 'reset_password_email_code',
+        emailAddressId: emailFactor?.emailAddressId,
       });
       if (Platform.OS === 'web') {
         window.alert('A new verification code was sent.');

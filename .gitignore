@@ -2,13 +2,6 @@
 node_modules/
 .env
 
-# Xcode
-frontend/BetrFood.xcodeproj/xcuserdata/
-frontend/BetrFood.xcodeproj/project.xcworkspace/xcuserdata/
-*.xcuserstate
-DerivedData/
-build/
-
 # macOS
 .DS_Store
 
