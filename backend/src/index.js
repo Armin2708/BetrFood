@@ -26,6 +26,25 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
+// Request logging middleware
+app.use((req, res, next) => {
+  const start = Date.now();
+  const hasAuth = !!req.headers.authorization;
+  console.log(`\n[REQ] --> ${req.method} ${req.originalUrl} | auth: ${hasAuth}`);
+
+  const originalSend = res.send.bind(res);
+  res.send = function (body) {
+    const duration = Date.now() - start;
+    console.log(`[RES] <-- ${req.method} ${req.originalUrl} | ${res.statusCode} | ${duration}ms`);
+    if (res.statusCode >= 400) {
+      console.log(`[RES] Error body:`, typeof body === 'string' ? body.substring(0, 500) : body);
+    }
+    return originalSend(body);
+  };
+
+  next();
+});
+
 // Serve uploaded images statically with caching
 app.use("/uploads", express.static(path.join(__dirname, "..", "uploads"), {
   maxAge: '7d',
@@ -58,5 +77,11 @@ app.use("/api/users", blocksRouter);
 app.use("/api/notifications", notificationsRouter);
 
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`\n=== BetrFood Backend Started ===`);
+  console.log(`Port: ${PORT}`);
+  console.log(`SUPABASE_URL: ${process.env.SUPABASE_URL ? '✓ set' : '✗ MISSING'}`);
+  console.log(`SUPABASE_SERVICE_ROLE_KEY: ${process.env.SUPABASE_SERVICE_ROLE_KEY ? '✓ set' : '✗ MISSING'}`);
+  console.log(`CLERK_SECRET_KEY: ${process.env.CLERK_SECRET_KEY ? '✓ set' : '✗ MISSING'}`);
+  console.log(`CLERK_PUBLISHABLE_KEY: ${process.env.CLERK_PUBLISHABLE_KEY ? '✓ set' : '✗ MISSING'}`);
+  console.log(`================================\n`);
 });

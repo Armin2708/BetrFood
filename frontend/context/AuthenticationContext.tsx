@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useCallback, ReactNode } from "react";
+import React, { createContext, useState, useEffect, useCallback, useRef, ReactNode } from "react";
 import { useAuth, useUser } from "@clerk/clerk-expo";
 import { setAuthToken, setTokenGetter, fetchMyProfile, fetchMyRole } from "../services/api";
 
@@ -41,6 +41,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [loading, setLoading] = useState(true);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
 
+  // Stable ref for getToken to avoid re-triggering the effect on every render
+  const getTokenRef = useRef(getToken);
+  useEffect(() => {
+    getTokenRef.current = getToken;
+  }, [getToken]);
+
   // Debug: log Clerk state changes
   useEffect(() => {
     console.log("[AuthContext] Clerk state:", { authLoaded, userLoaded, isSignedIn, clerkUserId: clerkUser?.id });
@@ -51,15 +57,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
     if (!authLoaded || !userLoaded) return;
 
     if (isSignedIn && clerkUser) {
-      // Pass getToken directly — no wrapper closure needed.
-      // Clerk's getToken() already returns a fresh JWT on each call.
-      setTokenGetter(getToken);
+      // Stable wrapper that always calls the latest getToken via ref
+      const stableGetToken = () => getTokenRef.current();
+      setTokenGetter(stableGetToken);
 
-      // Inline syncUser to avoid stale closure issues
       (async () => {
         try {
           console.log("[AuthContext] syncUser called, getting token...");
-          const jwt = await getToken();
+          const jwt = await stableGetToken();
           console.log("[AuthContext] Got token:", jwt ? "yes" : "no");
           setToken(jwt);
           setAuthToken(jwt);
@@ -106,7 +111,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setNeedsOnboarding(false);
       setLoading(false);
     }
-  }, [isSignedIn, authLoaded, userLoaded, clerkUser?.id, getToken]);
+  }, [isSignedIn, authLoaded, userLoaded, clerkUser?.id]);
 
   const refreshRole = useCallback(async () => {
     if (!user) return;

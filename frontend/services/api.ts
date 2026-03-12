@@ -310,12 +310,20 @@ export interface UserProfile {
 }
 
 export async function fetchMyProfile(): Promise<UserProfile> {
-  const response = await fetch(`${API_BASE_URL}/api/profiles/me`, {
-    headers: await authHeaders(),
-  });
+  const headers = await authHeaders();
+  console.log('[API] fetchMyProfile URL:', `${API_BASE_URL}/api/profiles/me`);
+  console.log('[API] fetchMyProfile has auth:', !!headers['Authorization']);
+  const response = await fetch(`${API_BASE_URL}/api/profiles/me`, { headers });
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Failed to fetch profile');
+    const text = await response.text();
+    console.log('[API] fetchMyProfile failed:', response.status, text);
+    try {
+      const error = JSON.parse(text);
+      throw new Error(error.error || 'Failed to fetch profile');
+    } catch (e) {
+      if (e instanceof SyntaxError) throw new Error(`Failed to fetch profile (HTTP ${response.status})`);
+      throw e;
+    }
   }
   return response.json();
 }
