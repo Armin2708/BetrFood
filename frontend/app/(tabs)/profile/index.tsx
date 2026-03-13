@@ -3,6 +3,7 @@ import { Stack, useRouter } from 'expo-router'
 import { Ionicons } from "@expo/vector-icons";
 import { useState, useCallback, useContext } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
+import { useClerk } from '@clerk/clerk-expo';
 import { AuthContext } from '../../../context/AuthenticationContext';
 import { fetchMyProfile, fetchFollowStats, fetchUserPosts, getImageUrl, UserProfile, Post as PostType } from '../../../services/api';
 
@@ -11,6 +12,7 @@ const ITEM_SIZE = width / 3;
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const { signOut } = useClerk();
   const { user } = useContext(AuthContext);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -121,6 +123,20 @@ export default function ProfileScreen() {
           <Ionicons name="folder-outline" size={18} color="#4CAF50" />
           <Text style={styles.collectionsButtonText}>Collections</Text>
           <Ionicons name="chevron-forward" size={16} color="#ccc" />
+        </Pressable>
+
+        {/* Sign Out Button */}
+        <Pressable
+          style={styles.signOutButton}
+          onPress={async () => {
+            await signOut();
+            router.replace('/');
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Sign out"
+        >
+          <Ionicons name="log-out-outline" size={18} color="#ff3b30" />
+          <Text style={styles.signOutButtonText}>Sign Out</Text>
         </Pressable>
 
         {/* Post Grid */}
@@ -255,6 +271,23 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '500',
     color: '#333',
+  },
+  signOutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: 20,
+    marginBottom: 16,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: '#ff3b30',
+    borderRadius: 8,
+    gap: 8,
+  },
+  signOutButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#ff3b30',
   },
   gridItem: {
     width: ITEM_SIZE,
