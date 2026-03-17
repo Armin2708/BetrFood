@@ -19,10 +19,15 @@ import PantryItemCard from '../../../components/PantryItemCard';
 import { PantryItem, PantryItemInput } from '../../../services/api';
 import { colors } from '../../../constants/theme';
 
+// Default category list per user story
 const CATEGORIES = [
-  'Produce', 'Dairy', 'Meat', 'Grains',
-  'Frozen', 'Canned', 'Beverages', 'Snacks', 'Spices', 'Other',
+  'Produce', 'Dairy', 'Proteins', 'Grains',
+  'Spices', 'Canned Goods', 'Frozen', 'Beverages', 'Snacks', 'Other',
 ];
+
+const UNCATEGORIZED_LABEL = 'Uncategorized';
+
+// ─── Add Item Modal ────────────────────────────────────────────────────────────
 
 function AddItemModal({
   visible,
@@ -169,9 +174,98 @@ function AddItemModal({
   );
 }
 
+// ─── Category Section Header ───────────────────────────────────────────────────
+
+function CategoryHeader({
+  category,
+  count,
+  collapsed,
+  onToggle,
+}: {
+  category: string;
+  count: number;
+  collapsed: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <TouchableOpacity
+      style={styles.sectionHeader}
+      onPress={onToggle}
+      activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityLabel={`${category}, ${count} item${count !== 1 ? 's' : ''}, ${collapsed ? 'collapsed' : 'expanded'}`}
+      accessibilityState={{ expanded: !collapsed }}
+    >
+      <View style={styles.sectionHeaderLeft}>
+        <Text style={styles.sectionHeaderText}>{category}</Text>
+        <View style={styles.countBadge}>
+          <Text style={styles.countBadgeText}>{count}</Text>
+        </View>
+      </View>
+      <Ionicons
+        name={collapsed ? 'chevron-forward' : 'chevron-down'}
+        size={16}
+        color={colors.textTertiary}
+      />
+    </TouchableOpacity>
+  );
+}
+
+// ─── View Toggle ───────────────────────────────────────────────────────────────
+
+function ViewToggle({
+  grouped,
+  onToggle,
+}: {
+  grouped: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <View style={styles.toggleBar}>
+      <TouchableOpacity
+        style={[styles.toggleButton, !grouped && styles.toggleButtonActive]}
+        onPress={() => grouped && onToggle()}
+        accessibilityRole="button"
+        accessibilityLabel="Flat list view"
+        accessibilityState={{ selected: !grouped }}
+      >
+        <Ionicons
+          name="list-outline"
+          size={16}
+          color={!grouped ? colors.primary : colors.textTertiary}
+        />
+        <Text style={[styles.toggleLabel, !grouped && styles.toggleLabelActive]}>
+          List
+        </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[styles.toggleButton, grouped && styles.toggleButtonActive]}
+        onPress={() => !grouped && onToggle()}
+        accessibilityRole="button"
+        accessibilityLabel="Category grouped view"
+        accessibilityState={{ selected: grouped }}
+      >
+        <Ionicons
+          name="grid-outline"
+          size={16}
+          color={grouped ? colors.primary : colors.textTertiary}
+        />
+        <Text style={[styles.toggleLabel, grouped && styles.toggleLabelActive]}>
+          By Category
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+// ─── Pantry Screen ─────────────────────────────────────────────────────────────
+
 export default function PantryScreen() {
   const { items, loading, addItem, removeItem, refreshItems } = usePantry();
   const [modalVisible, setModalVisible] = useState(false);
+  const [groupedView, setGroupedView] = useState(false);
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
   useFocusEffect(
     useCallback(() => {
@@ -179,30 +273,70 @@ export default function PantryScreen() {
     }, [refreshItems])
   );
 
-  // Group by category, sort alphabetically
+  const toggleCollapsed = (category: string) => {
+    setCollapsed((prev) => ({ ...prev, [category]: !prev[category] }));
+  };
+
+  // ── List row type ───────────────────────────────────────────────────────────
+
+  type ListRow =
+    | { type: 'header'; key: string; category: string; count: number }
+    | { type: 'item'; key: string; item: PantryItem };
+
+  // ── Flat list: all items sorted by name ─────────────────────────────────────
+
+  const flatListData: ListRow[] = items
+    .slice()
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map((item) => ({ type: 'item', key: item.id, item }));
+
+  // ── Grouped list: items bucketed by category ────────────────────────────────
+  // Items whose category doesn't match a known one go to Uncategorized.
+  // Empty categories are hidden. Uncategorized appears last.
+
   const grouped = items.reduce<Record<string, PantryItem[]>>((acc, item) => {
-    if (!acc[item.category]) acc[item.category] = [];
-    acc[item.category].push(item);
+    const cat = item.category?.trim() || '';
+    const label = CATEGORIES.includes(cat) ? cat : UNCATEGORIZED_LABEL;
+    if (!acc[label]) acc[label] = [];
+    acc[label].push(item);
     return acc;
   }, {});
 
-  const sections = Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b));
+  const orderedKeys = [
+    ...CATEGORIES.filter((c) => (grouped[c]?.length ?? 0) > 0),
+    ...(grouped[UNCATEGORIZED_LABEL]?.length > 0 ? [UNCATEGORIZED_LABEL] : []),
+  ];
 
-  type ListRow =
-    | { type: 'header'; key: string; category: string }
-    | { type: 'item'; key: string; item: PantryItem };
+  const groupedListData: ListRow[] = orderedKeys.flatMap((category) => {
+    const catItems = grouped[category] ?? [];
+    const isCollapsed = !!collapsed[category];
+    const headerRow: ListRow = {
+      type: 'header',
+      key: `header-${category}`,
+      category,
+      count: catItems.length,
+    };
+    if (isCollapsed) return [headerRow];
+    return [
+      headerRow,
+      ...catItems
+        .slice()
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map((item): ListRow => ({ type: 'item', key: item.id, item })),
+    ];
+  });
 
-  const listData: ListRow[] = sections.flatMap(([category, catItems]) => [
-    { type: 'header', key: `header-${category}`, category },
-    ...catItems.map((item) => ({ type: 'item' as const, key: item.id, item })),
-  ]);
+  const activeListData = groupedView ? groupedListData : flatListData;
 
   const renderRow = ({ item: row }: { item: ListRow }) => {
     if (row.type === 'header') {
       return (
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionHeaderText}>{row.category}</Text>
-        </View>
+        <CategoryHeader
+          category={row.category}
+          count={row.count}
+          collapsed={!!collapsed[row.category]}
+          onToggle={() => toggleCollapsed(row.category)}
+        />
       );
     }
     return <PantryItemCard item={row.item} onDelete={removeItem} />;
@@ -243,15 +377,18 @@ export default function PantryScreen() {
           </TouchableOpacity>
         </View>
       ) : (
-        <FlatList
-          data={listData}
-          keyExtractor={(row) => row.key}
-          renderItem={renderRow}
-          contentContainerStyle={styles.list}
-          showsVerticalScrollIndicator={false}
-          onRefresh={refreshItems}
-          refreshing={loading}
-        />
+        <>
+          <ViewToggle grouped={groupedView} onToggle={() => setGroupedView((v) => !v)} />
+          <FlatList
+            data={activeListData}
+            keyExtractor={(row) => row.key}
+            renderItem={renderRow}
+            contentContainerStyle={styles.list}
+            showsVerticalScrollIndicator={false}
+            onRefresh={refreshItems}
+            refreshing={loading}
+          />
+        </>
       )}
 
       <AddItemModal
@@ -262,6 +399,8 @@ export default function PantryScreen() {
     </View>
   );
 }
+
+// ─── Styles ────────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
   container: {
@@ -295,12 +434,54 @@ const styles = StyleSheet.create({
   list: {
     paddingBottom: 32,
   },
-  sectionHeader: {
-    backgroundColor: '#F9F9F9',
+  // Toggle bar
+  toggleBar: {
+    flexDirection: 'row',
     paddingHorizontal: 16,
-    paddingVertical: 6,
+    paddingVertical: 8,
+    gap: 8,
     borderBottomWidth: 1,
     borderColor: colors.borderLight,
+    backgroundColor: colors.backgroundPrimary,
+  },
+  toggleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+  },
+  toggleButtonActive: {
+    borderColor: colors.primary,
+    backgroundColor: '#FFF3EE',
+  },
+  toggleLabel: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: colors.textTertiary,
+  },
+  toggleLabelActive: {
+    color: colors.primary,
+    fontWeight: '600',
+  },
+  // Section header
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: colors.backgroundSecondary,
+    borderBottomWidth: 1,
+    borderColor: colors.borderLight,
+  },
+  sectionHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   sectionHeaderText: {
     fontSize: 13,
@@ -309,6 +490,20 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
+  countBadge: {
+    backgroundColor: colors.backgroundTertiary,
+    borderRadius: 10,
+    paddingHorizontal: 7,
+    paddingVertical: 1,
+    minWidth: 22,
+    alignItems: 'center',
+  },
+  countBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.textSecondary,
+  },
+  // Empty state
   emptyState: {
     flex: 1,
     justifyContent: 'center',
@@ -340,6 +535,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 16,
   },
+  // Modal
   modalOverlay: {
     flex: 1,
     justifyContent: 'flex-end',
