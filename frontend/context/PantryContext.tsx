@@ -13,6 +13,7 @@ type PantryContextType = {
   items: PantryItem[];
   loading: boolean;
   addItem: (item: PantryItemInput) => Promise<PantryItem>;
+  addItems: (items: PantryItemInput[]) => Promise<PantryItem[]>;
   editItem: (id: string, updates: Partial<PantryItemInput>) => Promise<void>;
   removeItem: (id: string) => Promise<void>;
   refreshItems: () => Promise<void>;
@@ -51,6 +52,13 @@ export const PantryProvider = ({ children }: { children: React.ReactNode }) => {
     return created;
   };
 
+  // Batch-add: creates all items in parallel and appends them all at once
+  const addItems = async (newItems: PantryItemInput[]): Promise<PantryItem[]> => {
+    const created = await Promise.all(newItems.map((item) => apiCreatePantryItem(item)));
+    setItems((prev) => [...prev, ...created]);
+    return created;
+  };
+
   const editItem = async (id: string, updates: Partial<PantryItemInput>): Promise<void> => {
     const updated = await apiUpdatePantryItem(id, updates);
     setItems((prev) => prev.map((i) => (i.id === id ? updated : i)));
@@ -63,7 +71,7 @@ export const PantryProvider = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <PantryContext.Provider
-      value={{ items, loading, addItem, editItem, removeItem, refreshItems: loadItems }}
+      value={{ items, loading, addItem, addItems, editItem, removeItem, refreshItems: loadItems }}
     >
       {children}
     </PantryContext.Provider>

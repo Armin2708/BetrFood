@@ -14,12 +14,12 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import { usePantry } from '../../../context/PantryContext';
 import PantryItemCard from '../../../components/PantryItemCard';
 import { PantryItem, PantryItemInput } from '../../../services/api';
 import { colors } from '../../../constants/theme';
 
-// Default category list per user story
 const CATEGORIES = [
   'Produce', 'Dairy', 'Proteins', 'Grains',
   'Spices', 'Canned Goods', 'Frozen', 'Beverages', 'Snacks', 'Other',
@@ -277,22 +277,25 @@ export default function PantryScreen() {
     setCollapsed((prev) => ({ ...prev, [category]: !prev[category] }));
   };
 
+  // Navigate to the review screen with no pre-populated candidates (manual flow)
+  const handleOpenReview = () => {
+    router.push('/pantry-review');
+  };
+
   // ── List row type ───────────────────────────────────────────────────────────
 
   type ListRow =
     | { type: 'header'; key: string; category: string; count: number }
     | { type: 'item'; key: string; item: PantryItem };
 
-  // ── Flat list: all items sorted by name ─────────────────────────────────────
+  // ── Flat list ───────────────────────────────────────────────────────────────
 
   const flatListData: ListRow[] = items
     .slice()
     .sort((a, b) => a.name.localeCompare(b.name))
     .map((item) => ({ type: 'item', key: item.id, item }));
 
-  // ── Grouped list: items bucketed by category ────────────────────────────────
-  // Items whose category doesn't match a known one go to Uncategorized.
-  // Empty categories are hidden. Uncategorized appears last.
+  // ── Grouped list ────────────────────────────────────────────────────────────
 
   const grouped = items.reduce<Record<string, PantryItem[]>>((acc, item) => {
     const cat = item.category?.trim() || '';
@@ -344,16 +347,28 @@ export default function PantryScreen() {
 
   return (
     <View style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title} accessibilityRole="header">My Pantry</Text>
-        <TouchableOpacity
-          style={styles.addIconButton}
-          onPress={() => setModalVisible(true)}
-          accessibilityRole="button"
-          accessibilityLabel="Add new pantry item"
-        >
-          <Ionicons name="add-circle" size={30} color={colors.primary} />
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={styles.reviewButton}
+            onPress={handleOpenReview}
+            accessibilityRole="button"
+            accessibilityLabel="Review and add multiple items"
+          >
+            <Ionicons name="clipboard-outline" size={18} color={colors.primary} />
+            <Text style={styles.reviewButtonText}>Review</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.addIconButton}
+            onPress={() => setModalVisible(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Add new pantry item"
+          >
+            <Ionicons name="add-circle" size={30} color={colors.primary} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {loading ? (
@@ -423,6 +438,26 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: colors.textPrimary,
   },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  reviewButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  reviewButtonText: {
+    fontSize: 13,
+    color: colors.primary,
+    fontWeight: '600',
+  },
   addIconButton: {
     padding: 4,
   },
@@ -434,7 +469,6 @@ const styles = StyleSheet.create({
   list: {
     paddingBottom: 32,
   },
-  // Toggle bar
   toggleBar: {
     flexDirection: 'row',
     paddingHorizontal: 16,
@@ -467,7 +501,6 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontWeight: '600',
   },
-  // Section header
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -503,7 +536,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.textSecondary,
   },
-  // Empty state
   emptyState: {
     flex: 1,
     justifyContent: 'center',
@@ -535,7 +567,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 16,
   },
-  // Modal
   modalOverlay: {
     flex: 1,
     justifyContent: 'flex-end',
