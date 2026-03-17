@@ -13,6 +13,8 @@ export default function SSOCallback() {
     clerk.handleRedirectCallback({
       signInFallbackRedirectUrl: "/",
       signUpFallbackRedirectUrl: "/",
+    }).then(() => {
+      router.replace("/");
     }).catch((error) => {
       console.error("SSO callback error:", error);
       router.replace("/(auth)/login");

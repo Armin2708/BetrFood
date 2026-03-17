@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, Image, StyleSheet,
   Alert, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView,
+  Animated,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -25,6 +26,7 @@ interface StepField {
 
 export interface Draft {
   id: string;
+  imageUri: string | null;
   caption: string;
   selectedTagIds: number[];
   showRecipe: boolean;
@@ -55,6 +57,19 @@ export default function CreatePostScreen() {
   ]);
   const [steps, setSteps] = useState<StepField[]>([{ instruction: '' }]);
 
+  // Toast notification
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const toastOpacity = useRef(new Animated.Value(0)).current;
+
+  const showToast = (message: string) => {
+    setToastMessage(message);
+    Animated.sequence([
+      Animated.timing(toastOpacity, { toValue: 1, duration: 200, useNativeDriver: true }),
+      Animated.delay(2000),
+      Animated.timing(toastOpacity, { toValue: 0, duration: 300, useNativeDriver: true }),
+    ]).start(() => setToastMessage(null));
+  };
+
   // Load draft if draftId is provided
   useEffect(() => {
     if (draftId) {
@@ -69,6 +84,7 @@ export default function CreatePostScreen() {
       const drafts: Draft[] = JSON.parse(raw);
       const draft = drafts.find((d) => d.id === id);
       if (!draft) return;
+      if (draft.imageUri) setImage(draft.imageUri);
       setCaption(draft.caption);
       setSelectedTagIds(draft.selectedTagIds);
       setShowRecipe(draft.showRecipe);
@@ -93,6 +109,7 @@ export default function CreatePostScreen() {
 
       const newDraft: Draft = {
         id: draftId || `draft_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+        imageUri: image,
         caption,
         selectedTagIds,
         showRecipe,
@@ -113,9 +130,9 @@ export default function CreatePostScreen() {
       }
 
       await AsyncStorage.setItem(DRAFTS_STORAGE_KEY, JSON.stringify(drafts));
-      Alert.alert('Draft saved', 'Your draft has been saved.');
+      showToast('Draft saved!');
     } catch (error) {
-      Alert.alert('Error', 'Failed to save draft.');
+      showToast('Failed to save draft.');
     }
   };
 
@@ -436,6 +453,13 @@ export default function CreatePostScreen() {
           </View>
         )}
       </ScrollView>
+
+      {/* Toast notification */}
+      {toastMessage && (
+        <Animated.View style={[styles.toast, { opacity: toastOpacity }]}>
+          <Text style={styles.toastText}>{toastMessage}</Text>
+        </Animated.View>
+      )}
     </KeyboardAvoidingView>
   );
 }
@@ -497,6 +521,22 @@ const styles = StyleSheet.create({
   charCount: { textAlign: 'right', color: '#999', marginTop: 4, fontSize: 12 },
   loadingOverlay: { alignItems: 'center', padding: 20 },
   loadingText: { marginTop: 8, color: '#666' },
+  toast: {
+    position: 'absolute',
+    bottom: 50,
+    left: 24,
+    right: 24,
+    backgroundColor: '#333',
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  toastText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
+  },
 
   // Recipe toggle
   recipeToggle: {

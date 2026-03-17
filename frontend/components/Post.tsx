@@ -198,7 +198,7 @@ export default function Post({
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.headerUserInfo}
-          onPress={() => userId && router.push(`/user-profile?userId=${userId}`)}
+          onPress={() => userId && router.push(`/(tabs)/feeds/user-profile?userId=${userId}`)}
           activeOpacity={0.7}
           accessibilityRole="button"
           accessibilityLabel={`View ${username}'s profile`}

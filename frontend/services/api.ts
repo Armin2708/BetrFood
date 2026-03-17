@@ -23,8 +23,13 @@ async function getFreshToken(): Promise<string | null> {
         _authToken = token;
         return token;
       }
+      // Token getter returned null — session expired
+      _authToken = null;
+      return null;
     } catch {
-      // Fall back to cached token
+      // Token refresh failed — clear stale token to avoid using expired JWT
+      _authToken = null;
+      return null;
     }
   }
   return _authToken;

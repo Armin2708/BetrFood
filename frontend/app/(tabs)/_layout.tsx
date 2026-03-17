@@ -1,7 +1,7 @@
 import { Tabs, Redirect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ComponentProps, useState, useCallback, useContext } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { useAuth } from "@clerk/clerk-expo";
 import { useFocusEffect } from '@react-navigation/native';
 import { fetchUnreadNotificationCount } from '../../services/api';
@@ -52,7 +52,15 @@ export default function TabsLayout() {
     }, [isSignedIn, authLoading, token])
   );
 
-  if (isLoaded && !isSignedIn) {
+  if (!isLoaded || authLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#FF6B35" />
+      </View>
+    );
+  }
+
+  if (!isSignedIn) {
     return <Redirect href="/(auth)/login" />;
   }
 

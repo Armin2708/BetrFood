@@ -122,7 +122,7 @@ router.get("/:id/follow-status", requireAuth, async (req, res) => {
   try {
     const { data, error } = await supabase
       .from("user_follows")
-      .select("id")
+      .select("follower_id")
       .eq("follower_id", currentUserId)
       .eq("following_id", targetUserId)
       .maybeSingle();

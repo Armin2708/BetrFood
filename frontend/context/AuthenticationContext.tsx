@@ -47,25 +47,25 @@ export function AuthProvider({ children }: AuthProviderProps) {
     getTokenRef.current = getToken;
   }, [getToken]);
 
-  // Debug: log Clerk state changes
-  useEffect(() => {
-    console.log("[AuthContext] Clerk state:", { authLoaded, userLoaded, isSignedIn, clerkUserId: clerkUser?.id });
-  }, [authLoaded, userLoaded, isSignedIn, clerkUser?.id]);
 
   // Sync Clerk auth state to our context
   useEffect(() => {
     if (!authLoaded || !userLoaded) return;
 
+    let cancelled = false;
+
     if (isSignedIn && clerkUser) {
+      // Reset loading so consumers wait for profile/role fetch
+      setLoading(true);
+
       // Stable wrapper that always calls the latest getToken via ref
       const stableGetToken = () => getTokenRef.current();
       setTokenGetter(stableGetToken);
 
       (async () => {
         try {
-          console.log("[AuthContext] syncUser called, getting token...");
           const jwt = await stableGetToken();
-          console.log("[AuthContext] Got token:", jwt ? "yes" : "no");
+          if (cancelled) return;
           setToken(jwt);
           setAuthToken(jwt);
 
@@ -79,28 +79,32 @@ export function AuthProvider({ children }: AuthProviderProps) {
           // Fetch profile first (auto-provisions in Supabase if missing),
           // then fetch role so the profile row exists for the role query.
           try {
-            console.log("[AuthContext] Fetching profile (auto-provisions in Supabase)...");
             const profile = await fetchMyProfile();
-            console.log("[AuthContext] Profile fetched:", profile);
+            if (cancelled) return;
             setNeedsOnboarding(!profile.onboardingCompleted);
-          } catch (err) {
-            console.error("[AuthContext] Profile fetch failed:", err);
+          } catch {
+            if (cancelled) return;
             setNeedsOnboarding(true);
           }
 
           // Load role from backend (profile now exists)
           try {
             const { role } = await fetchMyRole();
+            if (cancelled) return;
             userData.role = role;
           } catch {
+            if (cancelled) return;
             userData.role = "user";
           }
 
           setUser(userData);
         } catch (error) {
+          if (cancelled) return;
           console.error("[AuthContext] Error syncing user:", error);
         } finally {
-          setLoading(false);
+          if (!cancelled) {
+            setLoading(false);
+          }
         }
       })();
     } else {
@@ -111,17 +115,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setNeedsOnboarding(false);
       setLoading(false);
     }
+
+    return () => { cancelled = true; };
   }, [isSignedIn, authLoaded, userLoaded, clerkUser?.id]);
 
+  const userRef = useRef(user);
+  useEffect(() => { userRef.current = user; }, [user]);
+
   const refreshRole = useCallback(async () => {
-    if (!user) return;
+    if (!userRef.current) return;
     try {
       const { role } = await fetchMyRole();
       setUser((prev) => (prev ? { ...prev, role } : prev));
     } catch {
       // Keep existing role
     }
-  }, [user]);
+  }, []);
 
   return (
     <AuthContext.Provider

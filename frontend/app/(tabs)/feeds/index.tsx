@@ -150,33 +150,37 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.feedToggle}>
-        <TouchableOpacity
-          style={[styles.feedToggleTab, feedType === 'forYou' && styles.feedToggleActive]}
-          onPress={() => handleFeedTypeChange('forYou')}
-          accessibilityRole="tab"
-          accessibilityState={{ selected: feedType === 'forYou' }}
-        >
-          <Text style={[styles.feedToggleText, feedType === 'forYou' && styles.feedToggleTextActive]}>For You</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.feedToggleTab, feedType === 'following' && styles.feedToggleActive]}
-          onPress={() => handleFeedTypeChange('following')}
-          accessibilityRole="tab"
-          accessibilityState={{ selected: feedType === 'following' }}
-        >
-          <Text style={[styles.feedToggleText, feedType === 'following' && styles.feedToggleTextActive]}>Following</Text>
-        </TouchableOpacity>
-      </View>
-      <TagFilterBar
-        selectedTagIds={selectedTagIds}
-        onFilterChange={handleTagFilterChange}
-      />
       <FlatList
         data={posts}
         keyExtractor={(item) => item.id}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={refresh} />
+          <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor="#FF6B35" colors={['#FF6B35']} />
+        }
+        ListHeaderComponent={
+          <>
+            <View style={styles.feedToggle}>
+              <TouchableOpacity
+                style={[styles.feedToggleTab, feedType === 'forYou' && styles.feedToggleActive]}
+                onPress={() => handleFeedTypeChange('forYou')}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: feedType === 'forYou' }}
+              >
+                <Text style={[styles.feedToggleText, feedType === 'forYou' && styles.feedToggleTextActive]}>For You</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.feedToggleTab, feedType === 'following' && styles.feedToggleActive]}
+                onPress={() => handleFeedTypeChange('following')}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: feedType === 'following' }}
+              >
+                <Text style={[styles.feedToggleText, feedType === 'following' && styles.feedToggleTextActive]}>Following</Text>
+              </TouchableOpacity>
+            </View>
+            <TagFilterBar
+              selectedTagIds={selectedTagIds}
+              onFilterChange={handleTagFilterChange}
+            />
+          </>
         }
         onEndReached={handleEndReached}
         onEndReachedThreshold={0.5}

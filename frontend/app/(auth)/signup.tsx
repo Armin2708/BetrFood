@@ -12,8 +12,8 @@ import {
   Alert,
 } from "react-native";
 import { useState, useCallback } from "react";
-import { useRouter } from "expo-router";
-import { useSignIn, useSignUp, useSSO } from "@clerk/clerk-expo";
+import { useRouter, Redirect } from "expo-router";
+import { useAuth, useSignIn, useSignUp, useSSO } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
 import * as AuthSession from "expo-auth-session";
 import * as WebBrowser from "expo-web-browser";
@@ -21,6 +21,13 @@ import * as WebBrowser from "expo-web-browser";
 WebBrowser.maybeCompleteAuthSession();
 
 export default function Signup() {
+  const { isSignedIn, isLoaded } = useAuth();
+
+  // Already signed in — redirect to home
+  if (isLoaded && isSignedIn) {
+    return <Redirect href="/" />;
+  }
+
   if (Platform.OS === "web") {
     return <WebSignup />;
   }
@@ -30,7 +37,7 @@ export default function Signup() {
 function WebSignup() {
   const router = useRouter();
   const { signUp, setActive, isLoaded } = useSignUp();
-  const { signIn } = useSignIn();
+  const { signIn, setActive: setSignInActive } = useSignIn();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -95,49 +102,41 @@ function WebSignup() {
   };
 
   const handleOAuth = async (strategy: "oauth_google" | "oauth_apple") => {
-    if (!isLoaded || !signIn) return;
+    if (!isLoaded || !signUp) return;
     setLoading(true);
     try {
-      const result = await signIn.create({
-        strategy,
-        redirectUrl: window.location.origin + "/sso-callback",
-        actionCompleteRedirectUrl: window.location.origin + "/",
-      });
+      // Try signUp first; if the account already exists, Clerk will throw
+      // an error — we catch it and fall back to signIn.
+      let verificationUrl: string | null = null;
 
-      const verificationUrl =
-        result.firstFactorVerification?.externalVerificationRedirectURL;
+      try {
+        const result = await signUp.create({
+          strategy,
+          redirectUrl: window.location.origin + "/sso-callback",
+          actionCompleteRedirectUrl: window.location.origin + "/",
+        });
+        verificationUrl =
+          result.verifications?.externalAccount?.externalVerificationRedirectURL?.toString() ?? null;
+      } catch (signUpError: any) {
+        // Account already exists — fall back to signIn
+        if (signIn) {
+          const result = await signIn.create({
+            strategy,
+            redirectUrl: window.location.origin + "/sso-callback",
+            actionCompleteRedirectUrl: window.location.origin + "/",
+          });
+          verificationUrl =
+            result.firstFactorVerification?.externalVerificationRedirectURL?.toString() ?? null;
+        } else {
+          throw signUpError;
+        }
+      }
 
       if (!verificationUrl) {
         throw new Error("No OAuth redirect URL returned from Clerk");
       }
 
-      const popup = window.open(
-        verificationUrl.toString(),
-        "clerk-oauth",
-        "width=500,height=600,left=200,top=100"
-      );
-
-      if (!popup) {
-        throw new Error("Popup blocked. Please allow popups for this site.");
-      }
-
-      const pollInterval = setInterval(async () => {
-        try {
-          if (popup.closed) {
-            clearInterval(pollInterval);
-            const updatedSignIn = await signIn.reload();
-            if (updatedSignIn.status === "complete") {
-              await setActive!({ session: updatedSignIn.createdSessionId });
-              router.replace("/");
-            } else {
-              setLoading(false);
-            }
-          }
-        } catch {
-          clearInterval(pollInterval);
-          setLoading(false);
-        }
-      }, 500);
+      window.location.href = verificationUrl;
     } catch (error: any) {
       console.error("OAuth error:", error);
       const msg =
@@ -284,7 +283,7 @@ function WebSignup() {
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity onPress={() => router.back()} style={styles.backLink}>
+      <TouchableOpacity onPress={() => router.replace("/(auth)/login")} style={styles.backLink}>
         <Text style={styles.backLinkText}>
           Already have an account? <Text style={styles.footerLink}>Log in</Text>
         </Text>
@@ -557,7 +556,7 @@ function NativeSignup() {
         </View>
 
         {/* Back to Login */}
-        <TouchableOpacity onPress={() => router.back()} style={styles.backLink}>
+        <TouchableOpacity onPress={() => router.replace("/(auth)/login")} style={styles.backLink}>
           <Text style={styles.backLinkText}>
             Already have an account? <Text style={styles.footerLink}>Log in</Text>
           </Text>
