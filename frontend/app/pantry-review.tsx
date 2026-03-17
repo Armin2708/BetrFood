@@ -1,0 +1,506 @@
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  FlatList,
+  StyleSheet,
+  TouchableOpacity,
+  TextInput,
+  Alert,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
+import { router, useLocalSearchParams } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { usePantry } from '../context/PantryContext';
+import { colors } from '../constants/theme';
+import { PantryItemInput } from '../services/api';
+
+const CATEGORIES = [
+  'Produce', 'Dairy', 'Proteins', 'Grains',
+  'Spices', 'Canned Goods', 'Frozen', 'Beverages', 'Snacks', 'Other',
+];
+
+// Each candidate row has a local id for list keying (not a DB id)
+type Candidate = {
+  localId: string;
+  name: string;
+  quantity: number;
+  unit: string;
+  category: string;
+  expirationDate: string | null;
+};
+
+function makeid() {
+  return Math.random().toString(36).slice(2, 10);
+}
+
+function blankCandidate(): Candidate {
+  return {
+    localId: makeid(),
+    name: '',
+    quantity: 1,
+    unit: 'pcs',
+    category: CATEGORIES[0],
+    expirationDate: null,
+  };
+}
+
+// ─── Category Picker ───────────────────────────────────────────────────────────
+
+function CategoryPicker({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (cat: string) => void;
+}) {
+  return (
+    <View style={styles.chipRow}>
+      {CATEGORIES.map((cat) => (
+        <TouchableOpacity
+          key={cat}
+          style={[styles.chip, value === cat && styles.chipSelected]}
+          onPress={() => onChange(cat)}
+          accessibilityRole="button"
+          accessibilityState={{ selected: value === cat }}
+          accessibilityLabel={cat}
+        >
+          <Text style={[styles.chipText, value === cat && styles.chipTextSelected]}>
+            {cat}
+          </Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+}
+
+// ─── Candidate Row ─────────────────────────────────────────────────────────────
+
+function CandidateRow({
+  candidate,
+  onChange,
+  onRemove,
+}: {
+  candidate: Candidate;
+  onChange: (updated: Candidate) => void;
+  onRemove: () => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+
+  const update = (fields: Partial<Candidate>) =>
+    onChange({ ...candidate, ...fields });
+
+  return (
+    <View style={styles.candidateCard}>
+      {/* Row header: name field + remove button */}
+      <View style={styles.candidateHeader}>
+        <TextInput
+          style={[styles.input, styles.nameInput]}
+          value={candidate.name}
+          onChangeText={(text) => update({ name: text })}
+          placeholder="Item name *"
+          accessibilityLabel="Item name"
+        />
+        <TouchableOpacity
+          onPress={onRemove}
+          style={styles.removeButton}
+          accessibilityRole="button"
+          accessibilityLabel={`Remove ${candidate.name || 'item'}`}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Ionicons name="close-circle" size={22} color={colors.error} />
+        </TouchableOpacity>
+      </View>
+
+      {/* Qty + unit on one line */}
+      <View style={styles.row}>
+        <TextInput
+          style={[styles.input, styles.inputFlex]}
+          value={String(candidate.quantity)}
+          onChangeText={(text) => {
+            const n = parseFloat(text);
+            update({ quantity: isNaN(n) ? 0 : n });
+          }}
+          placeholder="Qty"
+          keyboardType="decimal-pad"
+          accessibilityLabel="Quantity"
+        />
+        <TextInput
+          style={[styles.input, styles.inputFlex]}
+          value={candidate.unit}
+          onChangeText={(text) => update({ unit: text })}
+          placeholder="Unit"
+          accessibilityLabel="Unit"
+        />
+      </View>
+
+      {/* Expandable category picker */}
+      <TouchableOpacity
+        style={styles.categoryToggle}
+        onPress={() => setExpanded((v) => !v)}
+        accessibilityRole="button"
+        accessibilityLabel={`Category: ${candidate.category}. Tap to change.`}
+      >
+        <Text style={styles.categoryToggleText}>
+          Category: <Text style={styles.categoryToggleValue}>{candidate.category}</Text>
+        </Text>
+        <Ionicons
+          name={expanded ? 'chevron-up' : 'chevron-down'}
+          size={14}
+          color={colors.textTertiary}
+        />
+      </TouchableOpacity>
+
+      {expanded && (
+        <CategoryPicker
+          value={candidate.category}
+          onChange={(cat) => {
+            update({ category: cat });
+            setExpanded(false);
+          }}
+        />
+      )}
+    </View>
+  );
+}
+
+// ─── Review Screen ─────────────────────────────────────────────────────────────
+
+export default function PantryReviewScreen() {
+  const { addItems } = usePantry();
+  const params = useLocalSearchParams<{ candidates?: string }>();
+
+  // Accept pre-populated candidates passed via navigation params (e.g. from a
+  // photo-identification flow), or start with one blank row.
+  const [candidates, setCandidates] = useState<Candidate[]>(() => {
+    if (params.candidates) {
+      try {
+        const parsed: PantryItemInput[] = JSON.parse(params.candidates);
+        return parsed.map((p) => ({
+          localId: makeid(),
+          name: p.name,
+          quantity: p.quantity,
+          unit: p.unit,
+          category: p.category || CATEGORIES[0],
+          expirationDate: p.expirationDate ?? null,
+        }));
+      } catch {
+        // Fall through to blank row
+      }
+    }
+    return [blankCandidate()];
+  });
+
+  const [saving, setSaving] = useState(false);
+
+  const updateCandidate = (localId: string, updated: Candidate) => {
+    setCandidates((prev) =>
+      prev.map((c) => (c.localId === localId ? updated : c))
+    );
+  };
+
+  const removeCandidate = (localId: string) => {
+    setCandidates((prev) => prev.filter((c) => c.localId !== localId));
+  };
+
+  const addBlankRow = () => {
+    setCandidates((prev) => [...prev, blankCandidate()]);
+  };
+
+  const handleConfirm = async () => {
+    // Validate — every item needs at least a name
+    const invalid = candidates.filter((c) => !c.name.trim());
+    if (invalid.length > 0) {
+      return Alert.alert(
+        'Missing Names',
+        'Every item needs a name. Remove or fill in the highlighted rows.'
+      );
+    }
+
+    if (candidates.length === 0) {
+      return Alert.alert('Nothing to add', 'Add at least one item before confirming.');
+    }
+
+    setSaving(true);
+    try {
+      const inputs: PantryItemInput[] = candidates.map((c) => ({
+        name: c.name.trim(),
+        quantity: c.quantity,
+        unit: c.unit.trim() || 'pcs',
+        category: c.category,
+        expirationDate: c.expirationDate,
+      }));
+
+      await addItems(inputs);
+      router.back();
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to add items to pantry.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDiscard = () => {
+    Alert.alert('Discard Items', 'Are you sure you want to discard all items?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Discard', style: 'destructive', onPress: () => router.back() },
+    ]);
+  };
+
+  return (
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity
+          onPress={handleDiscard}
+          accessibilityRole="button"
+          accessibilityLabel="Discard and go back"
+          style={styles.headerButton}
+        >
+          <Text style={styles.headerButtonText}>Discard</Text>
+        </TouchableOpacity>
+
+        <Text style={styles.title} accessibilityRole="header">
+          Review Items
+        </Text>
+
+        <TouchableOpacity
+          onPress={handleConfirm}
+          disabled={saving || candidates.length === 0}
+          accessibilityRole="button"
+          accessibilityLabel="Confirm and add all items to pantry"
+          style={[
+            styles.confirmButton,
+            (saving || candidates.length === 0) && styles.confirmButtonDisabled,
+          ]}
+        >
+          {saving ? (
+            <ActivityIndicator size="small" color={colors.white} />
+          ) : (
+            <Text style={styles.confirmButtonText}>
+              Add {candidates.length} {candidates.length === 1 ? 'Item' : 'Items'}
+            </Text>
+          )}
+        </TouchableOpacity>
+      </View>
+
+      {/* Subtitle */}
+      <Text style={styles.subtitle}>
+        Review, edit, or remove items before adding them to your pantry.
+      </Text>
+
+      {/* Item list */}
+      <FlatList
+        data={candidates}
+        keyExtractor={(c) => c.localId}
+        renderItem={({ item }) => (
+          <CandidateRow
+            candidate={item}
+            onChange={(updated) => updateCandidate(item.localId, updated)}
+            onRemove={() => removeCandidate(item.localId)}
+          />
+        )}
+        contentContainerStyle={styles.list}
+        showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+          <View style={styles.emptyState}>
+            <Ionicons name="basket-outline" size={48} color={colors.textTertiary} />
+            <Text style={styles.emptyText}>No items to review.</Text>
+            <Text style={styles.emptySubText}>Tap "Add Item" below to add one manually.</Text>
+          </View>
+        }
+        ListFooterComponent={
+          <TouchableOpacity
+            style={styles.addRowButton}
+            onPress={addBlankRow}
+            accessibilityRole="button"
+            accessibilityLabel="Add another item manually"
+          >
+            <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
+            <Text style={styles.addRowButtonText}>Add Item</Text>
+          </TouchableOpacity>
+        }
+      />
+    </KeyboardAvoidingView>
+  );
+}
+
+// ─── Styles ────────────────────────────────────────────────────────────────────
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.backgroundPrimary,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 56,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.backgroundPrimary,
+  },
+  title: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  headerButton: {
+    minWidth: 64,
+  },
+  headerButtonText: {
+    fontSize: 15,
+    color: colors.textTertiary,
+  },
+  confirmButton: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    minWidth: 64,
+    alignItems: 'center',
+  },
+  confirmButtonDisabled: {
+    opacity: 0.5,
+  },
+  confirmButtonText: {
+    color: colors.white,
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  subtitle: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: colors.backgroundSubtle,
+    borderBottomWidth: 1,
+    borderColor: colors.borderLight,
+  },
+  list: {
+    padding: 16,
+    gap: 12,
+    paddingBottom: 40,
+  },
+  // Candidate card
+  candidateCard: {
+    backgroundColor: colors.backgroundPrimary,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 12,
+    gap: 8,
+    marginBottom: 12,
+  },
+  candidateHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  nameInput: {
+    flex: 1,
+    fontWeight: '600',
+  },
+  removeButton: {
+    padding: 2,
+  },
+  row: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+    padding: 9,
+    fontSize: 14,
+    color: colors.textPrimary,
+    backgroundColor: colors.backgroundPrimary,
+  },
+  inputFlex: {
+    flex: 1,
+  },
+  categoryToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 6,
+    paddingHorizontal: 2,
+  },
+  categoryToggleText: {
+    fontSize: 13,
+    color: colors.textSecondary,
+  },
+  categoryToggleValue: {
+    color: colors.primary,
+    fontWeight: '600',
+  },
+  // Category chips
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    paddingTop: 4,
+  },
+  chip: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  chipSelected: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  chipText: {
+    fontSize: 12,
+    color: colors.textSecondary,
+  },
+  chipTextSelected: {
+    color: colors.white,
+    fontWeight: '600',
+  },
+  // Add row button
+  addRowButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 14,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    borderStyle: 'dashed',
+    marginTop: 4,
+  },
+  addRowButtonText: {
+    fontSize: 15,
+    color: colors.primary,
+    fontWeight: '600',
+  },
+  // Empty state
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 40,
+    gap: 8,
+  },
+  emptyText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  emptySubText: {
+    fontSize: 13,
+    color: colors.textTertiary,
+    textAlign: 'center',
+  },
+});
