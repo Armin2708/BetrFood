@@ -23,34 +23,36 @@ const notificationsRouter = require("./routes/notifications");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors());
+const allowedOrigins = process.env.CORS_ORIGINS
+  ? process.env.CORS_ORIGINS.split(',').map(o => o.trim())
+  : ['http://localhost:8081', 'http://localhost:19006'];
+app.use(cors({
+  origin: allowedOrigins,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
 app.use(express.json());
 
 // Request logging middleware
 app.use((req, res, next) => {
   const start = Date.now();
-  const hasAuth = !!req.headers.authorization;
-  console.log(`\n[REQ] --> ${req.method} ${req.originalUrl} | auth: ${hasAuth}`);
 
   const originalSend = res.send.bind(res);
   res.send = function (body) {
     const duration = Date.now() - start;
-    console.log(`[RES] <-- ${req.method} ${req.originalUrl} | ${res.statusCode} | ${duration}ms`);
-    if (res.statusCode >= 400) {
-      console.log(`[RES] Error body:`, typeof body === 'string' ? body.substring(0, 500) : body);
-    }
+    console.log(`${req.method} ${req.originalUrl} ${res.statusCode} ${duration}ms`);
     return originalSend(body);
   };
 
   next();
 });
 
-// Serve uploaded images statically with caching
+// Serve uploaded media (images + videos) statically with caching
 app.use("/uploads", express.static(path.join(__dirname, "..", "uploads"), {
   maxAge: '7d',
-  immutable: true,
   etag: true,
   lastModified: true,
+  acceptRanges: true, // Required for video seeking/streaming
 }));
 
 app.get("/", (req, res) => {
@@ -76,12 +78,18 @@ app.use("/api/preferences", preferencesRouter);
 app.use("/api/users", blocksRouter);
 app.use("/api/notifications", notificationsRouter);
 
+// Global error handler — catches multer errors and other unhandled middleware errors
+app.use((err, req, res, next) => {
+  console.error('[ERROR]', err.message);
+  if (err.code === 'LIMIT_FILE_SIZE') {
+    return res.status(413).json({ error: 'File too large.' });
+  }
+  if (err.message && err.message.includes('Only')) {
+    return res.status(400).json({ error: err.message });
+  }
+  res.status(500).json({ error: err.message || 'Internal server error.' });
+});
+
 app.listen(PORT, () => {
-  console.log(`\n=== BetrFood Backend Started ===`);
-  console.log(`Port: ${PORT}`);
-  console.log(`SUPABASE_URL: ${process.env.SUPABASE_URL ? '✓ set' : '✗ MISSING'}`);
-  console.log(`SUPABASE_SERVICE_ROLE_KEY: ${process.env.SUPABASE_SERVICE_ROLE_KEY ? '✓ set' : '✗ MISSING'}`);
-  console.log(`CLERK_SECRET_KEY: ${process.env.CLERK_SECRET_KEY ? '✓ set' : '✗ MISSING'}`);
-  console.log(`CLERK_PUBLISHABLE_KEY: ${process.env.CLERK_PUBLISHABLE_KEY ? '✓ set' : '✗ MISSING'}`);
-  console.log(`================================\n`);
+  console.log(`BetrFood backend listening on port ${PORT}`);
 });

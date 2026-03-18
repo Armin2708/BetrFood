@@ -1,0 +1,38 @@
+[     633ms] [WARNING] "shadow*" style props are deprecated. Use "boxShadow". @ http://localhost:8081/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app&transform.reactCompiler=true:7236
+[    1459ms] [WARNING] Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview @ https://neat-whippet-99.clerk.accounts.dev/npm/@clerk/clerk-js@5/dist/clerk.browser.js:18
+[    2016ms] [WARNING] props.pointerEvents is deprecated. Use style.pointerEvents @ http://localhost:8081/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app&transform.reactCompiler=true:7236
+[    2029ms] [WARNING] Animated: `useNativeDriver` is not supported because the native animated module is missing. Falling back to JS-based animation. To resolve this, add `RCTAnimation` module to this app, or remove `useNativeDriver`. Make sure to run `bundle exec pod install` first. Read more about autolinking: https://github.com/react-native-community/cli/blob/master/docs/autolinking.md @ http://localhost:8081/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app&transform.reactCompiler=true:21529
+[    5691ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/api/posts/a21bf2c6-d72d-436a-bb22-91a7875c6ccc/recipe:0
+[  124177ms] [ERROR] Failed to load resource: net::ERR_EMPTY_RESPONSE @ http://localhost:3000/api/tags:0
+[  124178ms] [ERROR] TypeError: Failed to fetch
+    at fetchTags (http://localhost:8081/services/api.bundle//&platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app&transform.reactCompiler=true&minify=false&modulesOnly=true&runModule=false&shallow=true:202:28) @ http://localhost:8081/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app&transform.reactCompiler=true:1120
+[  124178ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/api/roles/me:0
+[  124179ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/api/posts?limit=10:0
+[  124183ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/api/profiles/me:0
+[  124183ms] [ERROR] [AuthContext] Profile fetch failed: TypeError: Failed to fetch
+    at fetchMyProfile (http://localhost:8081/services/api.bundle//&platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app&transform.reactCompiler=true&minify=false&modulesOnly=true&runModule=false&shallow=true:262:28)
+    at async syncUser (http://localhost:8081/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app&transform.reactCompiler=true:117673:27) @ http://localhost:8081/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app&transform.reactCompiler=true:1120
+[  133542ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/api/posts?limit=10:0
+[  133542ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/api/roles/me:0
+[  133543ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/api/tags:0
+[  133543ms] [ERROR] TypeError: Failed to fetch
+    at fetchTags (http://localhost:8081/services/api.bundle//&platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app&transform.reactCompiler=true&minify=false&modulesOnly=true&runModule=false&shallow=true:202:28) @ http://localhost:8081/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app&transform.reactCompiler=true:1120
+[  133544ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/api/profiles/me:0
+[  133544ms] [ERROR] [AuthContext] Profile fetch failed: TypeError: Failed to fetch
+    at fetchMyProfile (http://localhost:8081/services/api.bundle//&platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app&transform.reactCompiler=true&minify=false&modulesOnly=true&runModule=false&shallow=true:262:28)
+    at async syncUser (http://localhost:8081/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app&transform.reactCompiler=true:117673:27) @ http://localhost:8081/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app&transform.reactCompiler=true:1120
+[  156844ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/api/posts/a21bf2c6-d72d-436a-bb22-91a7875c6ccc/recipe:0
+[  163425ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/api/posts/a21bf2c6-d72d-436a-bb22-91a7875c6ccc/recipe:0
+[  173319ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/api/posts/a21bf2c6-d72d-436a-bb22-91a7875c6ccc/recipe:0
+[  190292ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/api/posts/a21bf2c6-d72d-436a-bb22-91a7875c6ccc/recipe:0
+[  199673ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/api/posts/a21bf2c6-d72d-436a-bb22-91a7875c6ccc/recipe:0
+[  226695ms] [ERROR] WebSocket connection to 'ws://localhost:8081/message' failed:  @ http://localhost:8081/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app&transform.reactCompiler=true:55153
+[  226695ms] [ERROR] WebSocket connection to 'ws://localhost:8081/hot' failed:  @ http://localhost:8081/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app&transform.reactCompiler=true:53479
+[  227197ms] [WARNING] Cannot connect to Metro.
+ 
+ Try the following to fix the issue:
+ - Ensure the Metro dev server is running and available on the same network as this device
+ 
+ URL: localhost:8081
+ 
+ Error: undefined @ http://localhost:8081/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app&transform.reactCompiler=true:53402

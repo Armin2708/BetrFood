@@ -126,6 +126,12 @@ router.post('/posts/:id/tags', async (req, res) => {
 
     if (insertError) throw insertError;
 
+    // Mark post as edited
+    await supabase
+      .from('posts')
+      .update({ edited_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+      .eq('id', postId);
+
     const tags = await getTagsForPost(postId);
     res.json({ postId, tags });
   } catch (error) {
@@ -146,6 +152,13 @@ router.delete('/posts/:id/tags/:tagId', async (req, res) => {
       .eq('tag_id', parseInt(tagId));
 
     if (error) throw error;
+
+    // Mark post as edited
+    await supabase
+      .from('posts')
+      .update({ edited_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+      .eq('id', postId);
+
     res.json({ message: 'Tag removed from post.' });
   } catch (error) {
     console.error('Error removing tag from post:', error);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import SaveCollectionModal from "./SaveCollectionModal";
 import * as Clipboard from 'expo-clipboard';
 import { useActionSheet } from '@expo/react-native-action-sheet';
@@ -8,6 +8,7 @@ import { Tag, Recipe, deletePost, fetchRecipe, likePost, unlikePost, reportConte
 import TagDisplay from './TagDisplay';
 import RecipeDisplay from './RecipeDisplay';
 import { colors } from '../constants/theme';
+import { useVideoPlayer, VideoView } from 'expo-video';
 import {
   View,
   Text,
@@ -17,7 +18,11 @@ import {
   Share,
   Alert,
   Animated,
+  ScrollView,
+  Dimensions,
 } from 'react-native';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 import { router } from 'expo-router';
 
 interface PostProps {
@@ -25,6 +30,7 @@ interface PostProps {
   profilePic: string;
   username: string;
   postImage: string;
+  postImages?: string[];
   caption: string;
   userId?: string;
   currentUserId?: string;
@@ -34,6 +40,8 @@ interface PostProps {
   initialLiked?: boolean;
   initialLikes?: number;
   verified?: boolean;
+  mediaType?: 'image' | 'video';
+  commentCount?: number;
 }
 
 export default function Post({
@@ -41,6 +49,7 @@ export default function Post({
   profilePic,
   username,
   postImage,
+  postImages,
   caption,
   userId,
   currentUserId,
@@ -50,9 +59,14 @@ export default function Post({
   initialLiked = false,
   initialLikes = 0,
   verified = false,
+  mediaType = 'image',
+  commentCount = 0,
 }: PostProps) {
+  const { savePostToCollection } = useCollections();
   const [liked, setLiked] = useState(initialLiked);
   const [likeCount, setLikeCount] = useState(initialLikes);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const allImages = postImages && postImages.length > 0 ? postImages : [postImage];
   const [likeLoading, setLikeLoading] = useState(false);
   const [collectionModalVisible, setCollectionModalVisible] = useState(false);
   const [recipe, setRecipe] = useState<Recipe | null>(null);
@@ -61,6 +75,7 @@ export default function Post({
   useEffect(() => {
     if (id) {
       fetchRecipe(id).then(setRecipe).catch(() => {});
+      checkSaveStatus(id).then(({ isSaved }) => setSaved(isSaved)).catch(() => {});
     }
   }, [id]);
 
@@ -138,18 +153,43 @@ export default function Post({
     Alert.alert('Link Copied', 'The post link has been copied to your clipboard.');
   };
 
+  const submitReport = async (reason: string) => {
+    if (!id) return;
+    try {
+      await reportContent('post', id, reason);
+      Alert.alert('Report Submitted', 'Thank you for your report. We will review it shortly.');
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to submit report.');
+    }
+  };
+
   const handleReport = () => {
     if (!id) return;
     const reasons = ['Spam', 'Inappropriate', 'Harassment', 'Other'];
     Alert.alert('Report Post', 'Select a reason:', [
       ...reasons.map((reason) => ({
         text: reason,
-        onPress: async () => {
-          try {
-            await reportContent('post', id, reason);
-            Alert.alert('Report Submitted', 'Thank you for your report. We will review it shortly.');
-          } catch (error: any) {
-            Alert.alert('Error', error.message || 'Failed to submit report.');
+        onPress: () => {
+          if (reason === 'Other') {
+            Alert.prompt(
+              'Report Post',
+              'Please describe the issue:',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Submit',
+                  onPress: (text?: string) => {
+                    const detail = text?.trim();
+                    submitReport(detail ? `Other: ${detail}` : 'Other');
+                  },
+                },
+              ],
+              'plain-text',
+              '',
+              'default'
+            );
+          } else {
+            submitReport(reason);
           }
         },
       })),
@@ -157,14 +197,19 @@ export default function Post({
     ]);
   };
 
+  const handleEdit = () => {
+    if (!id) return;
+    router.push(`/edit-post?postId=${id}`);
+  };
+
   const showPostMenu = () => {
     if (isOwner) {
-      const options = ['Delete', 'Report', 'Cancel'];
+      const options = ['Edit', 'Delete', 'Cancel'];
       showActionSheetWithOptions(
-        { options, cancelButtonIndex: 2, destructiveButtonIndex: 0 },
+        { options, cancelButtonIndex: 2, destructiveButtonIndex: 1 },
         (index) => {
-          if (index === 0) handleDelete();
-          if (index === 1) handleReport();
+          if (index === 0) handleEdit();
+          if (index === 1) handleDelete();
         }
       );
     } else {
@@ -191,7 +236,7 @@ export default function Post({
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.headerUserInfo}
-          onPress={() => userId && router.push(`/user-profile?userId=${userId}`)}
+          onPress={() => userId && router.push(`/(tabs)/feeds/user-profile?userId=${userId}`)}
           activeOpacity={0.7}
           accessibilityRole="button"
           accessibilityLabel={`View ${username}'s profile`}
@@ -205,13 +250,43 @@ export default function Post({
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity
-        activeOpacity={0.9}
-        onPress={() => id && router.push(`/post-detail?postId=${id}`)}
-        accessibilityLabel={`Post by ${username}: ${caption?.substring(0, 80) || 'photo'}`}
-      >
-        <Image source={{ uri: postImage }} style={styles.postImage} />
-      </TouchableOpacity>
+      {mediaType === 'video' ? (
+        <PostVideo uri={allImages[0]} />
+      ) : (
+        <TouchableOpacity
+          activeOpacity={0.9}
+          onPress={() => id && router.push(`/post-detail?postId=${id}`)}
+          accessibilityLabel={`Post by ${username}: ${caption?.substring(0, 80) || 'photo'}`}
+        >
+          {allImages.length > 1 ? (
+            <View>
+              <ScrollView
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                onMomentumScrollEnd={(e) => {
+                  const index = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+                  setActiveImageIndex(index);
+                }}
+              >
+                {allImages.map((uri, index) => (
+                  <Image key={index} source={{ uri }} style={styles.postImage} />
+                ))}
+              </ScrollView>
+              <View style={styles.dotContainer}>
+                {allImages.map((_, index) => (
+                  <View
+                    key={index}
+                    style={[styles.dot, index === activeImageIndex && styles.dotActive]}
+                  />
+                ))}
+              </View>
+            </View>
+          ) : (
+            <Image source={{ uri: allImages[0] }} style={styles.postImage} />
+          )}
+        </TouchableOpacity>
+      )}
 
       <View style={styles.actions}>
         <TouchableOpacity
@@ -232,6 +307,15 @@ export default function Post({
           >
             {liked ? '❤️' : '🤍'} {liked ? 'Liked' : 'Like'}
           </Animated.Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => id && router.push(`/post-detail?postId=${id}`)}
+          style={styles.actionButton}
+          accessibilityRole="button"
+          accessibilityLabel="Comment on post"
+        >
+          <Text style={styles.actionText}>💬 {commentCount > 0 ? commentCount : 'Comment'}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -280,6 +364,20 @@ export default function Post({
   );
 }
 
+function PostVideo({ uri }: { uri: string }) {
+  const player = useVideoPlayer(uri, p => {
+    p.loop = false;
+  });
+  return (
+    <VideoView
+      player={player}
+      style={{ width: SCREEN_WIDTH, aspectRatio: 4 / 3 }}
+      allowsFullscreen
+      allowsPictureInPicture
+    />
+  );
+}
+
 const styles = StyleSheet.create({
   container: { marginVertical: 10, backgroundColor: colors.backgroundPrimary, borderBottomWidth: 1, borderColor: colors.border },
   header: { flexDirection: 'row', alignItems: 'center', padding: 10 },
@@ -287,7 +385,10 @@ const styles = StyleSheet.create({
   profilePic: { width: 40, height: 40, borderRadius: 20, marginRight: 10 },
   username: { fontWeight: 'bold', fontSize: 16, flex: 1 },
   menuButton: { padding: 8 },
-  postImage: { width: '100%', aspectRatio: 4 / 3, backgroundColor: colors.borderLight },
+  postImage: { width: SCREEN_WIDTH, aspectRatio: 4 / 3, backgroundColor: colors.borderLight },
+  dotContainer: { flexDirection: 'row', justifyContent: 'center', paddingVertical: 8, gap: 6 },
+  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.border },
+  dotActive: { backgroundColor: colors.primary, width: 8, height: 8, borderRadius: 4 },
   actions: { flexDirection: 'row', paddingHorizontal: 10, paddingTop: 10, gap: 16 },
   actionButton: { paddingVertical: 4 },
   actionText: { fontSize: 16, color: colors.textPrimary },

@@ -3,21 +3,27 @@ import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from "@expo/vector-icons";
 import { useState, useCallback, useContext, useEffect } from 'react';
 import { useActionSheet } from '@expo/react-native-action-sheet';
-import { AuthContext } from '../context/AuthenticationContext';
+import { AuthContext } from '../../../context/AuthenticationContext';
+import VideoThumbnailView from '../../../components/VideoThumbnail';
 import {
   fetchUserProfile,
   fetchFollowStats,
-  fetchPosts,
+  fetchUserPosts,
   getImageUrl,
+  getAvatarUrl,
   followUser,
   unfollowUser,
   checkFollowStatus,
+  checkBlockStatus,
+  checkMuteStatus,
   blockUser,
+  unblockUser,
   muteUser,
+  unmuteUser,
   reportContent,
   UserProfile,
   Post as PostType,
-} from '../services/api';
+} from '../../../services/api';
 
 const { width } = Dimensions.get('window');
 const ITEM_SIZE = width / 3;
@@ -33,36 +39,74 @@ export default function UserProfileScreen() {
   const [userPosts, setUserPosts] = useState<PostType[]>([]);
   const [isFollowing, setIsFollowing] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
   const { showActionSheetWithOptions } = useActionSheet();
 
-  const handleBlockUser = () => {
+  const handleToggleBlock = () => {
     if (!userId) return;
-    Alert.alert('Block User', 'Are you sure you want to block this user? You will no longer see their content.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Block',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await blockUser(userId);
-            Alert.alert('User Blocked', 'This user has been blocked.', [
-              { text: 'OK', onPress: () => router.back() },
-            ]);
-          } catch (error: any) {
-            Alert.alert('Error', error.message || 'Failed to block user.');
-          }
+    if (isBlocked) {
+      Alert.alert('Unblock User', 'Are you sure you want to unblock this user?', [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Unblock',
+          onPress: async () => {
+            try {
+              await unblockUser(userId);
+              setIsBlocked(false);
+              Alert.alert('User Unblocked', 'You can now see each other\'s content again.');
+            } catch (error: any) {
+              Alert.alert('Error', error.message || 'Failed to unblock user.');
+            }
+          },
         },
-      },
-    ]);
+      ]);
+    } else {
+      Alert.alert('Block User', 'Are you sure you want to block this user? You will no longer see their content and they won\'t see yours.', [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Block',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await blockUser(userId);
+              setIsBlocked(true);
+              Alert.alert('User Blocked', 'This user has been blocked.', [
+                { text: 'OK', onPress: () => router.back() },
+              ]);
+            } catch (error: any) {
+              Alert.alert('Error', error.message || 'Failed to block user.');
+            }
+          },
+        },
+      ]);
+    }
   };
 
-  const handleMuteUser = async () => {
+  const handleToggleMute = async () => {
     if (!userId) return;
     try {
-      await muteUser(userId);
-      Alert.alert('User Muted', 'This user has been muted. You will no longer see their posts in your feed.');
+      if (isMuted) {
+        await unmuteUser(userId);
+        setIsMuted(false);
+        Alert.alert('User Unmuted', 'You will now see this user\'s posts in your feed again.');
+      } else {
+        await muteUser(userId);
+        setIsMuted(true);
+        Alert.alert('User Muted', 'You will no longer see this user\'s posts in your feed.');
+      }
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to mute user.');
+      Alert.alert('Error', error.message || `Failed to ${isMuted ? 'unmute' : 'mute'} user.`);
+    }
+  };
+
+  const submitUserReport = async (reason: string) => {
+    if (!userId) return;
+    try {
+      await reportContent('user', userId, reason);
+      Alert.alert('Report Submitted', 'Thank you for your report. We will review it shortly.');
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to submit report.');
     }
   };
 
@@ -72,12 +116,27 @@ export default function UserProfileScreen() {
     Alert.alert('Report User', 'Select a reason:', [
       ...reasons.map((reason) => ({
         text: reason,
-        onPress: async () => {
-          try {
-            await reportContent('user', userId, reason);
-            Alert.alert('Report Submitted', 'Thank you for your report. We will review it shortly.');
-          } catch (error: any) {
-            Alert.alert('Error', error.message || 'Failed to submit report.');
+        onPress: () => {
+          if (reason === 'Other') {
+            Alert.prompt(
+              'Report User',
+              'Please describe the issue:',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Submit',
+                  onPress: (text?: string) => {
+                    const detail = text?.trim();
+                    submitUserReport(detail ? `Other: ${detail}` : 'Other');
+                  },
+                },
+              ],
+              'plain-text',
+              '',
+              'default'
+            );
+          } else {
+            submitUserReport(reason);
           }
         },
       })),
@@ -86,12 +145,14 @@ export default function UserProfileScreen() {
   };
 
   const showUserMenu = () => {
-    const options = ['Block User', 'Mute User', 'Report User', 'Cancel'];
+    const blockLabel = isBlocked ? 'Unblock User' : 'Block User';
+    const muteLabel = isMuted ? 'Unmute User' : 'Mute User';
+    const options = [blockLabel, muteLabel, 'Report User', 'Cancel'];
     showActionSheetWithOptions(
-      { options, cancelButtonIndex: 3, destructiveButtonIndex: 0 },
+      { options, cancelButtonIndex: 3, destructiveButtonIndex: isBlocked ? undefined : 0 },
       (index) => {
-        if (index === 0) handleBlockUser();
-        if (index === 1) handleMuteUser();
+        if (index === 0) handleToggleBlock();
+        if (index === 1) handleToggleMute();
         if (index === 2) handleReportUser();
       }
     );
@@ -112,16 +173,20 @@ export default function UserProfileScreen() {
       const data = await fetchUserProfile(userId);
       setProfile(data);
 
-      // Load follow stats, follow status, and posts in parallel
-      const [stats, status, postsResult] = await Promise.all([
+      // Load follow stats, follow status, block/mute status, and posts in parallel
+      const [stats, followStatus, blockStatus, muteStatus, postsResult] = await Promise.all([
         fetchFollowStats(userId).catch(() => ({ followerCount: 0, followingCount: 0 })),
         checkFollowStatus(userId).catch(() => ({ isFollowing: false })),
-        fetchPosts(null, 50).catch(() => ({ posts: [] as PostType[], nextCursor: null, hasMore: false })),
+        checkBlockStatus(userId).catch(() => ({ isBlocked: false })),
+        checkMuteStatus(userId).catch(() => ({ isMuted: false })),
+        fetchUserPosts(userId).catch(() => ({ posts: [] as PostType[] })),
       ]);
 
       setFollowStats(stats);
-      setIsFollowing(status.isFollowing);
-      setUserPosts(postsResult.posts.filter((p: PostType) => p.userId === userId));
+      setIsFollowing(followStatus.isFollowing);
+      setIsBlocked(blockStatus.isBlocked);
+      setIsMuted(muteStatus.isMuted);
+      setUserPosts(postsResult.posts);
     } catch (error) {
       console.error('Failed to load user profile:', error);
     } finally {
@@ -167,7 +232,7 @@ export default function UserProfileScreen() {
   if (loading) {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <Stack.Screen options={{ title: '', headerLeft: () => (
+        <Stack.Screen options={{ title: '', headerShown: true, headerLeft: () => (
           <Pressable onPress={() => router.back()} style={{ paddingRight: 16 }}>
             <Ionicons name="arrow-back" size={24} color="#000" />
           </Pressable>
@@ -181,6 +246,7 @@ export default function UserProfileScreen() {
     <>
       <Stack.Screen
         options={{
+          headerShown: true,
           title: profile?.username ? `@${profile.username}` : 'Profile',
           headerLeft: () => (
             <Pressable onPress={() => router.back()} style={{ paddingRight: 16 }}>
@@ -198,13 +264,7 @@ export default function UserProfileScreen() {
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
-          {profile?.avatarUrl ? (
-            <Image source={{ uri: profile.avatarUrl }} style={styles.avatar} />
-          ) : (
-            <View style={[styles.avatar, styles.avatarFallback]}>
-              <Ionicons name="person" size={40} color="#999" />
-            </View>
-          )}
+          <Image source={{ uri: getAvatarUrl(profile?.avatarUrl, profile?.displayName || profile?.username) }} style={styles.avatar} />
 
           <View style={styles.statsRow}>
             <Stat label="Following" value={String(followStats.followingCount)} />
@@ -246,10 +306,17 @@ export default function UserProfileScreen() {
           keyExtractor={(item) => item.id}
           numColumns={3}
           renderItem={({ item }) => (
-            <Image
-              source={{ uri: getImageUrl(item.imagePath) }}
-              style={styles.gridItem}
-            />
+            item.mediaType === 'video' ? (
+              <VideoThumbnailView
+                videoUri={getImageUrl(item.imagePath)}
+                style={styles.gridItem}
+              />
+            ) : (
+              <Image
+                source={{ uri: getImageUrl(item.imagePath) }}
+                style={styles.gridItem}
+              />
+            )
           )}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={

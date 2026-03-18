@@ -3,6 +3,102 @@ const router = express.Router();
 const supabase = require('../db/supabase');
 const { requireAuth } = require('../middleware/auth');
 
+// GET /api/users/blocked - List blocked users (auth required)
+// NOTE: Must be defined BEFORE /:id/* routes to avoid "blocked" matching as :id
+router.get('/blocked', requireAuth, async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('user_blocks')
+      .select('blocked_id, created_at')
+      .eq('blocker_id', req.userId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    if (!data || data.length === 0) {
+      return res.json([]);
+    }
+
+    // Enrich with profile data
+    const userIds = data.map(b => b.blocked_id);
+    const { data: profiles } = await supabase
+      .from('user_profiles')
+      .select('id, display_name, username, avatar_url')
+      .in('id', userIds);
+
+    const profileMap = {};
+    if (profiles) {
+      for (const p of profiles) {
+        profileMap[p.id] = p;
+      }
+    }
+
+    res.json(
+      data.map(b => {
+        const profile = profileMap[b.blocked_id] || {};
+        return {
+          userId: b.blocked_id,
+          displayName: profile.display_name || null,
+          username: profile.username || null,
+          avatarUrl: profile.avatar_url || null,
+          blockedAt: b.created_at,
+        };
+      })
+    );
+  } catch (error) {
+    console.error('Error listing blocked users:', error);
+    res.status(500).json({ error: 'Failed to list blocked users.' });
+  }
+});
+
+// GET /api/users/muted - List muted users (auth required)
+// NOTE: Must be defined BEFORE /:id/* routes to avoid "muted" matching as :id
+router.get('/muted', requireAuth, async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('user_mutes')
+      .select('muted_id, created_at')
+      .eq('muter_id', req.userId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    if (!data || data.length === 0) {
+      return res.json([]);
+    }
+
+    // Enrich with profile data
+    const userIds = data.map(m => m.muted_id);
+    const { data: profiles } = await supabase
+      .from('user_profiles')
+      .select('id, display_name, username, avatar_url')
+      .in('id', userIds);
+
+    const profileMap = {};
+    if (profiles) {
+      for (const p of profiles) {
+        profileMap[p.id] = p;
+      }
+    }
+
+    res.json(
+      data.map(m => {
+        const profile = profileMap[m.muted_id] || {};
+        return {
+          userId: m.muted_id,
+          displayName: profile.display_name || null,
+          username: profile.username || null,
+          avatarUrl: profile.avatar_url || null,
+          mutedAt: m.created_at,
+        };
+      })
+    );
+  } catch (error) {
+    console.error('Error listing muted users:', error);
+    res.status(500).json({ error: 'Failed to list muted users.' });
+  }
+});
+
 // POST /api/users/:id/block - Block user (auth required)
 router.post('/:id/block', requireAuth, async (req, res) => {
   try {
@@ -93,97 +189,41 @@ router.delete('/:id/mute', requireAuth, async (req, res) => {
   }
 });
 
-// GET /api/users/blocked - List blocked users (auth required)
-router.get('/blocked', requireAuth, async (req, res) => {
+// GET /api/users/:id/block-status - Check if current user has blocked a user (auth required)
+router.get('/:id/block-status', requireAuth, async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('user_blocks')
-      .select('blocked_id, created_at')
+      .select('blocker_id')
       .eq('blocker_id', req.userId)
-      .order('created_at', { ascending: false });
+      .eq('blocked_id', req.params.id)
+      .maybeSingle();
 
     if (error) throw error;
 
-    if (!data || data.length === 0) {
-      return res.json([]);
-    }
-
-    // Enrich with profile data
-    const userIds = data.map(b => b.blocked_id);
-    const { data: profiles } = await supabase
-      .from('user_profiles')
-      .select('id, display_name, username, avatar_url')
-      .in('id', userIds);
-
-    const profileMap = {};
-    if (profiles) {
-      for (const p of profiles) {
-        profileMap[p.id] = p;
-      }
-    }
-
-    res.json(
-      data.map(b => {
-        const profile = profileMap[b.blocked_id] || {};
-        return {
-          userId: b.blocked_id,
-          displayName: profile.display_name || null,
-          username: profile.username || null,
-          avatarUrl: profile.avatar_url || null,
-          blockedAt: b.created_at,
-        };
-      })
-    );
+    res.json({ isBlocked: !!data });
   } catch (error) {
-    console.error('Error listing blocked users:', error);
-    res.status(500).json({ error: 'Failed to list blocked users.' });
+    console.error('Error checking block status:', error);
+    res.status(500).json({ error: 'Failed to check block status.' });
   }
 });
 
-// GET /api/users/muted - List muted users (auth required)
-router.get('/muted', requireAuth, async (req, res) => {
+// GET /api/users/:id/mute-status - Check if current user has muted a user (auth required)
+router.get('/:id/mute-status', requireAuth, async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('user_mutes')
-      .select('muted_id, created_at')
+      .select('muter_id')
       .eq('muter_id', req.userId)
-      .order('created_at', { ascending: false });
+      .eq('muted_id', req.params.id)
+      .maybeSingle();
 
     if (error) throw error;
 
-    if (!data || data.length === 0) {
-      return res.json([]);
-    }
-
-    // Enrich with profile data
-    const userIds = data.map(m => m.muted_id);
-    const { data: profiles } = await supabase
-      .from('user_profiles')
-      .select('id, display_name, username, avatar_url')
-      .in('id', userIds);
-
-    const profileMap = {};
-    if (profiles) {
-      for (const p of profiles) {
-        profileMap[p.id] = p;
-      }
-    }
-
-    res.json(
-      data.map(m => {
-        const profile = profileMap[m.muted_id] || {};
-        return {
-          userId: m.muted_id,
-          displayName: profile.display_name || null,
-          username: profile.username || null,
-          avatarUrl: profile.avatar_url || null,
-          mutedAt: m.created_at,
-        };
-      })
-    );
+    res.json({ isMuted: !!data });
   } catch (error) {
-    console.error('Error listing muted users:', error);
-    res.status(500).json({ error: 'Failed to list muted users.' });
+    console.error('Error checking mute status:', error);
+    res.status(500).json({ error: 'Failed to check mute status.' });
   }
 });
 

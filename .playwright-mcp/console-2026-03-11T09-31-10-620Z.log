@@ -1,0 +1,5 @@
+[     241ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:8081/profile/settings/preferences:0
+[     422ms] [WARNING] "shadow*" style props are deprecated. Use "boxShadow". @ http://localhost:8081/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app&transform.reactCompiler=true:7236
+[     643ms] [WARNING] Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview @ https://neat-whippet-99.clerk.accounts.dev/npm/@clerk/clerk-js@5/dist/clerk.browser.js:18
+[    1097ms] [ERROR] Access to fetch at 'https://clerk-telemetry.com/v1/event' from origin 'http://localhost:8081' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:8081/login:0
+[    1097ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://clerk-telemetry.com/v1/event:0

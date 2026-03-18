@@ -18,6 +18,7 @@ import {
   fetchPostsByTags,
   fetchFollowingFeed,
   getImageUrl,
+  getAvatarUrl,
   Post as PostType,
 } from '../../../services/api';
 
@@ -150,48 +151,57 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.feedToggle}>
-        <TouchableOpacity
-          style={[styles.feedToggleTab, feedType === 'forYou' && styles.feedToggleActive]}
-          onPress={() => handleFeedTypeChange('forYou')}
-          accessibilityRole="tab"
-          accessibilityState={{ selected: feedType === 'forYou' }}
-        >
-          <Text style={[styles.feedToggleText, feedType === 'forYou' && styles.feedToggleTextActive]}>For You</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.feedToggleTab, feedType === 'following' && styles.feedToggleActive]}
-          onPress={() => handleFeedTypeChange('following')}
-          accessibilityRole="tab"
-          accessibilityState={{ selected: feedType === 'following' }}
-        >
-          <Text style={[styles.feedToggleText, feedType === 'following' && styles.feedToggleTextActive]}>Following</Text>
-        </TouchableOpacity>
-      </View>
-      <TagFilterBar
-        selectedTagIds={selectedTagIds}
-        onFilterChange={handleTagFilterChange}
-      />
       <FlatList
         data={posts}
         keyExtractor={(item) => item.id}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={refresh} />
+          <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor="#FF6B35" colors={['#FF6B35']} />
+        }
+        ListHeaderComponent={
+          <>
+            <View style={styles.feedToggle}>
+              <TouchableOpacity
+                style={[styles.feedToggleTab, feedType === 'forYou' && styles.feedToggleActive]}
+                onPress={() => handleFeedTypeChange('forYou')}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: feedType === 'forYou' }}
+              >
+                <Text style={[styles.feedToggleText, feedType === 'forYou' && styles.feedToggleTextActive]}>For You</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.feedToggleTab, feedType === 'following' && styles.feedToggleActive]}
+                onPress={() => handleFeedTypeChange('following')}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: feedType === 'following' }}
+              >
+                <Text style={[styles.feedToggleText, feedType === 'following' && styles.feedToggleTextActive]}>Following</Text>
+              </TouchableOpacity>
+            </View>
+            <TagFilterBar
+              selectedTagIds={selectedTagIds}
+              onFilterChange={handleTagFilterChange}
+            />
+          </>
         }
         onEndReached={handleEndReached}
         onEndReachedThreshold={0.5}
         renderItem={({ item }) => (
           <Post
             id={item.id}
-            profilePic={item.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.displayName || item.username || item.userId)}&background=random`}
+            profilePic={getAvatarUrl(item.avatarUrl, item.displayName || item.username || item.userId)}
             username={item.displayName || item.username || item.userId}
             postImage={getImageUrl(item.imagePath)}
+            postImages={item.images ? item.images.map(getImageUrl) : undefined}
             caption={item.caption}
             userId={item.userId}
             currentUserId={user?.id}
             onDeleted={handlePostDeleted}
             tags={item.tags}
             editedAt={item.editedAt}
+            initialLiked={item.liked}
+            initialLikes={item.likeCount}
+            mediaType={item.mediaType}
+            commentCount={item.commentCount}
           />
         )}
         ListFooterComponent={

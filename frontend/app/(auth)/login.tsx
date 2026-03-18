@@ -13,13 +13,21 @@ import {
 } from "react-native";
 import { useState, useCallback } from "react";
 import { useRouter } from "expo-router";
-import { useSignIn, useSSO } from "@clerk/clerk-expo";
+import { useAuth, useSignIn, useSSO } from "@clerk/clerk-expo";
+import { Redirect } from "expo-router";
 import * as AuthSession from "expo-auth-session";
 import * as WebBrowser from "expo-web-browser";
 
 WebBrowser.maybeCompleteAuthSession();
 
 export default function Login() {
+  const { isSignedIn, isLoaded } = useAuth();
+
+  // Already signed in — redirect to home
+  if (isLoaded && isSignedIn) {
+    return <Redirect href="/" />;
+  }
+
   if (Platform.OS === "web") {
     return <WebLogin />;
   }
@@ -93,7 +101,6 @@ function WebLogin() {
     if (!isLoaded || !signIn) return;
     setLoading(true);
     try {
-      // Create the OAuth sign-in and get the redirect URL
       const result = await signIn.create({
         strategy,
         redirectUrl: window.location.origin + "/sso-callback",
@@ -107,42 +114,8 @@ function WebLogin() {
         throw new Error("No OAuth redirect URL returned from Clerk");
       }
 
-      // Open OAuth in a popup window
-      const popup = window.open(
-        verificationUrl.toString(),
-        "clerk-oauth",
-        "width=500,height=600,left=200,top=100"
-      );
-
-      if (!popup) {
-        throw new Error("Popup blocked. Please allow popups for this site.");
-      }
-
-      // Poll for popup close and check auth status
-      const pollInterval = setInterval(async () => {
-        try {
-          if (popup.closed) {
-            clearInterval(pollInterval);
-            // Reload the sign-in to check if it completed
-            const updatedSignIn = await signIn.reload();
-            if (updatedSignIn.status === "complete") {
-              await setActive({ session: updatedSignIn.createdSessionId });
-              router.replace("/");
-            } else {
-              setLoading(false);
-            }
-          }
-        } catch (pollError: any) {
-          clearInterval(pollInterval);
-          const pollMsg =
-            pollError.errors?.[0]?.longMessage ||
-            pollError.errors?.[0]?.message ||
-            pollError.message ||
-            "OAuth sign-in could not be completed";
-          window.alert(pollMsg);
-          setLoading(false);
-        }
-      }, 500);
+      // Redirect in the same window instead of opening a popup
+      window.location.href = verificationUrl.toString();
     } catch (error: any) {
       console.error("OAuth error:", error);
       const msg =
@@ -274,7 +247,7 @@ function WebLogin() {
 
         <TouchableOpacity
           style={styles.linkButton}
-          onPress={() => router.push("/signup")}
+          onPress={() => router.push("/(auth)/signup")}
           accessibilityRole="link"
           accessibilityLabel="Don't have an account? Sign up"
         >
@@ -283,7 +256,7 @@ function WebLogin() {
           </Text>
         </TouchableOpacity>
 
-        <Pressable onPress={() => router.push("/resetPassword")} accessibilityRole="link" accessibilityLabel="Forgot password">
+        <Pressable onPress={() => router.push("/(auth)/resetPassword")} accessibilityRole="link" accessibilityLabel="Forgot password">
           <Text style={styles.forgotPasswordText}>Forgot password?</Text>
         </Pressable>
       </ScrollView>
@@ -522,7 +495,7 @@ function NativeLogin() {
 
         <TouchableOpacity
           style={styles.linkButton}
-          onPress={() => router.push("/signup")}
+          onPress={() => router.push("/(auth)/signup")}
           accessibilityRole="link"
           accessibilityLabel="Don't have an account? Sign up"
         >
@@ -531,7 +504,7 @@ function NativeLogin() {
           </Text>
         </TouchableOpacity>
 
-        <Pressable onPress={() => router.push("/resetPassword")} accessibilityRole="link" accessibilityLabel="Forgot password">
+        <Pressable onPress={() => router.push("/(auth)/resetPassword")} accessibilityRole="link" accessibilityLabel="Forgot password">
           <Text style={styles.forgotPasswordText}>Forgot password?</Text>
         </Pressable>
       </ScrollView>

@@ -7,3 +7,7 @@ node_modules/
 
 # IDE
 .idea/
+.vs/
+
+# Playwright MCP
+.playwright-mcp/

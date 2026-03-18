@@ -35,7 +35,7 @@ router.post('/', requireAuth, async (req, res) => {
   }
 });
 
-// GET /api/collections - List user's collections (auth required)
+// GET /api/collections - List user's collections with post counts (auth required)
 router.get('/', requireAuth, async (req, res) => {
   try {
     const { data, error } = await supabase
@@ -51,6 +51,7 @@ router.get('/', requireAuth, async (req, res) => {
         id: c.id,
         userId: c.user_id,
         name: c.name,
+        postCount: c.collection_posts?.[0]?.count ?? 0,
         createdAt: c.created_at,
         postCount: c.collection_posts?.[0]?.count ?? 0,
       }))
@@ -227,6 +228,7 @@ router.get('/:id/posts', requireAuth, async (req, res) => {
         userId: p.user_id,
         caption: p.caption,
         imagePath: p.image_path,
+        mediaType: p.media_type || 'image',
         createdAt: p.created_at,
         updatedAt: p.updated_at,
       }))

@@ -27,10 +27,12 @@ CREATE INDEX IF NOT EXISTS idx_user_profiles_role ON user_profiles(role);
 CREATE TABLE IF NOT EXISTS user_preferences (
   user_id TEXT PRIMARY KEY REFERENCES user_profiles(id) ON DELETE CASCADE,
   dietary_preferences TEXT[] DEFAULT '{}',
-  allergies TEXT[] DEFAULT '{}',
+  allergies JSONB DEFAULT '[]'::jsonb,
   cuisines TEXT[] DEFAULT '{}',
   profile_visibility TEXT DEFAULT 'public' CHECK (profile_visibility IN ('public', 'private')),
   dietary_info_visible BOOLEAN DEFAULT true,
+  cooking_skill TEXT DEFAULT 'beginner' CHECK (cooking_skill IN ('beginner', 'intermediate', 'advanced')),
+  max_cook_time INTEGER,
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -42,6 +44,7 @@ CREATE TABLE IF NOT EXISTS posts (
   user_id TEXT NOT NULL,
   caption TEXT DEFAULT '',
   image_path TEXT NOT NULL,
+  media_type TEXT DEFAULT 'image' CHECK (media_type IN ('image', 'video')),
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now(),
   edited_at TIMESTAMPTZ

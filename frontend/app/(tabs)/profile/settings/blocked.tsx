@@ -9,7 +9,7 @@ import {
 } from "../../../../services/api";
 
 interface BlockedMutedUser {
-  id: string;
+  userId: string;
   username: string | null;
   displayName: string | null;
 }
@@ -42,7 +42,7 @@ export default function BlockedMutedScreen() {
   const handleUnblock = async (userId: string) => {
     try {
       await unblockUser(userId);
-      setBlockedUsers((prev) => prev.filter((u) => u.id !== userId));
+      setBlockedUsers((prev) => prev.filter((u) => u.userId !== userId));
     } catch (error: any) {
       Alert.alert("Error", error.message || "Failed to unblock user.");
     }
@@ -51,7 +51,7 @@ export default function BlockedMutedScreen() {
   const handleUnmute = async (userId: string) => {
     try {
       await unmuteUser(userId);
-      setMutedUsers((prev) => prev.filter((u) => u.id !== userId));
+      setMutedUsers((prev) => prev.filter((u) => u.userId !== userId));
     } catch (error: any) {
       Alert.alert("Error", error.message || "Failed to unmute user.");
     }
@@ -73,7 +73,7 @@ export default function BlockedMutedScreen() {
       ) : (
         <FlatList
           data={blockedUsers}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => item.userId}
           scrollEnabled={false}
           renderItem={({ item }) => (
             <View style={styles.userRow}>
@@ -87,7 +87,7 @@ export default function BlockedMutedScreen() {
               </View>
               <Pressable
                 style={styles.actionButton}
-                onPress={() => handleUnblock(item.id)}
+                onPress={() => handleUnblock(item.userId)}
               >
                 <Text style={styles.actionButtonText}>Unblock</Text>
               </Pressable>
@@ -104,7 +104,7 @@ export default function BlockedMutedScreen() {
       ) : (
         <FlatList
           data={mutedUsers}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => item.userId}
           scrollEnabled={false}
           renderItem={({ item }) => (
             <View style={styles.userRow}>
@@ -118,7 +118,7 @@ export default function BlockedMutedScreen() {
               </View>
               <Pressable
                 style={[styles.actionButton, styles.unmuteButton]}
-                onPress={() => handleUnmute(item.id)}
+                onPress={() => handleUnmute(item.userId)}
               >
                 <Text style={[styles.actionButtonText, styles.unmuteButtonText]}>Unmute</Text>
               </Pressable>
