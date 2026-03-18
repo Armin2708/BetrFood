@@ -33,8 +33,11 @@ CREATE TABLE IF NOT EXISTS user_preferences (
   dietary_info_visible BOOLEAN DEFAULT true,
   cooking_skill TEXT DEFAULT 'beginner' CHECK (cooking_skill IN ('beginner', 'intermediate', 'advanced')),
   max_cook_time INTEGER,
+  expiring_items_threshold INTEGER DEFAULT 7,
   updated_at TIMESTAMPTZ DEFAULT now()
 );
+-- Add the column if the table already exists
+ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS expiring_items_threshold INTEGER DEFAULT 7;
 
 -- ============================================================
 -- 3. Posts
@@ -228,3 +231,20 @@ CREATE TABLE IF NOT EXISTS user_mutes (
   created_at TIMESTAMPTZ DEFAULT now(),
   PRIMARY KEY (muter_id, muted_id)
 );
+
+-- ============================================================
+-- 13. Pantry Items
+-- ============================================================
+CREATE TABLE IF NOT EXISTS pantry_items (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  quantity INTEGER NOT NULL DEFAULT 0,
+  unit TEXT DEFAULT '',
+  category TEXT DEFAULT 'Other',
+  expiration_date TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_pantry_items_user_id ON pantry_items(user_id);
+CREATE INDEX IF NOT EXISTS idx_pantry_items_name ON pantry_items(name);

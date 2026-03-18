@@ -17,6 +17,7 @@ export async function updatePreferences(prefs: {
   cuisines?: string[];
   profileVisibility?: 'public' | 'private';
   dietaryInfoVisible?: boolean;
+  expiringItemsThreshold?: number;
 }) {
   const response = await fetch(`${API_BASE_URL}/api/preferences`, {
     method: 'PUT',

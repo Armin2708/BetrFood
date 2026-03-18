@@ -24,6 +24,7 @@ router.get('/', requireAuth, async (req, res) => {
         dietaryInfoVisible: true,
         cookingSkill: 'beginner',
         maxCookTime: null,
+        expiringItemsThreshold: 7,
       });
     }
 
@@ -36,6 +37,7 @@ router.get('/', requireAuth, async (req, res) => {
       dietaryInfoVisible: data.dietary_info_visible !== false,
       cookingSkill: data.cooking_skill || 'beginner',
       maxCookTime: data.max_cook_time || null,
+      expiringItemsThreshold: data.expiring_items_threshold || 7,
     });
   } catch (error) {
     console.error('Error fetching preferences:', error);
@@ -46,7 +48,7 @@ router.get('/', requireAuth, async (req, res) => {
 // PUT /api/preferences - Update user preferences (auth required)
 router.put('/', requireAuth, async (req, res) => {
   try {
-    const { dietaryPreferences, allergies, cuisines, profileVisibility, dietaryInfoVisible } = req.body;
+    const { dietaryPreferences, allergies, cuisines, profileVisibility, dietaryInfoVisible, expiringItemsThreshold } = req.body;
 
     const updates = {
       user_id: req.userId,
@@ -116,6 +118,13 @@ router.put('/', requireAuth, async (req, res) => {
       updates.max_cook_time = maxCookTime;
     }
 
+    if (expiringItemsThreshold !== undefined) {
+      if (typeof expiringItemsThreshold !== 'number' || expiringItemsThreshold < 1 || expiringItemsThreshold > 30) {
+        return res.status(400).json({ error: 'expiringItemsThreshold must be a number between 1 and 30.' });
+      }
+      updates.expiring_items_threshold = expiringItemsThreshold;
+    }
+
     const { data, error } = await supabase
       .from('user_preferences')
       .upsert(updates, { onConflict: 'user_id' })
@@ -133,6 +142,7 @@ router.put('/', requireAuth, async (req, res) => {
       dietaryInfoVisible: data.dietary_info_visible !== false,
       cookingSkill: data.cooking_skill || 'beginner',
       maxCookTime: data.max_cook_time || null,
+      expiringItemsThreshold: data.expiring_items_threshold || 7,
     });
   } catch (error) {
     console.error('Error updating preferences:', error);

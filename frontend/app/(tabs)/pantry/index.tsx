@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   Modal,
   TextInput,
   Alert,
+  Pressable,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
@@ -17,7 +18,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { usePantry } from '../../../context/PantryContext';
 import PantryItemCard from '../../../components/PantryItemCard';
+import ExpiringSoonSection from '../../../components/ExpiringSoonSection';
 import { PantryItem, PantryItemInput } from '../../../services/api';
+import { fetchPreferences } from '../../../services/api';
 import { colors } from '../../../constants/theme';
 
 const CATEGORIES = [
@@ -86,90 +89,98 @@ function AddItemModal({
 
   return (
     <Modal visible={visible} animationType="slide" transparent>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      <Pressable
         style={styles.modalOverlay}
+        onPress={() => {
+          reset();
+          onClose();
+        }}
       >
-        <View style={styles.sheet}>
-          <Text style={styles.sheetTitle} accessibilityRole="header">
-            Add Pantry Item
-          </Text>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+        >
+          <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
+            <Text style={styles.sheetTitle} accessibilityRole="header">
+              Add Pantry Item
+            </Text>
 
-          <TextInput
-            style={styles.input}
-            placeholder="Item name *"
-            value={name}
-            onChangeText={setName}
-            accessibilityLabel="Item name"
-          />
-
-          <View style={styles.row}>
             <TextInput
-              style={[styles.input, styles.inputFlex]}
-              placeholder="Qty *"
-              value={quantity}
-              onChangeText={setQuantity}
-              keyboardType="decimal-pad"
-              accessibilityLabel="Quantity"
+              style={styles.input}
+              placeholder="Item name *"
+              value={name}
+              onChangeText={setName}
+              accessibilityLabel="Item name"
             />
+
+            <View style={styles.row}>
+              <TextInput
+                style={[styles.input, styles.inputFlex]}
+                placeholder="Qty *"
+                value={quantity}
+                onChangeText={setQuantity}
+                keyboardType="decimal-pad"
+                accessibilityLabel="Quantity"
+              />
+              <TextInput
+                style={[styles.input, styles.inputFlex]}
+                placeholder="Unit * (e.g. cups)"
+                value={unit}
+                onChangeText={setUnit}
+                accessibilityLabel="Unit"
+              />
+            </View>
+
+            <Text style={styles.fieldLabel}>Category</Text>
+            <View style={styles.chipRow}>
+              {CATEGORIES.map((cat) => (
+                <TouchableOpacity
+                  key={cat}
+                  style={[styles.chip, category === cat && styles.chipSelected]}
+                  onPress={() => setCategory(cat)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: category === cat }}
+                  accessibilityLabel={cat}
+                >
+                  <Text style={[styles.chipText, category === cat && styles.chipTextSelected]}>
+                    {cat}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
             <TextInput
-              style={[styles.input, styles.inputFlex]}
-              placeholder="Unit * (e.g. cups)"
-              value={unit}
-              onChangeText={setUnit}
-              accessibilityLabel="Unit"
+              style={styles.input}
+              placeholder="Expiration date (YYYY-MM-DD, optional)"
+              value={expirationDate}
+              onChangeText={setExpirationDate}
+              accessibilityLabel="Expiration date"
             />
-          </View>
 
-          <Text style={styles.fieldLabel}>Category</Text>
-          <View style={styles.chipRow}>
-            {CATEGORIES.map((cat) => (
-              <TouchableOpacity
-                key={cat}
-                style={[styles.chip, category === cat && styles.chipSelected]}
-                onPress={() => setCategory(cat)}
-                accessibilityRole="button"
-                accessibilityState={{ selected: category === cat }}
-                accessibilityLabel={cat}
-              >
-                <Text style={[styles.chipText, category === cat && styles.chipTextSelected]}>
-                  {cat}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+            <TouchableOpacity
+              style={[styles.addButton, saving && styles.addButtonDisabled]}
+              onPress={handleAdd}
+              disabled={saving}
+              accessibilityRole="button"
+              accessibilityLabel="Add item to pantry"
+            >
+              {saving ? (
+                <ActivityIndicator color={colors.white} />
+              ) : (
+                <Text style={styles.addButtonText}>Add Item</Text>
+              )}
+            </TouchableOpacity>
 
-          <TextInput
-            style={styles.input}
-            placeholder="Expiration date (YYYY-MM-DD, optional)"
-            value={expirationDate}
-            onChangeText={setExpirationDate}
-            accessibilityLabel="Expiration date"
-          />
-
-          <TouchableOpacity
-            style={[styles.addButton, saving && styles.addButtonDisabled]}
-            onPress={handleAdd}
-            disabled={saving}
-            accessibilityRole="button"
-            accessibilityLabel="Add item to pantry"
-          >
-            {saving ? (
-              <ActivityIndicator color={colors.white} />
-            ) : (
-              <Text style={styles.addButtonText}>Add Item</Text>
-            )}
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => { reset(); onClose(); }}
-            accessibilityRole="button"
-            accessibilityLabel="Cancel"
-          >
-            <Text style={styles.cancelText}>Cancel</Text>
-          </TouchableOpacity>
-        </View>
-      </KeyboardAvoidingView>
+            <TouchableOpacity
+              onPress={() => { reset(); onClose(); }}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel"
+            >
+              <Text style={styles.cancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </Pressable>
+        </KeyboardAvoidingView>
+      </Pressable>
     </Modal>
   );
 }
@@ -266,12 +277,23 @@ export default function PantryScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [groupedView, setGroupedView] = useState(false);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const [expiringItemsThreshold, setExpiringItemsThreshold] = useState(7);
 
   useFocusEffect(
     useCallback(() => {
       refreshItems();
+      loadThreshold();
     }, [refreshItems])
   );
+
+  const loadThreshold = async () => {
+    try {
+      const prefs = await fetchPreferences();
+      setExpiringItemsThreshold(prefs.expiringItemsThreshold || 7);
+    } catch (error) {
+      console.error('Failed to load preferences:', error);
+    }
+  };
 
   const toggleCollapsed = (category: string) => {
     setCollapsed((prev) => ({ ...prev, [category]: !prev[category] }));
@@ -393,6 +415,7 @@ export default function PantryScreen() {
         </View>
       ) : (
         <>
+          <ExpiringSoonSection items={items} threshold={expiringItemsThreshold} />
           <ViewToggle grouped={groupedView} onToggle={() => setGroupedView((v) => !v)} />
           <FlatList
             data={activeListData}

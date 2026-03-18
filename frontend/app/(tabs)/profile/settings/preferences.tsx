@@ -84,6 +84,7 @@ export default function FoodPreferences() {
   const [dietaryPreferences, setDietaryPreferences] = useState<string[]>([]);
   const [allergies, setAllergies] = useState<string[]>([]);
   const [cuisines, setCuisines] = useState<string[]>([]);
+  const [expiringItemsThreshold, setExpiringItemsThreshold] = useState(7);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -97,6 +98,7 @@ export default function FoodPreferences() {
       setDietaryPreferences(prefs.dietaryPreferences || []);
       setAllergies(prefs.allergies || []);
       setCuisines(prefs.cuisines || []);
+      setExpiringItemsThreshold(prefs.expiringItemsThreshold || 7);
     } catch {
       // Start with empty selections if fetch fails
     } finally {
@@ -119,7 +121,12 @@ export default function FoodPreferences() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await updatePreferences({ dietaryPreferences, allergies, cuisines });
+      await updatePreferences({ 
+        dietaryPreferences, 
+        allergies, 
+        cuisines,
+        expiringItemsThreshold,
+      });
       Alert.alert("Saved", "Your food preferences have been updated.");
     } catch {
       Alert.alert("Error", "Failed to save preferences. Please try again.");
@@ -158,6 +165,46 @@ export default function FoodPreferences() {
         selected={cuisines}
         onToggle={(item) => toggle(cuisines, setCuisines, item)}
       />
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Pantry Preferences</Text>
+        <Text style={styles.settingLabel}>
+          Show items expiring within: <Text style={styles.settingValue}>{expiringItemsThreshold} days</Text>
+        </Text>
+        <View style={styles.sliderContainer}>
+          <Text style={styles.sliderLabel}>1</Text>
+          <Pressable
+            style={[
+              styles.sliderTrack,
+              {
+                width: `${((expiringItemsThreshold - 1) / 29) * 100}%`,
+              },
+            ]}
+          />
+          <Text style={styles.sliderLabel}>30</Text>
+        </View>
+        <View style={styles.sliderButtonContainer}>
+          {[3, 7, 14, 30].map((days) => (
+            <Pressable
+              key={days}
+              style={[
+                styles.thresholdButton,
+                expiringItemsThreshold === days && styles.thresholdButtonActive,
+              ]}
+              onPress={() => setExpiringItemsThreshold(days)}
+            >
+              <Text
+                style={[
+                  styles.thresholdButtonText,
+                  expiringItemsThreshold === days && styles.thresholdButtonTextActive,
+                ]}
+              >
+                {days}d
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      </View>
 
       <Pressable
         style={[styles.saveButton, saving && styles.saveButtonDisabled]}
@@ -219,6 +266,61 @@ const styles = StyleSheet.create({
   chipTextActive: {
     color: "white",
     fontWeight: "500",
+  },
+  settingLabel: {
+    fontSize: 14,
+    color: "#333",
+    marginBottom: 12,
+  },
+  settingValue: {
+    fontWeight: "600",
+    color: "#007AFF",
+  },
+  sliderContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
+    gap: 8,
+  },
+  sliderTrack: {
+    flex: 1,
+    height: 4,
+    backgroundColor: "#007AFF",
+    borderRadius: 2,
+  },
+  sliderLabel: {
+    fontSize: 12,
+    color: "#999",
+    minWidth: 20,
+    textAlign: "center",
+  },
+  sliderButtonContainer: {
+    flexDirection: "row",
+    gap: 8,
+    justifyContent: "space-between",
+  },
+  thresholdButton: {
+    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    backgroundColor: "#f5f5f5",
+    alignItems: "center",
+  },
+  thresholdButtonActive: {
+    backgroundColor: "#007AFF",
+    borderColor: "#007AFF",
+  },
+  thresholdButtonText: {
+    fontSize: 13,
+    color: "#666",
+    fontWeight: "500",
+  },
+  thresholdButtonTextActive: {
+    color: "white",
+    fontWeight: "600",
   },
   saveButton: {
     backgroundColor: "#007AFF",
