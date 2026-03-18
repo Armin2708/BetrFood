@@ -56,13 +56,14 @@ router.clerkApi = clerkApi;
 /**
  * POST /api/auth/logout
  * Body: { sessionId }
- * Revokes the session.
+ * Revokes the session. Requires valid Clerk session ID format.
  */
 router.post('/logout', async (req, res) => {
   try {
     const { sessionId } = req.body;
 
-    if (sessionId) {
+    // Validate sessionId format to prevent path injection / SSRF
+    if (sessionId && /^sess_[a-zA-Z0-9]+$/.test(sessionId)) {
       await clerkApi('POST', `/sessions/${sessionId}/revoke`);
     }
 

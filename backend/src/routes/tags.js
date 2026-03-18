@@ -1,7 +1,6 @@
 const express = require('express');
 const supabase = require('../db/supabase');
-// RBAC middleware available for future role-gated tag operations:
-// const { requireRole, requireMinRole } = require('../middleware/rbac');
+const { requireAuth } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -87,7 +86,7 @@ router.get('/posts/by-tags', async (req, res) => {
 });
 
 // POST /api/tags/posts/:id/tags
-router.post('/posts/:id/tags', async (req, res) => {
+router.post('/posts/:id/tags', requireAuth, async (req, res) => {
   const postId = req.params.id;
   const { tagIds } = req.body;
 
@@ -96,15 +95,19 @@ router.post('/posts/:id/tags', async (req, res) => {
   }
 
   try {
-    // Verify post exists
+    // Verify post exists and user owns it
     const { data: post, error: postError } = await supabase
       .from('posts')
-      .select('id')
+      .select('id, user_id')
       .eq('id', postId)
       .single();
 
     if (postError || !post) {
       return res.status(404).json({ error: 'Post not found.' });
+    }
+
+    if (post.user_id !== req.userId) {
+      return res.status(403).json({ error: 'Not authorized to modify tags on this post.' });
     }
 
     // Verify all tags exist
@@ -141,10 +144,25 @@ router.post('/posts/:id/tags', async (req, res) => {
 });
 
 // DELETE /api/tags/posts/:id/tags/:tagId
-router.delete('/posts/:id/tags/:tagId', async (req, res) => {
+router.delete('/posts/:id/tags/:tagId', requireAuth, async (req, res) => {
   const { id: postId, tagId } = req.params;
 
   try {
+    // Verify post ownership
+    const { data: post, error: postError } = await supabase
+      .from('posts')
+      .select('user_id')
+      .eq('id', postId)
+      .single();
+
+    if (postError || !post) {
+      return res.status(404).json({ error: 'Post not found.' });
+    }
+
+    if (post.user_id !== req.userId) {
+      return res.status(403).json({ error: 'Not authorized to modify tags on this post.' });
+    }
+
     const { error, count } = await supabase
       .from('post_tags')
       .delete()
