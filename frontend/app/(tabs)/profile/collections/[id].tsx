@@ -15,6 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { useCollections } from "../../../../context/CollectionsContext";
 import { getImageUrl, Post } from "../../../../services/api";
+import VideoThumbnailView from "../../../../components/VideoThumbnail";
 
 const { width } = Dimensions.get("window");
 const NUM_COLUMNS = 3;
@@ -101,10 +102,17 @@ export default function CollectionDetailScreen() {
               onPress={() => router.push(`/post-detail?postId=${item.id}`)}
               onLongPress={() => handleRemovePost(item.id)}
             >
-              <Image
-                source={{ uri: getImageUrl(item.imagePath) }}
-                style={styles.gridItem}
-              />
+              {item.mediaType === 'video' ? (
+                <VideoThumbnailView
+                  videoUri={getImageUrl(item.imagePath)}
+                  style={styles.gridItem}
+                />
+              ) : (
+                <Image
+                  source={{ uri: getImageUrl(item.imagePath) }}
+                  style={styles.gridItem}
+                />
+              )}
             </Pressable>
           )}
           ListEmptyComponent={

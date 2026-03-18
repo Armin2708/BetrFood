@@ -228,6 +228,7 @@ router.get('/:id/posts', requireAuth, async (req, res) => {
         userId: p.user_id,
         caption: p.caption,
         imagePath: p.image_path,
+        mediaType: p.media_type || 'image',
         createdAt: p.created_at,
         updatedAt: p.updated_at,
       }))
