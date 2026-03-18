@@ -26,9 +26,9 @@ import {
   deletePost,
   likePost,
   unlikePost,
-  savePost,
   unsavePost,
   checkSaveStatus,
+  addPostToCollection,
   fetchComments,
   createComment,
   deleteComment,
@@ -37,6 +37,8 @@ import {
   Tag,
   Comment,
 } from '../services/api';
+import SaveCollectionModal from '../components/SaveCollectionModal';
+import { Collection } from '../context/CollectionsContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { AuthContext } from '../context/AuthenticationContext';
@@ -58,6 +60,7 @@ export default function PostDetailScreen() {
   const [likeCount, setLikeCount] = useState(0);
   const [likeLoading, setLikeLoading] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [collectionModalVisible, setCollectionModalVisible] = useState(false);
 
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentTotal, setCommentTotal] = useState(0);
@@ -237,19 +240,30 @@ export default function PostDetailScreen() {
     }
   };
 
-  const toggleSave = async () => {
+  const handleSavePress = async () => {
     if (!postId) return;
-    const prevSaved = saved;
-    setSaved(!prevSaved);
-    try {
-      if (prevSaved) {
+    if (saved) {
+      setSaved(false);
+      try {
         await unsavePost(postId);
-      } else {
-        await savePost(postId);
+      } catch {
+        setSaved(true);
+        Alert.alert('Error', 'Could not unsave post. Please try again.');
       }
+    } else {
+      setCollectionModalVisible(true);
+    }
+  };
+
+  const handleSaveToCollection = async (collection: Collection) => {
+    if (!postId) return;
+    setSaved(true);
+    setCollectionModalVisible(false);
+    try {
+      await addPostToCollection(collection.id, postId);
     } catch {
-      setSaved(prevSaved);
-      Alert.alert('Error', 'Could not update save. Please try again.');
+      setSaved(false);
+      Alert.alert('Error', 'Could not save post to collection. Please try again.');
     }
   };
 
@@ -519,7 +533,7 @@ export default function PostDetailScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            onPress={toggleSave}
+            onPress={handleSavePress}
             style={styles.actionButton}
             accessibilityRole="button"
             accessibilityLabel={saved ? 'Remove from saved' : 'Save post'}
@@ -636,6 +650,11 @@ export default function PostDetailScreen() {
           </TouchableOpacity>
         </View>
       </View>
+      <SaveCollectionModal
+        visible={collectionModalVisible}
+        onClose={() => setCollectionModalVisible(false)}
+        onSave={handleSaveToCollection}
+      />
     </KeyboardAvoidingView>
   );
 }

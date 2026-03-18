@@ -4,7 +4,7 @@ import * as Clipboard from 'expo-clipboard';
 import { useActionSheet } from '@expo/react-native-action-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Collection } from "../context/CollectionsContext";
-import { Tag, Recipe, deletePost, fetchRecipe, likePost, unlikePost, reportContent, savePost, unsavePost, checkSaveStatus } from '../services/api';
+import { Tag, Recipe, deletePost, fetchRecipe, likePost, unlikePost, reportContent, savePost, unsavePost, checkSaveStatus, addPostToCollection } from '../services/api';
 import TagDisplay from './TagDisplay';
 import RecipeDisplay from './RecipeDisplay';
 import { colors } from '../constants/theme';
@@ -134,10 +134,10 @@ export default function Post({
     setSaved(true);
     setCollectionModalVisible(false);
     try {
-      await savePost(id);
+      await addPostToCollection(collection.id, id);
     } catch {
       setSaved(false);
-      Alert.alert('Error', 'Could not save post. Please try again.');
+      Alert.alert('Error', 'Could not save post to collection. Please try again.');
     }
   };
 
