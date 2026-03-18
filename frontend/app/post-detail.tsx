@@ -35,6 +35,7 @@ import {
   Comment,
 } from '../services/api';
 import { Ionicons } from '@expo/vector-icons';
+import { useVideoPlayer, VideoView } from 'expo-video';
 import { AuthContext } from '../context/AuthenticationContext';
 import TagDisplay from '../components/TagDisplay';
 import RecipeDisplay from '../components/RecipeDisplay';
@@ -197,6 +198,11 @@ export default function PostDetailScreen() {
       : getImageUrl(post.imagePath)
     : '';
 
+  const allImages = post?.images && post.images.length > 0
+    ? post.images.map(p => p.startsWith('http') ? p : getImageUrl(p))
+    : imageUri ? [imageUri] : [];
+  const [activeDetailImage, setActiveDetailImage] = useState(0);
+
   const toggleLike = async () => {
     if (!postId || likeLoading) return;
 
@@ -324,22 +330,34 @@ export default function PostDetailScreen() {
       <View key={comment.id}>
         <View style={[styles.commentItem, { marginLeft: indentLevel * 24 }]}>
           {/* Comment avatar */}
-          {comment.avatarUrl ? (
-            <Image source={{ uri: comment.avatarUrl }} style={styles.commentAvatar} />
-          ) : (
-            <View style={[styles.commentAvatar, styles.commentAvatarPlaceholder]}>
-              <Text style={styles.commentAvatarText}>
-                {(comment.displayName || comment.username || '?').charAt(0).toUpperCase()}
-              </Text>
-            </View>
-          )}
+          <TouchableOpacity
+            onPress={() => router.push(`/(tabs)/feeds/user-profile?userId=${comment.userId}`)}
+            accessibilityRole="button"
+            accessibilityLabel={`View ${comment.displayName || comment.username || 'user'}'s profile`}
+          >
+            {comment.avatarUrl ? (
+              <Image source={{ uri: comment.avatarUrl }} style={styles.commentAvatar} />
+            ) : (
+              <View style={[styles.commentAvatar, styles.commentAvatarPlaceholder]}>
+                <Text style={styles.commentAvatarText}>
+                  {(comment.displayName || comment.username || '?').charAt(0).toUpperCase()}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
 
           <View style={styles.commentBody}>
             {/* Username and time */}
             <View style={styles.commentHeader}>
-              <Text style={styles.commentUsername}>
-                {comment.displayName || comment.username || 'User'}
-              </Text>
+              <TouchableOpacity
+                onPress={() => router.push(`/(tabs)/feeds/user-profile?userId=${comment.userId}`)}
+                accessibilityRole="button"
+                accessibilityLabel={`View ${comment.displayName || comment.username || 'user'}'s profile`}
+              >
+                <Text style={styles.commentUsername}>
+                  {comment.displayName || comment.username || 'User'}
+                </Text>
+              </TouchableOpacity>
               <Text style={styles.commentTime}>{formatCommentTime(comment.createdAt)}</Text>
             </View>
 
@@ -395,8 +413,31 @@ export default function PostDetailScreen() {
       </View>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        {/* Full-width image */}
-        {imageUri ? (
+        {/* Full-width media */}
+        {post.mediaType === 'video' && imageUri ? (
+          <DetailVideo uri={imageUri} />
+        ) : allImages.length > 1 ? (
+          <View>
+            <ScrollView
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              onMomentumScrollEnd={(e) => {
+                const index = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+                setActiveDetailImage(index);
+              }}
+            >
+              {allImages.map((uri, index) => (
+                <Image key={index} source={{ uri }} style={styles.postImage} resizeMode="cover" accessibilityLabel={`Photo ${index + 1} by ${post.displayName || post.username || 'user'}`} />
+              ))}
+            </ScrollView>
+            <View style={styles.dotContainer}>
+              {allImages.map((_, index) => (
+                <View key={index} style={[styles.dot, index === activeDetailImage && styles.dotActive]} />
+              ))}
+            </View>
+          </View>
+        ) : imageUri ? (
           <Image source={{ uri: imageUri }} style={styles.postImage} resizeMode="cover" accessibilityLabel={`Photo by ${post.displayName || post.username || 'user'}`} />
         ) : null}
 
@@ -565,6 +606,20 @@ export default function PostDetailScreen() {
   );
 }
 
+function DetailVideo({ uri }: { uri: string }) {
+  const player = useVideoPlayer(uri, p => {
+    p.loop = false;
+  });
+  return (
+    <VideoView
+      player={player}
+      style={{ width: SCREEN_WIDTH, height: SCREEN_WIDTH }}
+      allowsFullscreen
+      allowsPictureInPicture
+    />
+  );
+}
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -631,6 +686,9 @@ const styles = StyleSheet.create({
     height: SCREEN_WIDTH,
     backgroundColor: colors.borderLight,
   },
+  dotContainer: { flexDirection: 'row', justifyContent: 'center', paddingVertical: 8, gap: 6 },
+  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.border },
+  dotActive: { backgroundColor: colors.primary, width: 8, height: 8, borderRadius: 4 },
   authorRow: {
     flexDirection: 'row',
     alignItems: 'center',

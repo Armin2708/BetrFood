@@ -93,6 +93,44 @@ router.delete('/:id/mute', requireAuth, async (req, res) => {
   }
 });
 
+// GET /api/users/:id/block-status - Check if current user has blocked a user (auth required)
+router.get('/:id/block-status', requireAuth, async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('user_blocks')
+      .select('blocker_id')
+      .eq('blocker_id', req.userId)
+      .eq('blocked_id', req.params.id)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    res.json({ isBlocked: !!data });
+  } catch (error) {
+    console.error('Error checking block status:', error);
+    res.status(500).json({ error: 'Failed to check block status.' });
+  }
+});
+
+// GET /api/users/:id/mute-status - Check if current user has muted a user (auth required)
+router.get('/:id/mute-status', requireAuth, async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('user_mutes')
+      .select('muter_id')
+      .eq('muter_id', req.userId)
+      .eq('muted_id', req.params.id)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    res.json({ isMuted: !!data });
+  } catch (error) {
+    console.error('Error checking mute status:', error);
+    res.status(500).json({ error: 'Failed to check mute status.' });
+  }
+});
+
 // GET /api/users/blocked - List blocked users (auth required)
 router.get('/blocked', requireAuth, async (req, res) => {
   try {

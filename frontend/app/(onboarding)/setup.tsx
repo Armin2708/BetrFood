@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import {
   checkUsername,
   updateMyProfile,
+  uploadAvatar,
   completeOnboarding,
 } from '../../services/api';
 import { AuthContext } from '../../context/AuthenticationContext';
@@ -122,11 +123,15 @@ export default function OnboardingSetup() {
   const handleFinish = async () => {
     setSubmitting(true);
     try {
+      // Upload avatar first if one was selected
+      if (avatarUri) {
+        await uploadAvatar(avatarUri);
+      }
+
       await updateMyProfile({
         displayName: displayName || null,
         username,
         bio: bio || null,
-        avatarUrl: avatarUri || null,
         dietaryPreferences: selectedDietaryTags,
       });
       await completeOnboarding();

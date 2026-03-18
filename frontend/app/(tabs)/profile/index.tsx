@@ -1,18 +1,17 @@
 import { View, Text, Pressable, StyleSheet, Image, FlatList, Dimensions, ActivityIndicator, RefreshControl } from 'react-native';
 import { Stack, useRouter } from 'expo-router'
 import { Ionicons } from "@expo/vector-icons";
-import { useState, useCallback, useContext } from 'react';
+import { useState, useCallback, useContext, useRef, useEffect } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { useClerk } from '@clerk/clerk-expo';
 import { AuthContext } from '../../../context/AuthenticationContext';
-import { fetchMyProfile, fetchFollowStats, fetchUserPosts, getImageUrl, UserProfile, Post as PostType } from '../../../services/api';
+import { fetchMyProfile, fetchFollowStats, fetchUserPosts, getImageUrl, getAvatarUrl, UserProfile, Post as PostType } from '../../../services/api';
+import VideoThumbnailView from '../../../components/VideoThumbnail';
 
 const { width } = Dimensions.get('window');
 const ITEM_SIZE = width / 3;
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { signOut } = useClerk();
   const { user } = useContext(AuthContext);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -20,8 +19,11 @@ export default function ProfileScreen() {
   const [userPosts, setUserPosts] = useState<PostType[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
+  const userRef = useRef(user);
+  useEffect(() => { userRef.current = user; }, [user]);
+
   const loadProfile = useCallback(async () => {
-    if (!user) return;
+    if (!userRef.current) return;
     try {
       const data = await fetchMyProfile();
       setProfile(data);
@@ -42,7 +44,7 @@ export default function ProfileScreen() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, []);
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -66,9 +68,10 @@ export default function ProfileScreen() {
 
   return (
     <>
-      {/* Settings cog */}
+      {/* Header with username + settings */}
       <Stack.Screen
         options={{
+          title: profile?.username ? `@${profile.username}` : 'Profile',
           headerRight: () => (
             <Pressable onPress={() => router.push('/profile/settings')} accessibilityRole="button" accessibilityLabel="Settings">
               <Ionicons name='settings-outline' size={24}/>
@@ -80,13 +83,7 @@ export default function ProfileScreen() {
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
-          {profile?.avatarUrl ? (
-            <Image source={{ uri: profile.avatarUrl }} style={styles.avatar} accessibilityLabel={`${profile?.displayName || 'User'}'s profile photo`} />
-          ) : (
-            <View style={[styles.avatar, styles.avatarFallback]}>
-              <Ionicons name="person" size={40} color="#999" />
-            </View>
-          )}
+          <Image source={{ uri: getAvatarUrl(profile?.avatarUrl, profile?.displayName || profile?.username) }} style={styles.avatar} accessibilityLabel={`${profile?.displayName || 'User'}'s profile photo`} />
 
           <View style={styles.statsRow}>
             <Stat label="Following" value={String(followStats.followingCount)} callback={ () => router.push('/profile/info/followingScreen') }/>
@@ -125,20 +122,6 @@ export default function ProfileScreen() {
           <Ionicons name="chevron-forward" size={16} color="#ccc" />
         </Pressable>
 
-        {/* Sign Out Button */}
-        <Pressable
-          style={styles.signOutButton}
-          onPress={async () => {
-            await signOut();
-            router.replace('/');
-          }}
-          accessibilityRole="button"
-          accessibilityLabel="Sign out"
-        >
-          <Ionicons name="log-out-outline" size={18} color="#ff3b30" />
-          <Text style={styles.signOutButtonText}>Sign Out</Text>
-        </Pressable>
-
         {/* Post Grid */}
         <FlatList
           data={userPosts}
@@ -146,11 +129,18 @@ export default function ProfileScreen() {
           numColumns={3}
           renderItem={({ item }) => (
             <Pressable onPress={() => router.push(`/post-detail?postId=${item.id}`)}>
-              <Image
-                source={{ uri: getImageUrl(item.imagePath) }}
-                style={styles.gridItem}
-                accessibilityLabel={item.caption || 'Post image'}
-              />
+              {item.mediaType === 'video' ? (
+                <VideoThumbnailView
+                  videoUri={getImageUrl(item.imagePath)}
+                  style={styles.gridItem}
+                />
+              ) : (
+                <Image
+                  source={{ uri: getImageUrl(item.imagePath) }}
+                  style={styles.gridItem}
+                  accessibilityLabel={item.caption || 'Post image'}
+                />
+              )}
             </Pressable>
           )}
           showsVerticalScrollIndicator={false}
@@ -271,23 +261,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '500',
     color: '#333',
-  },
-  signOutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginHorizontal: 20,
-    marginBottom: 16,
-    paddingVertical: 10,
-    borderWidth: 1,
-    borderColor: '#ff3b30',
-    borderRadius: 8,
-    gap: 8,
-  },
-  signOutButtonText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#ff3b30',
   },
   gridItem: {
     width: ITEM_SIZE,

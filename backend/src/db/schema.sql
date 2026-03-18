@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS posts (
   user_id TEXT NOT NULL,
   caption TEXT DEFAULT '',
   image_path TEXT NOT NULL,
+  media_type TEXT DEFAULT 'image' CHECK (media_type IN ('image', 'video')),
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now(),
   edited_at TIMESTAMPTZ

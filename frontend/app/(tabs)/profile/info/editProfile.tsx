@@ -3,7 +3,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState, useEffect } from "react";
 import * as ImagePicker from 'expo-image-picker';
-import { fetchMyProfile, updateMyProfile, UserProfile } from "../../../../services/api";
+import { fetchMyProfile, updateMyProfile, uploadAvatar, getAvatarUrl, UserProfile } from "../../../../services/api";
 
 export default function EditProfile() {
   const router = useRouter();
@@ -14,6 +14,7 @@ export default function EditProfile() {
   const [username, setUsername] = useState("");
   const [bio, setBio] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarChanged, setAvatarChanged] = useState(false);
 
   useEffect(() => {
     loadProfile();
@@ -41,7 +42,7 @@ export default function EditProfile() {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
@@ -49,6 +50,7 @@ export default function EditProfile() {
 
     if (!result.canceled && result.assets[0]) {
       setAvatarUrl(result.assets[0].uri);
+      setAvatarChanged(true);
     }
   };
 
@@ -60,11 +62,15 @@ export default function EditProfile() {
 
     setSaving(true);
     try {
+      // Upload avatar if changed
+      if (avatarChanged && avatarUrl) {
+        await uploadAvatar(avatarUrl);
+      }
+
       await updateMyProfile({
         displayName: displayName || null,
         username: username.toLowerCase(),
         bio: bio || null,
-        avatarUrl,
       });
       router.back();
     } catch (error: any) {
@@ -87,7 +93,7 @@ export default function EditProfile() {
       {/* Profile Picture */}
       <Pressable style={styles.avatarSection} onPress={pickAvatar}>
         {avatarUrl ? (
-          <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
+          <Image source={{ uri: avatarChanged ? avatarUrl : getAvatarUrl(avatarUrl, displayName || username) }} style={styles.avatarImage} />
         ) : (
           <Ionicons name="person-circle-outline" size={100} color="#888" />
         )}

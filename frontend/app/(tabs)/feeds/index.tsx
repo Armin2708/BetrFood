@@ -18,6 +18,7 @@ import {
   fetchPostsByTags,
   fetchFollowingFeed,
   getImageUrl,
+  getAvatarUrl,
   Post as PostType,
 } from '../../../services/api';
 
@@ -187,15 +188,19 @@ export default function HomeScreen() {
         renderItem={({ item }) => (
           <Post
             id={item.id}
-            profilePic={item.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.displayName || item.username || item.userId)}&background=random`}
+            profilePic={getAvatarUrl(item.avatarUrl, item.displayName || item.username || item.userId)}
             username={item.displayName || item.username || item.userId}
             postImage={getImageUrl(item.imagePath)}
+            postImages={item.images ? item.images.map(getImageUrl) : undefined}
             caption={item.caption}
             userId={item.userId}
             currentUserId={user?.id}
             onDeleted={handlePostDeleted}
             tags={item.tags}
             editedAt={item.editedAt}
+            initialLiked={item.liked}
+            initialLikes={item.likeCount}
+            mediaType={item.mediaType}
           />
         )}
         ListFooterComponent={

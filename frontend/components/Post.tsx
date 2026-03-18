@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import SaveCollectionModal from "./SaveCollectionModal";
 import * as Clipboard from 'expo-clipboard';
 import { useActionSheet } from '@expo/react-native-action-sheet';
@@ -8,6 +8,7 @@ import { Tag, Recipe, deletePost, fetchRecipe, likePost, unlikePost, reportConte
 import TagDisplay from './TagDisplay';
 import RecipeDisplay from './RecipeDisplay';
 import { colors } from '../constants/theme';
+import { useVideoPlayer, VideoView } from 'expo-video';
 import {
   View,
   Text,
@@ -17,7 +18,11 @@ import {
   Share,
   Alert,
   Animated,
+  ScrollView,
+  Dimensions,
 } from 'react-native';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 import { router } from 'expo-router';
 
 interface PostProps {
@@ -25,6 +30,7 @@ interface PostProps {
   profilePic: string;
   username: string;
   postImage: string;
+  postImages?: string[];
   caption: string;
   userId?: string;
   currentUserId?: string;
@@ -34,6 +40,7 @@ interface PostProps {
   initialLiked?: boolean;
   initialLikes?: number;
   verified?: boolean;
+  mediaType?: 'image' | 'video';
 }
 
 export default function Post({
@@ -41,6 +48,7 @@ export default function Post({
   profilePic,
   username,
   postImage,
+  postImages,
   caption,
   userId,
   currentUserId,
@@ -50,9 +58,12 @@ export default function Post({
   initialLiked = false,
   initialLikes = 0,
   verified = false,
+  mediaType = 'image',
 }: PostProps) {
   const [liked, setLiked] = useState(initialLiked);
   const [likeCount, setLikeCount] = useState(initialLikes);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const allImages = postImages && postImages.length > 0 ? postImages : [postImage];
   const [likeLoading, setLikeLoading] = useState(false);
   const [saved, setSaved] = useState(false);
   const [collectionModalVisible, setCollectionModalVisible] = useState(false);
@@ -166,12 +177,11 @@ export default function Post({
 
   const showPostMenu = () => {
     if (isOwner) {
-      const options = ['Delete', 'Report', 'Cancel'];
+      const options = ['Delete', 'Cancel'];
       showActionSheetWithOptions(
-        { options, cancelButtonIndex: 2, destructiveButtonIndex: 0 },
+        { options, cancelButtonIndex: 1, destructiveButtonIndex: 0 },
         (index) => {
           if (index === 0) handleDelete();
-          if (index === 1) handleReport();
         }
       );
     } else {
@@ -212,13 +222,43 @@ export default function Post({
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity
-        activeOpacity={0.9}
-        onPress={() => id && router.push(`/post-detail?postId=${id}`)}
-        accessibilityLabel={`Post by ${username}: ${caption?.substring(0, 80) || 'photo'}`}
-      >
-        <Image source={{ uri: postImage }} style={styles.postImage} />
-      </TouchableOpacity>
+      {mediaType === 'video' ? (
+        <PostVideo uri={allImages[0]} />
+      ) : (
+        <TouchableOpacity
+          activeOpacity={0.9}
+          onPress={() => id && router.push(`/post-detail?postId=${id}`)}
+          accessibilityLabel={`Post by ${username}: ${caption?.substring(0, 80) || 'photo'}`}
+        >
+          {allImages.length > 1 ? (
+            <View>
+              <ScrollView
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                onMomentumScrollEnd={(e) => {
+                  const index = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+                  setActiveImageIndex(index);
+                }}
+              >
+                {allImages.map((uri, index) => (
+                  <Image key={index} source={{ uri }} style={styles.postImage} />
+                ))}
+              </ScrollView>
+              <View style={styles.dotContainer}>
+                {allImages.map((_, index) => (
+                  <View
+                    key={index}
+                    style={[styles.dot, index === activeImageIndex && styles.dotActive]}
+                  />
+                ))}
+              </View>
+            </View>
+          ) : (
+            <Image source={{ uri: allImages[0] }} style={styles.postImage} />
+          )}
+        </TouchableOpacity>
+      )}
 
       <View style={styles.actions}>
         <TouchableOpacity
@@ -239,6 +279,15 @@ export default function Post({
           >
             {liked ? '❤️' : '🤍'} {liked ? 'Liked' : 'Like'}
           </Animated.Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => id && router.push(`/post-detail?postId=${id}`)}
+          style={styles.actionButton}
+          accessibilityRole="button"
+          accessibilityLabel="Comment on post"
+        >
+          <Text style={styles.actionText}>💬 Comment</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -286,6 +335,20 @@ export default function Post({
   );
 }
 
+function PostVideo({ uri }: { uri: string }) {
+  const player = useVideoPlayer(uri, p => {
+    p.loop = false;
+  });
+  return (
+    <VideoView
+      player={player}
+      style={{ width: SCREEN_WIDTH, aspectRatio: 4 / 3 }}
+      allowsFullscreen
+      allowsPictureInPicture
+    />
+  );
+}
+
 const styles = StyleSheet.create({
   container: { marginVertical: 10, backgroundColor: colors.backgroundPrimary, borderBottomWidth: 1, borderColor: colors.border },
   header: { flexDirection: 'row', alignItems: 'center', padding: 10 },
@@ -293,7 +356,10 @@ const styles = StyleSheet.create({
   profilePic: { width: 40, height: 40, borderRadius: 20, marginRight: 10 },
   username: { fontWeight: 'bold', fontSize: 16, flex: 1 },
   menuButton: { padding: 8 },
-  postImage: { width: '100%', aspectRatio: 4 / 3, backgroundColor: colors.borderLight },
+  postImage: { width: SCREEN_WIDTH, aspectRatio: 4 / 3, backgroundColor: colors.borderLight },
+  dotContainer: { flexDirection: 'row', justifyContent: 'center', paddingVertical: 8, gap: 6 },
+  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.border },
+  dotActive: { backgroundColor: colors.primary, width: 8, height: 8, borderRadius: 4 },
   actions: { flexDirection: 'row', paddingHorizontal: 10, paddingTop: 10, gap: 16 },
   actionButton: { paddingVertical: 4 },
   actionText: { fontSize: 16, color: colors.textPrimary },

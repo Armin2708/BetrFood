@@ -45,12 +45,12 @@ app.use((req, res, next) => {
   next();
 });
 
-// Serve uploaded images statically with caching
+// Serve uploaded media (images + videos) statically with caching
 app.use("/uploads", express.static(path.join(__dirname, "..", "uploads"), {
   maxAge: '7d',
-  immutable: true,
   etag: true,
   lastModified: true,
+  acceptRanges: true, // Required for video seeking/streaming
 }));
 
 app.get("/", (req, res) => {
@@ -75,6 +75,38 @@ app.use("/api/posts", savesRouter);
 app.use("/api/preferences", preferencesRouter);
 app.use("/api/users", blocksRouter);
 app.use("/api/notifications", notificationsRouter);
+
+// Auto-migrate: ensure media_type column exists on posts table
+// Global error handler — catches multer errors and other unhandled middleware errors
+app.use((err, req, res, next) => {
+  console.error('[ERROR]', err.message);
+  if (err.code === 'LIMIT_FILE_SIZE') {
+    return res.status(413).json({ error: 'File too large.' });
+  }
+  if (err.message && err.message.includes('Only')) {
+    return res.status(400).json({ error: err.message });
+  }
+  res.status(500).json({ error: err.message || 'Internal server error.' });
+});
+
+const supabase = require("./db/supabase");
+(async () => {
+  try {
+    // Check if media_type column exists by querying a single post
+    const { data, error } = await supabase.from('posts').select('media_type').limit(1);
+    if (error && error.message.includes('media_type')) {
+      console.log('[Migration] Adding media_type column to posts...');
+      await supabase.rpc('exec_sql', {
+        query: "ALTER TABLE posts ADD COLUMN IF NOT EXISTS media_type TEXT DEFAULT 'image';"
+      });
+      console.log('[Migration] media_type column added.');
+    } else {
+      console.log('[Migration] media_type column already exists.');
+    }
+  } catch (err) {
+    console.error('[Migration] Failed to check/add media_type column:', err.message);
+  }
+})();
 
 app.listen(PORT, () => {
   console.log(`\n=== BetrFood Backend Started ===`);

@@ -4,8 +4,30 @@ const path = require('path');
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
 const sharp = require('sharp');
+const ffmpeg = require('fluent-ffmpeg');
 const supabase = require('../db/supabase');
 const { requireAuth, optionalAuth } = require('../middleware/auth');
+
+// Compress video to 720p MP4
+function compressVideo(inputPath, outputPath) {
+  return new Promise((resolve, reject) => {
+    ffmpeg(inputPath)
+      .outputOptions([
+        '-vf', 'scale=-2:720',        // 720p height, auto width (divisible by 2)
+        '-c:v', 'libx264',            // H.264 codec
+        '-preset', 'fast',            // Encoding speed
+        '-crf', '28',                 // Quality (lower = better, 28 = good compression)
+        '-c:a', 'aac',               // AAC audio
+        '-b:a', '128k',              // Audio bitrate
+        '-movflags', '+faststart',   // Enable streaming
+        '-y',                         // Overwrite output
+      ])
+      .output(outputPath)
+      .on('end', () => resolve())
+      .on('error', (err) => reject(err))
+      .run();
+  });
+}
 // RBAC middleware available for future role-gated features:
 // const { requireRole, requireMinRole } = require('../middleware/rbac');
 
@@ -24,23 +46,29 @@ const storage = multer.diskStorage({
   },
 });
 
+const allowedImages = /jpeg|jpg|png|gif|webp|heif|heic/;
+const allowedVideos = /mp4|mov|quicktime|webm/;
+
 const upload = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 },
+  limits: { fileSize: 100 * 1024 * 1024 }, // 100MB for video support
   fileFilter: (req, file, cb) => {
-    const allowed = /jpeg|jpg|png|gif|webp/;
-    const extOk = allowed.test(path.extname(file.originalname).toLowerCase());
-    const mimeOk = allowed.test(file.mimetype.split('/')[1]);
-    if (extOk && mimeOk) {
+    const ext = path.extname(file.originalname).toLowerCase().replace('.', '');
+    const mimeSub = file.mimetype.split('/')[1];
+
+    const isImage = allowedImages.test(mimeSub) && (ext ? allowedImages.test(ext) : true);
+    const isVideo = file.mimetype.startsWith('video/') && (ext ? allowedVideos.test(ext) : true);
+
+    if (isImage || isVideo) {
       cb(null, true);
     } else {
-      cb(new Error('Only image files (jpeg, jpg, png, gif, webp) are allowed'));
+      cb(new Error('Only image (jpeg, jpg, png, gif, webp, heif, heic) and video (mp4, mov, webm) files are allowed'));
     }
   },
 });
 
 // GET /api/posts - cursor-based paginated feed
-router.get('/', async (req, res) => {
+router.get('/', optionalAuth, async (req, res) => {
   try {
     const limit = Math.min(Math.max(parseInt(req.query.limit) || 10, 1), 50);
     const cursor = req.query.cursor || null;
@@ -68,17 +96,25 @@ router.get('/', async (req, res) => {
     const { data: posts, error } = await query;
     if (error) throw error;
 
-    const hasMore = posts.length > limit;
-    const resultPosts = hasMore ? posts.slice(0, limit) : posts;
+    // Filter out posts from blocked and muted users
+    const excludedIds = req.userId ? await getExcludedUserIds(req.userId) : new Set();
+    const filteredPosts = excludedIds.size > 0
+      ? posts.filter(p => !excludedIds.has(p.user_id))
+      : posts;
+
+    const hasMore = filteredPosts.length > limit;
+    const resultPosts = hasMore ? filteredPosts.slice(0, limit) : filteredPosts;
     const nextCursor = hasMore && resultPosts.length > 0
       ? resultPosts[resultPosts.length - 1].id
       : null;
 
-    // Enrich with profile data, tags, and comment counts, map to camelCase
+    // Enrich with profile data, tags, comment counts, likes, and images
     const enriched = await enrichPostsWithProfiles(resultPosts);
     const withTags = await enrichPostsWithTags(enriched);
     const withCounts = await enrichPostsWithCommentCounts(withTags);
-    const mapped = withCounts.map(mapPost);
+    const withLikes = await enrichPostsWithLikes(withCounts, req.userId);
+    const withImages = await enrichPostsWithImages(withLikes);
+    const mapped = withImages.map(mapPost);
 
     res.json({ posts: mapped, nextCursor, hasMore });
   } catch (error) {
@@ -130,8 +166,14 @@ router.get('/following', requireAuth, async (req, res) => {
     const { data: posts, error } = await query;
     if (error) throw error;
 
-    const hasMore = posts.length > limit;
-    const resultPosts = hasMore ? posts.slice(0, limit) : posts;
+    // Filter out posts from blocked and muted users
+    const excludedIds = await getExcludedUserIds(req.userId);
+    const filteredPosts = excludedIds.size > 0
+      ? posts.filter(p => !excludedIds.has(p.user_id))
+      : posts;
+
+    const hasMore = filteredPosts.length > limit;
+    const resultPosts = hasMore ? filteredPosts.slice(0, limit) : filteredPosts;
     const nextCursor = hasMore && resultPosts.length > 0
       ? resultPosts[resultPosts.length - 1].id
       : null;
@@ -139,7 +181,9 @@ router.get('/following', requireAuth, async (req, res) => {
     const enriched = await enrichPostsWithProfiles(resultPosts);
     const withTags = await enrichPostsWithTags(enriched);
     const withCounts = await enrichPostsWithCommentCounts(withTags);
-    const mapped = withCounts.map(mapPost);
+    const withLikes = await enrichPostsWithLikes(withCounts, req.userId);
+    const withImages = await enrichPostsWithImages(withLikes);
+    const mapped = withImages.map(mapPost);
 
     res.json({ posts: mapped, nextCursor, hasMore });
   } catch (error) {
@@ -186,7 +230,8 @@ router.get('/:id', async (req, res) => {
     const [enriched] = await enrichPostsWithProfiles([post]);
     const [withTags] = await enrichPostsWithTags([enriched]);
     const [withCount] = await enrichPostsWithCommentCounts([withTags]);
-    res.json(mapPost(withCount));
+    const [withImages] = await enrichPostsWithImages([withCount]);
+    res.json(mapPost(withImages));
   } catch (error) {
     console.error('Error fetching post:', error);
     res.status(500).json({ error: 'Failed to fetch post.' });
@@ -195,27 +240,66 @@ router.get('/:id', async (req, res) => {
 
 // POST /api/posts - create post with image upload (auth required)
 // Future: gate to creator+ with requireMinRole('creator') after requireAuth
-router.post('/', requireAuth, upload.single('image'), async (req, res) => {
+router.post('/', requireAuth, upload.array('images', 10), async (req, res) => {
   try {
-    if (!req.file) {
-      return res.status(400).json({ error: 'Image is required' });
+    // Support both multi-image (images) and legacy single-image (image) uploads
+    const files = req.files && req.files.length > 0 ? req.files : (req.file ? [req.file] : []);
+    if (files.length === 0) {
+      return res.status(400).json({ error: 'At least one image or video is required' });
     }
 
-    // Optimize uploaded image: resize to max 1200px wide, convert to JPEG, quality 80
-    const optimizedFilename = `${uuidv4()}.jpg`;
-    const optimizedPath = path.join(uploadsDir, optimizedFilename);
-    try {
-      await sharp(req.file.path)
-        .resize(1200, 1200, { fit: 'inside', withoutEnlargement: true })
-        .jpeg({ quality: 80 })
-        .toFile(optimizedPath);
-      // Remove the original unoptimized file
-      fs.unlinkSync(req.file.path);
-    } catch (sharpErr) {
-      console.error('Image optimization failed, using original:', sharpErr.message);
-      // Fall back to original file if sharp fails
+    // Validate video constraints
+    const videoFiles = files.filter(f => f.mimetype.startsWith('video/'));
+    if (videoFiles.length > 1) {
+      files.forEach(f => { try { fs.unlinkSync(f.path); } catch {} });
+      return res.status(400).json({ error: 'Only one video per post is allowed.' });
     }
-    const finalFilename = fs.existsSync(optimizedPath) ? optimizedFilename : req.file.filename;
+    if (videoFiles.length > 0 && files.length > 1) {
+      files.forEach(f => { try { fs.unlinkSync(f.path); } catch {} });
+      return res.status(400).json({ error: 'A video post cannot include other media.' });
+    }
+    for (const file of videoFiles) {
+      if (file.size > 50 * 1024 * 1024) {
+        files.forEach(f => { try { fs.unlinkSync(f.path); } catch {} });
+        return res.status(400).json({ error: 'Video files must be under 50MB (max ~20 seconds).' });
+      }
+    }
+
+    // Process uploaded files — compress images to 720p, videos to 720p
+    const mediaPaths = [];
+    let detectedMediaType = 'image';
+
+    for (const file of files) {
+      if (file.mimetype.startsWith('video/')) {
+        // Video file — compress to 720p MP4
+        detectedMediaType = 'video';
+        const compressedFilename = `${uuidv4()}.mp4`;
+        const compressedPath = path.join(uploadsDir, compressedFilename);
+        try {
+          await compressVideo(file.path, compressedPath);
+          fs.unlinkSync(file.path); // Remove original
+          mediaPaths.push(`/uploads/${compressedFilename}`);
+        } catch (ffmpegErr) {
+          console.error('Video compression failed, using original:', ffmpegErr.message);
+          mediaPaths.push(`/uploads/${file.filename}`);
+        }
+      } else {
+        // Image file — compress to 720p JPEG
+        const optimizedFilename = `${uuidv4()}.jpg`;
+        const optimizedPath = path.join(uploadsDir, optimizedFilename);
+        try {
+          await sharp(file.path)
+            .resize(1280, 720, { fit: 'inside', withoutEnlargement: true })
+            .jpeg({ quality: 75 })
+            .toFile(optimizedPath);
+          fs.unlinkSync(file.path);
+        } catch (sharpErr) {
+          console.error('Image compression failed, using original:', sharpErr.message);
+        }
+        const finalFilename = fs.existsSync(optimizedPath) ? optimizedFilename : file.filename;
+        mediaPaths.push(`/uploads/${finalFilename}`);
+      }
+    }
 
     const caption = (req.body.caption || '').slice(0, 500);
     const now = new Date().toISOString();
@@ -225,7 +309,8 @@ router.post('/', requireAuth, upload.single('image'), async (req, res) => {
       .insert({
         user_id: req.userId,
         caption,
-        image_path: `/uploads/${finalFilename}`,
+        image_path: mediaPaths[0],
+        media_type: detectedMediaType,
         created_at: now,
         updated_at: now,
       })
@@ -233,6 +318,16 @@ router.post('/', requireAuth, upload.single('image'), async (req, res) => {
       .single();
 
     if (error) throw error;
+
+    // Insert all media into post_images table
+    if (mediaPaths.length > 0) {
+      const imageRows = mediaPaths.map((imgPath, idx) => ({
+        post_id: post.id,
+        image_path: imgPath,
+        order_index: idx,
+      }));
+      await supabase.from('post_images').insert(imageRows);
+    }
 
     // Handle optional recipe data
     let recipeData = null;
@@ -452,14 +547,93 @@ async function enrichPostsWithCommentCounts(posts) {
   });
 }
 
+// Enrich posts with like counts and current user's like status
+async function enrichPostsWithLikes(posts, currentUserId) {
+  if (!posts || posts.length === 0) return posts;
+
+  const postIds = posts.map(p => p.id);
+
+  // Fetch like counts for all posts
+  const countPromises = postIds.map(async (postId) => {
+    const { count } = await supabase
+      .from('likes')
+      .select('*', { count: 'exact', head: true })
+      .eq('post_id', postId);
+    return { postId, count: count || 0 };
+  });
+
+  const counts = await Promise.all(countPromises);
+  const likeCountMap = {};
+  for (const { postId, count } of counts) {
+    likeCountMap[postId] = count;
+  }
+
+  // If we have a current user, check which posts they liked
+  const likedSet = new Set();
+  if (currentUserId) {
+    const { data: userLikes } = await supabase
+      .from('likes')
+      .select('post_id')
+      .eq('user_id', currentUserId)
+      .in('post_id', postIds);
+
+    if (userLikes) {
+      for (const like of userLikes) {
+        likedSet.add(like.post_id);
+      }
+    }
+  }
+
+  return posts.map(post => {
+    post._likeCount = likeCountMap[post.id] || 0;
+    post._liked = likedSet.has(post.id);
+    return post;
+  });
+}
+
+// Enrich posts with multiple images from post_images table
+async function enrichPostsWithImages(posts) {
+  if (!posts || posts.length === 0) return posts;
+
+  const postIds = posts.map(p => p.id);
+
+  const { data: postImages, error } = await supabase
+    .from('post_images')
+    .select('post_id, image_path, order_index')
+    .in('post_id', postIds)
+    .order('order_index', { ascending: true });
+
+  if (error) {
+    console.error('Error fetching post images:', error);
+    // Fall back to single image_path
+    return posts.map(post => { post._images = [post.image_path]; return post; });
+  }
+
+  const imageMap = {};
+  if (postImages) {
+    for (const img of postImages) {
+      if (!imageMap[img.post_id]) imageMap[img.post_id] = [];
+      imageMap[img.post_id].push(img.image_path);
+    }
+  }
+
+  return posts.map(post => {
+    post._images = imageMap[post.id] || [post.image_path];
+    return post;
+  });
+}
+
 // Map Supabase snake_case to camelCase for frontend
 function mapPost(post) {
   const profile = post._profile || {};
+  const images = post._images || [post.image_path];
   return {
     id: post.id,
     userId: post.user_id,
     caption: post.caption,
-    imagePath: post.image_path,
+    imagePath: images[0],
+    images: images,
+    mediaType: post.media_type || 'image',
     createdAt: post.created_at,
     updatedAt: post.updated_at,
     editedAt: post.edited_at || null,
@@ -467,8 +641,30 @@ function mapPost(post) {
     username: profile.username || null,
     avatarUrl: profile.avatar_url || null,
     commentCount: post._commentCount || 0,
+    likeCount: post._likeCount || 0,
+    liked: post._liked || false,
     tags: (post._tags || []).map(t => ({ id: t.id, name: t.name, type: t.type })),
   };
+}
+
+// Get user IDs that should be excluded from feeds (blocked + muted + users who blocked me)
+async function getExcludedUserIds(currentUserId) {
+  if (!currentUserId) return new Set();
+
+  const [blockedByMe, mutedByMe, blockedMe] = await Promise.all([
+    // Users I blocked
+    supabase.from('user_blocks').select('blocked_id').eq('blocker_id', currentUserId),
+    // Users I muted
+    supabase.from('user_mutes').select('muted_id').eq('muter_id', currentUserId),
+    // Users who blocked me (they shouldn't see my posts, and I shouldn't see theirs)
+    supabase.from('user_blocks').select('blocker_id').eq('blocked_id', currentUserId),
+  ]);
+
+  const excluded = new Set();
+  if (blockedByMe.data) blockedByMe.data.forEach(r => excluded.add(r.blocked_id));
+  if (mutedByMe.data) mutedByMe.data.forEach(r => excluded.add(r.muted_id));
+  if (blockedMe.data) blockedMe.data.forEach(r => excluded.add(r.blocker_id));
+  return excluded;
 }
 
 module.exports = router;
