@@ -4,7 +4,7 @@ import * as Clipboard from 'expo-clipboard';
 import { useActionSheet } from '@expo/react-native-action-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Collection } from "../context/CollectionsContext";
-import { Tag, Recipe, deletePost, fetchRecipe, likePost, unlikePost, reportContent } from '../services/api';
+import { Tag, Recipe, deletePost, fetchRecipe, likePost, unlikePost, reportContent, savePost, unsavePost, checkSaveStatus } from '../services/api';
 import TagDisplay from './TagDisplay';
 import RecipeDisplay from './RecipeDisplay';
 import { colors } from '../constants/theme';
@@ -41,6 +41,7 @@ interface PostProps {
   initialLikes?: number;
   verified?: boolean;
   mediaType?: 'image' | 'video';
+  commentCount?: number;
 }
 
 export default function Post({
@@ -59,6 +60,7 @@ export default function Post({
   initialLikes = 0,
   verified = false,
   mediaType = 'image',
+  commentCount = 0,
 }: PostProps) {
   const [liked, setLiked] = useState(initialLiked);
   const [likeCount, setLikeCount] = useState(initialLikes);
@@ -72,6 +74,7 @@ export default function Post({
   useEffect(() => {
     if (id) {
       fetchRecipe(id).then(setRecipe).catch(() => {});
+      checkSaveStatus(id).then(({ isSaved }) => setSaved(isSaved)).catch(() => {});
     }
   }, [id]);
 
@@ -111,15 +114,31 @@ export default function Post({
     }
   };
 
-  const handleSavePress = () => {
-    if (!saved) setCollectionModalVisible(true);
-    else setSaved(false);
+  const handleSavePress = async () => {
+    if (!id) return;
+    if (saved) {
+      setSaved(false);
+      try {
+        await unsavePost(id);
+      } catch {
+        setSaved(true);
+        Alert.alert('Error', 'Could not unsave post. Please try again.');
+      }
+    } else {
+      setCollectionModalVisible(true);
+    }
   };
 
-  const handleSave = (collection: Collection) => {
+  const handleSave = async (collection: Collection) => {
+    if (!id) return;
     setSaved(true);
     setCollectionModalVisible(false);
-    console.log(`Saved to ${collection.name}`);
+    try {
+      await savePost(id);
+    } catch {
+      setSaved(false);
+      Alert.alert('Error', 'Could not save post. Please try again.');
+    }
   };
 
   const handleDelete = () => {
@@ -156,18 +175,43 @@ export default function Post({
     Alert.alert('Link Copied', 'The post link has been copied to your clipboard.');
   };
 
+  const submitReport = async (reason: string) => {
+    if (!id) return;
+    try {
+      await reportContent('post', id, reason);
+      Alert.alert('Report Submitted', 'Thank you for your report. We will review it shortly.');
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to submit report.');
+    }
+  };
+
   const handleReport = () => {
     if (!id) return;
     const reasons = ['Spam', 'Inappropriate', 'Harassment', 'Other'];
     Alert.alert('Report Post', 'Select a reason:', [
       ...reasons.map((reason) => ({
         text: reason,
-        onPress: async () => {
-          try {
-            await reportContent('post', id, reason);
-            Alert.alert('Report Submitted', 'Thank you for your report. We will review it shortly.');
-          } catch (error: any) {
-            Alert.alert('Error', error.message || 'Failed to submit report.');
+        onPress: () => {
+          if (reason === 'Other') {
+            Alert.prompt(
+              'Report Post',
+              'Please describe the issue:',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Submit',
+                  onPress: (text?: string) => {
+                    const detail = text?.trim();
+                    submitReport(detail ? `Other: ${detail}` : 'Other');
+                  },
+                },
+              ],
+              'plain-text',
+              '',
+              'default'
+            );
+          } else {
+            submitReport(reason);
           }
         },
       })),
@@ -175,13 +219,19 @@ export default function Post({
     ]);
   };
 
+  const handleEdit = () => {
+    if (!id) return;
+    router.push(`/edit-post?postId=${id}`);
+  };
+
   const showPostMenu = () => {
     if (isOwner) {
-      const options = ['Delete', 'Cancel'];
+      const options = ['Edit', 'Delete', 'Cancel'];
       showActionSheetWithOptions(
-        { options, cancelButtonIndex: 1, destructiveButtonIndex: 0 },
+        { options, cancelButtonIndex: 2, destructiveButtonIndex: 1 },
         (index) => {
-          if (index === 0) handleDelete();
+          if (index === 0) handleEdit();
+          if (index === 1) handleDelete();
         }
       );
     } else {
@@ -287,7 +337,7 @@ export default function Post({
           accessibilityRole="button"
           accessibilityLabel="Comment on post"
         >
-          <Text style={styles.actionText}>💬 Comment</Text>
+          <Text style={styles.actionText}>💬 {commentCount > 0 ? commentCount : 'Comment'}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity

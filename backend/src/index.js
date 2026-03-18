@@ -23,22 +23,24 @@ const notificationsRouter = require("./routes/notifications");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors());
+const allowedOrigins = process.env.CORS_ORIGINS
+  ? process.env.CORS_ORIGINS.split(',').map(o => o.trim())
+  : ['http://localhost:8081', 'http://localhost:19006'];
+app.use(cors({
+  origin: allowedOrigins,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
 app.use(express.json());
 
 // Request logging middleware
 app.use((req, res, next) => {
   const start = Date.now();
-  const hasAuth = !!req.headers.authorization;
-  console.log(`\n[REQ] --> ${req.method} ${req.originalUrl} | auth: ${hasAuth}`);
 
   const originalSend = res.send.bind(res);
   res.send = function (body) {
     const duration = Date.now() - start;
-    console.log(`[RES] <-- ${req.method} ${req.originalUrl} | ${res.statusCode} | ${duration}ms`);
-    if (res.statusCode >= 400) {
-      console.log(`[RES] Error body:`, typeof body === 'string' ? body.substring(0, 500) : body);
-    }
+    console.log(`${req.method} ${req.originalUrl} ${res.statusCode} ${duration}ms`);
     return originalSend(body);
   };
 
@@ -76,7 +78,6 @@ app.use("/api/preferences", preferencesRouter);
 app.use("/api/users", blocksRouter);
 app.use("/api/notifications", notificationsRouter);
 
-// Auto-migrate: ensure media_type column exists on posts table
 // Global error handler — catches multer errors and other unhandled middleware errors
 app.use((err, req, res, next) => {
   console.error('[ERROR]', err.message);
@@ -89,31 +90,6 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: err.message || 'Internal server error.' });
 });
 
-const supabase = require("./db/supabase");
-(async () => {
-  try {
-    // Check if media_type column exists by querying a single post
-    const { data, error } = await supabase.from('posts').select('media_type').limit(1);
-    if (error && error.message.includes('media_type')) {
-      console.log('[Migration] Adding media_type column to posts...');
-      await supabase.rpc('exec_sql', {
-        query: "ALTER TABLE posts ADD COLUMN IF NOT EXISTS media_type TEXT DEFAULT 'image';"
-      });
-      console.log('[Migration] media_type column added.');
-    } else {
-      console.log('[Migration] media_type column already exists.');
-    }
-  } catch (err) {
-    console.error('[Migration] Failed to check/add media_type column:', err.message);
-  }
-})();
-
 app.listen(PORT, () => {
-  console.log(`\n=== BetrFood Backend Started ===`);
-  console.log(`Port: ${PORT}`);
-  console.log(`SUPABASE_URL: ${process.env.SUPABASE_URL ? '✓ set' : '✗ MISSING'}`);
-  console.log(`SUPABASE_SERVICE_ROLE_KEY: ${process.env.SUPABASE_SERVICE_ROLE_KEY ? '✓ set' : '✗ MISSING'}`);
-  console.log(`CLERK_SECRET_KEY: ${process.env.CLERK_SECRET_KEY ? '✓ set' : '✗ MISSING'}`);
-  console.log(`CLERK_PUBLISHABLE_KEY: ${process.env.CLERK_PUBLISHABLE_KEY ? '✓ set' : '✗ MISSING'}`);
-  console.log(`================================\n`);
+  console.log(`BetrFood backend listening on port ${PORT}`);
 });

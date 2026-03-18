@@ -201,6 +201,7 @@ export default function HomeScreen() {
             initialLiked={item.liked}
             initialLikes={item.likeCount}
             mediaType={item.mediaType}
+            commentCount={item.commentCount}
           />
         )}
         ListFooterComponent={

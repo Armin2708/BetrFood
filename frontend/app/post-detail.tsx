@@ -26,6 +26,9 @@ import {
   deletePost,
   likePost,
   unlikePost,
+  savePost,
+  unsavePost,
+  checkSaveStatus,
   fetchComments,
   createComment,
   deleteComment,
@@ -54,6 +57,7 @@ export default function PostDetailScreen() {
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
   const [likeLoading, setLikeLoading] = useState(false);
+  const [saved, setSaved] = useState(false);
 
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentTotal, setCommentTotal] = useState(0);
@@ -78,12 +82,14 @@ export default function PostDetailScreen() {
   async function loadData() {
     try {
       setLoading(true);
-      const [postData, tagsData] = await Promise.all([
+      const [postData, tagsData, saveStatus] = await Promise.all([
         fetchPost(postId!),
         fetchPostTags(postId!),
+        checkSaveStatus(postId!).catch(() => ({ isSaved: false })),
       ]);
       setPost(postData);
       setTags(tagsData);
+      setSaved(saveStatus.isSaved);
 
       // Try to load recipe
       try {
@@ -228,6 +234,22 @@ export default function PostDetailScreen() {
       Alert.alert('Error', 'Could not update like. Please try again.');
     } finally {
       setLikeLoading(false);
+    }
+  };
+
+  const toggleSave = async () => {
+    if (!postId) return;
+    const prevSaved = saved;
+    setSaved(!prevSaved);
+    try {
+      if (prevSaved) {
+        await unsavePost(postId);
+      } else {
+        await savePost(postId);
+      }
+    } catch {
+      setSaved(prevSaved);
+      Alert.alert('Error', 'Could not update save. Please try again.');
     }
   };
 
@@ -496,6 +518,18 @@ export default function PostDetailScreen() {
             </Animated.Text>
           </TouchableOpacity>
 
+          <TouchableOpacity
+            onPress={toggleSave}
+            style={styles.actionButton}
+            accessibilityRole="button"
+            accessibilityLabel={saved ? 'Remove from saved' : 'Save post'}
+            accessibilityState={{ selected: saved }}
+          >
+            <Text style={[styles.actionText, saved && styles.savedText]}>
+              {saved ? '\uD83D\uDD16 Saved' : '\uD83D\uDD16 Save'}
+            </Text>
+          </TouchableOpacity>
+
           <TouchableOpacity onPress={showShareMenu} style={styles.actionButton} accessibilityRole="button" accessibilityLabel="Share">
             <Text style={styles.actionText}>{'\uD83D\uDD17'} Share</Text>
           </TouchableOpacity>
@@ -752,6 +786,10 @@ const styles = StyleSheet.create({
   },
   likedText: {
     color: colors.liked,
+    fontWeight: '600',
+  },
+  savedText: {
+    color: colors.info,
     fontWeight: '600',
   },
   likeCount: {

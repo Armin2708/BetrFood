@@ -7,6 +7,15 @@ const sharp = require('sharp');
 const ffmpeg = require('fluent-ffmpeg');
 const supabase = require('../db/supabase');
 const { requireAuth, optionalAuth } = require('../middleware/auth');
+const {
+  enrichPostsWithProfiles,
+  enrichPostsWithTags,
+  enrichPostsWithCommentCounts,
+  enrichPostsWithLikes,
+  enrichPostsWithImages,
+  mapPost,
+  getExcludedUserIds,
+} = require('../utils/enrichment');
 
 // Compress video to 720p MP4
 function compressVideo(inputPath, outputPath) {
@@ -444,11 +453,25 @@ router.delete('/:id', requireAuth, async (req, res) => {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
-    // Clean up image file
-    if (post.image_path) {
-      const imgPath = path.join(__dirname, '..', '..', post.image_path);
-      if (fs.existsSync(imgPath)) {
-        fs.unlinkSync(imgPath);
+    // Clean up all media files (multi-image support)
+    const { data: postImages } = await supabase
+      .from('post_images')
+      .select('image_path')
+      .eq('post_id', req.params.id);
+
+    const mediaPaths = new Set();
+    if (postImages) {
+      for (const img of postImages) {
+        if (img.image_path) mediaPaths.add(img.image_path);
+      }
+    }
+    // Also include the primary image_path in case it's not in post_images
+    if (post.image_path) mediaPaths.add(post.image_path);
+
+    for (const mediaPath of mediaPaths) {
+      const fullPath = path.join(__dirname, '..', '..', mediaPath);
+      if (fs.existsSync(fullPath)) {
+        try { fs.unlinkSync(fullPath); } catch {}
       }
     }
 
@@ -464,207 +487,5 @@ router.delete('/:id', requireAuth, async (req, res) => {
     res.status(500).json({ error: 'Failed to delete post.' });
   }
 });
-
-// Enrich posts with user profile data (display_name, username, avatar_url)
-async function enrichPostsWithProfiles(posts) {
-  if (!posts || posts.length === 0) return posts;
-
-  const userIds = [...new Set(posts.map(p => p.user_id))];
-  const { data: profiles } = await supabase
-    .from('user_profiles')
-    .select('id, display_name, username, avatar_url')
-    .in('id', userIds);
-
-  const profileMap = {};
-  if (profiles) {
-    for (const p of profiles) {
-      profileMap[p.id] = p;
-    }
-  }
-
-  return posts.map(post => {
-    post._profile = profileMap[post.user_id] || null;
-    return post;
-  });
-}
-
-// Enrich posts with tags (batch fetch for all posts in one query)
-async function enrichPostsWithTags(posts) {
-  if (!posts || posts.length === 0) return posts;
-
-  const postIds = posts.map(p => p.id);
-
-  const { data: postTags, error } = await supabase
-    .from('post_tags')
-    .select('post_id, tag_id, tags(id, name, type)')
-    .in('post_id', postIds);
-
-  if (error) {
-    console.error('Error fetching tags for posts:', error);
-    return posts.map(post => { post._tags = []; return post; });
-  }
-
-  const tagMap = {};
-  if (postTags) {
-    for (const pt of postTags) {
-      if (!tagMap[pt.post_id]) tagMap[pt.post_id] = [];
-      if (pt.tags) {
-        tagMap[pt.post_id].push(pt.tags);
-      }
-    }
-  }
-
-  return posts.map(post => {
-    post._tags = tagMap[post.id] || [];
-    return post;
-  });
-}
-
-// Enrich posts with comment counts
-async function enrichPostsWithCommentCounts(posts) {
-  if (!posts || posts.length === 0) return posts;
-
-  const postIds = posts.map(p => p.id);
-
-  // Fetch comment counts for all posts in batch
-  const countPromises = postIds.map(async (postId) => {
-    const { count } = await supabase
-      .from('comments')
-      .select('*', { count: 'exact', head: true })
-      .eq('post_id', postId);
-    return { postId, count: count || 0 };
-  });
-
-  const counts = await Promise.all(countPromises);
-  const countMap = {};
-  for (const { postId, count } of counts) {
-    countMap[postId] = count;
-  }
-
-  return posts.map(post => {
-    post._commentCount = countMap[post.id] || 0;
-    return post;
-  });
-}
-
-// Enrich posts with like counts and current user's like status
-async function enrichPostsWithLikes(posts, currentUserId) {
-  if (!posts || posts.length === 0) return posts;
-
-  const postIds = posts.map(p => p.id);
-
-  // Fetch like counts for all posts
-  const countPromises = postIds.map(async (postId) => {
-    const { count } = await supabase
-      .from('likes')
-      .select('*', { count: 'exact', head: true })
-      .eq('post_id', postId);
-    return { postId, count: count || 0 };
-  });
-
-  const counts = await Promise.all(countPromises);
-  const likeCountMap = {};
-  for (const { postId, count } of counts) {
-    likeCountMap[postId] = count;
-  }
-
-  // If we have a current user, check which posts they liked
-  const likedSet = new Set();
-  if (currentUserId) {
-    const { data: userLikes } = await supabase
-      .from('likes')
-      .select('post_id')
-      .eq('user_id', currentUserId)
-      .in('post_id', postIds);
-
-    if (userLikes) {
-      for (const like of userLikes) {
-        likedSet.add(like.post_id);
-      }
-    }
-  }
-
-  return posts.map(post => {
-    post._likeCount = likeCountMap[post.id] || 0;
-    post._liked = likedSet.has(post.id);
-    return post;
-  });
-}
-
-// Enrich posts with multiple images from post_images table
-async function enrichPostsWithImages(posts) {
-  if (!posts || posts.length === 0) return posts;
-
-  const postIds = posts.map(p => p.id);
-
-  const { data: postImages, error } = await supabase
-    .from('post_images')
-    .select('post_id, image_path, order_index')
-    .in('post_id', postIds)
-    .order('order_index', { ascending: true });
-
-  if (error) {
-    console.error('Error fetching post images:', error);
-    // Fall back to single image_path
-    return posts.map(post => { post._images = [post.image_path]; return post; });
-  }
-
-  const imageMap = {};
-  if (postImages) {
-    for (const img of postImages) {
-      if (!imageMap[img.post_id]) imageMap[img.post_id] = [];
-      imageMap[img.post_id].push(img.image_path);
-    }
-  }
-
-  return posts.map(post => {
-    post._images = imageMap[post.id] || [post.image_path];
-    return post;
-  });
-}
-
-// Map Supabase snake_case to camelCase for frontend
-function mapPost(post) {
-  const profile = post._profile || {};
-  const images = post._images || [post.image_path];
-  return {
-    id: post.id,
-    userId: post.user_id,
-    caption: post.caption,
-    imagePath: images[0],
-    images: images,
-    mediaType: post.media_type || 'image',
-    createdAt: post.created_at,
-    updatedAt: post.updated_at,
-    editedAt: post.edited_at || null,
-    displayName: profile.display_name || null,
-    username: profile.username || null,
-    avatarUrl: profile.avatar_url || null,
-    commentCount: post._commentCount || 0,
-    likeCount: post._likeCount || 0,
-    liked: post._liked || false,
-    tags: (post._tags || []).map(t => ({ id: t.id, name: t.name, type: t.type })),
-  };
-}
-
-// Get user IDs that should be excluded from feeds (blocked + muted + users who blocked me)
-async function getExcludedUserIds(currentUserId) {
-  if (!currentUserId) return new Set();
-
-  const [blockedByMe, mutedByMe, blockedMe] = await Promise.all([
-    // Users I blocked
-    supabase.from('user_blocks').select('blocked_id').eq('blocker_id', currentUserId),
-    // Users I muted
-    supabase.from('user_mutes').select('muted_id').eq('muter_id', currentUserId),
-    // Users who blocked me (they shouldn't see my posts, and I shouldn't see theirs)
-    supabase.from('user_blocks').select('blocker_id').eq('blocked_id', currentUserId),
-  ]);
-
-  const excluded = new Set();
-  if (blockedByMe.data) blockedByMe.data.forEach(r => excluded.add(r.blocked_id));
-  if (mutedByMe.data) mutedByMe.data.forEach(r => excluded.add(r.muted_id));
-  if (blockedMe.data) blockedMe.data.forEach(r => excluded.add(r.blocker_id));
-  return excluded;
-}
 
 module.exports = router;

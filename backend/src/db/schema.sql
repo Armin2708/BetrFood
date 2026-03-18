@@ -27,10 +27,12 @@ CREATE INDEX IF NOT EXISTS idx_user_profiles_role ON user_profiles(role);
 CREATE TABLE IF NOT EXISTS user_preferences (
   user_id TEXT PRIMARY KEY REFERENCES user_profiles(id) ON DELETE CASCADE,
   dietary_preferences TEXT[] DEFAULT '{}',
-  allergies TEXT[] DEFAULT '{}',
+  allergies JSONB DEFAULT '[]'::jsonb,
   cuisines TEXT[] DEFAULT '{}',
   profile_visibility TEXT DEFAULT 'public' CHECK (profile_visibility IN ('public', 'private')),
   dietary_info_visible BOOLEAN DEFAULT true,
+  cooking_skill TEXT DEFAULT 'beginner' CHECK (cooking_skill IN ('beginner', 'intermediate', 'advanced')),
+  max_cook_time INTEGER,
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 

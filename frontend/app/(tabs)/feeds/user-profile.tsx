@@ -8,7 +8,7 @@ import VideoThumbnailView from '../../../components/VideoThumbnail';
 import {
   fetchUserProfile,
   fetchFollowStats,
-  fetchPosts,
+  fetchUserPosts,
   getImageUrl,
   getAvatarUrl,
   followUser,
@@ -100,18 +100,43 @@ export default function UserProfileScreen() {
     }
   };
 
+  const submitUserReport = async (reason: string) => {
+    if (!userId) return;
+    try {
+      await reportContent('user', userId, reason);
+      Alert.alert('Report Submitted', 'Thank you for your report. We will review it shortly.');
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to submit report.');
+    }
+  };
+
   const handleReportUser = () => {
     if (!userId) return;
     const reasons = ['Spam', 'Inappropriate', 'Harassment', 'Other'];
     Alert.alert('Report User', 'Select a reason:', [
       ...reasons.map((reason) => ({
         text: reason,
-        onPress: async () => {
-          try {
-            await reportContent('user', userId, reason);
-            Alert.alert('Report Submitted', 'Thank you for your report. We will review it shortly.');
-          } catch (error: any) {
-            Alert.alert('Error', error.message || 'Failed to submit report.');
+        onPress: () => {
+          if (reason === 'Other') {
+            Alert.prompt(
+              'Report User',
+              'Please describe the issue:',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Submit',
+                  onPress: (text?: string) => {
+                    const detail = text?.trim();
+                    submitUserReport(detail ? `Other: ${detail}` : 'Other');
+                  },
+                },
+              ],
+              'plain-text',
+              '',
+              'default'
+            );
+          } else {
+            submitUserReport(reason);
           }
         },
       })),
@@ -154,14 +179,14 @@ export default function UserProfileScreen() {
         checkFollowStatus(userId).catch(() => ({ isFollowing: false })),
         checkBlockStatus(userId).catch(() => ({ isBlocked: false })),
         checkMuteStatus(userId).catch(() => ({ isMuted: false })),
-        fetchPosts(null, 50).catch(() => ({ posts: [] as PostType[], nextCursor: null, hasMore: false })),
+        fetchUserPosts(userId).catch(() => ({ posts: [] as PostType[] })),
       ]);
 
       setFollowStats(stats);
       setIsFollowing(followStatus.isFollowing);
       setIsBlocked(blockStatus.isBlocked);
       setIsMuted(muteStatus.isMuted);
-      setUserPosts(postsResult.posts.filter((p: PostType) => p.userId === userId));
+      setUserPosts(postsResult.posts);
     } catch (error) {
       console.error('Failed to load user profile:', error);
     } finally {

@@ -22,6 +22,8 @@ router.get('/', requireAuth, async (req, res) => {
         cuisines: [],
         profileVisibility: 'public',
         dietaryInfoVisible: true,
+        cookingSkill: 'beginner',
+        maxCookTime: null,
       });
     }
 
@@ -32,6 +34,8 @@ router.get('/', requireAuth, async (req, res) => {
       cuisines: data.cuisines || [],
       profileVisibility: data.profile_visibility || 'public',
       dietaryInfoVisible: data.dietary_info_visible !== false,
+      cookingSkill: data.cooking_skill || 'beginner',
+      maxCookTime: data.max_cook_time || null,
     });
   } catch (error) {
     console.error('Error fetching preferences:', error);
@@ -60,6 +64,18 @@ router.put('/', requireAuth, async (req, res) => {
       if (!Array.isArray(allergies)) {
         return res.status(400).json({ error: 'allergies must be an array.' });
       }
+      const validSeverities = ['mild', 'moderate', 'severe'];
+      for (const allergy of allergies) {
+        if (typeof allergy !== 'object' || !allergy.name) {
+          return res.status(400).json({ error: 'Each allergy must be an object with a "name" field.' });
+        }
+        if (allergy.severity && !validSeverities.includes(allergy.severity)) {
+          return res.status(400).json({ error: 'Allergy severity must be "mild", "moderate", or "severe".' });
+        }
+        if (!allergy.severity) {
+          allergy.severity = 'moderate';
+        }
+      }
       updates.allergies = allergies;
     }
 
@@ -84,6 +100,22 @@ router.put('/', requireAuth, async (req, res) => {
       updates.dietary_info_visible = dietaryInfoVisible;
     }
 
+    const { cookingSkill, maxCookTime } = req.body;
+
+    if (cookingSkill !== undefined) {
+      if (!['beginner', 'intermediate', 'advanced'].includes(cookingSkill)) {
+        return res.status(400).json({ error: 'cookingSkill must be "beginner", "intermediate", or "advanced".' });
+      }
+      updates.cooking_skill = cookingSkill;
+    }
+
+    if (maxCookTime !== undefined) {
+      if (maxCookTime !== null && (typeof maxCookTime !== 'number' || maxCookTime < 0)) {
+        return res.status(400).json({ error: 'maxCookTime must be a positive number or null.' });
+      }
+      updates.max_cook_time = maxCookTime;
+    }
+
     const { data, error } = await supabase
       .from('user_preferences')
       .upsert(updates, { onConflict: 'user_id' })
@@ -99,6 +131,8 @@ router.put('/', requireAuth, async (req, res) => {
       cuisines: data.cuisines || [],
       profileVisibility: data.profile_visibility || 'public',
       dietaryInfoVisible: data.dietary_info_visible !== false,
+      cookingSkill: data.cooking_skill || 'beginner',
+      maxCookTime: data.max_cook_time || null,
     });
   } catch (error) {
     console.error('Error updating preferences:', error);
