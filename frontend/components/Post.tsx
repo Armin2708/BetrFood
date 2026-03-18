@@ -3,8 +3,8 @@ import SaveCollectionModal from "./SaveCollectionModal";
 import * as Clipboard from 'expo-clipboard';
 import { useActionSheet } from '@expo/react-native-action-sheet';
 import { Ionicons } from '@expo/vector-icons';
-import { Collection } from "../context/CollectionsContext";
-import { Tag, Recipe, deletePost, fetchRecipe, likePost, unlikePost, reportContent, savePost, unsavePost, checkSaveStatus, addPostToCollection } from '../services/api';
+import { Collection, useCollections } from "../context/CollectionsContext";
+import { Tag, Recipe, deletePost, fetchRecipe, likePost, unlikePost, reportContent, unsavePost, checkSaveStatus } from '../services/api';
 import TagDisplay from './TagDisplay';
 import RecipeDisplay from './RecipeDisplay';
 import { colors } from '../constants/theme';
@@ -62,6 +62,7 @@ export default function Post({
   mediaType = 'image',
   commentCount = 0,
 }: PostProps) {
+  const { savePostToCollection } = useCollections();
   const [liked, setLiked] = useState(initialLiked);
   const [likeCount, setLikeCount] = useState(initialLikes);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -134,7 +135,7 @@ export default function Post({
     setSaved(true);
     setCollectionModalVisible(false);
     try {
-      await addPostToCollection(collection.id, id);
+      await savePostToCollection(collection.id, id);
     } catch {
       setSaved(false);
       Alert.alert('Error', 'Could not save post to collection. Please try again.');

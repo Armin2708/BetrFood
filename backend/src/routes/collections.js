@@ -35,12 +35,12 @@ router.post('/', requireAuth, async (req, res) => {
   }
 });
 
-// GET /api/collections - List user's collections (auth required)
+// GET /api/collections - List user's collections with post counts (auth required)
 router.get('/', requireAuth, async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('collections')
-      .select('*')
+      .select('*, collection_posts(count)')
       .eq('user_id', req.userId)
       .order('created_at', { ascending: false });
 
@@ -51,6 +51,7 @@ router.get('/', requireAuth, async (req, res) => {
         id: c.id,
         userId: c.user_id,
         name: c.name,
+        postCount: c.collection_posts?.[0]?.count ?? 0,
         createdAt: c.created_at,
       }))
     );

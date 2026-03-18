@@ -28,7 +28,6 @@ import {
   unlikePost,
   unsavePost,
   checkSaveStatus,
-  addPostToCollection,
   fetchComments,
   createComment,
   deleteComment,
@@ -38,7 +37,7 @@ import {
   Comment,
 } from '../services/api';
 import SaveCollectionModal from '../components/SaveCollectionModal';
-import { Collection } from '../context/CollectionsContext';
+import { Collection, useCollections } from '../context/CollectionsContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { AuthContext } from '../context/AuthenticationContext';
@@ -51,6 +50,7 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 export default function PostDetailScreen() {
   const { postId } = useLocalSearchParams<{ postId: string }>();
   const { user } = useContext(AuthContext);
+  const { savePostToCollection } = useCollections();
 
   const [post, setPost] = useState<Post | null>(null);
   const [recipe, setRecipe] = useState<Recipe | null>(null);
@@ -260,7 +260,7 @@ export default function PostDetailScreen() {
     setSaved(true);
     setCollectionModalVisible(false);
     try {
-      await addPostToCollection(collection.id, postId);
+      await savePostToCollection(collection.id, postId);
     } catch {
       setSaved(false);
       Alert.alert('Error', 'Could not save post to collection. Please try again.');
