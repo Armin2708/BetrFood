@@ -122,7 +122,7 @@ export default function NotificationsScreen() {
         case 'like':
         case 'comment':
           if (notification.data?.postId) {
-            router.push(`/post/${notification.data.postId}` as any);
+            router.push(`/post-detail?postId=${notification.data.postId}`);
           }
           break;
       }

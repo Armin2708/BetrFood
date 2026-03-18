@@ -98,7 +98,7 @@ export default function CollectionDetailScreen() {
           numColumns={NUM_COLUMNS}
           renderItem={({ item }) => (
             <Pressable
-              onPress={() => router.push(`/post/${item.id}` as any)}
+              onPress={() => router.push(`/post-detail?postId=${item.id}`)}
               onLongPress={() => handleRemovePost(item.id)}
             >
               <Image
