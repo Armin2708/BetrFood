@@ -40,7 +40,7 @@ router.get('/', requireAuth, async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('collections')
-      .select('*')
+      .select('*, collection_posts(count)')
       .eq('user_id', req.userId)
       .order('created_at', { ascending: false });
 
@@ -52,10 +52,10 @@ router.get('/', requireAuth, async (req, res) => {
         userId: c.user_id,
         name: c.name,
         createdAt: c.created_at,
+        postCount: c.collection_posts?.[0]?.count ?? 0,
       }))
     );
   } catch (error) {
-    console.error('Error listing collections:', error);
     res.status(500).json({ error: 'Failed to list collections.' });
   }
 });
@@ -234,6 +234,23 @@ router.get('/:id/posts', requireAuth, async (req, res) => {
   } catch (error) {
     console.error('Error listing collection posts:', error);
     res.status(500).json({ error: 'Failed to list collection posts.' });
+  }
+});
+
+// GET /api/collections/post/:postId/ - List collections with a specific post
+router.get('/post/:postId', requireAuth, async (req, res) => {
+  const { postId } = req.params;
+  try {
+    const { data, error } = await supabase
+      .from('collection_posts')
+      .select('collection_id')
+      .eq('post_id', postId);
+
+    if (error) throw error;
+    res.json(data.map(c => c.collection_id));
+  } catch (error) {
+    console.error('Error fetching collections for post:', error);
+    res.status(500).json({ error: 'Failed to fetch collections for post.' });
   }
 });
 

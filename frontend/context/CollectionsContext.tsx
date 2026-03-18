@@ -6,6 +6,7 @@ import {
   addPostToCollection as apiAddPostToCollection,
   removePostFromCollection as apiRemovePostFromCollection,
   fetchCollectionPosts as apiFetchCollectionPosts,
+  fetchPostCollections as apiFetchPostCollections,
 } from "../services/api";
 import { AuthContext } from "./AuthenticationContext";
 
@@ -23,6 +24,7 @@ type CollectionsContextType = {
   savePostToCollection: (collectionId: string, postId: string) => Promise<void>;
   removePostFromCollection: (collectionId: string, postId: string) => Promise<void>;
   fetchPostsForCollection: (collectionId: string) => Promise<any[]>;
+  fetchCollectionsForPost: (postId: string) => Promise<string[]>;
   refreshCollections: () => Promise<void>;
 };
 
@@ -76,26 +78,24 @@ export const CollectionsProvider = ({ children }: any) => {
 
   const savePostToCollection = async (collectionId: string, postId: string): Promise<void> => {
     await apiAddPostToCollection(collectionId, postId);
-    setCollections((prev) =>
-      prev.map((c) =>
-        c.id === collectionId ? { ...c, postCount: c.postCount + 1 } : c
-      )
-    );
+    await loadCollections();
   };
 
   const removePostFromCollectionFn = async (collectionId: string, postId: string): Promise<void> => {
     await apiRemovePostFromCollection(collectionId, postId);
-    setCollections((prev) =>
-      prev.map((c) =>
-        c.id === collectionId ? { ...c, postCount: Math.max(0, c.postCount - 1) } : c
-      )
-    );
+    await loadCollections();
   };
 
   const fetchPostsForCollection = async (collectionId: string): Promise<any[]> => {
     const data = await apiFetchCollectionPosts(collectionId);
     return Array.isArray(data) ? data : data.posts ?? [];
   };
+
+  const fetchCollectionsForPost = async (postId: string): Promise<string[]> => {
+    const data = await apiFetchPostCollections(postId);
+    return Array.isArray(data) ? data : [];
+  };
+
 
   return (
     <CollectionsContext.Provider
@@ -107,6 +107,7 @@ export const CollectionsProvider = ({ children }: any) => {
         savePostToCollection,
         removePostFromCollection: removePostFromCollectionFn,
         fetchPostsForCollection,
+        fetchCollectionsForPost,
         refreshCollections: loadCollections,
       }}
     >

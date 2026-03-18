@@ -565,7 +565,7 @@ export async function addPostToCollection(collectionId: string, postId: string) 
   const response = await fetch(`${API_BASE_URL}/api/collections/${collectionId}/posts`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
-    body: JSON.stringify({ postId }),
+    body: JSON.stringify({ postId, collectionId }),
   });
   if (!response.ok) {
     const error = await response.json();
@@ -593,6 +593,18 @@ export async function fetchCollectionPosts(collectionId: string) {
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.error || 'Failed to fetch collection posts');
+  }
+  return response.json();
+}
+
+export async function fetchPostCollections(postId: string) {
+  console.log("fetching post collections");
+  const response = await fetch(`${API_BASE_URL}/api/collections/post/${postId}`, {
+    headers: await authHeaders(),
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to fetch post collections');
   }
   return response.json();
 }

@@ -3,7 +3,7 @@ import SaveCollectionModal from "./SaveCollectionModal";
 import * as Clipboard from 'expo-clipboard';
 import { useActionSheet } from '@expo/react-native-action-sheet';
 import { Ionicons } from '@expo/vector-icons';
-import { Collection } from "../context/CollectionsContext";
+import { usePostCollections } from '../hooks/usePostCollections';
 import { Tag, Recipe, deletePost, fetchRecipe, likePost, unlikePost, reportContent } from '../services/api';
 import TagDisplay from './TagDisplay';
 import RecipeDisplay from './RecipeDisplay';
@@ -54,10 +54,10 @@ export default function Post({
   const [liked, setLiked] = useState(initialLiked);
   const [likeCount, setLikeCount] = useState(initialLikes);
   const [likeLoading, setLikeLoading] = useState(false);
-  const [saved, setSaved] = useState(false);
   const [collectionModalVisible, setCollectionModalVisible] = useState(false);
   const [recipe, setRecipe] = useState<Recipe | null>(null);
-
+  const { savedIds, isSaved, refreshSaved } = usePostCollections(id);
+  
   useEffect(() => {
     if (id) {
       fetchRecipe(id).then(setRecipe).catch(() => {});
@@ -101,14 +101,7 @@ export default function Post({
   };
 
   const handleSavePress = () => {
-    if (!saved) setCollectionModalVisible(true);
-    else setSaved(false);
-  };
-
-  const handleSave = (collection: Collection) => {
-    setSaved(true);
-    setCollectionModalVisible(false);
-    console.log(`Saved to ${collection.name}`);
+    setCollectionModalVisible(true);
   };
 
   const handleDelete = () => {
@@ -245,11 +238,11 @@ export default function Post({
           onPress={handleSavePress}
           style={styles.actionButton}
           accessibilityRole="button"
-          accessibilityLabel={saved ? 'Remove from saved' : 'Save post'}
-          accessibilityState={{ selected: saved }}
+          accessibilityLabel={isSaved ? 'Remove from saved' : 'Save post'}
+          accessibilityState={{ selected: isSaved }}
         >
-          <Text style={[styles.actionText, saved && styles.saved]}>
-            {saved ? '🔖 Saved' : '🔖 Save'}
+          <Text style={[styles.actionText, isSaved && styles.saved]}>
+            {isSaved ? '🔖 Saved' : '🔖 Save'}
           </Text>
         </TouchableOpacity>
 
@@ -280,7 +273,8 @@ export default function Post({
       <SaveCollectionModal
         visible={collectionModalVisible}
         onClose={() => setCollectionModalVisible(false)}
-        onSave={handleSave}
+        postId={id}
+        onCollectionsChange={refreshSaved}
       />
     </View>
   );
