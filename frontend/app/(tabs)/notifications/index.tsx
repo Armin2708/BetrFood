@@ -39,7 +39,7 @@ function getRelativeTime(dateString: string): string {
 function getNotificationIcon(type: string): { name: string; color: string } {
   switch (type) {
     case 'new_follower':
-      return { name: 'person-add', color: '#FF6B35' };
+      return { name: 'person-add', color: '#22C55E' };
     case 'like':
       return { name: 'heart', color: '#E91E63' };
     case 'comment':
@@ -194,7 +194,7 @@ export default function NotificationsScreen() {
       />
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#FF6B35" />
+          <ActivityIndicator size="large" color="#22C55E" />
         </View>
       ) : (
         <FlatList
@@ -206,7 +206,7 @@ export default function NotificationsScreen() {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              tintColor="#FF6B35"
+              tintColor="#22C55E"
             />
           }
           contentContainerStyle={
@@ -268,7 +268,7 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#FF6B35',
+    backgroundColor: '#22C55E',
   },
   emptyContainer: {
     alignItems: 'center',
@@ -298,7 +298,7 @@ const styles = StyleSheet.create({
   },
   markAllText: {
     fontSize: 14,
-    color: '#FF6B35',
+    color: '#22C55E',
     fontWeight: '600',
   },
 });

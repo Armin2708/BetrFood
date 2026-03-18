@@ -14,7 +14,7 @@ const TYPE_LABELS: Record<string, string> = {
 };
 
 const TYPE_COLORS: Record<string, string> = {
-  cuisine: '#FF6B35',
+  cuisine: '#22C55E',
   meal: '#4CAF50',
   dietary: '#2196F3',
 };
@@ -41,7 +41,7 @@ export default function TagSelector({ selectedTagIds, onSelectionChange }: TagSe
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="small" color="#FF6B35" />
+        <ActivityIndicator size="small" color="#22C55E" />
       </View>
     );
   }

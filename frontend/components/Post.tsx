@@ -25,6 +25,27 @@ import {
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 import { router } from 'expo-router';
 
+const CAPTION_MAX_LENGTH = 100;
+
+function getRelativeTime(dateString: string | null | undefined): string {
+  if (!dateString) return '';
+  const now = new Date();
+  const date = new Date(dateString);
+  const diffMs = now.getTime() - date.getTime();
+  const diffSec = Math.floor(diffMs / 1000);
+  const diffMin = Math.floor(diffSec / 60);
+  const diffHr = Math.floor(diffMin / 60);
+  const diffDay = Math.floor(diffHr / 24);
+  const diffWeek = Math.floor(diffDay / 7);
+
+  if (diffSec < 60) return 'just now';
+  if (diffMin < 60) return `${diffMin}m ago`;
+  if (diffHr < 24) return `${diffHr}h ago`;
+  if (diffDay < 7) return `${diffDay}d ago`;
+  if (diffWeek < 4) return `${diffWeek}w ago`;
+  return date.toLocaleDateString();
+}
+
 interface PostProps {
   id?: string;
   profilePic: string;
@@ -35,6 +56,7 @@ interface PostProps {
   userId?: string;
   currentUserId?: string;
   editedAt?: string | null;
+  createdAt?: string | null;
   onDeleted?: (postId: string) => void;
   tags?: Tag[];
   initialLiked?: boolean;
@@ -54,6 +76,7 @@ export default function Post({
   userId,
   currentUserId,
   editedAt,
+  createdAt,
   onDeleted,
   tags,
   initialLiked = false,
@@ -71,6 +94,7 @@ export default function Post({
   const [saved, setSaved] = useState(false);
   const [collectionModalVisible, setCollectionModalVisible] = useState(false);
   const [recipe, setRecipe] = useState<Recipe | null>(null);
+  const [captionExpanded, setCaptionExpanded] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -227,20 +251,22 @@ export default function Post({
 
   const showPostMenu = () => {
     if (isOwner) {
-      const options = ['Edit', 'Delete', 'Cancel'];
+      const options = ['Edit', 'Save', 'Delete', 'Cancel'];
       showActionSheetWithOptions(
-        { options, cancelButtonIndex: 2, destructiveButtonIndex: 1 },
+        { options, cancelButtonIndex: 3, destructiveButtonIndex: 2 },
         (index) => {
           if (index === 0) handleEdit();
-          if (index === 1) handleDelete();
+          if (index === 1) handleSavePress();
+          if (index === 2) handleDelete();
         }
       );
     } else {
-      const options = ['Report', 'Cancel'];
+      const options = ['Save', 'Report', 'Cancel'];
       showActionSheetWithOptions(
-        { options, cancelButtonIndex: 1, destructiveButtonIndex: 0 },
+        { options, cancelButtonIndex: 2, destructiveButtonIndex: 1 },
         (index) => {
-          if (index === 0) handleReport();
+          if (index === 0) handleSavePress();
+          if (index === 1) handleReport();
         }
       );
     }
@@ -254,6 +280,13 @@ export default function Post({
     });
   };
 
+  const isCaptionLong = caption && caption.length > CAPTION_MAX_LENGTH;
+  const displayCaption = isCaptionLong && !captionExpanded
+    ? caption.substring(0, CAPTION_MAX_LENGTH)
+    : caption;
+
+  const relativeTime = getRelativeTime(createdAt || editedAt);
+
   return (
     <View style={styles.container} accessible={true} accessibilityLabel={`Post by ${username}`}>
       <View style={styles.header}>
@@ -265,8 +298,15 @@ export default function Post({
           accessibilityLabel={`View ${username}'s profile`}
         >
           <Image source={{ uri: profilePic }} style={styles.profilePic} />
-          <Text style={styles.username}>{username}</Text>
-          {verified && <Text style={styles.verifiedBadge}>{'\u2713'}</Text>}
+          <View style={styles.headerTextContainer}>
+            <View style={styles.usernameRow}>
+              <Text style={styles.username}>{username}</Text>
+              {verified && <Text style={styles.verifiedBadge}>{'\u2713'}</Text>}
+            </View>
+            {relativeTime ? (
+              <Text style={styles.postedTime}>Posted {relativeTime}</Text>
+            ) : null}
+          </View>
         </TouchableOpacity>
         <TouchableOpacity style={styles.menuButton} onPress={showPostMenu} accessibilityRole="button" accessibilityLabel="Post options">
           <Ionicons name="ellipsis-horizontal" size={20} color={colors.textPrimary} />
@@ -321,15 +361,22 @@ export default function Post({
           accessibilityLabel={liked ? `Unlike post, ${likeCount} likes` : `Like post, ${likeCount} likes`}
           accessibilityState={{ selected: liked }}
         >
-          <Animated.Text
-            style={[
-              styles.actionText,
-              liked && styles.liked,
-              { transform: [{ scale: scaleAnim }] },
-            ]}
-          >
-            {liked ? '❤️' : '🤍'} {liked ? 'Liked' : 'Like'}
-          </Animated.Text>
+          <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+            <Ionicons
+              name={liked ? 'thumbs-up' : 'thumbs-up-outline'}
+              size={22}
+              color={liked ? '#22C55E' : colors.textPrimary}
+            />
+          </Animated.View>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.actionButton}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="Dislike post"
+        >
+          <Ionicons name="thumbs-down-outline" size={22} color={colors.textPrimary} />
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -338,37 +385,37 @@ export default function Post({
           accessibilityRole="button"
           accessibilityLabel="Comment on post"
         >
-          <Text style={styles.actionText}>💬 {commentCount > 0 ? commentCount : 'Comment'}</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={handleSavePress}
-          style={styles.actionButton}
-          accessibilityRole="button"
-          accessibilityLabel={saved ? 'Remove from saved' : 'Save post'}
-          accessibilityState={{ selected: saved }}
-        >
-          <Text style={[styles.actionText, saved && styles.saved]}>
-            {saved ? '🔖 Saved' : '🔖 Save'}
-          </Text>
+          <Ionicons name="chatbubble-outline" size={22} color={colors.textPrimary} />
         </TouchableOpacity>
 
         <TouchableOpacity onPress={showShareMenu} style={styles.actionButton} accessibilityRole="button" accessibilityLabel="Share post">
-          <Text style={styles.actionText}>🔗 Share</Text>
+          <Ionicons name="share-social-outline" size={22} color={colors.textPrimary} />
         </TouchableOpacity>
       </View>
 
       <Text style={styles.likeCount} accessibilityLabel={`${likeCount} ${likeCount === 1 ? 'like' : 'likes'}`}>
-        {likeCount} {likeCount === 1 ? 'like' : 'likes'}
+        {likeCount > 0
+          ? <>{likeCount} {likeCount === 1 ? 'like' : 'likes'}</>
+          : '0 likes'}
       </Text>
 
       <TouchableOpacity
         activeOpacity={0.8}
-        onPress={() => id && router.push(`/post-detail?postId=${id}`)}
+        onPress={() => {
+          if (isCaptionLong && !captionExpanded) {
+            setCaptionExpanded(true);
+          } else if (id) {
+            router.push(`/post-detail?postId=${id}`);
+          }
+        }}
         accessibilityLabel={`${username}: ${caption}`}
       >
         <Text style={styles.caption}>
-          <Text style={styles.captionUsername}>{username} </Text>{caption}
+          <Text style={styles.captionUsername}>{username} </Text>
+          {displayCaption}
+          {isCaptionLong && !captionExpanded && (
+            <Text style={styles.captionMore}>... more</Text>
+          )}
         </Text>
       </TouchableOpacity>
       {editedAt && <Text style={styles.editedLabel}>Edited</Text>}
@@ -404,21 +451,23 @@ const styles = StyleSheet.create({
   container: { marginVertical: 10, backgroundColor: colors.backgroundPrimary, borderBottomWidth: 1, borderColor: colors.border },
   header: { flexDirection: 'row', alignItems: 'center', padding: 10 },
   headerUserInfo: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+  headerTextContainer: { flex: 1 },
+  usernameRow: { flexDirection: 'row', alignItems: 'center' },
   profilePic: { width: 40, height: 40, borderRadius: 20, marginRight: 10 },
-  username: { fontWeight: 'bold', fontSize: 16, flex: 1 },
+  username: { fontWeight: 'bold', fontSize: 16 },
+  postedTime: { fontSize: 12, color: '#94A3B8', marginTop: 1 },
   menuButton: { padding: 8 },
-  postImage: { width: SCREEN_WIDTH, aspectRatio: 4 / 3, backgroundColor: colors.borderLight },
+  postImage: { width: SCREEN_WIDTH, aspectRatio: 1, backgroundColor: colors.borderLight },
   dotContainer: { flexDirection: 'row', justifyContent: 'center', paddingVertical: 8, gap: 6 },
   dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.border },
   dotActive: { backgroundColor: colors.primary, width: 8, height: 8, borderRadius: 4 },
-  actions: { flexDirection: 'row', paddingHorizontal: 10, paddingTop: 10, gap: 16 },
+  actions: { flexDirection: 'row', paddingHorizontal: 10, paddingTop: 10, gap: 18 },
   actionButton: { paddingVertical: 4 },
-  actionText: { fontSize: 16, color: colors.textPrimary },
-  liked: { color: colors.liked, fontWeight: '600' },
-  saved: { color: colors.info, fontWeight: '600' },
-  likeCount: { paddingHorizontal: 10, paddingTop: 4, fontSize: 14, fontWeight: '600', color: colors.textPrimary },
-  caption: { paddingHorizontal: 10, paddingTop: 8, paddingBottom: 4, fontSize: 14, color: colors.textPrimary },
+  likeCount: { paddingHorizontal: 10, paddingTop: 6, fontSize: 14, color: colors.textPrimary },
+  likeCountBold: { fontWeight: 'bold' },
+  caption: { paddingHorizontal: 10, paddingTop: 6, paddingBottom: 4, fontSize: 14, color: colors.textPrimary, lineHeight: 20 },
   captionUsername: { fontWeight: 'bold' },
+  captionMore: { color: '#B2B2B2' },
   verifiedBadge: { color: colors.verified, fontSize: 16, fontWeight: 'bold', marginLeft: 4 },
   editedLabel: { paddingHorizontal: 10, paddingBottom: 10, fontSize: 12, color: colors.textQuaternary, fontStyle: 'italic' },
 });

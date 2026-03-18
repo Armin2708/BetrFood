@@ -55,7 +55,7 @@ export default function TabsLayout() {
   if (!isLoaded || authLoading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#FF6B35" />
+        <ActivityIndicator size="large" color="#22C55E" />
       </View>
     );
   }
@@ -65,7 +65,26 @@ export default function TabsLayout() {
   }
 
   return (
-    <Tabs screenOptions={{ headerShown: false }}>
+    <Tabs
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: '#FFFFFF',
+        tabBarInactiveTintColor: 'rgba(255,255,255,0.6)',
+        tabBarStyle: {
+          backgroundColor: '#22C55E',
+          borderTopWidth: 0,
+          height: 80,
+          paddingBottom: 20,
+          paddingTop: 8,
+          elevation: 0,
+          shadowOpacity: 0,
+        },
+        tabBarLabelStyle: {
+          fontSize: 10,
+          fontWeight: '700',
+        },
+      }}
+    >
       <Tabs.Screen
         name="feeds"
         options={{
@@ -122,7 +141,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: -8,
     top: -4,
-    backgroundColor: '#FF6B35',
+    backgroundColor: '#FFFFFF',
     borderRadius: 9,
     minWidth: 18,
     height: 18,
@@ -131,7 +150,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   badgeText: {
-    color: '#FFFFFF',
+    color: '#22C55E',
     fontSize: 10,
     fontWeight: '700',
   },

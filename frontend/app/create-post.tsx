@@ -350,11 +350,11 @@ export default function CreatePostScreen() {
               {images.length < MAX_IMAGES && (
                 <View style={styles.addMoreRow}>
                   <TouchableOpacity style={styles.addMoreButton} onPress={pickMedia}>
-                    <Ionicons name="images-outline" size={18} color="#FF6B35" />
+                    <Ionicons name="images-outline" size={18} color="#22C55E" />
                     <Text style={styles.addMoreText}>Add More</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.addMoreButton} onPress={takePhoto}>
-                    <Ionicons name="camera-outline" size={18} color="#FF6B35" />
+                    <Ionicons name="camera-outline" size={18} color="#22C55E" />
                     <Text style={styles.addMoreText}>Take Photo</Text>
                   </TouchableOpacity>
                 </View>
@@ -535,7 +535,7 @@ export default function CreatePostScreen() {
         <View style={styles.uploadOverlay}>
           {uploadStatus === 'uploading' && (
             <View style={styles.uploadContent}>
-              <ActivityIndicator size="large" color="#FF6B35" />
+              <ActivityIndicator size="large" color="#22C55E" />
               <Text style={styles.uploadTitle}>Uploading your post...</Text>
               <Text style={styles.uploadSubtitle}>This may take a moment</Text>
             </View>
@@ -594,19 +594,19 @@ const styles = StyleSheet.create({
   },
   cancelText: { fontSize: 16, color: '#666' },
   title: { fontSize: 18, fontWeight: 'bold' },
-  postText: { fontSize: 16, fontWeight: 'bold', color: '#FF6B35' },
+  postText: { fontSize: 16, fontWeight: 'bold', color: '#22C55E' },
   disabledText: { color: '#ccc' },
   draftButton: {
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#FF6B35',
+    borderColor: '#22C55E',
   },
   draftButtonText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#FF6B35',
+    color: '#22C55E',
   },
   draftsLink: {
     alignSelf: 'flex-end',
@@ -615,7 +615,7 @@ const styles = StyleSheet.create({
   },
   draftsLinkText: {
     fontSize: 14,
-    color: '#FF6B35',
+    color: '#22C55E',
     fontWeight: '500',
   },
   imageSection: { paddingVertical: 20 },
@@ -626,15 +626,15 @@ const styles = StyleSheet.create({
   videoOverlay: { ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center', zIndex: 1 },
   imageCounter: { textAlign: 'center', color: '#666', marginTop: 8, fontSize: 13, fontWeight: '500' },
   addMoreRow: { flexDirection: 'row', justifyContent: 'center', gap: 16, marginTop: 12 },
-  addMoreButton: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: '#FF6B35' },
-  addMoreText: { fontSize: 14, fontWeight: '600', color: '#FF6B35' },
+  addMoreButton: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: '#22C55E' },
+  addMoreText: { fontSize: 14, fontWeight: '600', color: '#22C55E' },
   imageHint: { fontSize: 13, color: '#999', marginTop: 8 },
   imagePlaceholder: {
     width: 300, height: 300, borderRadius: 12, borderWidth: 2,
     borderColor: '#ddd', borderStyle: 'dashed', justifyContent: 'center',
     alignItems: 'center', gap: 16,
   },
-  imageButton: { backgroundColor: '#FF6B35', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 },
+  imageButton: { backgroundColor: '#22C55E', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 },
   imageButtonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
   captionSection: { paddingHorizontal: 16, paddingVertical: 12 },
   captionInput: {
@@ -681,7 +681,7 @@ const styles = StyleSheet.create({
   },
   retryButton: {
     marginTop: 28,
-    backgroundColor: '#FF6B35',
+    backgroundColor: '#22C55E',
     paddingHorizontal: 32,
     paddingVertical: 14,
     borderRadius: 10,
@@ -697,10 +697,10 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 10,
     borderWidth: 1.5,
-    borderColor: '#FF6B35',
+    borderColor: '#22C55E',
   },
   retryButtonOutlineText: {
-    color: '#FF6B35',
+    color: '#22C55E',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -728,7 +728,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#FF6B35',
+    borderColor: '#22C55E',
     alignItems: 'center',
   },
   recipeToggleActive: {
@@ -737,7 +737,7 @@ const styles = StyleSheet.create({
   recipeToggleText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#FF6B35',
+    color: '#22C55E',
   },
   recipeToggleTextActive: {
     color: '#CC4400',
@@ -756,7 +756,7 @@ const styles = StyleSheet.create({
   recipeTitle: {
     fontSize: 17,
     fontWeight: 'bold',
-    color: '#FF6B35',
+    color: '#22C55E',
     marginBottom: 12,
   },
   recipeRow: {
@@ -798,8 +798,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   difficultyOptionActive: {
-    borderColor: '#FF6B35',
-    backgroundColor: '#FF6B35',
+    borderColor: '#22C55E',
+    backgroundColor: '#22C55E',
   },
   difficultyText: {
     fontSize: 14,
@@ -838,7 +838,7 @@ const styles = StyleSheet.create({
   stepNumber: {
     fontSize: 15,
     fontWeight: 'bold',
-    color: '#FF6B35',
+    color: '#22C55E',
     marginTop: 10,
     width: 20,
   },
@@ -854,7 +854,7 @@ const styles = StyleSheet.create({
   addButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#FF6B35',
+    color: '#22C55E',
   },
   removeButton: {
     width: 28,

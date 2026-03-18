@@ -23,7 +23,7 @@ export default function SSOCallback() {
 
   return (
     <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-      <ActivityIndicator size="large" color="#FF6B35" />
+      <ActivityIndicator size="large" color="#22C55E" />
     </View>
   );
 }

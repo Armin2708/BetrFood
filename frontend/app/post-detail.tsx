@@ -449,6 +449,27 @@ export default function PostDetailScreen() {
       </View>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+        {/* Author info (above image per Figma design) */}
+        <View style={styles.authorRow}>
+          {post.avatarUrl ? (
+            <Image source={{ uri: post.avatarUrl }} style={styles.avatar} />
+          ) : (
+            <View style={[styles.avatar, styles.avatarPlaceholder]}>
+              <Text style={styles.avatarPlaceholderText}>
+                {(post.displayName || post.username || '?').charAt(0).toUpperCase()}
+              </Text>
+            </View>
+          )}
+          <View style={styles.authorInfo}>
+            {post.displayName && (
+              <Text style={styles.displayName}>{post.displayName}</Text>
+            )}
+            {post.username && (
+              <Text style={styles.usernameText}>@{post.username}</Text>
+            )}
+          </View>
+        </View>
+
         {/* Full-width media */}
         {post.mediaType === 'video' && imageUri ? (
           <DetailVideo uri={imageUri} />
@@ -477,27 +498,6 @@ export default function PostDetailScreen() {
           <Image source={{ uri: imageUri }} style={styles.postImage} resizeMode="cover" accessibilityLabel={`Photo by ${post.displayName || post.username || 'user'}`} />
         ) : null}
 
-        {/* Author info */}
-        <View style={styles.authorRow}>
-          {post.avatarUrl ? (
-            <Image source={{ uri: post.avatarUrl }} style={styles.avatar} />
-          ) : (
-            <View style={[styles.avatar, styles.avatarPlaceholder]}>
-              <Text style={styles.avatarPlaceholderText}>
-                {(post.displayName || post.username || '?').charAt(0).toUpperCase()}
-              </Text>
-            </View>
-          )}
-          <View style={styles.authorInfo}>
-            {post.displayName && (
-              <Text style={styles.displayName}>{post.displayName}</Text>
-            )}
-            {post.username && (
-              <Text style={styles.usernameText}>@{post.username}</Text>
-            )}
-          </View>
-        </View>
-
         {/* Caption */}
         {post.caption ? (
           <Text style={styles.caption}>{post.caption}</Text>
@@ -518,18 +518,25 @@ export default function PostDetailScreen() {
             disabled={likeLoading}
             activeOpacity={0.7}
             accessibilityRole="button"
-            accessibilityLabel={liked ? 'Unlike' : 'Like'}
+            accessibilityLabel={liked ? `Unlike post, ${likeCount} likes` : `Like post, ${likeCount} likes`}
             accessibilityState={{ selected: liked }}
           >
-            <Animated.Text
-              style={[
-                styles.actionText,
-                liked && styles.likedText,
-                { transform: [{ scale: scaleAnim }] },
-              ]}
-            >
-              {liked ? '\u2764\uFE0F' : '\uD83E\uDD0D'} {liked ? 'Liked' : 'Like'}
-            </Animated.Text>
+            <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+              <Ionicons
+                name={liked ? 'thumbs-up' : 'thumbs-up-outline'}
+                size={22}
+                color={liked ? '#22C55E' : colors.textPrimary}
+              />
+            </Animated.View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionButton}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Dislike post"
+          >
+            <Ionicons name="thumbs-down-outline" size={22} color={colors.textPrimary} />
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -539,19 +546,23 @@ export default function PostDetailScreen() {
             accessibilityLabel={saved ? 'Remove from saved' : 'Save post'}
             accessibilityState={{ selected: saved }}
           >
-            <Text style={[styles.actionText, saved && styles.savedText]}>
-              {saved ? '\uD83D\uDD16 Saved' : '\uD83D\uDD16 Save'}
-            </Text>
+            <Ionicons
+              name={saved ? 'bookmark' : 'bookmark-outline'}
+              size={22}
+              color={saved ? '#22C55E' : colors.textPrimary}
+            />
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={showShareMenu} style={styles.actionButton} accessibilityRole="button" accessibilityLabel="Share">
-            <Text style={styles.actionText}>{'\uD83D\uDD17'} Share</Text>
+          <TouchableOpacity onPress={showShareMenu} style={styles.actionButton} accessibilityRole="button" accessibilityLabel="Share post">
+            <Ionicons name="share-social-outline" size={22} color={colors.textPrimary} />
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.likeCount}>
-          {likeCount} {likeCount === 1 ? 'like' : 'likes'}
-        </Text>
+        {likeCount > 0 && (
+          <Text style={styles.likeCount} accessibilityLabel={`${likeCount} ${likeCount === 1 ? 'like' : 'likes'}`}>
+            Liked by <Text style={styles.likeCountBold}>{post.username || post.displayName || 'someone'}</Text>{likeCount > 1 ? ' and others' : ''}
+          </Text>
+        )}
 
         {/* Recipe section */}
         {recipe && (
@@ -799,25 +810,15 @@ const styles = StyleSheet.create({
   actionButton: {
     paddingVertical: 8,
   },
-  actionText: {
-    fontSize: 16,
-    color: colors.textPrimary,
-  },
-  likedText: {
-    color: colors.liked,
-    fontWeight: '600',
-  },
-  savedText: {
-    color: colors.info,
-    fontWeight: '600',
-  },
   likeCount: {
     paddingHorizontal: 16,
-    paddingTop: 4,
+    paddingTop: 6,
     paddingBottom: 8,
     fontSize: 14,
-    fontWeight: '600',
     color: colors.textPrimary,
+  },
+  likeCountBold: {
+    fontWeight: 'bold',
   },
   recipeSection: {
     marginTop: 4,

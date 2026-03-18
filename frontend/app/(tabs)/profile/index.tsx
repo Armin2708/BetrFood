@@ -8,7 +8,23 @@ import { fetchMyProfile, fetchFollowStats, fetchUserPosts, getImageUrl, getAvata
 import VideoThumbnailView from '../../../components/VideoThumbnail';
 
 const { width } = Dimensions.get('window');
-const ITEM_SIZE = width / 3;
+const GRID_GAP = 2;
+const ITEM_SIZE = (width - GRID_GAP * 2) / 3;
+
+type ProfileTab = 'posts' | 'private' | 'liked' | 'recipes';
+
+const TAB_ICONS: { key: ProfileTab; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { key: 'posts', icon: 'albums-outline' },
+  { key: 'private', icon: 'lock-closed-outline' },
+  { key: 'liked', icon: 'thumbs-up-outline' },
+  { key: 'recipes', icon: 'receipt-outline' },
+];
+
+function formatCount(count: number): string {
+  if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(count % 1_000_000 === 0 ? 0 : 1)}M`;
+  if (count >= 1_000) return `${(count / 1_000).toFixed(count % 1_000 === 0 ? 0 : 1)}K`;
+  return String(count);
+}
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -18,6 +34,7 @@ export default function ProfileScreen() {
   const [followStats, setFollowStats] = useState({ followerCount: 0, followingCount: 0 });
   const [userPosts, setUserPosts] = useState<PostType[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [activeTab, setActiveTab] = useState<ProfileTab>('posts');
 
   const userRef = useRef(user);
   useEffect(() => { userRef.current = user; }, [user]);
@@ -61,72 +78,135 @@ export default function ProfileScreen() {
   if (loading) {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color="#4CAF50" />
+        <Stack.Screen options={{ headerShown: false }} />
+        <ActivityIndicator size="large" color="#22C55E" />
       </View>
     );
   }
 
+  const renderProfileHeader = () => (
+    <View style={styles.profileHeaderWrapper}>
+      {/* Top navigation bar */}
+      <View style={styles.topBar}>
+        <Pressable
+          onPress={() => {}}
+          style={styles.topBarButton}
+          accessibilityRole="button"
+          accessibilityLabel="Menu"
+        >
+          <Ionicons name="menu-outline" size={26} color="#000" />
+        </Pressable>
+        <View style={{ flex: 1 }} />
+        <Pressable
+          onPress={() => router.push('/profile/settings')}
+          style={styles.topBarButton}
+          accessibilityRole="button"
+          accessibilityLabel="Settings"
+        >
+          <Ionicons name="settings-outline" size={24} color="#000" />
+        </Pressable>
+      </View>
+
+      {/* Avatar */}
+      <View style={styles.avatarContainer}>
+        <Image
+          source={{ uri: getAvatarUrl(profile?.avatarUrl, profile?.displayName || profile?.username) }}
+          style={styles.avatar}
+          accessibilityLabel={`${profile?.displayName || 'User'}'s profile photo`}
+        />
+      </View>
+
+      {/* Display name */}
+      {profile?.displayName ? (
+        <View style={styles.displayNameRow}>
+          <Text style={styles.displayName}>{profile.displayName}</Text>
+          {profile.verified && (
+            <View style={styles.verifiedBadge}>
+              <Ionicons name="checkmark-circle" size={18} color="#22C55E" />
+            </View>
+          )}
+        </View>
+      ) : null}
+
+      {/* Username */}
+      <Text style={styles.username}>
+        {profile?.username ? `@${profile.username}` : '@unknown'}
+      </Text>
+
+      {/* Bio */}
+      {profile?.bio ? (
+        <Text style={styles.bio}>{profile.bio}</Text>
+      ) : null}
+
+      {/* Followers / Following stats */}
+      <View style={styles.followRow}>
+        <Pressable
+          onPress={() => router.push('/profile/info/followersScreen')}
+          style={styles.followItem}
+          accessibilityLabel={`${followStats.followerCount} Followers`}
+        >
+          <Text style={styles.followCount}>{formatCount(followStats.followerCount)}</Text>
+          <Text style={styles.followLabel}>  Followers</Text>
+        </Pressable>
+        <View style={styles.followSpacer} />
+        <Pressable
+          onPress={() => router.push('/profile/info/followingScreen')}
+          style={styles.followItem}
+          accessibilityLabel={`${followStats.followingCount} Following`}
+        >
+          <Text style={styles.followCount}>{formatCount(followStats.followingCount)}</Text>
+          <Text style={styles.followLabel}>  Following</Text>
+        </Pressable>
+      </View>
+
+      {/* Edit Profile button */}
+      <Pressable
+        style={styles.editButton}
+        onPress={() => router.push("/profile/info/editProfile")}
+        accessibilityRole="button"
+        accessibilityLabel="Edit profile"
+      >
+        <Text style={styles.editButtonText}>Edit profile</Text>
+      </Pressable>
+
+      {/* Tab icons */}
+      <View style={styles.tabRow}>
+        {TAB_ICONS.map((tab) => (
+          <Pressable
+            key={tab.key}
+            style={styles.tabItem}
+            onPress={() => setActiveTab(tab.key)}
+            accessibilityRole="tab"
+            accessibilityLabel={tab.key}
+            accessibilityState={{ selected: activeTab === tab.key }}
+          >
+            <View style={[
+              styles.tabIconContainer,
+              activeTab === tab.key && styles.tabIconContainerActive,
+            ]}>
+              <Ionicons
+                name={tab.icon}
+                size={22}
+                color={activeTab === tab.key ? '#000' : '#94A3B8'}
+              />
+            </View>
+            {activeTab === tab.key && <View style={styles.tabIndicator} />}
+          </Pressable>
+        ))}
+      </View>
+    </View>
+  );
+
   return (
     <>
-      {/* Header with username + settings */}
-      <Stack.Screen
-        options={{
-          title: profile?.username ? `@${profile.username}` : 'Profile',
-          headerRight: () => (
-            <Pressable onPress={() => router.push('/profile/settings')} accessibilityRole="button" accessibilityLabel="Settings">
-              <Ionicons name='settings-outline' size={24}/>
-            </Pressable>
-          ),
-        }}
-      />
+      <Stack.Screen options={{ headerShown: false }} />
 
       <View style={styles.container}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Image source={{ uri: getAvatarUrl(profile?.avatarUrl, profile?.displayName || profile?.username) }} style={styles.avatar} accessibilityLabel={`${profile?.displayName || 'User'}'s profile photo`} />
-
-          <View style={styles.statsRow}>
-            <Stat label="Following" value={String(followStats.followingCount)} callback={ () => router.push('/profile/info/followingScreen') }/>
-            <Stat label="Followers" value={String(followStats.followerCount)} callback={ () => router.push('/profile/info/followersScreen') } />
-            <Stat label="Posts" value={String(userPosts.length)} callback={ () => {} }/>
-          </View>
-        </View>
-
-        {/* Username + Bio */}
-        <View style={styles.userInfo}>
-          {profile?.displayName ? (
-            <View style={styles.displayNameRow}>
-              <Text style={styles.displayName}>{profile.displayName}</Text>
-              {profile.verified && <Text style={styles.verifiedBadge}>{'\u2713'}</Text>}
-            </View>
-          ) : null}
-          <Text style={styles.username}>
-            {profile?.username ? `@${profile.username}` : '@unknown'}
-          </Text>
-          {profile?.bio ? (
-            <Text style={styles.bio}>{profile.bio}</Text>
-          ) : null}
-        </View>
-
-        {/* Edit Profile Button */}
-        <Pressable style={styles.editButton} onPress={() => router.push("/profile/info/editProfile")} accessibilityRole="button" accessibilityLabel="Edit profile">
-          <View>
-            <Text style={styles.editButtonText}>Edit Profile</Text>
-          </View>
-        </Pressable>
-
-        {/* Collections Button */}
-        <Pressable style={styles.collectionsButton} onPress={() => router.push("/profile/collections")} accessibilityRole="button" accessibilityLabel="View collections">
-          <Ionicons name="folder-outline" size={18} color="#4CAF50" />
-          <Text style={styles.collectionsButtonText}>Collections</Text>
-          <Ionicons name="chevron-forward" size={16} color="#ccc" />
-        </Pressable>
-
-        {/* Post Grid */}
         <FlatList
-          data={userPosts}
+          data={activeTab === 'posts' ? userPosts : []}
           keyExtractor={(item) => item.id}
           numColumns={3}
+          ListHeaderComponent={renderProfileHeader}
           renderItem={({ item }) => (
             <Pressable onPress={() => router.push(`/post-detail?postId=${item.id}`)}>
               {item.mediaType === 'video' ? (
@@ -144,10 +224,13 @@ export default function ProfileScreen() {
             </Pressable>
           )}
           showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#22C55E" />}
           ListEmptyComponent={
             <View style={styles.emptyGrid}>
-              <Text style={styles.emptyText}>No posts yet</Text>
+              <Ionicons name="camera-outline" size={48} color="#CBD5E1" style={{ marginBottom: 12 }} />
+              <Text style={styles.emptyText}>
+                {activeTab === 'posts' ? 'No posts yet' : `No ${activeTab} content yet`}
+              </Text>
             </View>
           }
         />
@@ -156,125 +239,177 @@ export default function ProfileScreen() {
   );
 }
 
-function Stat({ label, value, callback }: { label: string; value: string; callback: () => void }) {
-  return (
-    <View style={styles.statItem}>
-      <Pressable onPress={ callback } accessibilityLabel={`${value} ${label}`}>
-        <Text style={styles.statValue}>{value}</Text>
-        <Text style={styles.statLabel}>{label}</Text>
-        </Pressable>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#FFFFFF',
   },
-  header: {
-    flexDirection: 'row',
-    padding: 20,
+  profileHeaderWrapper: {
     alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+  },
+
+  /* Top navigation bar */
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    paddingHorizontal: 16,
+    paddingTop: 56,
+    paddingBottom: 8,
+  },
+  topBarButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  /* Avatar */
+  avatarContainer: {
+    marginTop: 8,
+    marginBottom: 16,
+    borderRadius: 70,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   avatar: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
+    width: 140,
+    height: 140,
+    borderRadius: 70,
   },
-  avatarFallback: {
-    backgroundColor: '#f0f0f0',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  statsRow: {
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  statItem: {
-    alignItems: 'center',
-  },
-  statValue: {
-    color: '#000',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  statLabel: {
-    color: '#555',
-    fontSize: 12,
-  },
-  userInfo: {
-    paddingHorizontal: 20,
-  },
+
+  /* Display name */
   displayNameRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 2,
   },
   displayName: {
-    color: '#000',
-    fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: 25,
+    fontWeight: '600',
+    color: '#000000',
+    textAlign: 'center',
   },
   verifiedBadge: {
-    color: '#1DA1F2',
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginLeft: 4,
+    marginLeft: 6,
   },
+
+  /* Username */
   username: {
-    color: '#555',
-    fontSize: 14,
-    marginTop: 2,
+    fontSize: 12,
+    color: '#94A3B8',
+    textAlign: 'center',
+    marginBottom: 8,
   },
+
+  /* Bio */
   bio: {
-    color: '#555',
-    marginTop: 4,
+    fontSize: 14,
+    color: '#64748B',
+    textAlign: 'center',
+    paddingHorizontal: 40,
+    marginBottom: 12,
+    lineHeight: 20,
   },
-  editButton: {
-    margin: 20,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    paddingVertical: 8,
-    borderRadius: 6,
-    alignItems: 'center',
-  },
-  editButtonText: {
-    color: '#000',
-    fontWeight: '500',
-  },
-  collectionsButton: {
+
+  /* Followers / Following row */
+  followRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginHorizontal: 20,
+    justifyContent: 'center',
     marginBottom: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    backgroundColor: '#fafafa',
   },
-  collectionsButtonText: {
+  followItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  followCount: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#000000',
+  },
+  followLabel: {
+    fontSize: 14,
+    color: '#64748B',
+  },
+  followSpacer: {
+    width: 24,
+  },
+
+  /* Edit Profile button */
+  editButton: {
+    borderWidth: 2,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    height: 48,
+    paddingHorizontal: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+    minWidth: 200,
+  },
+  editButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+
+  /* Tab icons */
+  tabRow: {
+    flexDirection: 'row',
+    width: '100%',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  tabItem: {
     flex: 1,
-    marginLeft: 10,
-    fontSize: 15,
-    fontWeight: '500',
-    color: '#333',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
   },
+  tabIconContainer: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 20,
+  },
+  tabIconContainerActive: {
+    backgroundColor: '#F0FDF4',
+  },
+  tabIndicator: {
+    position: 'absolute',
+    bottom: 0,
+    width: 40,
+    height: 2,
+    backgroundColor: '#000000',
+    borderRadius: 1,
+  },
+
+  /* Post grid */
   gridItem: {
     width: ITEM_SIZE,
     height: ITEM_SIZE,
-    backgroundColor: '#eee',
-    borderWidth: 0.5,
-    borderColor: '#fff',
+    backgroundColor: '#F1F5F9',
+    borderRadius: 8,
+    overflow: 'hidden',
   },
+
+  /* Empty state */
   emptyGrid: {
     alignItems: 'center',
-    padding: 40,
+    paddingVertical: 60,
   },
   emptyText: {
-    fontSize: 16,
-    color: '#999',
+    fontSize: 15,
+    color: '#94A3B8',
   },
 });

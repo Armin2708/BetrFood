@@ -10,6 +10,7 @@ import {
   Alert,
   KeyboardAvoidingView,
   ScrollView,
+  Image,
 } from "react-native";
 import { useState, useCallback } from "react";
 import { useRouter } from "expo-router";
@@ -17,6 +18,8 @@ import { useAuth, useSignIn, useSSO } from "@clerk/clerk-expo";
 import { Redirect } from "expo-router";
 import * as AuthSession from "expo-auth-session";
 import * as WebBrowser from "expo-web-browser";
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -33,6 +36,250 @@ export default function Login() {
   }
   return <NativeLogin />;
 }
+
+/* ------------------------------------------------------------------ */
+/*  Shared UI for the login form (used by both Web and Native)        */
+/* ------------------------------------------------------------------ */
+
+function LoginFormUI({
+  email,
+  setEmail,
+  password,
+  setPassword,
+  loading,
+  onLogin,
+  onOAuthGoogle,
+  onOAuthApple,
+  onForgotPassword,
+  onSignup,
+}: {
+  email: string;
+  setEmail: (v: string) => void;
+  password: string;
+  setPassword: (v: string) => void;
+  loading: boolean;
+  onLogin: () => void;
+  onOAuthGoogle: () => void;
+  onOAuthApple: () => void;
+  onForgotPassword: () => void;
+  onSignup: () => void;
+}) {
+  return (
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
+      <ScrollView
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
+        bounces={false}
+      >
+        {/* Logo */}
+        <Image
+          source={require("../../assets/images/Logo.png")}
+          style={styles.logo}
+          resizeMode="contain"
+        />
+
+        {/* Title */}
+        <Text style={styles.title} accessibilityRole="header">
+          Welcome to <Text style={styles.titleGreen}>BetrFood</Text>
+        </Text>
+
+        {/* Subtitle */}
+        <Text style={styles.subtitle}>
+          Discover healthier eating habits with fellow food lovers
+        </Text>
+
+        {/* Email input */}
+        <TextInput
+          placeholder="Email or username"
+          placeholderTextColor="#94A3B8"
+          onChangeText={setEmail}
+          value={email}
+          autoCapitalize="none"
+          keyboardType="email-address"
+          style={styles.input}
+          accessibilityLabel="Email address"
+          accessibilityHint="Enter your email"
+        />
+
+        {/* Password input */}
+        <TextInput
+          placeholder="Password"
+          placeholderTextColor="#94A3B8"
+          secureTextEntry
+          onChangeText={setPassword}
+          value={password}
+          style={styles.input}
+          accessibilityLabel="Password"
+          accessibilityHint="Enter your password"
+        />
+
+        {/* Log In button */}
+        <TouchableOpacity
+          style={styles.button}
+          onPress={onLogin}
+          disabled={loading}
+          accessibilityRole="button"
+          accessibilityLabel="Log in"
+          activeOpacity={0.85}
+        >
+          <LinearGradient
+            colors={["#22C55E", "#10B981"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.buttonGradient}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.buttonText}>Log In</Text>
+            )}
+          </LinearGradient>
+        </TouchableOpacity>
+
+        {/* Forgot password */}
+        <Pressable
+          onPress={onForgotPassword}
+          accessibilityRole="link"
+          accessibilityLabel="Forgot password"
+          style={styles.forgotPasswordWrapper}
+        >
+          <Text style={styles.forgotPasswordText}>Forgot password?</Text>
+        </Pressable>
+
+        {/* Divider */}
+        <View style={styles.divider}>
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerText}>Sign in with</Text>
+          <View style={styles.dividerLine} />
+        </View>
+
+        {/* Social buttons row */}
+        <View style={styles.socialRow}>
+          <TouchableOpacity
+            style={styles.socialButton}
+            onPress={onOAuthGoogle}
+            disabled={loading}
+            accessibilityRole="button"
+            accessibilityLabel="Continue with Google"
+          >
+            <Ionicons name="logo-google" size={24} color="#333" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.socialButton}
+            onPress={onOAuthApple}
+            disabled={loading}
+            accessibilityRole="button"
+            accessibilityLabel="Continue with Apple"
+          >
+            <Ionicons name="logo-apple" size={24} color="#333" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.socialButton}
+            onPress={() => {
+              const msg = "Facebook sign-in is not yet available.";
+              Platform.OS === "web" ? window.alert(msg) : Alert.alert("Coming Soon", msg);
+            }}
+            disabled={loading}
+            accessibilityRole="button"
+            accessibilityLabel="Continue with Facebook"
+          >
+            <Ionicons name="logo-facebook" size={24} color="#1877F2" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Sign up link */}
+        <View style={styles.signupRow}>
+          <Text style={styles.signupText}>Don't have an account? </Text>
+          <TouchableOpacity
+            onPress={onSignup}
+            accessibilityRole="link"
+            accessibilityLabel="Sign up"
+          >
+            <Text style={styles.signupLink}>Sign up</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
+  );
+}
+
+function VerifyFormUI({
+  email,
+  code,
+  setCode,
+  loading,
+  onVerify,
+}: {
+  email: string;
+  code: string;
+  setCode: (v: string) => void;
+  loading: boolean;
+  onVerify: () => void;
+}) {
+  return (
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
+      <ScrollView
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
+        bounces={false}
+      >
+        <Image
+          source={require("../../assets/images/Logo.png")}
+          style={styles.logo}
+          resizeMode="contain"
+        />
+        <Text style={styles.title} accessibilityRole="header">
+          Verify Your Identity
+        </Text>
+        <Text style={styles.subtitle}>
+          We sent a verification code to {email}
+        </Text>
+        <TextInput
+          placeholder="Verification code"
+          placeholderTextColor="#94A3B8"
+          onChangeText={setCode}
+          value={code}
+          keyboardType="number-pad"
+          style={styles.input}
+          accessibilityLabel="Verification code"
+        />
+        <TouchableOpacity
+          style={styles.button}
+          onPress={onVerify}
+          disabled={loading}
+          accessibilityRole="button"
+          accessibilityLabel="Verify code"
+          activeOpacity={0.85}
+        >
+          <LinearGradient
+            colors={["#22C55E", "#10B981"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.buttonGradient}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.buttonText}>Verify</Text>
+            )}
+          </LinearGradient>
+        </TouchableOpacity>
+      </ScrollView>
+    </KeyboardAvoidingView>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  WebLogin                                                           */
+/* ------------------------------------------------------------------ */
 
 function WebLogin() {
   const router = useRouter();
@@ -78,7 +325,10 @@ function WebLogin() {
     if (!isLoaded || !signIn) return;
     setLoading(true);
     try {
-      const result = await signIn.attemptSecondFactor({ strategy: "email_code", code });
+      const result = await signIn.attemptSecondFactor({
+        strategy: "email_code",
+        code,
+      });
       if (result.status === "complete") {
         await setActive({ session: result.createdSessionId });
         router.replace("/");
@@ -130,139 +380,35 @@ function WebLogin() {
 
   if (pendingSecondFactor) {
     return (
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <ScrollView
-          contentContainerStyle={styles.container}
-          keyboardShouldPersistTaps="handled"
-          bounces={false}
-        >
-          <Text style={styles.title} accessibilityRole="header">Verify Your Identity</Text>
-          <Text style={styles.subtitle}>
-            We sent a verification code to {email}
-          </Text>
-          <TextInput
-            placeholder="Verification code"
-            onChangeText={setCode}
-            value={code}
-            keyboardType="number-pad"
-            style={styles.input}
-            accessibilityLabel="Verification code"
-          />
-          <TouchableOpacity
-            style={styles.button}
-            onPress={handleVerifySecondFactor}
-            disabled={loading}
-            accessibilityRole="button"
-            accessibilityLabel="Verify code"
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.buttonText}>Verify</Text>
-            )}
-          </TouchableOpacity>
-        </ScrollView>
-      </KeyboardAvoidingView>
+      <VerifyFormUI
+        email={email}
+        code={code}
+        setCode={setCode}
+        loading={loading}
+        onVerify={handleVerifySecondFactor}
+      />
     );
   }
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <ScrollView
-        contentContainerStyle={styles.container}
-        keyboardShouldPersistTaps="handled"
-        bounces={false}
-      >
-        <Text style={styles.title} accessibilityRole="header">Welcome Back</Text>
-        <Text style={styles.subtitle}>Sign in to your account</Text>
-
-        <TouchableOpacity
-          style={styles.oauthButton}
-          onPress={() => handleOAuth("oauth_google")}
-          disabled={loading}
-          accessibilityRole="button"
-          accessibilityLabel="Continue with Google"
-        >
-          <Text style={styles.oauthButtonText}>Continue with Google</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.oauthButton, styles.appleButton]}
-          onPress={() => handleOAuth("oauth_apple")}
-          disabled={loading}
-          accessibilityRole="button"
-          accessibilityLabel="Continue with Apple"
-        >
-          <Text style={[styles.oauthButtonText, styles.appleButtonText]}>
-            Continue with Apple
-          </Text>
-        </TouchableOpacity>
-
-        <View style={styles.divider}>
-          <View style={styles.dividerLine} />
-          <Text style={styles.dividerText}>or</Text>
-          <View style={styles.dividerLine} />
-        </View>
-
-        <TextInput
-          placeholder="Email"
-          onChangeText={setEmail}
-          value={email}
-          autoCapitalize="none"
-          keyboardType="email-address"
-          style={styles.input}
-          accessibilityLabel="Email address"
-          accessibilityHint="Enter your email"
-        />
-
-        <TextInput
-          placeholder="Password"
-          secureTextEntry
-          onChangeText={setPassword}
-          value={password}
-          style={styles.input}
-          accessibilityLabel="Password"
-          accessibilityHint="Enter your password"
-        />
-
-        <TouchableOpacity
-          style={styles.button}
-          onPress={handleLogin}
-          disabled={loading}
-          accessibilityRole="button"
-          accessibilityLabel="Sign in"
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>Sign In</Text>
-          )}
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.linkButton}
-          onPress={() => router.push("/(auth)/signup")}
-          accessibilityRole="link"
-          accessibilityLabel="Don't have an account? Sign up"
-        >
-          <Text style={styles.linkText}>
-            Don't have an account? <Text style={styles.linkBold}>Sign Up</Text>
-          </Text>
-        </TouchableOpacity>
-
-        <Pressable onPress={() => router.push("/(auth)/resetPassword")} accessibilityRole="link" accessibilityLabel="Forgot password">
-          <Text style={styles.forgotPasswordText}>Forgot password?</Text>
-        </Pressable>
-      </ScrollView>
-    </KeyboardAvoidingView>
+    <LoginFormUI
+      email={email}
+      setEmail={setEmail}
+      password={password}
+      setPassword={setPassword}
+      loading={loading}
+      onLogin={handleLogin}
+      onOAuthGoogle={() => handleOAuth("oauth_google")}
+      onOAuthApple={() => handleOAuth("oauth_apple")}
+      onForgotPassword={() => router.push("/(auth)/resetPassword")}
+      onSignup={() => router.push("/(auth)/signup")}
+    />
   );
 }
+
+/* ------------------------------------------------------------------ */
+/*  NativeLogin                                                        */
+/* ------------------------------------------------------------------ */
 
 function NativeLogin() {
   const router = useRouter();
@@ -314,7 +460,10 @@ function NativeLogin() {
     if (!isLoaded || !signIn) return;
     setLoading(true);
     try {
-      const result = await signIn.attemptSecondFactor({ strategy: "email_code", code });
+      const result = await signIn.attemptSecondFactor({
+        strategy: "email_code",
+        code,
+      });
       if (result.status === "complete") {
         await setActive({ session: result.createdSessionId });
         router.replace("/");
@@ -338,28 +487,43 @@ function NativeLogin() {
       if (!isLoaded) return;
       setLoading(true);
       try {
-        const { createdSessionId, setActive: setActiveSession, signUp, signIn: ssoSignIn } =
-          await startSSOFlow({
-            strategy,
-            redirectUrl: AuthSession.makeRedirectUri({ scheme: "betrfood" }),
-          });
+        const {
+          createdSessionId,
+          setActive: setActiveSession,
+          signUp,
+          signIn: ssoSignIn,
+        } = await startSSOFlow({
+          strategy,
+          redirectUrl: AuthSession.makeRedirectUri({ scheme: "betrfood" }),
+        });
 
         if (createdSessionId) {
           await setActiveSession!({ session: createdSessionId });
           router.replace("/");
         } else if (signUp) {
-          // New user — Clerk transferred signIn → signUp.
+          // New user — Clerk transferred signIn -> signUp.
           // Username will be set during onboarding.
-          const latest = signUp.status === "complete" ? signUp : await signUp.reload();
+          const latest =
+            signUp.status === "complete" ? signUp : await signUp.reload();
           if (latest.status === "complete" && latest.createdSessionId) {
             await setActiveSession!({ session: latest.createdSessionId });
             router.replace("/");
           } else {
-            console.log("[OAuth] signUp still incomplete:", latest.status, latest.missingFields);
-            Alert.alert("Sign In Incomplete", "Could not complete account creation. Please try signing up with email.");
+            console.log(
+              "[OAuth] signUp still incomplete:",
+              latest.status,
+              latest.missingFields
+            );
+            Alert.alert(
+              "Sign In Incomplete",
+              "Could not complete account creation. Please try signing up with email."
+            );
           }
         } else {
-          Alert.alert("Sign In Incomplete", "Additional verification steps may be required.");
+          Alert.alert(
+            "Sign In Incomplete",
+            "Additional verification steps may be required."
+          );
         }
       } catch (error: any) {
         console.error("OAuth error:", JSON.stringify(error, null, 2));
@@ -378,238 +542,159 @@ function NativeLogin() {
 
   if (pendingSecondFactor) {
     return (
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <ScrollView
-          contentContainerStyle={styles.container}
-          keyboardShouldPersistTaps="handled"
-          bounces={false}
-        >
-          <Text style={styles.title} accessibilityRole="header">Verify Your Identity</Text>
-          <Text style={styles.subtitle}>
-            We sent a verification code to {email}
-          </Text>
-          <TextInput
-            placeholder="Verification code"
-            onChangeText={setCode}
-            value={code}
-            keyboardType="number-pad"
-            style={styles.input}
-            accessibilityLabel="Verification code"
-          />
-          <TouchableOpacity
-            style={styles.button}
-            onPress={handleVerifySecondFactor}
-            disabled={loading}
-            accessibilityRole="button"
-            accessibilityLabel="Verify code"
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.buttonText}>Verify</Text>
-            )}
-          </TouchableOpacity>
-        </ScrollView>
-      </KeyboardAvoidingView>
+      <VerifyFormUI
+        email={email}
+        code={code}
+        setCode={setCode}
+        loading={loading}
+        onVerify={handleVerifySecondFactor}
+      />
     );
   }
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <ScrollView
-        contentContainerStyle={styles.container}
-        keyboardShouldPersistTaps="handled"
-        bounces={false}
-      >
-        <Text style={styles.title} accessibilityRole="header">Welcome Back</Text>
-        <Text style={styles.subtitle}>Sign in to your account</Text>
-
-        <TouchableOpacity
-          style={styles.oauthButton}
-          onPress={() => handleOAuth("oauth_google")}
-          disabled={loading}
-          accessibilityRole="button"
-          accessibilityLabel="Continue with Google"
-        >
-          <Text style={styles.oauthButtonText}>Continue with Google</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.oauthButton, styles.appleButton]}
-          onPress={() => handleOAuth("oauth_apple")}
-          disabled={loading}
-          accessibilityRole="button"
-          accessibilityLabel="Continue with Apple"
-        >
-          <Text style={[styles.oauthButtonText, styles.appleButtonText]}>
-            Continue with Apple
-          </Text>
-        </TouchableOpacity>
-
-        <View style={styles.divider}>
-          <View style={styles.dividerLine} />
-          <Text style={styles.dividerText}>or</Text>
-          <View style={styles.dividerLine} />
-        </View>
-
-        <TextInput
-          placeholder="Email"
-          onChangeText={setEmail}
-          value={email}
-          autoCapitalize="none"
-          keyboardType="email-address"
-          style={styles.input}
-          accessibilityLabel="Email address"
-          accessibilityHint="Enter your email"
-        />
-
-        <TextInput
-          placeholder="Password"
-          secureTextEntry
-          onChangeText={setPassword}
-          value={password}
-          style={styles.input}
-          accessibilityLabel="Password"
-          accessibilityHint="Enter your password"
-        />
-
-        <TouchableOpacity
-          style={styles.button}
-          onPress={handleLogin}
-          disabled={loading}
-          accessibilityRole="button"
-          accessibilityLabel="Sign in"
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>Sign In</Text>
-          )}
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.linkButton}
-          onPress={() => router.push("/(auth)/signup")}
-          accessibilityRole="link"
-          accessibilityLabel="Don't have an account? Sign up"
-        >
-          <Text style={styles.linkText}>
-            Don't have an account? <Text style={styles.linkBold}>Sign Up</Text>
-          </Text>
-        </TouchableOpacity>
-
-        <Pressable onPress={() => router.push("/(auth)/resetPassword")} accessibilityRole="link" accessibilityLabel="Forgot password">
-          <Text style={styles.forgotPasswordText}>Forgot password?</Text>
-        </Pressable>
-      </ScrollView>
-    </KeyboardAvoidingView>
+    <LoginFormUI
+      email={email}
+      setEmail={setEmail}
+      password={password}
+      setPassword={setPassword}
+      loading={loading}
+      onLogin={handleLogin}
+      onOAuthGoogle={() => handleOAuth("oauth_google")}
+      onOAuthApple={() => handleOAuth("oauth_apple")}
+      onForgotPassword={() => router.push("/(auth)/resetPassword")}
+      onSignup={() => router.push("/(auth)/signup")}
+    />
   );
 }
+
+/* ------------------------------------------------------------------ */
+/*  Styles                                                             */
+/* ------------------------------------------------------------------ */
 
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
-    padding: 24,
-    justifyContent: "center",
+    paddingHorizontal: 28,
+    paddingTop: 60,
+    paddingBottom: 40,
     alignItems: "center",
-    backgroundColor: "#fff",
+    backgroundColor: "#FFFFFF",
+  },
+  logo: {
+    width: 80,
+    height: 80,
+    marginBottom: 28,
   },
   title: {
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: "bold",
-    marginBottom: 4,
-    color: "#333",
-    alignSelf: "flex-start",
+    color: "#0F172A",
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  titleGreen: {
+    color: "#22C55E",
+    fontWeight: "bold",
   },
   subtitle: {
-    fontSize: 16,
-    color: "#666",
-    marginBottom: 24,
-    alignSelf: "flex-start",
+    fontSize: 14,
+    color: "#64748B",
+    textAlign: "center",
+    marginBottom: 32,
+    lineHeight: 20,
+    paddingHorizontal: 16,
   },
-  oauthButton: {
-    padding: 14,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#ddd",
-    alignItems: "center",
-    marginBottom: 12,
-    backgroundColor: "#fff",
+  input: {
     width: "100%",
+    height: 52,
+    borderWidth: 2,
+    borderColor: "#E2E8F0",
+    borderRadius: 14,
+    paddingHorizontal: 20,
+    fontSize: 15,
+    color: "#0F172A",
+    backgroundColor: "#FFFFFF",
+    marginBottom: 14,
   },
-  oauthButtonText: {
+  button: {
+    width: "100%",
+    marginTop: 4,
+    marginBottom: 4,
+    borderRadius: 14,
+    overflow: "hidden",
+    shadowColor: "#22C55E",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  buttonGradient: {
+    height: 52,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  buttonText: {
+    color: "#FFFFFF",
+    fontWeight: "700",
     fontSize: 16,
+  },
+  forgotPasswordWrapper: {
+    alignSelf: "flex-end",
+    marginTop: 8,
+    marginBottom: 20,
+  },
+  forgotPasswordText: {
+    color: "#22C55E",
+    fontSize: 12,
     fontWeight: "600",
-    color: "#333",
-  },
-  appleButton: {
-    backgroundColor: "#000",
-    borderColor: "#000",
-  },
-  appleButtonText: {
-    color: "#fff",
   },
   divider: {
     flexDirection: "row",
     alignItems: "center",
-    marginVertical: 20,
     width: "100%",
+    marginBottom: 20,
   },
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: "#ddd",
+    backgroundColor: "#E2E8F0",
   },
   dividerText: {
     paddingHorizontal: 16,
-    color: "#999",
-    fontSize: 14,
+    color: "#94A3B8",
+    fontSize: 13,
   },
-  input: {
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 8,
-    padding: 14,
-    marginBottom: 12,
-    fontSize: 16,
+  socialRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 12,
+    marginBottom: 32,
     width: "100%",
   },
-  button: {
-    backgroundColor: "#FF6B35",
-    padding: 16,
-    borderRadius: 8,
+  socialButton: {
+    flex: 1,
+    height: 50,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: "#E2E8F0",
     alignItems: "center",
-    marginBottom: 12,
-    marginTop: 4,
-    width: "100%",
+    justifyContent: "center",
+    backgroundColor: "#FFFFFF",
   },
-  buttonText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 16,
-  },
-  linkButton: {
+  signupRow: {
+    flexDirection: "row",
     alignItems: "center",
-    padding: 8,
+    justifyContent: "center",
   },
-  linkText: {
-    color: "#666",
+  signupText: {
     fontSize: 14,
+    color: "#64748B",
   },
-  linkBold: {
-    color: "#FF6B35",
+  signupLink: {
+    fontSize: 14,
+    color: "#22C55E",
     fontWeight: "600",
-  },
-  forgotPasswordText: {
-    padding: 10,
-    color: "#FF6B35",
-    fontWeight: "600",
-    textAlign: "center",
   },
 });

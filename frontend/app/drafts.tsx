@@ -100,7 +100,7 @@ export default function DraftsScreen() {
   if (loading) {
     return (
       <View style={[styles.container, styles.centered]}>
-        <ActivityIndicator size="large" color="#FF6B35" />
+        <ActivityIndicator size="large" color="#22C55E" />
       </View>
     );
   }
@@ -194,7 +194,7 @@ const styles = StyleSheet.create({
   },
   draftDetails: {
     fontSize: 13,
-    color: '#FF6B35',
+    color: '#22C55E',
     marginTop: 4,
   },
   draftDate: {
