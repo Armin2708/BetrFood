@@ -7,8 +7,16 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  Switch,
 } from "react-native";
 import { fetchPreferences, updatePreferences } from "../../../../services/api";
+import {
+  requestNotificationPermission,
+  cancelAllExpiryNotifications,
+  scheduleExpiryNotifications,
+  cancelExpiryNotification,
+} from "../../../../utils/pantryNotifications";
+import { fetchPantryItems } from "../../../../services/api";
 
 const DIETARY_OPTIONS = [
   "Vegan",
@@ -85,6 +93,7 @@ export default function FoodPreferences() {
   const [allergies, setAllergies] = useState<string[]>([]);
   const [cuisines, setCuisines] = useState<string[]>([]);
   const [expiringItemsThreshold, setExpiringItemsThreshold] = useState(7);
+  const [expirationNotificationsEnabled, setExpirationNotificationsEnabled] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -99,6 +108,7 @@ export default function FoodPreferences() {
       setAllergies(prefs.allergies || []);
       setCuisines(prefs.cuisines || []);
       setExpiringItemsThreshold(prefs.expiringItemsThreshold || 7);
+      setExpirationNotificationsEnabled(prefs.expirationNotificationsEnabled ?? false);
     } catch {
       // Start with empty selections if fetch fails
     } finally {
@@ -118,16 +128,48 @@ export default function FoodPreferences() {
     }
   };
 
+  // Handle the notification toggle — request permissions when enabling,
+  // cancel all notifications when disabling.
+  const handleNotificationToggle = async (value: boolean) => {
+    if (value) {
+      const granted = await requestNotificationPermission();
+      if (!granted) {
+        Alert.alert(
+          'Permission Required',
+          'Please enable notifications for BetrFood in your device settings to receive expiration reminders.'
+        );
+        return;
+      }
+    } else {
+      await cancelAllExpiryNotifications();
+    }
+    setExpirationNotificationsEnabled(value);
+  };
+
+  // When threshold changes, reschedule all existing notifications
+  const handleThresholdChange = async (days: number) => {
+    setExpiringItemsThreshold(days);
+    if (expirationNotificationsEnabled) {
+      try {
+        const items = await fetchPantryItems();
+        await scheduleExpiryNotifications(items, true, days);
+      } catch {
+        // Non-critical — notifications will reschedule on next app load
+      }
+    }
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
-      await updatePreferences({ 
-        dietaryPreferences, 
-        allergies, 
+      await updatePreferences({
+        dietaryPreferences,
+        allergies,
         cuisines,
         expiringItemsThreshold,
+        expirationNotificationsEnabled,
       });
-      Alert.alert("Saved", "Your food preferences have been updated.");
+      Alert.alert("Saved", "Your preferences have been updated.");
     } catch {
       Alert.alert("Error", "Failed to save preferences. Please try again.");
     } finally {
@@ -166,44 +208,61 @@ export default function FoodPreferences() {
         onToggle={(item) => toggle(cuisines, setCuisines, item)}
       />
 
+      {/* ── Pantry Preferences ─────────────────────────────────────────── */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Pantry Preferences</Text>
-        <Text style={styles.settingLabel}>
-          Show items expiring within: <Text style={styles.settingValue}>{expiringItemsThreshold} days</Text>
-        </Text>
-        <View style={styles.sliderContainer}>
-          <Text style={styles.sliderLabel}>1</Text>
-          <Pressable
-            style={[
-              styles.sliderTrack,
-              {
-                width: `${((expiringItemsThreshold - 1) / 29) * 100}%`,
-              },
-            ]}
+
+        {/* Notification toggle */}
+        <View style={styles.toggleRow}>
+          <View style={styles.toggleTextGroup}>
+            <Text style={styles.toggleLabel}>Expiration Notifications</Text>
+            <Text style={styles.toggleSubLabel}>
+              Get reminded when items are about to expire
+            </Text>
+          </View>
+          <Switch
+            value={expirationNotificationsEnabled}
+            onValueChange={handleNotificationToggle}
+            trackColor={{ false: '#ddd', true: '#007AFF' }}
+            thumbColor="#fff"
+            accessibilityLabel="Enable expiration notifications"
+            accessibilityRole="switch"
           />
-          <Text style={styles.sliderLabel}>30</Text>
         </View>
-        <View style={styles.sliderButtonContainer}>
-          {[3, 7, 14, 30].map((days) => (
-            <Pressable
-              key={days}
-              style={[
-                styles.thresholdButton,
-                expiringItemsThreshold === days && styles.thresholdButtonActive,
-              ]}
-              onPress={() => setExpiringItemsThreshold(days)}
-            >
-              <Text
-                style={[
-                  styles.thresholdButtonText,
-                  expiringItemsThreshold === days && styles.thresholdButtonTextActive,
-                ]}
-              >
-                {days}d
-              </Text>
-            </Pressable>
-          ))}
-        </View>
+
+        {/* Threshold picker — only shown when notifications are enabled */}
+        {expirationNotificationsEnabled && (
+          <View style={styles.thresholdSection}>
+            <Text style={styles.settingLabel}>
+              Notify me when items expire within:{' '}
+              <Text style={styles.settingValue}>{expiringItemsThreshold} days</Text>
+            </Text>
+            <View style={styles.sliderButtonContainer}>
+              {[3, 7, 14, 30].map((days) => (
+                <Pressable
+                  key={days}
+                  style={[
+                    styles.thresholdButton,
+                    expiringItemsThreshold === days && styles.thresholdButtonActive,
+                  ]}
+                  onPress={() => handleThresholdChange(days)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: expiringItemsThreshold === days }}
+                  accessibilityLabel={`Notify ${days} days before expiry`}
+                >
+                  <Text
+                    style={[
+                      styles.thresholdButtonText,
+                      expiringItemsThreshold === days && styles.thresholdButtonTextActive,
+                    ]}
+                  >
+                    {days}d
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+        )}
       </View>
 
       <Pressable
@@ -267,6 +326,35 @@ const styles = StyleSheet.create({
     color: "white",
     fontWeight: "500",
   },
+  // Notification toggle row
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 12,
+    marginBottom: 12,
+  },
+  toggleTextGroup: {
+    flex: 1,
+    paddingRight: 12,
+  },
+  toggleLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#333',
+  },
+  toggleSubLabel: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 2,
+  },
+  // Threshold section (visible when notifications are on)
+  thresholdSection: {
+    paddingHorizontal: 2,
+  },
   settingLabel: {
     fontSize: 14,
     color: "#333",
@@ -275,24 +363,6 @@ const styles = StyleSheet.create({
   settingValue: {
     fontWeight: "600",
     color: "#007AFF",
-  },
-  sliderContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 16,
-    gap: 8,
-  },
-  sliderTrack: {
-    flex: 1,
-    height: 4,
-    backgroundColor: "#007AFF",
-    borderRadius: 2,
-  },
-  sliderLabel: {
-    fontSize: 12,
-    color: "#999",
-    minWidth: 20,
-    textAlign: "center",
   },
   sliderButtonContainer: {
     flexDirection: "row",

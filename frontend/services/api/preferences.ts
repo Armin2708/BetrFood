@@ -18,6 +18,7 @@ export async function updatePreferences(prefs: {
   profileVisibility?: 'public' | 'private';
   dietaryInfoVisible?: boolean;
   expiringItemsThreshold?: number;
+  expirationNotificationsEnabled?: boolean;
 }) {
   const response = await fetch(`${API_BASE_URL}/api/preferences`, {
     method: 'PUT',
