@@ -7,6 +7,7 @@ import { colors } from '../constants/theme';
 interface PantryItemCardProps {
   item: PantryItem;
   onDelete: (id: string) => void;
+  onEdit: (item: PantryItem) => void;
 }
 
 function getExpirationStatus(expirationDate: string | null): {
@@ -29,7 +30,7 @@ function getExpirationStatus(expirationDate: string | null): {
   };
 }
 
-export default function PantryItemCard({ item, onDelete }: PantryItemCardProps) {
+export default function PantryItemCard({ item, onDelete, onEdit }: PantryItemCardProps) {
   const expStatus = getExpirationStatus(item.expirationDate);
 
   const handleDelete = () => {
@@ -45,7 +46,14 @@ export default function PantryItemCard({ item, onDelete }: PantryItemCardProps) 
       accessible
       accessibilityLabel={`${item.name}, ${item.quantity} ${item.unit}, category: ${item.category}`}
     >
-      <View style={styles.left}>
+      {/* Tapping the left content opens the edit form */}
+      <TouchableOpacity
+        style={styles.left}
+        onPress={() => onEdit(item)}
+        activeOpacity={0.6}
+        accessibilityRole="button"
+        accessibilityLabel={`Edit ${item.name}`}
+      >
         <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
         <View style={styles.metaRow}>
           <View style={styles.categoryChip}>
@@ -60,7 +68,18 @@ export default function PantryItemCard({ item, onDelete }: PantryItemCardProps) 
             {expStatus.label}
           </Text>
         )}
-      </View>
+      </TouchableOpacity>
+
+      {/* Edit pencil button — same tap target as the left side but explicit */}
+      <TouchableOpacity
+        onPress={() => onEdit(item)}
+        style={styles.editButton}
+        accessibilityRole="button"
+        accessibilityLabel={`Edit ${item.name}`}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      >
+        <Ionicons name="pencil-outline" size={17} color={colors.textTertiary} />
+      </TouchableOpacity>
 
       <TouchableOpacity
         onPress={handleDelete}
@@ -116,6 +135,9 @@ const styles = StyleSheet.create({
   },
   expiration: {
     fontSize: 12,
+  },
+  editButton: {
+    paddingLeft: 12,
   },
   deleteButton: {
     paddingLeft: 12,
