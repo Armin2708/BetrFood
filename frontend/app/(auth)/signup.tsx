@@ -12,8 +12,8 @@ import {
   Alert,
 } from "react-native";
 import { useState, useCallback } from "react";
-import { useRouter } from "expo-router";
-import { useSignIn, useSignUp, useSSO } from "@clerk/clerk-expo";
+import { useRouter, Redirect } from "expo-router";
+import { useAuth, useSignIn, useSignUp, useSSO } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
 import * as AuthSession from "expo-auth-session";
 import * as WebBrowser from "expo-web-browser";
@@ -21,6 +21,13 @@ import * as WebBrowser from "expo-web-browser";
 WebBrowser.maybeCompleteAuthSession();
 
 export default function Signup() {
+  const { isSignedIn, isLoaded } = useAuth();
+
+  // Already signed in — redirect to home
+  if (isLoaded && isSignedIn) {
+    return <Redirect href="/" />;
+  }
+
   if (Platform.OS === "web") {
     return <WebSignup />;
   }
@@ -30,8 +37,9 @@ export default function Signup() {
 function WebSignup() {
   const router = useRouter();
   const { signUp, setActive, isLoaded } = useSignUp();
-  const { signIn } = useSignIn();
+  const { signIn, setActive: setSignInActive } = useSignIn();
 
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -95,49 +103,41 @@ function WebSignup() {
   };
 
   const handleOAuth = async (strategy: "oauth_google" | "oauth_apple") => {
-    if (!isLoaded || !signIn) return;
+    if (!isLoaded || !signUp) return;
     setLoading(true);
     try {
-      const result = await signIn.create({
-        strategy,
-        redirectUrl: window.location.origin + "/sso-callback",
-        actionCompleteRedirectUrl: window.location.origin + "/",
-      });
+      // Try signUp first; if the account already exists, Clerk will throw
+      // an error — we catch it and fall back to signIn.
+      let verificationUrl: string | null = null;
 
-      const verificationUrl =
-        result.firstFactorVerification?.externalVerificationRedirectURL;
+      try {
+        const result = await signUp.create({
+          strategy,
+          redirectUrl: window.location.origin + "/sso-callback",
+          actionCompleteRedirectUrl: window.location.origin + "/",
+        });
+        verificationUrl =
+          result.verifications?.externalAccount?.externalVerificationRedirectURL?.toString() ?? null;
+      } catch (signUpError: any) {
+        // Account already exists — fall back to signIn
+        if (signIn) {
+          const result = await signIn.create({
+            strategy,
+            redirectUrl: window.location.origin + "/sso-callback",
+            actionCompleteRedirectUrl: window.location.origin + "/",
+          });
+          verificationUrl =
+            result.firstFactorVerification?.externalVerificationRedirectURL?.toString() ?? null;
+        } else {
+          throw signUpError;
+        }
+      }
 
       if (!verificationUrl) {
         throw new Error("No OAuth redirect URL returned from Clerk");
       }
 
-      const popup = window.open(
-        verificationUrl.toString(),
-        "clerk-oauth",
-        "width=500,height=600,left=200,top=100"
-      );
-
-      if (!popup) {
-        throw new Error("Popup blocked. Please allow popups for this site.");
-      }
-
-      const pollInterval = setInterval(async () => {
-        try {
-          if (popup.closed) {
-            clearInterval(pollInterval);
-            const updatedSignIn = await signIn.reload();
-            if (updatedSignIn.status === "complete") {
-              await setActive!({ session: updatedSignIn.createdSessionId });
-              router.replace("/");
-            } else {
-              setLoading(false);
-            }
-          }
-        } catch {
-          clearInterval(pollInterval);
-          setLoading(false);
-        }
-      }, 500);
+      window.location.href = verificationUrl;
     } catch (error: any) {
       console.error("OAuth error:", error);
       const msg =
@@ -157,13 +157,16 @@ function WebSignup() {
         <Text style={styles.subtitle}>
           We sent a verification code to {email}
         </Text>
-        <TextInput
-          placeholder="Verification code"
-          onChangeText={setCode}
-          value={code}
-          keyboardType="number-pad"
-          style={styles.input}
-        />
+        <View style={styles.inputWrapper}>
+          <TextInput
+            placeholder="Verification code"
+            placeholderTextColor="#94A3B8"
+            onChangeText={setCode}
+            value={code}
+            keyboardType="number-pad"
+            style={styles.input}
+          />
+        </View>
         <TouchableOpacity
           style={styles.signUpButton}
           onPress={handleVerify}
@@ -213,6 +216,12 @@ function WebSignup() {
         >
           <Ionicons name="logo-apple" size={22} color="#000" />
         </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.socialButton}
+          disabled={loading}
+        >
+          <Ionicons name="logo-facebook" size={22} color="#1877F2" />
+        </TouchableOpacity>
       </View>
 
       <View style={styles.dividerRow}>
@@ -221,11 +230,23 @@ function WebSignup() {
         <View style={styles.dividerLine} />
       </View>
 
+      <Text style={styles.label}>Username</Text>
+      <View style={styles.inputWrapper}>
+        <TextInput
+          placeholder="Choose a username"
+          placeholderTextColor="#94A3B8"
+          onChangeText={setUsername}
+          value={username}
+          style={styles.input}
+          autoCapitalize="none"
+        />
+      </View>
+
       <Text style={styles.label}>Email</Text>
       <View style={styles.inputWrapper}>
         <TextInput
           placeholder="Enter your email"
-          placeholderTextColor="#9CA3AF"
+          placeholderTextColor="#94A3B8"
           onChangeText={setEmail}
           value={email}
           style={styles.input}
@@ -238,7 +259,7 @@ function WebSignup() {
       <View style={styles.inputWrapper}>
         <TextInput
           placeholder="Create a password"
-          placeholderTextColor="#9CA3AF"
+          placeholderTextColor="#94A3B8"
           onChangeText={setPassword}
           value={password}
           style={styles.input}
@@ -251,7 +272,7 @@ function WebSignup() {
       <View style={styles.inputWrapper}>
         <TextInput
           placeholder="Confirm your password"
-          placeholderTextColor="#9CA3AF"
+          placeholderTextColor="#94A3B8"
           onChangeText={setConfirmPassword}
           value={confirmPassword}
           style={styles.input}
@@ -284,7 +305,7 @@ function WebSignup() {
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity onPress={() => router.back()} style={styles.backLink}>
+      <TouchableOpacity onPress={() => router.replace("/(auth)/login")} style={styles.backLink}>
         <Text style={styles.backLinkText}>
           Already have an account? <Text style={styles.footerLink}>Log in</Text>
         </Text>
@@ -298,6 +319,7 @@ function NativeSignup() {
   const { signUp, setActive, isLoaded } = useSignUp();
   const { startSSOFlow } = useSSO();
 
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -414,13 +436,16 @@ function NativeSignup() {
           We sent a verification code to {email}
         </Text>
 
-        <TextInput
-          placeholder="Verification code"
-          onChangeText={setCode}
-          value={code}
-          keyboardType="number-pad"
-          style={styles.input}
-        />
+        <View style={styles.inputWrapper}>
+          <TextInput
+            placeholder="Verification code"
+            placeholderTextColor="#94A3B8"
+            onChangeText={setCode}
+            value={code}
+            keyboardType="number-pad"
+            style={styles.input}
+          />
+        </View>
 
         <TouchableOpacity
           style={styles.signUpButton}
@@ -479,6 +504,13 @@ function NativeSignup() {
           >
             <Ionicons name="logo-apple" size={22} color="#000" />
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.socialButton}
+            disabled={loading}
+          >
+            <Ionicons name="logo-facebook" size={22} color="#1877F2" />
+          </TouchableOpacity>
         </View>
 
         {/* Divider */}
@@ -488,12 +520,25 @@ function NativeSignup() {
           <View style={styles.dividerLine} />
         </View>
 
+        {/* Username */}
+        <Text style={styles.label}>Username</Text>
+        <View style={styles.inputWrapper}>
+          <TextInput
+            placeholder="Choose a username"
+            placeholderTextColor="#94A3B8"
+            onChangeText={setUsername}
+            value={username}
+            style={styles.input}
+            autoCapitalize="none"
+          />
+        </View>
+
         {/* Email */}
         <Text style={styles.label}>Email</Text>
         <View style={styles.inputWrapper}>
           <TextInput
             placeholder="Enter your email"
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor="#94A3B8"
             onChangeText={setEmail}
             value={email}
             style={styles.input}
@@ -507,7 +552,7 @@ function NativeSignup() {
         <View style={styles.inputWrapper}>
           <TextInput
             placeholder="Create a password"
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor="#94A3B8"
             onChangeText={setPassword}
             value={password}
             style={styles.input}
@@ -521,7 +566,7 @@ function NativeSignup() {
         <View style={styles.inputWrapper}>
           <TextInput
             placeholder="Confirm your password"
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor="#94A3B8"
             onChangeText={setConfirmPassword}
             value={confirmPassword}
             style={styles.input}
@@ -557,7 +602,7 @@ function NativeSignup() {
         </View>
 
         {/* Back to Login */}
-        <TouchableOpacity onPress={() => router.back()} style={styles.backLink}>
+        <TouchableOpacity onPress={() => router.replace("/(auth)/login")} style={styles.backLink}>
           <Text style={styles.backLinkText}>
             Already have an account? <Text style={styles.footerLink}>Log in</Text>
           </Text>
@@ -587,17 +632,17 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   title: {
-    fontSize: 26,
-    fontWeight: "700",
-    color: "#111827",
+    fontSize: 24,
+    fontWeight: "800",
+    color: "#0F172A",
     marginBottom: 6,
-    letterSpacing: -0.4,
+    letterSpacing: -0.3,
   },
   subtitle: {
-    fontSize: 14,
-    color: "#9CA3AF",
+    fontSize: 13,
+    color: "#64748B",
     marginBottom: 24,
-    lineHeight: 20,
+    lineHeight: 18,
   },
   socialRow: {
     flexDirection: "row",
@@ -606,10 +651,10 @@ const styles = StyleSheet.create({
   },
   socialButton: {
     flex: 1,
-    height: 52,
+    height: 50,
     borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: "#E5E7EB",
+    borderWidth: 2,
+    borderColor: "#E2E8F0",
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#fff",
@@ -623,45 +668,45 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: "#F3F4F6",
+    backgroundColor: "#E2E8F0",
   },
   dividerText: {
     fontSize: 13,
-    color: "#9CA3AF",
+    color: "#94A3B8",
     fontWeight: "500",
   },
   label: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#374151",
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#0F172A",
     marginBottom: 6,
   },
   inputWrapper: {
     flexDirection: "row",
     alignItems: "center",
-    borderWidth: 1.5,
-    borderColor: "#E5E7EB",
+    borderWidth: 2,
+    borderColor: "#E2E8F0",
     borderRadius: 14,
-    backgroundColor: "#F9FAFB",
+    backgroundColor: "#fff",
     paddingHorizontal: 14,
-    marginBottom: 12,
+    marginBottom: 14,
   },
   input: {
     height: 52,
-    fontSize: 15,
-    color: "#1F2937",
+    fontSize: 14,
+    color: "#0F172A",
     flex: 1,
   },
   signUpButton: {
-    backgroundColor: "#4AC55E",
-    borderRadius: 16,
-    height: 56,
+    backgroundColor: "#22C55E",
+    borderRadius: 14,
+    height: 52,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 20,
-    shadowColor: "#4AC55E",
+    shadowColor: "rgba(34, 197, 94, 0.35)",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
+    shadowOpacity: 1,
     shadowRadius: 10,
     elevation: 5,
   },
@@ -679,11 +724,11 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 12,
-    color: "#9CA3AF",
+    color: "#94A3B8",
   },
   footerLink: {
     fontSize: 12,
-    color: "#4AC55E",
+    color: "#22C55E",
     fontWeight: "600",
   },
   backLink: {
@@ -692,6 +737,6 @@ const styles = StyleSheet.create({
   },
   backLinkText: {
     fontSize: 13,
-    color: "#9CA3AF",
+    color: "#94A3B8",
   },
 });

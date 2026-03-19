@@ -1,9 +1,9 @@
 import { View, Text, TextInput, StyleSheet, Pressable, ActivityIndicator, Alert, Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import * as ImagePicker from 'expo-image-picker';
-import { fetchMyProfile, updateMyProfile, uploadAvatar, getImageUrl, UserProfile } from "../../../../services/api";
+import { fetchMyProfile, updateMyProfile, uploadAvatar, getAvatarUrl, checkUsername, UserProfile } from "../../../../services/api";
 import { colors, spacing } from "../../../../constants/theme";
 
 export default function EditProfile() {
@@ -15,9 +15,37 @@ export default function EditProfile() {
   const [username, setUsername] = useState("");
   const [bio, setBio] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarChanged, setAvatarChanged] = useState(false);
+  const [originalUsername, setOriginalUsername] = useState("");
+  const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
+  const [checkingUsername, setCheckingUsername] = useState(false);
+  const usernameTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const debouncedCheckUsername = useCallback((value: string) => {
+    if (usernameTimerRef.current) clearTimeout(usernameTimerRef.current);
+    if (value.length < 3 || value === originalUsername) {
+      setUsernameAvailable(value === originalUsername ? null : null);
+      setCheckingUsername(false);
+      return;
+    }
+    setCheckingUsername(true);
+    usernameTimerRef.current = setTimeout(async () => {
+      try {
+        const { available } = await checkUsername(value);
+        setUsernameAvailable(available);
+      } catch {
+        setUsernameAvailable(null);
+      } finally {
+        setCheckingUsername(false);
+      }
+    }, 500);
+  }, [originalUsername]);
 
   useEffect(() => {
     loadProfile();
+    return () => {
+      if (usernameTimerRef.current) clearTimeout(usernameTimerRef.current);
+    };
   }, []);
 
   const loadProfile = async () => {
@@ -25,6 +53,7 @@ export default function EditProfile() {
       const profile = await fetchMyProfile();
       setDisplayName(profile.displayName || "");
       setUsername(profile.username || "");
+      setOriginalUsername(profile.username || "");
       setBio(profile.bio || "");
       setAvatarUrl(profile.avatarUrl || null);
     } catch (error) {
@@ -42,7 +71,7 @@ export default function EditProfile() {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
@@ -50,6 +79,7 @@ export default function EditProfile() {
 
     if (!result.canceled && result.assets[0]) {
       setAvatarUrl(result.assets[0].uri);
+      setAvatarChanged(true);
     }
   };
 
@@ -58,20 +88,26 @@ export default function EditProfile() {
       Alert.alert("Error", "Username must be at least 3 characters.");
       return;
     }
+    if (username !== originalUsername && usernameAvailable === false) {
+      Alert.alert("Error", "That username is already taken.");
+      return;
+    }
 
     setSaving(true);
     try {
-      let finalAvatarUrl = avatarUrl;
-      if (avatarUrl && avatarUrl.startsWith('file://')) {
-        finalAvatarUrl = await uploadAvatar(avatarUrl);
+      // Upload avatar if changed
+      if (avatarChanged && avatarUrl) {
+        await uploadAvatar(avatarUrl);
       }
+
       await updateMyProfile({
         displayName: displayName || null,
         username: username.toLowerCase(),
         bio: bio || null,
-        avatarUrl: finalAvatarUrl,
       });
-      router.back();
+      Alert.alert("Success", "Profile updated.", [
+        { text: "OK", onPress: () => router.back() },
+      ]);
     } catch (error: any) {
       Alert.alert("Error", error.message || "Failed to save profile.");
     } finally {
@@ -92,7 +128,7 @@ export default function EditProfile() {
       {/* Profile Picture */}
       <Pressable style={styles.avatarSection} onPress={pickAvatar} accessibilityRole="button" accessibilityLabel="Change profile photo">
         {avatarUrl ? (
-          <Image source={{ uri: avatarUrl.startsWith('/uploads/') ? getImageUrl(avatarUrl) : avatarUrl }} style={styles.avatarImage} />
+          <Image source={{ uri: avatarChanged ? avatarUrl : getAvatarUrl(avatarUrl, displayName || username) }} style={styles.avatarImage} />
         ) : (
           <View style={styles.avatarPlaceholder}>
             <Ionicons name="person" size={44} color={colors.textQuaternary} />
@@ -121,10 +157,31 @@ export default function EditProfile() {
           style={styles.input}
           placeholder="Enter username"
           value={username}
-          onChangeText={(text) => setUsername(text.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+          onChangeText={(text) => {
+            const cleaned = text.toLowerCase().replace(/[^a-z0-9_]/g, '');
+            setUsername(cleaned);
+            debouncedCheckUsername(cleaned);
+          }}
           autoCapitalize="none"
           maxLength={20}
         />
+        {username.length >= 3 && username !== originalUsername && (
+          <View style={styles.usernameStatus}>
+            {checkingUsername ? (
+              <ActivityIndicator size="small" color="#007AFF" />
+            ) : usernameAvailable === true ? (
+              <>
+                <Ionicons name="checkmark-circle" size={18} color="#4CAF50" />
+                <Text style={styles.usernameAvailable}>Available</Text>
+              </>
+            ) : usernameAvailable === false ? (
+              <>
+                <Ionicons name="close-circle" size={18} color="#e74c3c" />
+                <Text style={styles.usernameTaken}>Taken</Text>
+              </>
+            ) : null}
+          </View>
+        )}
       </View>
 
       {/* Bio */}
@@ -224,6 +281,25 @@ const styles = StyleSheet.create({
     color: colors.textQuaternary,
     textAlign: 'right',
     marginTop: spacing.xs,
+  },
+
+  usernameStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 6,
+    gap: 4,
+  },
+
+  usernameAvailable: {
+    fontSize: 13,
+    color: '#4CAF50',
+    fontWeight: '500',
+  },
+
+  usernameTaken: {
+    fontSize: 13,
+    color: '#e74c3c',
+    fontWeight: '500',
   },
 
   saveButton: {

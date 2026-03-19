@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, router } from 'expo-router';
 import Post from '../../../components/Post';
 import PostSkeleton from '../../../components/PostSkeleton';
@@ -18,10 +19,13 @@ import {
   fetchPostsByTags,
   fetchFollowingFeed,
   getImageUrl,
+  getAvatarUrl,
   Post as PostType,
 } from '../../../services/api';
 
 const PAGE_LIMIT = 10;
+
+type FeedTab = 'following' | 'community' | 'explore';
 
 export default function HomeScreen() {
   const { user } = useContext(AuthContext);
@@ -33,9 +37,9 @@ export default function HomeScreen() {
   const [hasMore, setHasMore] = useState(true);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
-  const [feedType, setFeedType] = useState<'forYou' | 'following'>('forYou');
+  const [feedType, setFeedType] = useState<FeedTab>('community');
 
-  const loadPosts = useCallback(async (tagIds: number[] = [], feed: 'forYou' | 'following' = 'forYou') => {
+  const loadPosts = useCallback(async (tagIds: number[] = [], feed: FeedTab = 'community') => {
     setError(null);
     try {
       if (tagIds.length > 0) {
@@ -49,6 +53,7 @@ export default function HomeScreen() {
         setNextCursor(data.nextCursor);
         setHasMore(data.hasMore);
       } else {
+        // Both 'community' and 'explore' show all posts for now
         const data = await fetchPosts(null, PAGE_LIMIT);
         setPosts(data.posts);
         setNextCursor(data.nextCursor);
@@ -111,7 +116,7 @@ export default function HomeScreen() {
     loadPosts(tagIds, feedType).then(() => setLoading(false));
   };
 
-  const handleFeedTypeChange = (type: 'forYou' | 'following') => {
+  const handleFeedTypeChange = (type: FeedTab) => {
     if (type === feedType) return;
     setFeedType(type);
     setSelectedTagIds([]);
@@ -122,6 +127,17 @@ export default function HomeScreen() {
   const handlePostDeleted = (postId: string) => {
     setPosts(prev => prev.filter(p => p.id !== postId));
   };
+
+  const handleSearchPress = () => {
+    console.log('Search pressed');
+    // router.push('/search');
+  };
+
+  const TABS: { key: FeedTab; label: string }[] = [
+    { key: 'following', label: 'Following' },
+    { key: 'community', label: 'Community' },
+    { key: 'explore', label: 'Explore' },
+  ];
 
   if (loading) {
     return (
@@ -150,54 +166,74 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.feedToggle}>
-        <TouchableOpacity
-          style={[styles.feedToggleTab, feedType === 'forYou' && styles.feedToggleActive]}
-          onPress={() => handleFeedTypeChange('forYou')}
-          accessibilityRole="tab"
-          accessibilityState={{ selected: feedType === 'forYou' }}
-        >
-          <Text style={[styles.feedToggleText, feedType === 'forYou' && styles.feedToggleTextActive]}>For You</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.feedToggleTab, feedType === 'following' && styles.feedToggleActive]}
-          onPress={() => handleFeedTypeChange('following')}
-          accessibilityRole="tab"
-          accessibilityState={{ selected: feedType === 'following' }}
-        >
-          <Text style={[styles.feedToggleText, feedType === 'following' && styles.feedToggleTextActive]}>Following</Text>
-        </TouchableOpacity>
-      </View>
-      <TagFilterBar
-        selectedTagIds={selectedTagIds}
-        onFilterChange={handleTagFilterChange}
-      />
       <FlatList
         data={posts}
         keyExtractor={(item) => item.id}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={refresh} />
+          <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor="#22C55E" colors={['#22C55E']} />
+        }
+        ListHeaderComponent={
+          <>
+            <View style={styles.feedToggle}>
+              <View style={styles.feedToggleTabs}>
+                {TABS.map((tab) => (
+                  <TouchableOpacity
+                    key={tab.key}
+                    style={styles.feedToggleTab}
+                    onPress={() => handleFeedTypeChange(tab.key)}
+                    accessibilityRole="tab"
+                    accessibilityState={{ selected: feedType === tab.key }}
+                  >
+                    <Text style={[
+                      styles.feedToggleText,
+                      feedType === tab.key && styles.feedToggleTextActive,
+                    ]}>
+                      {tab.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <TouchableOpacity
+                style={styles.searchButton}
+                onPress={handleSearchPress}
+                accessibilityRole="button"
+                accessibilityLabel="Search"
+              >
+                <Ionicons name="search-outline" size={19} color="#000" />
+              </TouchableOpacity>
+            </View>
+            <TagFilterBar
+              selectedTagIds={selectedTagIds}
+              onFilterChange={handleTagFilterChange}
+            />
+          </>
         }
         onEndReached={handleEndReached}
         onEndReachedThreshold={0.5}
         renderItem={({ item }) => (
           <Post
             id={item.id}
-            profilePic={item.avatarUrl ? (item.avatarUrl.startsWith('/uploads/') ? getImageUrl(item.avatarUrl) : item.avatarUrl) : `https://ui-avatars.com/api/?name=${encodeURIComponent(item.displayName || item.username || item.userId)}&background=random`}
+            profilePic={getAvatarUrl(item.avatarUrl, item.displayName || item.username || item.userId)}
             username={item.displayName || item.username || item.userId}
             postImage={getImageUrl(item.imagePath)}
+            postImages={item.images ? item.images.map(getImageUrl) : undefined}
             caption={item.caption}
             userId={item.userId}
             currentUserId={user?.id}
             onDeleted={handlePostDeleted}
             tags={item.tags}
             editedAt={item.editedAt}
+            createdAt={item.createdAt}
+            initialLiked={item.liked}
+            initialLikes={item.likeCount}
+            mediaType={item.mediaType}
+            commentCount={item.commentCount}
           />
         )}
         ListFooterComponent={
           loadingMore ? (
             <View style={styles.footer}>
-              <ActivityIndicator size="small" color="#FF6B35" />
+              <ActivityIndicator size="small" color="#22C55E" />
             </View>
           ) : null
         }
@@ -215,59 +251,45 @@ export default function HomeScreen() {
         }
         contentContainerStyle={posts.length === 0 ? styles.emptyList : undefined}
       />
-
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => router.push('/create-post')}
-        accessibilityRole="button"
-        accessibilityLabel="Create new post"
-      >
-        <Text style={styles.fabText}>+</Text>
-      </TouchableOpacity>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f5' },
+  container: { flex: 1, backgroundColor: '#FFFFFF' },
   feedToggle: {
     flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    paddingHorizontal: 16,
+  },
+  feedToggleTabs: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 24,
   },
   feedToggleTab: {
-    flex: 1,
     paddingVertical: 12,
-    alignItems: 'center',
-  },
-  feedToggleActive: {
-    borderBottomWidth: 2,
-    borderBottomColor: '#FF6B35',
   },
   feedToggleText: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: '#999',
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#000',
   },
   feedToggleTextActive: {
-    color: '#FF6B35',
-    fontWeight: '600',
+    color: '#22C55E',
+  },
+  searchButton: {
+    padding: 8,
   },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
   errorText: { fontSize: 16, color: '#e74c3c', textAlign: 'center', marginBottom: 16 },
-  retryButton: { backgroundColor: '#FF6B35', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 },
+  retryButton: { backgroundColor: '#22C55E', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 },
   retryText: { color: '#fff', fontSize: 16, fontWeight: '600' },
   footer: { paddingVertical: 20, alignItems: 'center' },
   empty: { alignItems: 'center', padding: 40 },
   emptyTitle: { fontSize: 20, fontWeight: '600', color: '#666', marginBottom: 8 },
   emptyText: { fontSize: 16, color: '#999' },
   emptyList: { flexGrow: 1, justifyContent: 'center' },
-  fab: {
-    position: 'absolute', bottom: 24, right: 24, width: 56, height: 56, borderRadius: 28,
-    backgroundColor: '#FF6B35', justifyContent: 'center', alignItems: 'center',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3,
-    shadowRadius: 4, elevation: 5,
-  },
-  fabText: { color: '#fff', fontSize: 28, fontWeight: 'bold', marginTop: -2 },
 });

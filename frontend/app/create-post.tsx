@@ -1,10 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, Image, StyleSheet,
   Alert, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView,
+  Animated, FlatList, Dimensions,
 } from 'react-native';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 import * as ImagePicker from 'expo-image-picker';
 import { router, useLocalSearchParams } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createPostApi, RecipeInput, addTagsToPost } from '../services/api';
 import TagSelector from '../components/TagSelector';
@@ -25,6 +29,8 @@ interface StepField {
 
 export interface Draft {
   id: string;
+  imageUri: string | null; // legacy single image
+  imageUris?: string[]; // multi-image
   caption: string;
   selectedTagIds: number[];
   showRecipe: boolean;
@@ -38,7 +44,7 @@ export interface Draft {
 
 export default function CreatePostScreen() {
   const { draftId } = useLocalSearchParams<{ draftId?: string }>();
-  const [image, setImage] = useState<string | null>(null);
+  const [images, setImages] = useState<string[]>([]);
   const [caption, setCaption] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -55,6 +61,23 @@ export default function CreatePostScreen() {
   ]);
   const [steps, setSteps] = useState<StepField[]>([{ instruction: '' }]);
 
+  // Upload status: null = not uploading, 'uploading' | 'success' | 'error'
+  const [uploadStatus, setUploadStatus] = useState<'uploading' | 'success' | 'error' | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  // Toast notification
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const toastOpacity = useRef(new Animated.Value(0)).current;
+
+  const showToast = (message: string) => {
+    setToastMessage(message);
+    Animated.sequence([
+      Animated.timing(toastOpacity, { toValue: 1, duration: 200, useNativeDriver: true }),
+      Animated.delay(2000),
+      Animated.timing(toastOpacity, { toValue: 0, duration: 300, useNativeDriver: true }),
+    ]).start(() => setToastMessage(null));
+  };
+
   // Load draft if draftId is provided
   useEffect(() => {
     if (draftId) {
@@ -69,6 +92,11 @@ export default function CreatePostScreen() {
       const drafts: Draft[] = JSON.parse(raw);
       const draft = drafts.find((d) => d.id === id);
       if (!draft) return;
+      if (draft.imageUris && draft.imageUris.length > 0) {
+        setImages(draft.imageUris);
+      } else if (draft.imageUri) {
+        setImages([draft.imageUri]);
+      }
       setCaption(draft.caption);
       setSelectedTagIds(draft.selectedTagIds);
       setShowRecipe(draft.showRecipe);
@@ -83,7 +111,7 @@ export default function CreatePostScreen() {
   };
 
   const saveDraft = async () => {
-    if (!caption.trim() && !showRecipe && selectedTagIds.length === 0) {
+    if (!caption.trim() && !showRecipe && selectedTagIds.length === 0 && images.length === 0) {
       Alert.alert('Empty draft', 'Please add some content before saving a draft.');
       return;
     }
@@ -93,6 +121,8 @@ export default function CreatePostScreen() {
 
       const newDraft: Draft = {
         id: draftId || `draft_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+        imageUri: images[0] || null,
+        imageUris: images,
         caption,
         selectedTagIds,
         showRecipe,
@@ -113,34 +143,57 @@ export default function CreatePostScreen() {
       }
 
       await AsyncStorage.setItem(DRAFTS_STORAGE_KEY, JSON.stringify(drafts));
-      Alert.alert('Draft saved', 'Your draft has been saved.');
+      showToast('Draft saved!');
     } catch (error) {
-      Alert.alert('Error', 'Failed to save draft.');
+      showToast('Failed to save draft.');
     }
   };
 
-  const pickImage = async () => {
+  const MAX_IMAGES = 10;
+
+  const isVideoUri = (uri: string) => /\.(mp4|mov|webm|avi|m4v)$/i.test(uri);
+
+  const pickMedia = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert('Permission needed', 'Please grant camera roll permissions.');
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'], allowsEditing: true, quality: 0.7,
+      mediaTypes: ['images', 'videos'],
+      allowsMultipleSelection: true,
+      selectionLimit: MAX_IMAGES - images.length,
+      quality: 0.7,
+      videoMaxDuration: 20,
     });
-    if (!result.canceled && result.assets[0]) setImage(result.assets[0].uri);
+    if (!result.canceled && result.assets.length > 0) {
+      const newUris = result.assets.map(a => a.uri);
+      setImages(prev => [...prev, ...newUris].slice(0, MAX_IMAGES));
+    }
   };
 
   const takePhoto = async () => {
+    if (images.length >= MAX_IMAGES) {
+      Alert.alert('Limit reached', `You can add up to ${MAX_IMAGES} media items.`);
+      return;
+    }
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert('Permission needed', 'Please grant camera permissions.');
       return;
     }
     const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ['images', 'videos'],
       allowsEditing: true, quality: 0.7,
+      videoMaxDuration: 20,
     });
-    if (!result.canceled && result.assets[0]) setImage(result.assets[0].uri);
+    if (!result.canceled && result.assets[0]) {
+      setImages(prev => [...prev, result.assets[0].uri].slice(0, MAX_IMAGES));
+    }
+  };
+
+  const removeImage = (index: number) => {
+    setImages(prev => prev.filter((_, i) => i !== index));
   };
 
   // Ingredient helpers
@@ -201,14 +254,15 @@ export default function CreatePostScreen() {
   };
 
   const submitPost = async () => {
-    if (!image) {
-      Alert.alert('Image required', 'Please select or take a photo first.');
+    if (images.length === 0) {
+      Alert.alert('Media required', 'Please select a photo or video first.');
       return;
     }
-    setLoading(true);
+    setUploadStatus('uploading');
+    setUploadError(null);
     try {
       const recipeData = buildRecipeData();
-      const post = await createPostApi(image, caption, recipeData);
+      const post = await createPostApi(images, caption, recipeData);
 
       // Add tags if any selected
       if (selectedTagIds.length > 0) {
@@ -227,13 +281,14 @@ export default function CreatePostScreen() {
         } catch {}
       }
 
-      Alert.alert('Success', 'Your post has been published!', [
-        { text: 'OK', onPress: () => router.replace('/feeds') },
-      ]);
+      setUploadStatus('success');
+      // Auto-redirect to feed after a short delay
+      setTimeout(() => {
+        router.replace('/feeds');
+      }, 1500);
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Something went wrong');
-    } finally {
-      setLoading(false);
+      setUploadStatus('error');
+      setUploadError(error.message || 'Something went wrong. Please try again.');
     }
   };
 
@@ -249,8 +304,8 @@ export default function CreatePostScreen() {
             <TouchableOpacity onPress={saveDraft} style={styles.draftButton}>
               <Text style={styles.draftButtonText}>Save Draft</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={submitPost} disabled={loading || !image}>
-              <Text style={[styles.postText, (!image || loading) && styles.disabledText]}>Post</Text>
+            <TouchableOpacity onPress={submitPost} disabled={!!uploadStatus || images.length === 0}>
+              <Text style={[styles.postText, (images.length === 0 || !!uploadStatus) && styles.disabledText]}>Post</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -264,19 +319,56 @@ export default function CreatePostScreen() {
         </TouchableOpacity>
 
         <View style={styles.imageSection}>
-          {image ? (
-            <TouchableOpacity onPress={pickImage}>
-              <Image source={{ uri: image }} style={styles.previewImage} />
-              <Text style={styles.changeText}>Tap to change</Text>
-            </TouchableOpacity>
+          {images.length > 0 ? (
+            <View>
+              <ScrollView
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                style={styles.imageCarousel}
+              >
+                {images.map((uri, index) => (
+                  <View key={index} style={styles.carouselSlide}>
+                    <Image source={{ uri }} style={styles.previewImage} />
+                    {isVideoUri(uri) && (
+                      <View style={styles.videoOverlay}>
+                        <Ionicons name="play-circle" size={48} color="rgba(255,255,255,0.9)" />
+                      </View>
+                    )}
+                    <TouchableOpacity
+                      style={styles.removeImageButton}
+                      onPress={() => removeImage(index)}
+                    >
+                      <Ionicons name="close-circle" size={28} color="#e74c3c" />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </ScrollView>
+              {images.length > 1 && (
+                <Text style={styles.imageCounter}>{images.length} / {MAX_IMAGES} items</Text>
+              )}
+              {images.length < MAX_IMAGES && (
+                <View style={styles.addMoreRow}>
+                  <TouchableOpacity style={styles.addMoreButton} onPress={pickMedia}>
+                    <Ionicons name="images-outline" size={18} color="#22C55E" />
+                    <Text style={styles.addMoreText}>Add More</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.addMoreButton} onPress={takePhoto}>
+                    <Ionicons name="camera-outline" size={18} color="#22C55E" />
+                    <Text style={styles.addMoreText}>Take Photo</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
           ) : (
             <View style={styles.imagePlaceholder}>
-              <TouchableOpacity style={styles.imageButton} onPress={pickImage}>
+              <TouchableOpacity style={styles.imageButton} onPress={pickMedia}>
                 <Text style={styles.imageButtonText}>Choose from Gallery</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.imageButton} onPress={takePhoto}>
                 <Text style={styles.imageButtonText}>Take a Photo</Text>
               </TouchableOpacity>
+              <Text style={styles.imageHint}>You can select up to {MAX_IMAGES} photos or videos</Text>
             </View>
           )}
         </View>
@@ -429,13 +521,60 @@ export default function CreatePostScreen() {
           </View>
         )}
 
-        {loading && (
-          <View style={styles.loadingOverlay}>
-            <ActivityIndicator size="large" color="#FF6B35" />
-            <Text style={styles.loadingText}>Publishing...</Text>
-          </View>
-        )}
       </ScrollView>
+
+      {/* Toast notification */}
+      {toastMessage && (
+        <Animated.View style={[styles.toast, { opacity: toastOpacity }]}>
+          <Text style={styles.toastText}>{toastMessage}</Text>
+        </Animated.View>
+      )}
+
+      {/* Full-screen upload status overlay */}
+      {uploadStatus && (
+        <View style={styles.uploadOverlay}>
+          {uploadStatus === 'uploading' && (
+            <View style={styles.uploadContent}>
+              <ActivityIndicator size="large" color="#22C55E" />
+              <Text style={styles.uploadTitle}>Uploading your post...</Text>
+              <Text style={styles.uploadSubtitle}>This may take a moment</Text>
+            </View>
+          )}
+          {uploadStatus === 'success' && (
+            <View style={styles.uploadContent}>
+              <View style={styles.uploadIconCircle}>
+                <Ionicons name="checkmark" size={48} color="#fff" />
+              </View>
+              <Text style={styles.uploadTitle}>Post published!</Text>
+              <Text style={styles.uploadSubtitle}>Redirecting to your feed...</Text>
+            </View>
+          )}
+          {uploadStatus === 'error' && (
+            <View style={styles.uploadContent}>
+              <View style={[styles.uploadIconCircle, styles.uploadIconError]}>
+                <Ionicons name="close" size={48} color="#fff" />
+              </View>
+              <Text style={styles.uploadTitle}>Upload failed</Text>
+              <Text style={styles.uploadSubtitle}>{uploadError}</Text>
+              <TouchableOpacity
+                style={styles.retryButton}
+                onPress={() => {
+                  setUploadStatus(null);
+                  setUploadError(null);
+                }}
+              >
+                <Text style={styles.retryButtonText}>Go Back</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.retryButtonOutline}
+                onPress={submitPost}
+              >
+                <Text style={styles.retryButtonOutlineText}>Try Again</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+      )}
     </KeyboardAvoidingView>
   );
 }
@@ -455,19 +594,19 @@ const styles = StyleSheet.create({
   },
   cancelText: { fontSize: 16, color: '#666' },
   title: { fontSize: 18, fontWeight: 'bold' },
-  postText: { fontSize: 16, fontWeight: 'bold', color: '#FF6B35' },
+  postText: { fontSize: 16, fontWeight: 'bold', color: '#22C55E' },
   disabledText: { color: '#ccc' },
   draftButton: {
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#FF6B35',
+    borderColor: '#22C55E',
   },
   draftButtonText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#FF6B35',
+    color: '#22C55E',
   },
   draftsLink: {
     alignSelf: 'flex-end',
@@ -476,18 +615,26 @@ const styles = StyleSheet.create({
   },
   draftsLinkText: {
     fontSize: 14,
-    color: '#FF6B35',
+    color: '#22C55E',
     fontWeight: '500',
   },
-  imageSection: { alignItems: 'center', paddingVertical: 20 },
-  previewImage: { width: 300, height: 300, borderRadius: 12, backgroundColor: '#eee' },
-  changeText: { textAlign: 'center', color: '#999', marginTop: 8, fontSize: 14 },
+  imageSection: { paddingVertical: 20 },
+  imageCarousel: { height: 300 },
+  carouselSlide: { width: SCREEN_WIDTH, alignItems: 'center', justifyContent: 'center' },
+  previewImage: { width: SCREEN_WIDTH - 48, height: 280, borderRadius: 12, backgroundColor: '#eee' },
+  removeImageButton: { position: 'absolute', top: 8, right: 32, zIndex: 2 },
+  videoOverlay: { ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center', zIndex: 1 },
+  imageCounter: { textAlign: 'center', color: '#666', marginTop: 8, fontSize: 13, fontWeight: '500' },
+  addMoreRow: { flexDirection: 'row', justifyContent: 'center', gap: 16, marginTop: 12 },
+  addMoreButton: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: '#22C55E' },
+  addMoreText: { fontSize: 14, fontWeight: '600', color: '#22C55E' },
+  imageHint: { fontSize: 13, color: '#999', marginTop: 8 },
   imagePlaceholder: {
     width: 300, height: 300, borderRadius: 12, borderWidth: 2,
     borderColor: '#ddd', borderStyle: 'dashed', justifyContent: 'center',
     alignItems: 'center', gap: 16,
   },
-  imageButton: { backgroundColor: '#FF6B35', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 },
+  imageButton: { backgroundColor: '#22C55E', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 },
   imageButtonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
   captionSection: { paddingHorizontal: 16, paddingVertical: 12 },
   captionInput: {
@@ -495,8 +642,84 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: '#eee', borderRadius: 8, padding: 12,
   },
   charCount: { textAlign: 'right', color: '#999', marginTop: 4, fontSize: 12 },
-  loadingOverlay: { alignItems: 'center', padding: 20 },
-  loadingText: { marginTop: 8, color: '#666' },
+  uploadOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 100,
+  },
+  uploadContent: {
+    alignItems: 'center',
+    paddingHorizontal: 40,
+  },
+  uploadIconCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#4CAF50',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  uploadIconError: {
+    backgroundColor: '#e74c3c',
+  },
+  uploadTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#111',
+    marginTop: 16,
+    textAlign: 'center',
+  },
+  uploadSubtitle: {
+    fontSize: 15,
+    color: '#666',
+    marginTop: 8,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  retryButton: {
+    marginTop: 28,
+    backgroundColor: '#22C55E',
+    paddingHorizontal: 32,
+    paddingVertical: 14,
+    borderRadius: 10,
+  },
+  retryButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  retryButtonOutline: {
+    marginTop: 12,
+    paddingHorizontal: 32,
+    paddingVertical: 14,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: '#22C55E',
+  },
+  retryButtonOutlineText: {
+    color: '#22C55E',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  toast: {
+    position: 'absolute',
+    bottom: 50,
+    left: 24,
+    right: 24,
+    backgroundColor: '#333',
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  toastText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
+  },
 
   // Recipe toggle
   recipeToggle: {
@@ -505,7 +728,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#FF6B35',
+    borderColor: '#22C55E',
     alignItems: 'center',
   },
   recipeToggleActive: {
@@ -514,7 +737,7 @@ const styles = StyleSheet.create({
   recipeToggleText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#FF6B35',
+    color: '#22C55E',
   },
   recipeToggleTextActive: {
     color: '#CC4400',
@@ -533,7 +756,7 @@ const styles = StyleSheet.create({
   recipeTitle: {
     fontSize: 17,
     fontWeight: 'bold',
-    color: '#FF6B35',
+    color: '#22C55E',
     marginBottom: 12,
   },
   recipeRow: {
@@ -575,8 +798,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   difficultyOptionActive: {
-    borderColor: '#FF6B35',
-    backgroundColor: '#FF6B35',
+    borderColor: '#22C55E',
+    backgroundColor: '#22C55E',
   },
   difficultyText: {
     fontSize: 14,
@@ -615,7 +838,7 @@ const styles = StyleSheet.create({
   stepNumber: {
     fontSize: 15,
     fontWeight: 'bold',
-    color: '#FF6B35',
+    color: '#22C55E',
     marginTop: 10,
     width: 20,
   },
@@ -631,7 +854,7 @@ const styles = StyleSheet.create({
   addButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#FF6B35',
+    color: '#22C55E',
   },
   removeButton: {
     width: 28,

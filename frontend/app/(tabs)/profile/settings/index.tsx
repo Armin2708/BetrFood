@@ -1,10 +1,11 @@
-import { View, Text, StyleSheet, Pressable, Alert } from "react-native";
+import { View, Text, StyleSheet, Pressable, Alert, ScrollView, Image, Linking } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useClerk } from "@clerk/clerk-expo";
 import { useContext } from "react";
 import { AuthContext } from "../../../../context/AuthenticationContext";
 import { deleteAccount } from "../../../../services/api";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function Settings() {
   const router = useRouter();
@@ -41,130 +42,295 @@ export default function Settings() {
     );
   };
 
+  const openLink = (url: string) => {
+    Linking.openURL(url).catch(() => {});
+  };
+
   return (
-    <View style={styles.container}>
-      {/* Settings Options */}
-      <View style={styles.section}>
-        <Pressable
-          style={styles.row}
-          onPress={() => router.push("/profile/settings/preferences" as any)}
-        >
-          <Ionicons name="restaurant-outline" size={22} />
-          <Text style={styles.rowText}>Food Preferences</Text>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      {/* Header */}
+      <View style={styles.header}>
+        <Pressable onPress={() => router.back()} style={styles.backButton} hitSlop={12}>
+          <Ionicons name="arrow-back" size={24} color="#0F172A" />
         </Pressable>
-
-        <Pressable style={styles.row}>
-          <Ionicons name="notifications-outline" size={22} />
-          <Text style={styles.rowText}>Notifications</Text>
-        </Pressable>
-
-        <Pressable
-          style={styles.row}
-          onPress={() => router.push("/profile/settings/privacy" as any)}
-        >
-          <Ionicons name="lock-closed-outline" size={22} />
-          <Text style={styles.rowText}>Privacy</Text>
-        </Pressable>
-
-        <Pressable
-          style={styles.row}
-          onPress={() => router.push("/profile/settings/blocked" as any)}
-        >
-          <Ionicons name="ban-outline" size={22} />
-          <Text style={styles.rowText}>Blocked & Muted</Text>
-        </Pressable>
-
-        <Pressable style={styles.row}>
-          <Ionicons name="help-circle-outline" size={22} />
-          <Text style={styles.rowText}>Help</Text>
-        </Pressable>
-
-        {isAdminOrMod && (
-          <Pressable style={styles.row} onPress={() => router.push('/admin' as any)}>
-            <Ionicons name="shield-outline" size={22} color="#FF6B35" />
-            <Text style={[styles.rowText, styles.adminText]}>Admin Panel</Text>
-          </Pressable>
-        )}
+        <Text style={styles.headerTitle}>Settings</Text>
+        <View style={styles.headerSpacer} />
       </View>
 
-      {/* Logout */}
-      <Pressable style={styles.logoutButton} onPress={handleLogout}>
-        <Ionicons name="log-out-outline" size={22} color="white" />
-        <Text style={styles.logoutText}>Log Out</Text>
-      </Pressable>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Logo and Branding */}
+        <View style={styles.brandSection}>
+          <Image
+            source={require("../../../../assets/images/Logo.png")}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+          <Text style={styles.brandTitle}>BetrFood</Text>
+          <Text style={styles.brandSubtitle}>Discover. Share. Eat Better.</Text>
+        </View>
 
-      {/* Delete Account */}
-      <Pressable style={styles.deleteButton} onPress={handleDeleteAccount}>
-        <Ionicons name="trash-outline" size={22} color="#ff3b30" />
-        <Text style={styles.deleteText}>Delete Account</Text>
-      </Pressable>
-    </View>
+        {/* APP INFORMATION */}
+        <Text style={styles.sectionHeader}>APP INFORMATION</Text>
+        <View style={styles.card}>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Version</Text>
+            <Text style={styles.infoValue}>2.4.1</Text>
+          </View>
+          <View style={styles.divider} />
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Build Number</Text>
+            <Text style={styles.infoValue}>241</Text>
+          </View>
+          <View style={styles.divider} />
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Release Date</Text>
+            <Text style={styles.infoValue}>March 2026</Text>
+          </View>
+        </View>
+
+        {/* LEGAL */}
+        <Text style={styles.sectionHeader}>LEGAL</Text>
+        <View style={styles.card}>
+          <Pressable
+            style={styles.navRow}
+            onPress={() => router.push("/profile/settings/preferences" as any)}
+          >
+            <Text style={styles.navLabel}>Account</Text>
+            <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+          </Pressable>
+          <View style={styles.divider} />
+          <Pressable
+            style={styles.navRow}
+            onPress={() => router.push("/profile/settings/privacy" as any)}
+          >
+            <Text style={styles.navLabel}>Privacy</Text>
+            <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+          </Pressable>
+          <View style={styles.divider} />
+          <Pressable style={styles.navRow}>
+            <Text style={styles.navLabel}>Help & Support</Text>
+            <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+          </Pressable>
+          <View style={styles.divider} />
+          <Pressable style={styles.navRow}>
+            <Text style={styles.navLabel}>Cookie Policy</Text>
+            <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+          </Pressable>
+        </View>
+
+        {/* RESOURCES */}
+        <Text style={styles.sectionHeader}>RESOURCES</Text>
+        <View style={styles.card}>
+          <Pressable style={styles.navRow}>
+            <Text style={styles.navLabel}>Open Source Licenses</Text>
+            <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+          </Pressable>
+          <View style={styles.divider} />
+          <Pressable style={styles.navRow}>
+            <Text style={styles.navLabel}>Acknowledgments</Text>
+            <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+          </Pressable>
+        </View>
+
+        {/* FOLLOW US */}
+        <Text style={styles.sectionHeader}>FOLLOW US</Text>
+        <View style={styles.socialRow}>
+          <Pressable style={styles.socialIcon} onPress={() => openLink("https://instagram.com/betrfood")}>
+            <Ionicons name="logo-instagram" size={22} color="#0F172A" />
+          </Pressable>
+          <Pressable style={styles.socialIcon} onPress={() => openLink("https://twitter.com/betrfood")}>
+            <Ionicons name="logo-twitter" size={22} color="#0F172A" />
+          </Pressable>
+          <Pressable style={styles.socialIcon} onPress={() => openLink("https://tiktok.com/@betrfood")}>
+            <Ionicons name="logo-tiktok" size={22} color="#0F172A" />
+          </Pressable>
+          <Pressable style={styles.socialIcon} onPress={() => openLink("https://facebook.com/betrfood")}>
+            <Ionicons name="logo-facebook" size={22} color="#0F172A" />
+          </Pressable>
+        </View>
+
+        {/* Admin Panel Link */}
+        {isAdminOrMod && (
+          <>
+            <Text style={styles.sectionHeader}>ADMIN</Text>
+            <View style={styles.card}>
+              <Pressable
+                style={styles.navRow}
+                onPress={() => router.push('/admin' as any)}
+              >
+                <Text style={[styles.navLabel, { color: '#22C55E', fontWeight: '600' }]}>Admin Panel</Text>
+                <Ionicons name="chevron-forward" size={18} color="#22C55E" />
+              </Pressable>
+            </View>
+          </>
+        )}
+
+        {/* ACCOUNT ACTIONS */}
+        <Text style={styles.sectionHeader}>ACCOUNT</Text>
+        <View style={styles.card}>
+          <Pressable
+            style={styles.navRow}
+            onPress={() => router.push("/profile/settings/blocked" as any)}
+          >
+            <Text style={styles.navLabel}>Blocked & Muted</Text>
+            <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+          </Pressable>
+          <View style={styles.divider} />
+          <Pressable style={styles.navRow} onPress={handleLogout}>
+            <Text style={[styles.navLabel, { color: '#EF4444' }]}>Log Out</Text>
+            <Ionicons name="log-out-outline" size={18} color="#EF4444" />
+          </Pressable>
+          <View style={styles.divider} />
+          <Pressable style={styles.navRow} onPress={handleDeleteAccount}>
+            <Text style={[styles.navLabel, { color: '#EF4444' }]}>Delete Account</Text>
+            <Ionicons name="trash-outline" size={18} color="#EF4444" />
+          </Pressable>
+        </View>
+
+        {/* About Text */}
+        <Text style={styles.aboutText}>
+          BetrFood is made with love to help you discover healthier food choices, share recipes with friends, and build better eating habits together.
+        </Text>
+
+        {/* Copyright */}
+        <Text style={styles.copyright}>
+          {"\u00A9"} 2024 BetrFood, Inc. All rights reserved.
+        </Text>
+
+        <View style={{ height: 40 }} />
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
-    backgroundColor: "#fff",
-    padding: 20,
+    backgroundColor: '#F8FAFC',
   },
-
-  section: {
-    borderTopWidth: 1,
-    borderTopColor: "#eee",
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    backgroundColor: '#F8FAFC',
   },
-
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 16,
-    gap: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
+  backButton: {
+    width: 32,
   },
-
-  rowText: {
-    fontSize: 16,
+  headerTitle: {
+    fontSize: 25,
+    fontWeight: '600',
+    color: '#0F172A',
   },
-
-  adminText: {
-    color: "#FF6B35",
-    fontWeight: "600",
+  headerSpacer: {
+    width: 32,
   },
-
-  logoutButton: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#ff3b30",
-    padding: 14,
-    borderRadius: 10,
-    marginTop: 40,
-    gap: 8,
+  scrollView: {
+    flex: 1,
   },
-
-  logoutText: {
-    color: "white",
-    fontWeight: "600",
-    fontSize: 16,
+  scrollContent: {
+    paddingHorizontal: 20,
   },
-
-  deleteButton: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
+  brandSection: {
+    alignItems: 'center',
+    paddingTop: 8,
+    paddingBottom: 24,
+  },
+  logo: {
+    width: 96,
+    height: 96,
+    marginBottom: 12,
+  },
+  brandTitle: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#0F172A',
+    marginBottom: 4,
+  },
+  brandSubtitle: {
+    fontSize: 13,
+    color: '#64748B',
+  },
+  sectionHeader: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#94A3B8',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    marginTop: 24,
+    marginBottom: 8,
+    marginLeft: 4,
+  },
+  card: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    overflow: 'hidden',
+  },
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  infoLabel: {
+    fontSize: 15,
+    color: '#0F172A',
+  },
+  infoValue: {
+    fontSize: 15,
+    color: '#64748B',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#F1F5F9',
+    marginLeft: 16,
+  },
+  navRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  navLabel: {
+    fontSize: 15,
+    color: '#0F172A',
+  },
+  socialRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 16,
+    paddingVertical: 4,
+  },
+  socialIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#F8FAFC',
+    justifyContent: 'center',
+    alignItems: 'center',
     borderWidth: 1,
-    borderColor: "#ff3b30",
-    backgroundColor: "#fff",
-    padding: 14,
-    borderRadius: 10,
-    marginTop: 12,
-    gap: 8,
+    borderColor: '#E2E8F0',
   },
-
-  deleteText: {
-    color: "#ff3b30",
-    fontWeight: "600",
-    fontSize: 16,
+  aboutText: {
+    fontSize: 13,
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginTop: 32,
+    paddingHorizontal: 20,
+  },
+  copyright: {
+    fontSize: 12,
+    color: '#94A3B8',
+    textAlign: 'center',
+    marginTop: 12,
   },
 });

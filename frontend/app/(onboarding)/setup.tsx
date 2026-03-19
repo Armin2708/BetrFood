@@ -18,8 +18,9 @@ import { Ionicons } from '@expo/vector-icons';
 import {
   checkUsername,
   updateMyProfile,
-  completeOnboarding,
   uploadAvatar,
+  completeOnboarding,
+  updatePreferences,
 } from '../../services/api';
 import { AuthContext } from '../../context/AuthenticationContext';
 import { colors } from '../../constants/theme';
@@ -35,7 +36,18 @@ const DIETARY_TAGS = [
   { id: 24, name: 'Low-Carb' },
 ];
 
-const TOTAL_STEPS = 3;
+const ALLERGY_OPTIONS = [
+  'Peanuts', 'Tree Nuts', 'Milk', 'Eggs', 'Wheat',
+  'Soy', 'Fish', 'Shellfish', 'Sesame',
+];
+
+const CUISINE_OPTIONS = [
+  'Italian', 'Mexican', 'Chinese', 'Japanese', 'Indian',
+  'Thai', 'Mediterranean', 'Korean', 'French', 'American',
+  'Middle Eastern', 'Ethiopian', 'Vietnamese', 'Greek', 'Caribbean',
+];
+
+const TOTAL_STEPS = 5;
 
 export default function OnboardingSetup() {
   const router = useRouter();
@@ -56,6 +68,12 @@ export default function OnboardingSetup() {
 
   // Step 3
   const [selectedDietaryTags, setSelectedDietaryTags] = useState<number[]>([]);
+
+  // Step 4
+  const [selectedAllergies, setSelectedAllergies] = useState<string[]>([]);
+
+  // Step 5
+  const [selectedCuisines, setSelectedCuisines] = useState<string[]>([]);
 
   const [submitting, setSubmitting] = useState(false);
 
@@ -120,21 +138,43 @@ export default function OnboardingSetup() {
     );
   };
 
+  // Step 4: Toggle allergy
+  const toggleAllergy = (allergy: string) => {
+    setSelectedAllergies((prev) =>
+      prev.includes(allergy) ? prev.filter((a) => a !== allergy) : [...prev, allergy]
+    );
+  };
+
+  // Step 5: Toggle cuisine
+  const toggleCuisine = (cuisine: string) => {
+    setSelectedCuisines((prev) =>
+      prev.includes(cuisine) ? prev.filter((c) => c !== cuisine) : [...prev, cuisine]
+    );
+  };
+
   // Finish onboarding
   const handleFinish = async () => {
     setSubmitting(true);
     try {
-      let finalAvatarUrl: string | null = avatarUri || null;
-      if (avatarUri && avatarUri.startsWith('file://')) {
-        finalAvatarUrl = await uploadAvatar(avatarUri);
+      // Upload avatar first if one was selected
+      if (avatarUri) {
+        await uploadAvatar(avatarUri);
       }
+
       await updateMyProfile({
         displayName: displayName || null,
         username,
         bio: bio || null,
-        avatarUrl: finalAvatarUrl,
         dietaryPreferences: selectedDietaryTags,
       });
+
+      if (selectedAllergies.length > 0 || selectedCuisines.length > 0) {
+        await updatePreferences({
+          allergies: selectedAllergies,
+          cuisines: selectedCuisines,
+        });
+      }
+
       await completeOnboarding();
       setNeedsOnboarding(false);
       router.replace('/feeds');
@@ -310,6 +350,80 @@ export default function OnboardingSetup() {
         <TouchableOpacity style={styles.backButton} onPress={handleBack}>
           <Text style={styles.backButtonText}>Back</Text>
         </TouchableOpacity>
+        <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
+          <Text style={styles.nextButtonText}>Next</Text>
+        </TouchableOpacity>
+      </View>
+      <TouchableOpacity onPress={handleNext} style={styles.skipLink}>
+        <Text style={styles.skipText}>Skip</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  // Step 4: Allergies
+  const renderStep4 = () => (
+    <View style={styles.stepContainer}>
+      <Text style={styles.stepTitle}>Any food allergies?</Text>
+      <Text style={styles.stepSubtitle}>Select any allergies so we can warn you</Text>
+
+      <View style={styles.tagGrid}>
+        {ALLERGY_OPTIONS.map((allergy) => {
+          const selected = selectedAllergies.includes(allergy);
+          return (
+            <TouchableOpacity
+              key={allergy}
+              style={[styles.tagChip, selected && styles.tagChipSelected]}
+              onPress={() => toggleAllergy(allergy)}
+            >
+              <Text style={[styles.tagChipText, selected && styles.tagChipTextSelected]}>
+                {allergy}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
+      <View style={styles.buttonRow}>
+        <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+          <Text style={styles.backButtonText}>Back</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
+          <Text style={styles.nextButtonText}>Next</Text>
+        </TouchableOpacity>
+      </View>
+      <TouchableOpacity onPress={handleNext} style={styles.skipLink}>
+        <Text style={styles.skipText}>Skip</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  // Step 5: Favorite Cuisines
+  const renderStep5 = () => (
+    <View style={styles.stepContainer}>
+      <Text style={styles.stepTitle}>Favorite cuisines</Text>
+      <Text style={styles.stepSubtitle}>Pick cuisines you love to personalize your feed</Text>
+
+      <View style={styles.tagGrid}>
+        {CUISINE_OPTIONS.map((cuisine) => {
+          const selected = selectedCuisines.includes(cuisine);
+          return (
+            <TouchableOpacity
+              key={cuisine}
+              style={[styles.tagChip, selected && styles.tagChipSelected]}
+              onPress={() => toggleCuisine(cuisine)}
+            >
+              <Text style={[styles.tagChipText, selected && styles.tagChipTextSelected]}>
+                {cuisine}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
+      <View style={styles.buttonRow}>
+        <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+          <Text style={styles.backButtonText}>Back</Text>
+        </TouchableOpacity>
         <TouchableOpacity
           style={[styles.nextButton, submitting && styles.buttonDisabled]}
           onPress={handleFinish}
@@ -338,6 +452,8 @@ export default function OnboardingSetup() {
         {step === 1 && renderStep1()}
         {step === 2 && renderStep2()}
         {step === 3 && renderStep3()}
+        {step === 4 && renderStep4()}
+        {step === 5 && renderStep5()}
       </ScrollView>
     </KeyboardAvoidingView>
   );

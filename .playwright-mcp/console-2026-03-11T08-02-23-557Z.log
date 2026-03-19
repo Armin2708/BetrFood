@@ -1,0 +1,39 @@
+[     749ms] [WARNING] "shadow*" style props are deprecated. Use "boxShadow". @ http://localhost:8081/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app&transform.reactCompiler=true:7236
+[     867ms] [WARNING] Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview @ https://neat-whippet-99.clerk.accounts.dev/npm/@clerk/clerk-js@5/dist/clerk.browser.js:18
+[    1010ms] [WARNING] props.pointerEvents is deprecated. Use style.pointerEvents @ http://localhost:8081/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app&transform.reactCompiler=true:7236
+[    1018ms] [WARNING] Animated: `useNativeDriver` is not supported because the native animated module is missing. Falling back to JS-based animation. To resolve this, add `RCTAnimation` module to this app, or remove `useNativeDriver`. Make sure to run `bundle exec pod install` first. Read more about autolinking: https://github.com/react-native-community/cli/blob/master/docs/autolinking.md @ http://localhost:8081/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app&transform.reactCompiler=true:21529
+[    1747ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/api/posts/a21bf2c6-d72d-436a-bb22-91a7875c6ccc/recipe:0
+[ 3438918ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/api/posts/a21bf2c6-d72d-436a-bb22-91a7875c6ccc/recipe:0
+[ 3458731ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/api/posts/a21bf2c6-d72d-436a-bb22-91a7875c6ccc/recipe:0
+[ 3462071ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/api/posts/a21bf2c6-d72d-436a-bb22-91a7875c6ccc/recipe:0
+[ 3465146ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/api/posts/a21bf2c6-d72d-436a-bb22-91a7875c6ccc/recipe:0
+[ 3471626ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/api/posts/a21bf2c6-d72d-436a-bb22-91a7875c6ccc/recipe:0
+[ 3480550ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/api/posts/a21bf2c6-d72d-436a-bb22-91a7875c6ccc/recipe:0
+[ 3485227ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/api/posts/a21bf2c6-d72d-436a-bb22-91a7875c6ccc/recipe:0
+[ 3492087ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/api/posts/a21bf2c6-d72d-436a-bb22-91a7875c6ccc/recipe:0
+[ 3501063ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/api/posts/a21bf2c6-d72d-436a-bb22-91a7875c6ccc/recipe:0
+[ 3503690ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/api/posts/a21bf2c6-d72d-436a-bb22-91a7875c6ccc/recipe:0
+[ 3504078ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:3000/api/collections:0
+[ 3504080ms] [ERROR] Failed to load collections: Error: Missing or invalid Authorization header.
+    at fetchCollections (http://localhost:8081/services/api.bundle//&platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app&transform.reactCompiler=true&minify=false&modulesOnly=true&runModule=false&shallow=true:521:13)
+    at async eval (http://localhost:8081/context/CollectionsContext.bundle//&platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app&transform.reactCompiler=true&minify=false&modulesOnly=true&runModule=false&shallow=true:36:22) @ http://localhost:8081/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app&transform.reactCompiler=true:1120
+[ 3504972ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/api/posts/a21bf2c6-d72d-436a-bb22-91a7875c6ccc/recipe:0
+[ 3518608ms] [WARNING] [Layout children]: No route named "notifications" exists in nested children: [feeds, notifications/index, profile] @ http://localhost:8081/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app&transform.reactCompiler=true:47293
+[ 3519812ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/api/posts/a21bf2c6-d72d-436a-bb22-91a7875c6ccc/recipe:0
+[ 3564758ms] [WARNING] [Layout children]: No route named "notifications" exists in nested children: [feeds, notifications/index, profile] @ http://localhost:8081/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app&transform.reactCompiler=true:47293
+[ 3565686ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/api/posts/a21bf2c6-d72d-436a-bb22-91a7875c6ccc/recipe:0
+[ 3600632ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/api/posts/a21bf2c6-d72d-436a-bb22-91a7875c6ccc/recipe:0
+[ 3605057ms] [WARNING] [Layout children]: No route named "notifications" exists in nested children: [feeds, notifications/index, profile] @ http://localhost:8081/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app&transform.reactCompiler=true:47293
+[ 3605680ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/api/posts/a21bf2c6-d72d-436a-bb22-91a7875c6ccc/recipe:0
+[ 3658603ms] [WARNING] [Layout children]: No route named "notifications" exists in nested children: [feeds, notifications/index, profile] @ http://localhost:8081/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app&transform.reactCompiler=true:47293
+[ 3663276ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/api/posts/a21bf2c6-d72d-436a-bb22-91a7875c6ccc/recipe:0
+[ 3788330ms] [ERROR] WebSocket connection to 'ws://localhost:8081/message' failed:  @ http://localhost:8081/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app&transform.reactCompiler=true:55165
+[ 3788330ms] [ERROR] WebSocket connection to 'ws://localhost:8081/hot' failed:  @ http://localhost:8081/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app&transform.reactCompiler=true:53491
+[ 3788831ms] [WARNING] Cannot connect to Metro.
+ 
+ Try the following to fix the issue:
+ - Ensure the Metro dev server is running and available on the same network as this device
+ 
+ URL: localhost:8081
+ 
+ Error: undefined @ http://localhost:8081/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app&transform.reactCompiler=true:53414

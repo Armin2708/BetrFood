@@ -209,7 +209,7 @@ export default function AdminScreen() {
   if (loading) {
     return (
       <View style={[styles.container, styles.centered]}>
-        <ActivityIndicator size="large" color="#FF6B35" />
+        <ActivityIndicator size="large" color="#22C55E" />
         <Text style={styles.loadingText}>Loading admin panel...</Text>
       </View>
     );
@@ -324,7 +324,7 @@ export default function AdminScreen() {
         onEndReached={loadMore}
         onEndReachedThreshold={0.5}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FF6B35" />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#22C55E" />
         }
         ListEmptyComponent={
           <View style={styles.emptyState}>
@@ -392,7 +392,7 @@ const styles = StyleSheet.create({
   statNumber: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#FF6B35',
+    color: '#22C55E',
   },
   statLabel: {
     fontSize: 13,
@@ -424,7 +424,7 @@ const styles = StyleSheet.create({
   roleRowCount: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#FF6B35',
+    color: '#22C55E',
   },
 
   // Search
@@ -507,7 +507,7 @@ const styles = StyleSheet.create({
     color: '#ff3b30',
   },
   roleModerator: {
-    color: '#FF6B35',
+    color: '#22C55E',
   },
   roleCreator: {
     color: '#34C759',
@@ -546,7 +546,7 @@ const styles = StyleSheet.create({
     marginTop: 24,
     paddingHorizontal: 24,
     paddingVertical: 12,
-    backgroundColor: '#FF6B35',
+    backgroundColor: '#22C55E',
     borderRadius: 8,
   },
   backButtonText: {

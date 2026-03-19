@@ -17,10 +17,13 @@ async function migrate() {
         user_id TEXT NOT NULL,
         caption TEXT DEFAULT '',
         image_path TEXT NOT NULL,
+        media_type TEXT DEFAULT 'image' CHECK (media_type IN ('image', 'video')),
         created_at TIMESTAMPTZ DEFAULT now(),
         updated_at TIMESTAMPTZ DEFAULT now(),
         edited_at TIMESTAMPTZ
       );
+      -- Add media_type column if table already exists
+      ALTER TABLE posts ADD COLUMN IF NOT EXISTS media_type TEXT DEFAULT 'image';
       CREATE INDEX IF NOT EXISTS idx_posts_created_at ON posts(created_at DESC);
       CREATE INDEX IF NOT EXISTS idx_posts_user_id ON posts(user_id);
 

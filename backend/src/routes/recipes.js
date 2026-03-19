@@ -104,6 +104,12 @@ router.post('/posts/:postId/recipe', requireAuth, async (req, res) => {
       if (stepError) throw stepError;
     }
 
+    // Mark post as edited
+    await supabase
+      .from('posts')
+      .update({ edited_at: now, updated_at: now })
+      .eq('id', postId);
+
     const fullRecipe = await buildRecipeResponse(recipe);
     res.status(201).json(fullRecipe);
   } catch (error) {
@@ -208,6 +214,12 @@ router.put('/posts/:postId/recipe', requireAuth, async (req, res) => {
       }
     }
 
+    // Mark post as edited
+    await supabase
+      .from('posts')
+      .update({ edited_at: now, updated_at: now })
+      .eq('id', postId);
+
     const fullRecipe = await buildRecipeResponse(updated);
     res.json(fullRecipe);
   } catch (error) {
@@ -242,6 +254,14 @@ router.delete('/posts/:postId/recipe', requireAuth, async (req, res) => {
       .eq('post_id', postId);
 
     if (error) throw error;
+
+    // Mark post as edited
+    const now = new Date().toISOString();
+    await supabase
+      .from('posts')
+      .update({ edited_at: now, updated_at: now })
+      .eq('id', postId);
+
     res.json({ message: 'Recipe deleted successfully' });
   } catch (error) {
     console.error('Error deleting recipe:', error);

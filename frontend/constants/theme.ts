@@ -5,9 +5,11 @@
 
 export const colors = {
   // Brand
-  primary: '#FF6B35',
-  primaryLight: '#FF8F66',
-  primaryDark: '#E55A25',
+  primary: '#22C55E',
+  primaryLight: '#4ADE80',
+  primaryDark: '#16A34A',
+  primaryGradientStart: '#22C55E',
+  primaryGradientEnd: '#10B981',
 
   // Semantic
   success: '#4CAF50',
@@ -16,24 +18,24 @@ export const colors = {
   info: '#2196F3',
 
   // Tag types
-  tagCuisine: '#FF6B35',
+  tagCuisine: '#22C55E',
   tagMeal: '#4CAF50',
   tagDietary: '#2196F3',
 
   // Recipe
-  recipeBackground: '#FFF8F0',
-  recipeBorder: '#FFE0C2',
+  recipeBackground: '#F0FDF4',
+  recipeBorder: '#BBF7D0',
 
   // Neutrals
   black: '#000',
   white: '#fff',
-  textPrimary: '#333',
-  textSecondary: '#666',
-  textTertiary: '#888',
-  textQuaternary: '#999',
-  placeholder: '#999',
-  border: '#ddd',
-  borderLight: '#eee',
+  textPrimary: '#0F172A',
+  textSecondary: '#64748B',
+  textTertiary: '#94A3B8',
+  textQuaternary: '#94A3B8',
+  placeholder: '#94A3B8',
+  border: '#E2E8F0',
+  borderLight: '#F8FAFC',
   divider: '#e0e0e0',
   backgroundPrimary: '#fff',
   backgroundSecondary: '#f5f5f5',
@@ -43,7 +45,7 @@ export const colors = {
 
   // Special
   verified: '#1DA1F2',
-  liked: '#FF3B30',
+  liked: '#22C55E',
   delete: '#e74c3c',
 
   // Overlay

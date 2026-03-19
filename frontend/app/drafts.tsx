@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, ActivityIndicator,
+  View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, ActivityIndicator, Image,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
@@ -76,6 +76,13 @@ export default function DraftsScreen() {
 
     return (
       <TouchableOpacity style={styles.draftItem} onPress={() => openDraft(item.id)}>
+        {item.imageUri ? (
+          <Image source={{ uri: item.imageUri }} style={styles.draftThumbnail} />
+        ) : (
+          <View style={[styles.draftThumbnail, styles.draftThumbnailPlaceholder]}>
+            <Ionicons name="image-outline" size={20} color="#ccc" />
+          </View>
+        )}
         <View style={styles.draftContent}>
           <Text style={styles.draftPreview} numberOfLines={2}>{preview}</Text>
           {details.length > 0 && (
@@ -93,7 +100,7 @@ export default function DraftsScreen() {
   if (loading) {
     return (
       <View style={[styles.container, styles.centered]}>
-        <ActivityIndicator size="large" color="#FF6B35" />
+        <ActivityIndicator size="large" color="#22C55E" />
       </View>
     );
   }
@@ -163,6 +170,20 @@ const styles = StyleSheet.create({
     borderColor: '#eee',
     marginBottom: 10,
   },
+  draftThumbnail: {
+    width: 48,
+    height: 48,
+    borderRadius: 8,
+    marginRight: 12,
+    backgroundColor: '#eee',
+  },
+  draftThumbnailPlaceholder: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderStyle: 'dashed',
+  },
   draftContent: {
     flex: 1,
   },
@@ -173,7 +194,7 @@ const styles = StyleSheet.create({
   },
   draftDetails: {
     fontSize: 13,
-    color: '#FF6B35',
+    color: '#22C55E',
     marginTop: 4,
   },
   draftDate: {

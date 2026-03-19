@@ -23,13 +23,28 @@ router.get('/:postId/comments', async (req, res) => {
     const enriched = await enrichCommentsWithProfiles(comments || []);
     const mapped = enriched.map(mapComment);
 
+    // Build threaded tree: nest replies under their parent
+    const commentMap = {};
+    const roots = [];
+    for (const c of mapped) {
+      c.replies = [];
+      commentMap[c.id] = c;
+    }
+    for (const c of mapped) {
+      if (c.parentId && commentMap[c.parentId]) {
+        commentMap[c.parentId].replies.push(c);
+      } else {
+        roots.push(c);
+      }
+    }
+
     // Get total count
     const { count } = await supabase
       .from('comments')
       .select('*', { count: 'exact', head: true })
       .eq('post_id', postId);
 
-    res.json({ comments: mapped, total: count || 0 });
+    res.json({ comments: roots, total: count || 0 });
   } catch (error) {
     console.error('Error fetching comments:', error);
     res.status(500).json({ error: 'Failed to fetch comments.' });

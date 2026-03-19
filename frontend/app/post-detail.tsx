@@ -26,6 +26,8 @@ import {
   deletePost,
   likePost,
   unlikePost,
+  unsavePost,
+  checkSaveStatus,
   fetchComments,
   createComment,
   deleteComment,
@@ -34,7 +36,10 @@ import {
   Tag,
   Comment,
 } from '../services/api';
+import SaveCollectionModal from '../components/SaveCollectionModal';
+import { Collection, useCollections } from '../context/CollectionsContext';
 import { Ionicons } from '@expo/vector-icons';
+import { useVideoPlayer, VideoView } from 'expo-video';
 import { AuthContext } from '../context/AuthenticationContext';
 import TagDisplay from '../components/TagDisplay';
 import RecipeDisplay from '../components/RecipeDisplay';
@@ -45,6 +50,7 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 export default function PostDetailScreen() {
   const { postId } = useLocalSearchParams<{ postId: string }>();
   const { user } = useContext(AuthContext);
+  const { savePostToCollection } = useCollections();
 
   const [post, setPost] = useState<Post | null>(null);
   const [recipe, setRecipe] = useState<Recipe | null>(null);
@@ -53,6 +59,8 @@ export default function PostDetailScreen() {
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
   const [likeLoading, setLikeLoading] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [collectionModalVisible, setCollectionModalVisible] = useState(false);
 
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentTotal, setCommentTotal] = useState(0);
@@ -77,12 +85,14 @@ export default function PostDetailScreen() {
   async function loadData() {
     try {
       setLoading(true);
-      const [postData, tagsData] = await Promise.all([
+      const [postData, tagsData, saveStatus] = await Promise.all([
         fetchPost(postId!),
         fetchPostTags(postId!),
+        checkSaveStatus(postId!).catch(() => ({ isSaved: false })),
       ]);
       setPost(postData);
       setTags(tagsData);
+      setSaved(saveStatus.isSaved);
 
       // Try to load recipe
       try {
@@ -197,6 +207,11 @@ export default function PostDetailScreen() {
       : getImageUrl(post.imagePath)
     : '';
 
+  const allImages = post?.images && post.images.length > 0
+    ? post.images.map(p => p.startsWith('http') ? p : getImageUrl(p))
+    : imageUri ? [imageUri] : [];
+  const [activeDetailImage, setActiveDetailImage] = useState(0);
+
   const toggleLike = async () => {
     if (!postId || likeLoading) return;
 
@@ -222,6 +237,33 @@ export default function PostDetailScreen() {
       Alert.alert('Error', 'Could not update like. Please try again.');
     } finally {
       setLikeLoading(false);
+    }
+  };
+
+  const handleSavePress = async () => {
+    if (!postId) return;
+    if (saved) {
+      setSaved(false);
+      try {
+        await unsavePost(postId);
+      } catch {
+        setSaved(true);
+        Alert.alert('Error', 'Could not unsave post. Please try again.');
+      }
+    } else {
+      setCollectionModalVisible(true);
+    }
+  };
+
+  const handleSaveToCollection = async (collection: Collection) => {
+    if (!postId) return;
+    setSaved(true);
+    setCollectionModalVisible(false);
+    try {
+      await savePostToCollection(collection.id, postId);
+    } catch {
+      setSaved(false);
+      Alert.alert('Error', 'Could not save post to collection. Please try again.');
     }
   };
 
@@ -324,22 +366,34 @@ export default function PostDetailScreen() {
       <View key={comment.id}>
         <View style={[styles.commentItem, { marginLeft: indentLevel * 24 }]}>
           {/* Comment avatar */}
-          {comment.avatarUrl ? (
-            <Image source={{ uri: comment.avatarUrl.startsWith('/uploads/') ? getImageUrl(comment.avatarUrl) : comment.avatarUrl }} style={styles.commentAvatar} />
-          ) : (
-            <View style={[styles.commentAvatar, styles.commentAvatarPlaceholder]}>
-              <Text style={styles.commentAvatarText}>
-                {(comment.displayName || comment.username || '?').charAt(0).toUpperCase()}
-              </Text>
-            </View>
-          )}
+          <TouchableOpacity
+            onPress={() => router.push(`/(tabs)/feeds/user-profile?userId=${comment.userId}`)}
+            accessibilityRole="button"
+            accessibilityLabel={`View ${comment.displayName || comment.username || 'user'}'s profile`}
+          >
+            {comment.avatarUrl ? (
+              <Image source={{ uri: comment.avatarUrl }} style={styles.commentAvatar} />
+            ) : (
+              <View style={[styles.commentAvatar, styles.commentAvatarPlaceholder]}>
+                <Text style={styles.commentAvatarText}>
+                  {(comment.displayName || comment.username || '?').charAt(0).toUpperCase()}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
 
           <View style={styles.commentBody}>
             {/* Username and time */}
             <View style={styles.commentHeader}>
-              <Text style={styles.commentUsername}>
-                {comment.displayName || comment.username || 'User'}
-              </Text>
+              <TouchableOpacity
+                onPress={() => router.push(`/(tabs)/feeds/user-profile?userId=${comment.userId}`)}
+                accessibilityRole="button"
+                accessibilityLabel={`View ${comment.displayName || comment.username || 'user'}'s profile`}
+              >
+                <Text style={styles.commentUsername}>
+                  {comment.displayName || comment.username || 'User'}
+                </Text>
+              </TouchableOpacity>
               <Text style={styles.commentTime}>{formatCommentTime(comment.createdAt)}</Text>
             </View>
 
@@ -395,12 +449,7 @@ export default function PostDetailScreen() {
       </View>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        {/* Full-width image */}
-        {imageUri ? (
-          <Image source={{ uri: imageUri }} style={styles.postImage} resizeMode="cover" accessibilityLabel={`Photo by ${post.displayName || post.username || 'user'}`} />
-        ) : null}
-
-        {/* Author info */}
+        {/* Author info (above image per Figma design) */}
         <View style={styles.authorRow}>
           {post.avatarUrl ? (
             <Image source={{ uri: post.avatarUrl.startsWith('/uploads/') ? getImageUrl(post.avatarUrl) : post.avatarUrl }} style={styles.avatar} />
@@ -420,6 +469,34 @@ export default function PostDetailScreen() {
             )}
           </View>
         </View>
+
+        {/* Full-width media */}
+        {post.mediaType === 'video' && imageUri ? (
+          <DetailVideo uri={imageUri} />
+        ) : allImages.length > 1 ? (
+          <View>
+            <ScrollView
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              onMomentumScrollEnd={(e) => {
+                const index = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+                setActiveDetailImage(index);
+              }}
+            >
+              {allImages.map((uri, index) => (
+                <Image key={index} source={{ uri }} style={styles.postImage} resizeMode="cover" accessibilityLabel={`Photo ${index + 1} by ${post.displayName || post.username || 'user'}`} />
+              ))}
+            </ScrollView>
+            <View style={styles.dotContainer}>
+              {allImages.map((_, index) => (
+                <View key={index} style={[styles.dot, index === activeDetailImage && styles.dotActive]} />
+              ))}
+            </View>
+          </View>
+        ) : imageUri ? (
+          <Image source={{ uri: imageUri }} style={styles.postImage} resizeMode="cover" accessibilityLabel={`Photo by ${post.displayName || post.username || 'user'}`} />
+        ) : null}
 
         {/* Caption */}
         {post.caption ? (
@@ -441,28 +518,51 @@ export default function PostDetailScreen() {
             disabled={likeLoading}
             activeOpacity={0.7}
             accessibilityRole="button"
-            accessibilityLabel={liked ? 'Unlike' : 'Like'}
+            accessibilityLabel={liked ? `Unlike post, ${likeCount} likes` : `Like post, ${likeCount} likes`}
             accessibilityState={{ selected: liked }}
           >
-            <Animated.Text
-              style={[
-                styles.actionText,
-                liked && styles.likedText,
-                { transform: [{ scale: scaleAnim }] },
-              ]}
-            >
-              {liked ? '\u2764\uFE0F' : '\uD83E\uDD0D'} {liked ? 'Liked' : 'Like'}
-            </Animated.Text>
+            <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+              <Ionicons
+                name={liked ? 'thumbs-up' : 'thumbs-up-outline'}
+                size={22}
+                color={liked ? '#22C55E' : colors.textPrimary}
+              />
+            </Animated.View>
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={showShareMenu} style={styles.actionButton} accessibilityRole="button" accessibilityLabel="Share">
-            <Text style={styles.actionText}>{'\uD83D\uDD17'} Share</Text>
+          <TouchableOpacity
+            style={styles.actionButton}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Dislike post"
+          >
+            <Ionicons name="thumbs-down-outline" size={22} color={colors.textPrimary} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={handleSavePress}
+            style={styles.actionButton}
+            accessibilityRole="button"
+            accessibilityLabel={saved ? 'Remove from saved' : 'Save post'}
+            accessibilityState={{ selected: saved }}
+          >
+            <Ionicons
+              name={saved ? 'bookmark' : 'bookmark-outline'}
+              size={22}
+              color={saved ? '#22C55E' : colors.textPrimary}
+            />
+          </TouchableOpacity>
+
+          <TouchableOpacity onPress={showShareMenu} style={styles.actionButton} accessibilityRole="button" accessibilityLabel="Share post">
+            <Ionicons name="share-social-outline" size={22} color={colors.textPrimary} />
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.likeCount}>
-          {likeCount} {likeCount === 1 ? 'like' : 'likes'}
-        </Text>
+        {likeCount > 0 && (
+          <Text style={styles.likeCount} accessibilityLabel={`${likeCount} ${likeCount === 1 ? 'like' : 'likes'}`}>
+            Liked by <Text style={styles.likeCountBold}>{post.username || post.displayName || 'someone'}</Text>{likeCount > 1 ? ' and others' : ''}
+          </Text>
+        )}
 
         {/* Recipe section */}
         {recipe && (
@@ -561,7 +661,26 @@ export default function PostDetailScreen() {
           </TouchableOpacity>
         </View>
       </View>
+      <SaveCollectionModal
+        visible={collectionModalVisible}
+        onClose={() => setCollectionModalVisible(false)}
+        onSave={handleSaveToCollection}
+      />
     </KeyboardAvoidingView>
+  );
+}
+
+function DetailVideo({ uri }: { uri: string }) {
+  const player = useVideoPlayer(uri, p => {
+    p.loop = false;
+  });
+  return (
+    <VideoView
+      player={player}
+      style={{ width: SCREEN_WIDTH, height: SCREEN_WIDTH }}
+      allowsFullscreen
+      allowsPictureInPicture
+    />
   );
 }
 
@@ -631,6 +750,9 @@ const styles = StyleSheet.create({
     height: SCREEN_WIDTH,
     backgroundColor: colors.borderLight,
   },
+  dotContainer: { flexDirection: 'row', justifyContent: 'center', paddingVertical: 8, gap: 6 },
+  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.border },
+  dotActive: { backgroundColor: colors.primary, width: 8, height: 8, borderRadius: 4 },
   authorRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -688,21 +810,15 @@ const styles = StyleSheet.create({
   actionButton: {
     paddingVertical: 8,
   },
-  actionText: {
-    fontSize: 16,
-    color: colors.textPrimary,
-  },
-  likedText: {
-    color: colors.liked,
-    fontWeight: '600',
-  },
   likeCount: {
     paddingHorizontal: 16,
-    paddingTop: 4,
+    paddingTop: 6,
     paddingBottom: 8,
     fontSize: 14,
-    fontWeight: '600',
     color: colors.textPrimary,
+  },
+  likeCountBold: {
+    fontWeight: 'bold',
   },
   recipeSection: {
     marginTop: 4,
