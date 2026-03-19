@@ -183,7 +183,7 @@ export default function HomeScreen() {
         renderItem={({ item }) => (
           <Post
             id={item.id}
-            profilePic={item.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.displayName || item.username || item.userId)}&background=random`}
+            profilePic={item.avatarUrl ? (item.avatarUrl.startsWith('/uploads/') ? getImageUrl(item.avatarUrl) : item.avatarUrl) : `https://ui-avatars.com/api/?name=${encodeURIComponent(item.displayName || item.username || item.userId)}&background=random`}
             username={item.displayName || item.username || item.userId}
             postImage={getImageUrl(item.imagePath)}
             caption={item.caption}

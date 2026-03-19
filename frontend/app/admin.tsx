@@ -218,7 +218,7 @@ export default function AdminScreen() {
   const renderUserItem = ({ item }: { item: AdminUser }) => (
     <TouchableOpacity style={styles.userItem} onPress={() => handleUserAction(item)}>
       {item.avatarUrl ? (
-        <Image source={{ uri: item.avatarUrl }} style={styles.userAvatar} />
+        <Image source={{ uri: item.avatarUrl.startsWith('/uploads/') ? getImageUrl(item.avatarUrl) : item.avatarUrl }} style={styles.userAvatar} />
       ) : (
         <View style={[styles.userAvatar, styles.avatarFallback]}>
           <Ionicons name="person" size={20} color="#999" />

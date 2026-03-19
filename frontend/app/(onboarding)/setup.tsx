@@ -19,8 +19,10 @@ import {
   checkUsername,
   updateMyProfile,
   completeOnboarding,
+  uploadAvatar,
 } from '../../services/api';
 import { AuthContext } from '../../context/AuthenticationContext';
+import { colors } from '../../constants/theme';
 
 const DIETARY_TAGS = [
   { id: 17, name: 'Vegan' },
@@ -122,11 +124,15 @@ export default function OnboardingSetup() {
   const handleFinish = async () => {
     setSubmitting(true);
     try {
+      let finalAvatarUrl: string | null = avatarUri || null;
+      if (avatarUri && avatarUri.startsWith('file://')) {
+        finalAvatarUrl = await uploadAvatar(avatarUri);
+      }
       await updateMyProfile({
         displayName: displayName || null,
         username,
         bio: bio || null,
-        avatarUrl: avatarUri || null,
+        avatarUrl: finalAvatarUrl,
         dietaryPreferences: selectedDietaryTags,
       });
       await completeOnboarding();
@@ -173,10 +179,10 @@ export default function OnboardingSetup() {
       return <ActivityIndicator size="small" color="#999" style={styles.usernameStatus} />;
     }
     if (usernameAvailable === true) {
-      return <Ionicons name="checkmark-circle" size={22} color="#4CAF50" style={styles.usernameStatus} />;
+      return <Ionicons name="checkmark-circle" size={22} color={colors.success} style={styles.usernameStatus} />;
     }
     if (usernameAvailable === false) {
-      return <Ionicons name="close-circle" size={22} color="#F44336" style={styles.usernameStatus} />;
+      return <Ionicons name="close-circle" size={22} color={colors.error} style={styles.usernameStatus} />;
     }
     return null;
   };
@@ -359,7 +365,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
   },
   progressDotActive: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: colors.primary,
   },
   progressDotInactive: {
     backgroundColor: '#ddd',
@@ -418,7 +424,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 12,
-    color: '#F44336',
+    color: colors.error,
     marginTop: 4,
   },
   buttonRow: {
@@ -428,7 +434,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   nextButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: colors.primary,
     paddingVertical: 14,
     paddingHorizontal: 32,
     borderRadius: 10,
@@ -514,8 +520,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#fafafa',
   },
   tagChipSelected: {
-    borderColor: '#4CAF50',
-    backgroundColor: '#E8F5E9',
+    borderColor: colors.primary,
+    backgroundColor: colors.recipeBackground,
   },
   tagChipText: {
     fontSize: 14,
@@ -523,7 +529,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   tagChipTextSelected: {
-    color: '#2E7D32',
+    color: colors.primaryDark,
     fontWeight: '600',
   },
 });

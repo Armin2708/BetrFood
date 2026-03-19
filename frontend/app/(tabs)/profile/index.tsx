@@ -5,6 +5,7 @@ import { useState, useCallback, useContext } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { AuthContext } from '../../../context/AuthenticationContext';
 import { fetchMyProfile, fetchFollowStats, fetchUserPosts, getImageUrl, UserProfile, Post as PostType } from '../../../services/api';
+import { colors } from '../../../constants/theme';
 
 const { width } = Dimensions.get('window');
 const ITEM_SIZE = width / 3;
@@ -57,7 +58,7 @@ export default function ProfileScreen() {
   if (loading) {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color="#4CAF50" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -79,7 +80,7 @@ export default function ProfileScreen() {
         {/* Header */}
         <View style={styles.header}>
           {profile?.avatarUrl ? (
-            <Image source={{ uri: profile.avatarUrl }} style={styles.avatar} accessibilityLabel={`${profile?.displayName || 'User'}'s profile photo`} />
+            <Image source={{ uri: profile.avatarUrl.startsWith('/uploads/') ? getImageUrl(profile.avatarUrl) : profile.avatarUrl }} style={styles.avatar} accessibilityLabel={`${profile?.displayName || 'User'}'s profile photo`} />
           ) : (
             <View style={[styles.avatar, styles.avatarFallback]}>
               <Ionicons name="person" size={40} color="#999" />
@@ -164,7 +165,7 @@ function Stat({ label, value, callback }: { label: string; value: string; callba
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.backgroundPrimary,
   },
   header: {
     flexDirection: 'row',
@@ -177,7 +178,7 @@ const styles = StyleSheet.create({
     borderRadius: 45,
   },
   avatarFallback: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: colors.backgroundTertiary,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -188,14 +189,16 @@ const styles = StyleSheet.create({
   },
   statItem: {
     alignItems: 'center',
+    minHeight: 44,
+    justifyContent: 'center',
   },
   statValue: {
-    color: '#000',
+    color: colors.textPrimary,
     fontWeight: 'bold',
     fontSize: 16,
   },
   statLabel: {
-    color: '#555',
+    color: colors.textSecondary,
     fontSize: 12,
   },
   userInfo: {
@@ -206,36 +209,39 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   displayName: {
-    color: '#000',
+    color: colors.textPrimary,
     fontWeight: 'bold',
     fontSize: 16,
   },
   verifiedBadge: {
-    color: '#1DA1F2',
+    color: colors.verified,
     fontSize: 16,
     fontWeight: 'bold',
     marginLeft: 4,
   },
   username: {
-    color: '#555',
+    color: colors.textSecondary,
     fontSize: 14,
     marginTop: 2,
   },
   bio: {
-    color: '#555',
+    color: colors.textSecondary,
     marginTop: 4,
+    lineHeight: 20,
   },
   editButton: {
     margin: 20,
     borderWidth: 1,
-    borderColor: '#ccc',
-    paddingVertical: 8,
-    borderRadius: 6,
+    borderColor: colors.border,
+    paddingVertical: 10,
+    borderRadius: 8,
     alignItems: 'center',
+    minHeight: 44,
+    justifyContent: 'center',
   },
   editButtonText: {
-    color: '#000',
-    fontWeight: '500',
+    color: colors.textPrimary,
+    fontWeight: '600',
   },
   collectionsButton: {
     flexDirection: 'row',
@@ -245,23 +251,24 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 14,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: colors.divider,
     borderRadius: 8,
-    backgroundColor: '#fafafa',
+    backgroundColor: colors.backgroundMuted,
+    minHeight: 44,
   },
   collectionsButtonText: {
     flex: 1,
     marginLeft: 10,
     fontSize: 15,
     fontWeight: '500',
-    color: '#333',
+    color: colors.textPrimary,
   },
   gridItem: {
     width: ITEM_SIZE,
     height: ITEM_SIZE,
-    backgroundColor: '#eee',
+    backgroundColor: colors.borderLight,
     borderWidth: 0.5,
-    borderColor: '#fff',
+    borderColor: colors.backgroundPrimary,
   },
   emptyGrid: {
     alignItems: 'center',
@@ -269,6 +276,6 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: '#999',
+    color: colors.textQuaternary,
   },
 });

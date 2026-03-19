@@ -18,6 +18,7 @@ import {
   UserProfile,
   Post as PostType,
 } from '../services/api';
+import { colors } from '../constants/theme';
 
 const { width } = Dimensions.get('window');
 const ITEM_SIZE = width / 3;
@@ -172,7 +173,7 @@ export default function UserProfileScreen() {
             <Ionicons name="arrow-back" size={24} color="#000" />
           </Pressable>
         )}} />
-        <ActivityIndicator size="large" color="#4CAF50" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -199,7 +200,7 @@ export default function UserProfileScreen() {
         {/* Header */}
         <View style={styles.header}>
           {profile?.avatarUrl ? (
-            <Image source={{ uri: profile.avatarUrl }} style={styles.avatar} />
+            <Image source={{ uri: profile.avatarUrl.startsWith('/uploads/') ? getImageUrl(profile.avatarUrl) : profile.avatarUrl }} style={styles.avatar} />
           ) : (
             <View style={[styles.avatar, styles.avatarFallback]}>
               <Ionicons name="person" size={40} color="#999" />
@@ -231,13 +232,19 @@ export default function UserProfileScreen() {
 
         {/* Follow/Unfollow Button */}
         <Pressable
-          style={[styles.followButton, isFollowing && styles.followingButton]}
+          style={[styles.followButton, isFollowing && styles.followingButton, followLoading && styles.followButtonDisabled]}
           onPress={handleFollowToggle}
           disabled={followLoading}
+          accessibilityRole="button"
+          accessibilityLabel={isFollowing ? 'Unfollow user' : 'Follow user'}
         >
-          <Text style={[styles.followButtonText, isFollowing && styles.followingButtonText]}>
-            {isFollowing ? 'Following' : 'Follow'}
-          </Text>
+          {followLoading ? (
+            <ActivityIndicator size="small" color={isFollowing ? colors.textPrimary : colors.white} />
+          ) : (
+            <Text style={[styles.followButtonText, isFollowing && styles.followingButtonText]}>
+              {isFollowing ? 'Following' : 'Follow'}
+            </Text>
+          )}
         </Pressable>
 
         {/* Post Grid */}
@@ -246,10 +253,13 @@ export default function UserProfileScreen() {
           keyExtractor={(item) => item.id}
           numColumns={3}
           renderItem={({ item }) => (
-            <Image
-              source={{ uri: getImageUrl(item.imagePath) }}
-              style={styles.gridItem}
-            />
+            <Pressable onPress={() => router.push(`/post-detail?postId=${item.id}`)}>
+              <Image
+                source={{ uri: getImageUrl(item.imagePath) }}
+                style={styles.gridItem}
+                accessibilityLabel={item.caption || 'Post image'}
+              />
+            </Pressable>
           )}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
@@ -275,7 +285,7 @@ function Stat({ label, value }: { label: string; value: string }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.backgroundPrimary,
   },
   header: {
     flexDirection: 'row',
@@ -288,7 +298,7 @@ const styles = StyleSheet.create({
     borderRadius: 45,
   },
   avatarFallback: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: colors.backgroundTertiary,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -299,14 +309,16 @@ const styles = StyleSheet.create({
   },
   statItem: {
     alignItems: 'center',
+    minHeight: 44,
+    justifyContent: 'center',
   },
   statValue: {
-    color: '#000',
+    color: colors.textPrimary,
     fontWeight: 'bold',
     fontSize: 16,
   },
   statLabel: {
-    color: '#555',
+    color: colors.textSecondary,
     fontSize: 12,
   },
   userInfo: {
@@ -317,50 +329,57 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   displayName: {
-    color: '#000',
+    color: colors.textPrimary,
     fontWeight: 'bold',
     fontSize: 16,
   },
   verifiedBadge: {
-    color: '#1DA1F2',
+    color: colors.verified,
     fontSize: 16,
     fontWeight: 'bold',
     marginLeft: 4,
   },
   username: {
-    color: '#555',
+    color: colors.textSecondary,
     fontSize: 14,
     marginTop: 2,
   },
   bio: {
-    color: '#555',
+    color: colors.textSecondary,
     marginTop: 4,
+    lineHeight: 20,
   },
   followButton: {
     margin: 20,
-    backgroundColor: '#4CAF50',
-    paddingVertical: 8,
-    borderRadius: 6,
+    backgroundColor: colors.primary,
+    paddingVertical: 10,
+    borderRadius: 8,
     alignItems: 'center',
+    minHeight: 44,
+    justifyContent: 'center',
   },
   followingButton: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.backgroundPrimary,
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: colors.border,
+  },
+  followButtonDisabled: {
+    opacity: 0.6,
   },
   followButtonText: {
-    color: '#fff',
+    color: colors.white,
     fontWeight: '600',
+    fontSize: 15,
   },
   followingButtonText: {
-    color: '#000',
+    color: colors.textPrimary,
   },
   gridItem: {
     width: ITEM_SIZE,
     height: ITEM_SIZE,
-    backgroundColor: '#eee',
+    backgroundColor: colors.borderLight,
     borderWidth: 0.5,
-    borderColor: '#fff',
+    borderColor: colors.backgroundPrimary,
   },
   emptyGrid: {
     alignItems: 'center',
@@ -368,6 +387,6 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: '#999',
+    color: colors.textQuaternary,
   },
 });

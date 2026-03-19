@@ -3,7 +3,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState, useEffect } from "react";
 import * as ImagePicker from 'expo-image-picker';
-import { fetchMyProfile, updateMyProfile, UserProfile } from "../../../../services/api";
+import { fetchMyProfile, updateMyProfile, uploadAvatar, getImageUrl, UserProfile } from "../../../../services/api";
+import { colors, spacing } from "../../../../constants/theme";
 
 export default function EditProfile() {
   const router = useRouter();
@@ -60,11 +61,15 @@ export default function EditProfile() {
 
     setSaving(true);
     try {
+      let finalAvatarUrl = avatarUrl;
+      if (avatarUrl && avatarUrl.startsWith('file://')) {
+        finalAvatarUrl = await uploadAvatar(avatarUrl);
+      }
       await updateMyProfile({
         displayName: displayName || null,
         username: username.toLowerCase(),
         bio: bio || null,
-        avatarUrl,
+        avatarUrl: finalAvatarUrl,
       });
       router.back();
     } catch (error: any) {
@@ -77,7 +82,7 @@ export default function EditProfile() {
   if (loading) {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -85,11 +90,13 @@ export default function EditProfile() {
   return (
     <View style={styles.container}>
       {/* Profile Picture */}
-      <Pressable style={styles.avatarSection} onPress={pickAvatar}>
+      <Pressable style={styles.avatarSection} onPress={pickAvatar} accessibilityRole="button" accessibilityLabel="Change profile photo">
         {avatarUrl ? (
-          <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
+          <Image source={{ uri: avatarUrl.startsWith('/uploads/') ? getImageUrl(avatarUrl) : avatarUrl }} style={styles.avatarImage} />
         ) : (
-          <Ionicons name="person-circle-outline" size={100} color="#888" />
+          <View style={styles.avatarPlaceholder}>
+            <Ionicons name="person" size={44} color={colors.textQuaternary} />
+          </View>
         )}
         <View style={styles.changePhoto}>
           <Text style={styles.changePhotoText}>Change Photo</Text>
@@ -135,9 +142,9 @@ export default function EditProfile() {
       </View>
 
       {/* Save Button */}
-      <Pressable style={[styles.saveButton, saving && { opacity: 0.5 }]} onPress={handleSave} disabled={saving}>
+      <Pressable style={[styles.saveButton, saving && styles.saveButtonDisabled]} onPress={handleSave} disabled={saving} accessibilityRole="button" accessibilityLabel="Save profile changes">
         {saving ? (
-          <ActivityIndicator color="#fff" />
+          <ActivityIndicator color={colors.white} />
         ) : (
           <Text style={styles.saveText}>Save Changes</Text>
         )}
@@ -149,13 +156,14 @@ export default function EditProfile() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
-    padding: 20,
+    backgroundColor: colors.backgroundPrimary,
+    padding: spacing.xl,
   },
 
   avatarSection: {
     alignItems: "center",
     marginBottom: 30,
+    minHeight: 44,
   },
 
   avatarImage: {
@@ -164,29 +172,46 @@ const styles = StyleSheet.create({
     borderRadius: 50,
   },
 
+  avatarPlaceholder: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: colors.backgroundTertiary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
   changePhoto: {
-    marginTop: 10,
+    marginTop: spacing.sm,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
   },
 
   changePhotoText: {
-    color: "#007AFF",
-    fontWeight: "500",
+    color: colors.primary,
+    fontWeight: "600",
+    fontSize: 14,
   },
 
   inputGroup: {
-    marginBottom: 20,
+    marginBottom: spacing.xl,
   },
 
   label: {
     fontWeight: "600",
+    color: colors.textPrimary,
     marginBottom: 6,
+    fontSize: 14,
   },
 
   input: {
     borderWidth: 1,
-    borderColor: "#ddd",
-    padding: 12,
+    borderColor: colors.border,
+    padding: spacing.md,
     borderRadius: 8,
+    fontSize: 16,
+    color: colors.textPrimary,
+    backgroundColor: colors.backgroundMuted,
   },
 
   bio: {
@@ -196,21 +221,27 @@ const styles = StyleSheet.create({
 
   charCount: {
     fontSize: 12,
-    color: '#999',
+    color: colors.textQuaternary,
     textAlign: 'right',
-    marginTop: 4,
+    marginTop: spacing.xs,
   },
 
   saveButton: {
-    backgroundColor: "#007AFF",
-    padding: 15,
+    backgroundColor: colors.primary,
+    paddingVertical: 14,
     borderRadius: 10,
     alignItems: "center",
-    marginTop: 20,
+    marginTop: spacing.xl,
+    minHeight: 48,
+    justifyContent: 'center',
+  },
+
+  saveButtonDisabled: {
+    opacity: 0.5,
   },
 
   saveText: {
-    color: "white",
+    color: colors.white,
     fontWeight: "600",
     fontSize: 16,
   },

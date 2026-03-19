@@ -108,7 +108,6 @@ export default function Post({
   const handleSave = (collection: Collection) => {
     setSaved(true);
     setCollectionModalVisible(false);
-    console.log(`Saved to ${collection.name}`);
   };
 
   const handleDelete = () => {

@@ -1,7 +1,20 @@
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 
-const LOCAL_IP = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || `http://${LOCAL_IP}:3000`;
+function getApiBaseUrl(): string {
+  if (process.env.EXPO_PUBLIC_API_URL) {
+    return process.env.EXPO_PUBLIC_API_URL;
+  }
+  const debuggerHost = Constants.expoConfig?.hostUri ?? Constants.manifest2?.extra?.expoGo?.debuggerHost;
+  if (debuggerHost) {
+    const host = debuggerHost.split(':')[0];
+    return `http://${host}:3000`;
+  }
+  const fallbackIp = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
+  return `http://${fallbackIp}:3000`;
+}
+
+const API_BASE_URL = getApiBaseUrl();
 
 // Token storage - set by AuthContext
 let _authToken: string | null = null;
@@ -164,6 +177,35 @@ export async function createPostApi(
   }
 
   return response.json();
+}
+
+export async function uploadAvatar(imageUri: string): Promise<string> {
+  const formData = new FormData();
+  const filename = imageUri.split('/').pop() || 'avatar.jpg';
+  const match = /\.(\w+)$/.exec(filename);
+  const type = match ? `image/${match[1]}` : 'image/jpeg';
+
+  formData.append('avatar', {
+    uri: imageUri,
+    name: filename,
+    type,
+  } as any);
+
+  const response = await fetch(`${API_BASE_URL}/api/profiles/me/avatar`, {
+    method: 'POST',
+    body: formData,
+    headers: {
+      ...(await authHeaders()),
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to upload avatar');
+  }
+
+  const profile = await response.json();
+  return profile.avatarUrl;
 }
 
 export function getImageUrl(imagePath: string): string {

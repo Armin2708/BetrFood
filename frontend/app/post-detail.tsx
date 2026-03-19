@@ -325,7 +325,7 @@ export default function PostDetailScreen() {
         <View style={[styles.commentItem, { marginLeft: indentLevel * 24 }]}>
           {/* Comment avatar */}
           {comment.avatarUrl ? (
-            <Image source={{ uri: comment.avatarUrl }} style={styles.commentAvatar} />
+            <Image source={{ uri: comment.avatarUrl.startsWith('/uploads/') ? getImageUrl(comment.avatarUrl) : comment.avatarUrl }} style={styles.commentAvatar} />
           ) : (
             <View style={[styles.commentAvatar, styles.commentAvatarPlaceholder]}>
               <Text style={styles.commentAvatarText}>
@@ -403,7 +403,7 @@ export default function PostDetailScreen() {
         {/* Author info */}
         <View style={styles.authorRow}>
           {post.avatarUrl ? (
-            <Image source={{ uri: post.avatarUrl }} style={styles.avatar} />
+            <Image source={{ uri: post.avatarUrl.startsWith('/uploads/') ? getImageUrl(post.avatarUrl) : post.avatarUrl }} style={styles.avatar} />
           ) : (
             <View style={[styles.avatar, styles.avatarPlaceholder]}>
               <Text style={styles.avatarPlaceholderText}>
