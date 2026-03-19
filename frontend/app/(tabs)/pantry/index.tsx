@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -202,7 +203,6 @@ function EditItemModal({
   const [expirationDate, setExpirationDate] = useState('');
   const [saving, setSaving] = useState(false);
 
-  // Pre-populate fields whenever a new item is passed in
   useEffect(() => {
     if (item) {
       setName(item.name);
@@ -422,6 +422,103 @@ function ViewToggle({
   );
 }
 
+// ─── Search Bar ────────────────────────────────────────────────────────────────
+
+function SearchBar({
+  value,
+  onChangeText,
+  onClear,
+}: {
+  value: string;
+  onChangeText: (text: string) => void;
+  onClear: () => void;
+}) {
+  return (
+    <View style={styles.searchContainer}>
+      <Ionicons name="search-outline" size={16} color={colors.textTertiary} style={styles.searchIcon} />
+      <TextInput
+        style={styles.searchInput}
+        placeholder="Search by name or category..."
+        placeholderTextColor={colors.placeholder}
+        value={value}
+        onChangeText={onChangeText}
+        returnKeyType="search"
+        clearButtonMode="never"
+        accessibilityLabel="Search pantry items"
+        accessibilityRole="search"
+      />
+      {value.length > 0 && (
+        <TouchableOpacity
+          onPress={onClear}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          accessibilityRole="button"
+          accessibilityLabel="Clear search"
+        >
+          <Ionicons name="close-circle" size={16} color={colors.textTertiary} />
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+}
+
+// ─── Category Filter Chips ─────────────────────────────────────────────────────
+
+function CategoryFilterChips({
+  selected,
+  onSelect,
+  onClear,
+  availableCategories,
+}: {
+  selected: string | null;
+  onSelect: (cat: string) => void;
+  onClear: () => void;
+  availableCategories: string[];
+}) {
+  if (availableCategories.length === 0) return null;
+
+  return (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={styles.filterChipScroll}
+    >
+      {selected !== null && (
+        <TouchableOpacity
+          style={styles.clearFilterChip}
+          onPress={onClear}
+          accessibilityRole="button"
+          accessibilityLabel="Clear category filter"
+        >
+          <Ionicons name="close" size={12} color={colors.textSecondary} />
+          <Text style={styles.clearFilterChipText}>Clear</Text>
+        </TouchableOpacity>
+      )}
+      {availableCategories.map((cat) => (
+        <TouchableOpacity
+          key={cat}
+          style={[
+            styles.filterChip,
+            selected === cat && styles.filterChipSelected,
+          ]}
+          onPress={() => (selected === cat ? onClear() : onSelect(cat))}
+          accessibilityRole="button"
+          accessibilityState={{ selected: selected === cat }}
+          accessibilityLabel={`Filter by ${cat}`}
+        >
+          <Text
+            style={[
+              styles.filterChipText,
+              selected === cat && styles.filterChipTextSelected,
+            ]}
+          >
+            {cat}
+          </Text>
+        </TouchableOpacity>
+      ))}
+    </ScrollView>
+  );
+}
+
 // ─── Pantry Screen ─────────────────────────────────────────────────────────────
 
 export default function PantryScreen() {
@@ -431,6 +528,17 @@ export default function PantryScreen() {
   const [groupedView, setGroupedView] = useState(false);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [expiringItemsThreshold, setExpiringItemsThreshold] = useState(7);
+
+  // ── Search & filter state ───────────────────────────────────────────────────
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
+  const hasActiveFilter = searchQuery.trim().length > 0 || selectedCategory !== null;
+
+  const handleClearAll = () => {
+    setSearchQuery('');
+    setSelectedCategory(null);
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -456,6 +564,29 @@ export default function PantryScreen() {
     router.push('/pantry-review');
   };
 
+  // ── Filtered items ──────────────────────────────────────────────────────────
+  // Real-time filtering: matches name and category against the search query,
+  // and optionally restricts to a selected category chip.
+  const filteredItems = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return items.filter((item) => {
+      const matchesSearch =
+        q.length === 0 ||
+        item.name.toLowerCase().includes(q) ||
+        item.category.toLowerCase().includes(q);
+      const matchesCategory =
+        selectedCategory === null || item.category === selectedCategory;
+      return matchesSearch && matchesCategory;
+    });
+  }, [items, searchQuery, selectedCategory]);
+
+  // Only show categories that have at least one item (from full list, not filtered)
+  const availableCategories = useMemo(() => {
+    const cats = new Set(items.map((i) => i.category?.trim() || UNCATEGORIZED_LABEL));
+    return [...CATEGORIES.filter((c) => cats.has(c)),
+      ...(cats.has(UNCATEGORIZED_LABEL) ? [UNCATEGORIZED_LABEL] : [])];
+  }, [items]);
+
   // ── List row type ───────────────────────────────────────────────────────────
 
   type ListRow =
@@ -464,14 +595,14 @@ export default function PantryScreen() {
 
   // ── Flat list ───────────────────────────────────────────────────────────────
 
-  const flatListData: ListRow[] = items
+  const flatListData: ListRow[] = filteredItems
     .slice()
     .sort((a, b) => a.name.localeCompare(b.name))
     .map((item) => ({ type: 'item', key: item.id, item }));
 
   // ── Grouped list ────────────────────────────────────────────────────────────
 
-  const grouped = items.reduce<Record<string, PantryItem[]>>((acc, item) => {
+  const grouped = filteredItems.reduce<Record<string, PantryItem[]>>((acc, item) => {
     const cat = item.category?.trim() || '';
     const label = CATEGORIES.includes(cat) ? cat : UNCATEGORIZED_LABEL;
     if (!acc[label]) acc[label] = [];
@@ -551,6 +682,21 @@ export default function PantryScreen() {
         </View>
       </View>
 
+      {/* Search bar */}
+      <SearchBar
+        value={searchQuery}
+        onChangeText={setSearchQuery}
+        onClear={() => setSearchQuery('')}
+      />
+
+      {/* Category filter chips */}
+      <CategoryFilterChips
+        selected={selectedCategory}
+        onSelect={setSelectedCategory}
+        onClear={() => setSelectedCategory(null)}
+        availableCategories={availableCategories}
+      />
+
       {loading ? (
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={colors.primary} />
@@ -573,8 +719,13 @@ export default function PantryScreen() {
         </View>
       ) : (
         <>
-          <ExpiringSoonSection items={items} threshold={expiringItemsThreshold} />
-          <ViewToggle grouped={groupedView} onToggle={() => setGroupedView((v) => !v)} />
+          {/* Hide expiring section and view toggle when searching */}
+          {!hasActiveFilter && (
+            <ExpiringSoonSection items={items} threshold={expiringItemsThreshold} />
+          )}
+          {!hasActiveFilter && (
+            <ViewToggle grouped={groupedView} onToggle={() => setGroupedView((v) => !v)} />
+          )}
           <FlatList
             data={activeListData}
             keyExtractor={(row) => row.key}
@@ -583,6 +734,23 @@ export default function PantryScreen() {
             showsVerticalScrollIndicator={false}
             onRefresh={refreshItems}
             refreshing={loading}
+            ListEmptyComponent={
+              <View style={styles.searchEmpty}>
+                <Ionicons name="search-outline" size={40} color={colors.textTertiary} />
+                <Text style={styles.searchEmptyTitle}>No items found</Text>
+                <Text style={styles.searchEmptySubtitle}>
+                  Try a different name or category.
+                </Text>
+                <TouchableOpacity
+                  onPress={handleClearAll}
+                  style={styles.clearAllButton}
+                  accessibilityRole="button"
+                  accessibilityLabel="Clear search and filters"
+                >
+                  <Text style={styles.clearAllButtonText}>Clear Search</Text>
+                </TouchableOpacity>
+              </View>
+            }
           />
         </>
       )}
@@ -648,6 +816,72 @@ const styles = StyleSheet.create({
   },
   addIconButton: {
     padding: 4,
+  },
+  // Search bar
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 16,
+    marginTop: 10,
+    marginBottom: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    backgroundColor: colors.backgroundSecondary,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+  },
+  searchIcon: {
+    marginRight: 6,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+    color: colors.textPrimary,
+    padding: 0,
+  },
+  // Category filter chips
+  filterChipScroll: {
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    gap: 8,
+  },
+  clearFilterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 14,
+    backgroundColor: colors.backgroundTertiary,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+  },
+  clearFilterChipText: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    fontWeight: '500',
+  },
+  filterChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.backgroundPrimary,
+  },
+  filterChipSelected: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  filterChipText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: colors.textSecondary,
+  },
+  filterChipTextSelected: {
+    color: colors.white,
+    fontWeight: '600',
   },
   centered: {
     flex: 1,
@@ -754,6 +988,36 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontWeight: '600',
     fontSize: 16,
+  },
+  // Search empty state
+  searchEmpty: {
+    alignItems: 'center',
+    paddingTop: 60,
+    paddingHorizontal: 40,
+    gap: 10,
+  },
+  searchEmptyTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  searchEmptySubtitle: {
+    fontSize: 14,
+    color: colors.textTertiary,
+    textAlign: 'center',
+  },
+  clearAllButton: {
+    marginTop: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  clearAllButtonText: {
+    color: colors.primary,
+    fontWeight: '600',
+    fontSize: 14,
   },
   modalOverlay: {
     flex: 1,
