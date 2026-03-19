@@ -39,34 +39,6 @@ const avatarUpload = multer({
   },
 });
 
-const uploadsDir = path.join(__dirname, '..', '..', 'uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
-
-const avatarStorage = multer.diskStorage({
-  destination: uploadsDir,
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, `${uuidv4()}${ext}`);
-  },
-});
-
-const avatarUpload = multer({
-  storage: avatarStorage,
-  limits: { fileSize: 5 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    const allowed = /jpeg|jpg|png|gif|webp/;
-    const extOk = allowed.test(path.extname(file.originalname).toLowerCase());
-    const mimeOk = allowed.test(file.mimetype.split('/')[1]);
-    if (extOk && mimeOk) {
-      cb(null, true);
-    } else {
-      cb(new Error('Only image files (jpeg, jpg, png, gif, webp) are allowed'));
-    }
-  },
-});
-
 const CLERK_SECRET_KEY = process.env.CLERK_SECRET_KEY;
 
 /**
@@ -295,44 +267,6 @@ router.post('/me/complete-onboarding', requireAuth, async (req, res) => {
   } catch (error) {
     console.error('Error completing onboarding:', error);
     return res.status(500).json({ error: 'Failed to complete onboarding.' });
-  }
-});
-
-// POST /api/profiles/me/avatar - Upload avatar image
-router.post('/me/avatar', requireAuth, avatarUpload.single('avatar'), async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ error: 'Image file is required.' });
-    }
-
-    // Optimize: resize to 400x400, convert to JPEG
-    const optimizedFilename = `avatar_${uuidv4()}.jpg`;
-    const optimizedPath = path.join(uploadsDir, optimizedFilename);
-    try {
-      await sharp(req.file.path)
-        .resize(400, 400, { fit: 'cover' })
-        .jpeg({ quality: 80 })
-        .toFile(optimizedPath);
-      fs.unlinkSync(req.file.path);
-    } catch (sharpErr) {
-      console.error('Avatar optimization failed, using original:', sharpErr.message);
-    }
-    const finalFilename = fs.existsSync(optimizedPath) ? optimizedFilename : req.file.filename;
-    const avatarPath = `/uploads/${finalFilename}`;
-
-    // Update profile with new avatar path
-    const { data, error } = await supabase
-      .from('user_profiles')
-      .upsert({ id: req.userId, avatar_url: avatarPath, updated_at: new Date().toISOString() }, { onConflict: 'id' })
-      .select('*')
-      .single();
-
-    if (error) throw error;
-
-    return res.json(formatProfile(data));
-  } catch (error) {
-    console.error('Error uploading avatar:', error);
-    return res.status(500).json({ error: 'Failed to upload avatar.' });
   }
 });
 
