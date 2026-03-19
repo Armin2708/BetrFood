@@ -1,14 +1,13 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import SaveCollectionModal from "./SaveCollectionModal";
 import * as Clipboard from 'expo-clipboard';
 import { useActionSheet } from '@expo/react-native-action-sheet';
 import { Ionicons } from '@expo/vector-icons';
-import { Collection, useCollections } from "../context/CollectionsContext";
-import { Tag, Recipe, deletePost, fetchRecipe, likePost, unlikePost, reportContent, unsavePost, checkSaveStatus } from '../services/api';
+import { Collection } from "../context/CollectionsContext";
+import { Tag, Recipe, deletePost, fetchRecipe, likePost, unlikePost, reportContent } from '../services/api';
 import TagDisplay from './TagDisplay';
 import RecipeDisplay from './RecipeDisplay';
 import { colors } from '../constants/theme';
-import { useVideoPlayer, VideoView } from 'expo-video';
 import {
   View,
   Text,
@@ -18,33 +17,8 @@ import {
   Share,
   Alert,
   Animated,
-  ScrollView,
-  Dimensions,
 } from 'react-native';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 import { router } from 'expo-router';
-
-const CAPTION_MAX_LENGTH = 100;
-
-function getRelativeTime(dateString: string | null | undefined): string {
-  if (!dateString) return '';
-  const now = new Date();
-  const date = new Date(dateString);
-  const diffMs = now.getTime() - date.getTime();
-  const diffSec = Math.floor(diffMs / 1000);
-  const diffMin = Math.floor(diffSec / 60);
-  const diffHr = Math.floor(diffMin / 60);
-  const diffDay = Math.floor(diffHr / 24);
-  const diffWeek = Math.floor(diffDay / 7);
-
-  if (diffSec < 60) return 'just now';
-  if (diffMin < 60) return `${diffMin}m ago`;
-  if (diffHr < 24) return `${diffHr}h ago`;
-  if (diffDay < 7) return `${diffDay}d ago`;
-  if (diffWeek < 4) return `${diffWeek}w ago`;
-  return date.toLocaleDateString();
-}
 
 interface PostProps {
   id?: string;
@@ -56,7 +30,7 @@ interface PostProps {
   userId?: string;
   currentUserId?: string;
   editedAt?: string | null;
-  createdAt?: string | null;
+  createdAt?: string;
   onDeleted?: (postId: string) => void;
   tags?: Tag[];
   initialLiked?: boolean;
@@ -64,6 +38,10 @@ interface PostProps {
   verified?: boolean;
   mediaType?: 'image' | 'video';
   commentCount?: number;
+  // Pantry match props
+  isPantryMatch?: boolean;
+  pantryMatchedCount?: number;
+  pantryMissingCount?: number;
 }
 
 export default function Post({
@@ -82,24 +60,22 @@ export default function Post({
   initialLiked = false,
   initialLikes = 0,
   verified = false,
-  mediaType = 'image',
-  commentCount = 0,
+  mediaType,
+  commentCount,
+  isPantryMatch,
+  pantryMatchedCount,
+  pantryMissingCount,
 }: PostProps) {
-  const { savePostToCollection } = useCollections();
   const [liked, setLiked] = useState(initialLiked);
   const [likeCount, setLikeCount] = useState(initialLikes);
-  const [activeImageIndex, setActiveImageIndex] = useState(0);
-  const allImages = postImages && postImages.length > 0 ? postImages : [postImage];
   const [likeLoading, setLikeLoading] = useState(false);
   const [saved, setSaved] = useState(false);
   const [collectionModalVisible, setCollectionModalVisible] = useState(false);
   const [recipe, setRecipe] = useState<Recipe | null>(null);
-  const [captionExpanded, setCaptionExpanded] = useState(false);
 
   useEffect(() => {
     if (id) {
       fetchRecipe(id).then(setRecipe).catch(() => {});
-      checkSaveStatus(id).then(({ isSaved }) => setSaved(isSaved)).catch(() => {});
     }
   }, [id]);
 
@@ -115,11 +91,9 @@ export default function Post({
     const prevCount = likeCount;
     const newLiked = !liked;
 
-    // Optimistic update
     setLiked(newLiked);
     setLikeCount((prev) => (newLiked ? prev + 1 : Math.max(0, prev - 1)));
 
-    // Bounce animation
     Animated.sequence([
       Animated.spring(scaleAnim, { toValue: 1.4, useNativeDriver: true, speed: 50 }),
       Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, speed: 50 }),
@@ -130,7 +104,6 @@ export default function Post({
       const data = newLiked ? await likePost(id) : await unlikePost(id);
       setLikeCount(data.likes);
     } catch {
-      // Rollback on failure
       setLiked(prevLiked);
       setLikeCount(prevCount);
       Alert.alert('Error', 'Could not update like. Please try again.');
@@ -139,31 +112,15 @@ export default function Post({
     }
   };
 
-  const handleSavePress = async () => {
-    if (!id) return;
-    if (saved) {
-      setSaved(false);
-      try {
-        await unsavePost(id);
-      } catch {
-        setSaved(true);
-        Alert.alert('Error', 'Could not unsave post. Please try again.');
-      }
-    } else {
-      setCollectionModalVisible(true);
-    }
+  const handleSavePress = () => {
+    if (!saved) setCollectionModalVisible(true);
+    else setSaved(false);
   };
 
-  const handleSave = async (collection: Collection) => {
-    if (!id) return;
+  const handleSave = (collection: Collection) => {
     setSaved(true);
     setCollectionModalVisible(false);
-    try {
-      await savePostToCollection(collection.id, id);
-    } catch {
-      setSaved(false);
-      Alert.alert('Error', 'Could not save post to collection. Please try again.');
-    }
+    console.log(`Saved to ${collection.name}`);
   };
 
   const handleDelete = () => {
@@ -171,7 +128,8 @@ export default function Post({
     Alert.alert('Delete Post', 'Are you sure?', [
       { text: 'Cancel', style: 'cancel' },
       {
-        text: 'Delete', style: 'destructive',
+        text: 'Delete',
+        style: 'destructive',
         onPress: async () => {
           try {
             await deletePost(id);
@@ -200,43 +158,18 @@ export default function Post({
     Alert.alert('Link Copied', 'The post link has been copied to your clipboard.');
   };
 
-  const submitReport = async (reason: string) => {
-    if (!id) return;
-    try {
-      await reportContent('post', id, reason);
-      Alert.alert('Report Submitted', 'Thank you for your report. We will review it shortly.');
-    } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to submit report.');
-    }
-  };
-
   const handleReport = () => {
     if (!id) return;
     const reasons = ['Spam', 'Inappropriate', 'Harassment', 'Other'];
     Alert.alert('Report Post', 'Select a reason:', [
       ...reasons.map((reason) => ({
         text: reason,
-        onPress: () => {
-          if (reason === 'Other') {
-            Alert.prompt(
-              'Report Post',
-              'Please describe the issue:',
-              [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                  text: 'Submit',
-                  onPress: (text?: string) => {
-                    const detail = text?.trim();
-                    submitReport(detail ? `Other: ${detail}` : 'Other');
-                  },
-                },
-              ],
-              'plain-text',
-              '',
-              'default'
-            );
-          } else {
-            submitReport(reason);
+        onPress: async () => {
+          try {
+            await reportContent('post', id, reason);
+            Alert.alert('Report Submitted', 'Thank you for your report. We will review it shortly.');
+          } catch (error: any) {
+            Alert.alert('Error', error.message || 'Failed to submit report.');
           }
         },
       })),
@@ -244,29 +177,22 @@ export default function Post({
     ]);
   };
 
-  const handleEdit = () => {
-    if (!id) return;
-    router.push(`/edit-post?postId=${id}`);
-  };
-
   const showPostMenu = () => {
     if (isOwner) {
-      const options = ['Edit', 'Save', 'Delete', 'Cancel'];
+      const options = ['Delete', 'Report', 'Cancel'];
       showActionSheetWithOptions(
-        { options, cancelButtonIndex: 3, destructiveButtonIndex: 2 },
+        { options, cancelButtonIndex: 2, destructiveButtonIndex: 0 },
         (index) => {
-          if (index === 0) handleEdit();
-          if (index === 1) handleSavePress();
-          if (index === 2) handleDelete();
+          if (index === 0) handleDelete();
+          if (index === 1) handleReport();
         }
       );
     } else {
-      const options = ['Save', 'Report', 'Cancel'];
+      const options = ['Report', 'Cancel'];
       showActionSheetWithOptions(
-        { options, cancelButtonIndex: 2, destructiveButtonIndex: 1 },
+        { options, cancelButtonIndex: 1, destructiveButtonIndex: 0 },
         (index) => {
-          if (index === 0) handleSavePress();
-          if (index === 1) handleReport();
+          if (index === 0) handleReport();
         }
       );
     }
@@ -280,76 +206,43 @@ export default function Post({
     });
   };
 
-  const isCaptionLong = caption && caption.length > CAPTION_MAX_LENGTH;
-  const displayCaption = isCaptionLong && !captionExpanded
-    ? caption.substring(0, CAPTION_MAX_LENGTH)
-    : caption;
-
-  const relativeTime = getRelativeTime(createdAt || editedAt);
+  // Only show pantry badge when we have match data
+  const showPantryBadge =
+    isPantryMatch !== undefined &&
+    pantryMatchedCount !== undefined &&
+    pantryMissingCount !== undefined;
 
   return (
     <View style={styles.container} accessible={true} accessibilityLabel={`Post by ${username}`}>
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.headerUserInfo}
-          onPress={() => userId && router.push(`/(tabs)/feeds/user-profile?userId=${userId}`)}
+          onPress={() => userId && router.push(`/user-profile?userId=${userId}`)}
           activeOpacity={0.7}
           accessibilityRole="button"
           accessibilityLabel={`View ${username}'s profile`}
         >
           <Image source={{ uri: profilePic }} style={styles.profilePic} />
-          <View style={styles.headerTextContainer}>
-            <View style={styles.usernameRow}>
-              <Text style={styles.username}>{username}</Text>
-              {verified && <Text style={styles.verifiedBadge}>{'\u2713'}</Text>}
-            </View>
-            {relativeTime ? (
-              <Text style={styles.postedTime}>Posted {relativeTime}</Text>
-            ) : null}
-          </View>
+          <Text style={styles.username}>{username}</Text>
+          {verified && <Text style={styles.verifiedBadge}>{'\u2713'}</Text>}
         </TouchableOpacity>
-        <TouchableOpacity style={styles.menuButton} onPress={showPostMenu} accessibilityRole="button" accessibilityLabel="Post options">
+        <TouchableOpacity
+          style={styles.menuButton}
+          onPress={showPostMenu}
+          accessibilityRole="button"
+          accessibilityLabel="Post options"
+        >
           <Ionicons name="ellipsis-horizontal" size={20} color={colors.textPrimary} />
         </TouchableOpacity>
       </View>
 
-      {mediaType === 'video' ? (
-        <PostVideo uri={allImages[0]} />
-      ) : (
-        <TouchableOpacity
-          activeOpacity={0.9}
-          onPress={() => id && router.push(`/post-detail?postId=${id}`)}
-          accessibilityLabel={`Post by ${username}: ${caption?.substring(0, 80) || 'photo'}`}
-        >
-          {allImages.length > 1 ? (
-            <View>
-              <ScrollView
-                horizontal
-                pagingEnabled
-                showsHorizontalScrollIndicator={false}
-                onMomentumScrollEnd={(e) => {
-                  const index = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
-                  setActiveImageIndex(index);
-                }}
-              >
-                {allImages.map((uri, index) => (
-                  <Image key={index} source={{ uri }} style={styles.postImage} />
-                ))}
-              </ScrollView>
-              <View style={styles.dotContainer}>
-                {allImages.map((_, index) => (
-                  <View
-                    key={index}
-                    style={[styles.dot, index === activeImageIndex && styles.dotActive]}
-                  />
-                ))}
-              </View>
-            </View>
-          ) : (
-            <Image source={{ uri: allImages[0] }} style={styles.postImage} />
-          )}
-        </TouchableOpacity>
-      )}
+      <TouchableOpacity
+        activeOpacity={0.9}
+        onPress={() => id && router.push(`/post-detail?postId=${id}`)}
+        accessibilityLabel={`Post by ${username}: ${caption?.substring(0, 80) || 'photo'}`}
+      >
+        <Image source={{ uri: postImage }} style={styles.postImage} />
+      </TouchableOpacity>
 
       <View style={styles.actions}>
         <TouchableOpacity
@@ -361,66 +254,92 @@ export default function Post({
           accessibilityLabel={liked ? `Unlike post, ${likeCount} likes` : `Like post, ${likeCount} likes`}
           accessibilityState={{ selected: liked }}
         >
-          <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-            <Ionicons
-              name={liked ? 'thumbs-up' : 'thumbs-up-outline'}
-              size={22}
-              color={liked ? '#22C55E' : colors.textPrimary}
-            />
-          </Animated.View>
+          <Animated.Text
+            style={[
+              styles.actionText,
+              liked && styles.liked,
+              { transform: [{ scale: scaleAnim }] },
+            ]}
+          >
+            {liked ? '❤️' : '🤍'} {liked ? 'Liked' : 'Like'}
+          </Animated.Text>
         </TouchableOpacity>
 
         <TouchableOpacity
+          onPress={handleSavePress}
           style={styles.actionButton}
-          activeOpacity={0.7}
           accessibilityRole="button"
-          accessibilityLabel="Dislike post"
+          accessibilityLabel={saved ? 'Remove from saved' : 'Save post'}
+          accessibilityState={{ selected: saved }}
         >
-          <Ionicons name="thumbs-down-outline" size={22} color={colors.textPrimary} />
+          <Text style={[styles.actionText, saved && styles.saved]}>
+            {saved ? '🔖 Saved' : '🔖 Save'}
+          </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          onPress={() => id && router.push(`/post-detail?postId=${id}`)}
+          onPress={showShareMenu}
           style={styles.actionButton}
           accessibilityRole="button"
-          accessibilityLabel="Comment on post"
+          accessibilityLabel="Share post"
         >
-          <Ionicons name="chatbubble-outline" size={22} color={colors.textPrimary} />
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={showShareMenu} style={styles.actionButton} accessibilityRole="button" accessibilityLabel="Share post">
-          <Ionicons name="share-social-outline" size={22} color={colors.textPrimary} />
+          <Text style={styles.actionText}>🔗 Share</Text>
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.likeCount} accessibilityLabel={`${likeCount} ${likeCount === 1 ? 'like' : 'likes'}`}>
-        {likeCount > 0
-          ? <>{likeCount} {likeCount === 1 ? 'like' : 'likes'}</>
-          : '0 likes'}
+      <Text
+        style={styles.likeCount}
+        accessibilityLabel={`${likeCount} ${likeCount === 1 ? 'like' : 'likes'}`}
+      >
+        {likeCount} {likeCount === 1 ? 'like' : 'likes'}
       </Text>
 
       <TouchableOpacity
         activeOpacity={0.8}
-        onPress={() => {
-          if (isCaptionLong && !captionExpanded) {
-            setCaptionExpanded(true);
-          } else if (id) {
-            router.push(`/post-detail?postId=${id}`);
-          }
-        }}
+        onPress={() => id && router.push(`/post-detail?postId=${id}`)}
         accessibilityLabel={`${username}: ${caption}`}
       >
         <Text style={styles.caption}>
-          <Text style={styles.captionUsername}>{username} </Text>
-          {displayCaption}
-          {isCaptionLong && !captionExpanded && (
-            <Text style={styles.captionMore}>... more</Text>
-          )}
+          <Text style={styles.captionUsername}>{username} </Text>{caption}
         </Text>
       </TouchableOpacity>
       {editedAt && <Text style={styles.editedLabel}>Edited</Text>}
 
       {tags && tags.length > 0 && <TagDisplay tags={tags} />}
+
+      {/* ── Pantry match badge ─────────────────────────────────────────── */}
+      {showPantryBadge && (
+        <View
+          style={[
+            styles.pantryBadge,
+            isPantryMatch ? styles.pantryBadgeMatch : styles.pantryBadgePartial,
+          ]}
+          accessible
+          accessibilityLabel={
+            isPantryMatch
+              ? `Pantry match: ${pantryMatchedCount} ingredients in your pantry, ${pantryMissingCount} needed`
+              : `Partial match: ${pantryMatchedCount} ingredients in your pantry, ${pantryMissingCount} missing`
+          }
+        >
+          <Ionicons
+            name={isPantryMatch ? 'checkmark-circle' : 'basket-outline'}
+            size={14}
+            color={isPantryMatch ? '#16A34A' : '#92400E'}
+          />
+          <Text
+            style={[
+              styles.pantryBadgeText,
+              isPantryMatch ? styles.pantryBadgeTextMatch : styles.pantryBadgeTextPartial,
+            ]}
+          >
+            {isPantryMatch ? '✓ Pantry match · ' : ''}
+            {pantryMatchedCount} in pantry
+            {(pantryMissingCount ?? 0) > 0
+              ? ` · ${pantryMissingCount} needed`
+              : ''}
+          </Text>
+        </View>
+      )}
 
       {recipe && <RecipeDisplay recipe={recipe} />}
 
@@ -433,41 +352,79 @@ export default function Post({
   );
 }
 
-function PostVideo({ uri }: { uri: string }) {
-  const player = useVideoPlayer(uri, p => {
-    p.loop = false;
-  });
-  return (
-    <VideoView
-      player={player}
-      style={{ width: SCREEN_WIDTH, aspectRatio: 4 / 3 }}
-      allowsFullscreen
-      allowsPictureInPicture
-    />
-  );
-}
-
 const styles = StyleSheet.create({
-  container: { marginVertical: 10, backgroundColor: colors.backgroundPrimary, borderBottomWidth: 1, borderColor: colors.border },
+  container: {
+    marginVertical: 10,
+    backgroundColor: colors.backgroundPrimary,
+    borderBottomWidth: 1,
+    borderColor: colors.border,
+  },
   header: { flexDirection: 'row', alignItems: 'center', padding: 10 },
   headerUserInfo: { flexDirection: 'row', alignItems: 'center', flex: 1 },
-  headerTextContainer: { flex: 1 },
-  usernameRow: { flexDirection: 'row', alignItems: 'center' },
   profilePic: { width: 40, height: 40, borderRadius: 20, marginRight: 10 },
-  username: { fontWeight: 'bold', fontSize: 16 },
-  postedTime: { fontSize: 12, color: '#94A3B8', marginTop: 1 },
+  username: { fontWeight: 'bold', fontSize: 16, flex: 1 },
   menuButton: { padding: 8 },
-  postImage: { width: SCREEN_WIDTH, aspectRatio: 1, backgroundColor: colors.borderLight },
-  dotContainer: { flexDirection: 'row', justifyContent: 'center', paddingVertical: 8, gap: 6 },
-  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.border },
-  dotActive: { backgroundColor: colors.primary, width: 8, height: 8, borderRadius: 4 },
-  actions: { flexDirection: 'row', paddingHorizontal: 10, paddingTop: 10, gap: 18 },
+  postImage: { width: '100%', aspectRatio: 4 / 3, backgroundColor: colors.borderLight },
+  actions: { flexDirection: 'row', paddingHorizontal: 10, paddingTop: 10, gap: 16 },
   actionButton: { paddingVertical: 4 },
-  likeCount: { paddingHorizontal: 10, paddingTop: 6, fontSize: 14, color: colors.textPrimary },
-  likeCountBold: { fontWeight: 'bold' },
-  caption: { paddingHorizontal: 10, paddingTop: 6, paddingBottom: 4, fontSize: 14, color: colors.textPrimary, lineHeight: 20 },
+  actionText: { fontSize: 16, color: colors.textPrimary },
+  liked: { color: colors.liked, fontWeight: '600' },
+  saved: { color: colors.info, fontWeight: '600' },
+  likeCount: {
+    paddingHorizontal: 10,
+    paddingTop: 4,
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textPrimary,
+  },
+  caption: {
+    paddingHorizontal: 10,
+    paddingTop: 8,
+    paddingBottom: 4,
+    fontSize: 14,
+    color: colors.textPrimary,
+  },
   captionUsername: { fontWeight: 'bold' },
-  captionMore: { color: '#B2B2B2' },
-  verifiedBadge: { color: colors.verified, fontSize: 16, fontWeight: 'bold', marginLeft: 4 },
-  editedLabel: { paddingHorizontal: 10, paddingBottom: 10, fontSize: 12, color: colors.textQuaternary, fontStyle: 'italic' },
+  verifiedBadge: {
+    color: colors.verified,
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginLeft: 4,
+  },
+  editedLabel: {
+    paddingHorizontal: 10,
+    paddingBottom: 10,
+    fontSize: 12,
+    color: colors.textQuaternary,
+    fontStyle: 'italic',
+  },
+  // Pantry match badge
+  pantryBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginHorizontal: 10,
+    marginTop: 6,
+    marginBottom: 2,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+  },
+  pantryBadgeMatch: {
+    backgroundColor: '#DCFCE7',
+  },
+  pantryBadgePartial: {
+    backgroundColor: '#FEF3C7',
+  },
+  pantryBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  pantryBadgeTextMatch: {
+    color: '#16A34A',
+  },
+  pantryBadgeTextPartial: {
+    color: '#92400E',
+  },
 });
