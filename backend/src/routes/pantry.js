@@ -21,6 +21,26 @@ Example: {"name":"Banana","category":"Produce","confidence":95}
 
 If no food item is visible, return: {"name":null,"category":null,"confidence":0}`;
 
+const SCAN_RECEIPT_PROMPT = `You are a grocery receipt OCR and parser. Analyze this photo of a grocery store receipt.
+
+Extract all purchased food/grocery items from the receipt. For each item:
+1. Read the item name from the receipt text
+2. Expand common receipt abbreviations (e.g., "BAN" → "Banana", "ORG" → "Organic", "GRN" → "Green", "WHT" → "White", "CHKN" → "Chicken", "BRD" → "Bread", "MLK" → "Milk", "YGT" → "Yogurt", "VEG" → "Vegetables", "FRZ" → "Frozen")
+3. Estimate a reasonable quantity and unit
+4. Assign a category
+
+Return ONLY a JSON array (no markdown, no explanation) where each element has:
+- "name": string (full readable item name, abbreviations expanded)
+- "quantity": number (estimated from receipt or 1)
+- "unit": string (e.g. "pcs", "lbs", "oz", "gal")
+- "category": string (one of: "Produce", "Dairy", "Proteins", "Grains", "Spices", "Canned Goods", "Frozen", "Beverages", "Snacks", "Other")
+
+Filter out non-food items like bags, tax lines, totals, subtotals, discounts, store info, and payment details.
+
+Example: [{"name":"Organic Bananas","quantity":1,"unit":"bunch","category":"Produce"}]
+
+If the receipt is unreadable or no food items found, return an empty array: []`;
+
 const IDENTIFY_PROMPT = `You are a grocery item identifier. Analyze this photo and identify all visible food/grocery items.
 
 Return ONLY a JSON array (no markdown, no explanation) where each element has:
@@ -208,6 +228,52 @@ router.post('/identify-single', requireAuth, async (req, res) => {
       return res.status(422).json({ error: 'AI response was not valid JSON' });
     }
     res.status(500).json({ error: 'Failed to identify item' });
+  }
+});
+
+// POST /api/pantry/scan-receipt — extract grocery items from a receipt photo
+router.post('/scan-receipt', requireAuth, async (req, res) => {
+  const { image } = req.body;
+
+  if (!image || typeof image !== 'string') {
+    return res.status(400).json({ error: 'base64 image is required' });
+  }
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: 'google/gemini-2.0-flash-exp:free',
+      max_tokens: 2048,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: SCAN_RECEIPT_PROMPT },
+            {
+              type: 'image_url',
+              image_url: { url: `data:image/jpeg;base64,${image}` },
+            },
+          ],
+        },
+      ],
+    });
+
+    const raw = response.choices[0].message.content.trim();
+
+    // Strip markdown code fences if present
+    const jsonStr = raw.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
+    const items = JSON.parse(jsonStr);
+
+    if (!Array.isArray(items)) {
+      return res.status(422).json({ error: 'AI did not return a valid item list' });
+    }
+
+    res.json({ items });
+  } catch (err) {
+    console.error('[SCAN-RECEIPT ERROR]', err.message);
+    if (err instanceof SyntaxError) {
+      return res.status(422).json({ error: 'AI response was not valid JSON' });
+    }
+    res.status(500).json({ error: 'Failed to scan receipt' });
   }
 });
 

@@ -21,7 +21,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { usePantry } from '../../../context/PantryContext';
 import PantryItemCard from '../../../components/PantryItemCard';
 import ExpiringSoonSection from '../../../components/ExpiringSoonSection';
-import { PantryItem, PantryItemInput, identifyPantryItems, identifySingleItem } from '../../../services/api';
+import { PantryItem, PantryItemInput, identifyPantryItems, identifySingleItem, scanReceipt } from '../../../services/api';
 import { fetchPreferences } from '../../../services/api';
 import { colors } from '../../../constants/theme';
 
@@ -620,6 +620,7 @@ export default function PantryScreen() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   const [identifying, setIdentifying] = useState(false);
+  const [scanningReceipt, setScanningReceipt] = useState(false);
 
   const hasActiveFilter = searchQuery.trim().length > 0 || selectedCategory !== null;
 
@@ -663,6 +664,49 @@ export default function PantryScreen() {
     } catch (error: any) {
       setIdentifying(false);
       Alert.alert('Error', error.message || 'Failed to identify grocery items.');
+    }
+  };
+
+  const handleScanReceipt = async () => {
+    try {
+      const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permissionResult.granted) {
+        Alert.alert('Permission Required', 'Camera access is needed to scan receipts.');
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ['images'],
+        quality: 0.8,
+        base64: true,
+        allowsEditing: false,
+      });
+
+      if (result.canceled || !result.assets?.[0]?.base64) return;
+
+      setScanningReceipt(true);
+      try {
+        const items = await scanReceipt(result.assets[0].base64);
+
+        if (items.length === 0) {
+          Alert.alert('No Items Found', 'Could not extract items from the receipt. Try a clearer photo with the items visible.');
+          return;
+        }
+
+        const candidates = items.map((item) => ({
+          name: item.name,
+          quantity: item.quantity,
+          unit: item.unit,
+          category: item.category,
+          expirationDate: null,
+        }));
+        router.push({ pathname: '/pantry-review', params: { candidates: JSON.stringify(candidates) } });
+      } finally {
+        setScanningReceipt(false);
+      }
+    } catch (error: any) {
+      setScanningReceipt(false);
+      Alert.alert('Error', error.message || 'Failed to scan receipt.');
     }
   };
 
@@ -803,8 +847,17 @@ export default function PantryScreen() {
             <Text style={styles.reviewButtonText}>Review</Text>
           </TouchableOpacity>
           <TouchableOpacity
+            onPress={handleScanReceipt}
+            disabled={identifying || scanningReceipt}
+            accessibilityRole="button"
+            accessibilityLabel="Scan receipt to add items"
+            style={{ marginRight: 8 }}
+          >
+            <Ionicons name="document-text-outline" size={26} color={colors.primary} />
+          </TouchableOpacity>
+          <TouchableOpacity
             onPress={handlePhotoAdd}
-            disabled={identifying}
+            disabled={identifying || scanningReceipt}
             accessibilityRole="button"
             accessibilityLabel="Add items by photo"
             style={{ marginRight: 8 }}
@@ -908,7 +961,7 @@ export default function PantryScreen() {
         onSave={editItem}
       />
 
-      {identifying && (
+      {(identifying || scanningReceipt) && (
         <View style={{
           ...StyleSheet.absoluteFillObject,
           backgroundColor: 'rgba(0,0,0,0.5)',
@@ -925,10 +978,10 @@ export default function PantryScreen() {
           }}>
             <ActivityIndicator size="large" color={colors.primary} />
             <Text style={{ fontSize: 16, fontWeight: '600', color: colors.textPrimary }}>
-              Identifying groceries...
+              {scanningReceipt ? 'Scanning receipt...' : 'Identifying groceries...'}
             </Text>
             <Text style={{ fontSize: 13, color: colors.textSecondary, textAlign: 'center' }}>
-              AI is analyzing your photo
+              AI is analyzing your {scanningReceipt ? 'receipt' : 'photo'}
             </Text>
           </View>
         </View>

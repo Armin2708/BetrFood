@@ -98,6 +98,20 @@ export async function identifySingleItem(base64Image: string): Promise<SingleIte
   return response.json();
 }
 
+export async function scanReceipt(base64Image: string): Promise<IdentifiedItem[]> {
+  const response = await fetch(`${API_BASE_URL}/api/pantry/scan-receipt`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+    body: JSON.stringify({ image: base64Image }),
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to scan receipt');
+  }
+  const data = await response.json();
+  return data.items;
+}
+
 export async function identifyPantryItems(base64Image: string): Promise<IdentifiedItem[]> {
   const response = await fetch(`${API_BASE_URL}/api/pantry/identify`, {
     method: 'POST',
