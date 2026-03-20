@@ -21,7 +21,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { usePantry } from '../../../context/PantryContext';
 import PantryItemCard from '../../../components/PantryItemCard';
 import ExpiringSoonSection from '../../../components/ExpiringSoonSection';
-import { PantryItem, PantryItemInput, identifyPantryItems } from '../../../services/api';
+import { PantryItem, PantryItemInput, identifyPantryItems, identifySingleItem } from '../../../services/api';
 import { fetchPreferences } from '../../../services/api';
 import { colors } from '../../../constants/theme';
 
@@ -49,6 +49,8 @@ function AddItemModal({
   const [category, setCategory] = useState(CATEGORIES[0]);
   const [expirationDate, setExpirationDate] = useState('');
   const [saving, setSaving] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [confidence, setConfidence] = useState<number | null>(null);
 
   const reset = () => {
     setName('');
@@ -56,6 +58,7 @@ function AddItemModal({
     setUnit('');
     setCategory(CATEGORIES[0]);
     setExpirationDate('');
+    setConfidence(null);
   };
 
   const handleAdd = async () => {
@@ -89,6 +92,42 @@ function AddItemModal({
     }
   };
 
+  const handleScanItem = async () => {
+    try {
+      const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permissionResult.granted) {
+        Alert.alert('Permission Required', 'Camera access is needed to identify items.');
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ['images'],
+        quality: 0.7,
+        base64: true,
+        allowsEditing: false,
+      });
+
+      if (result.canceled || !result.assets?.[0]?.base64) return;
+
+      setScanning(true);
+      setConfidence(null);
+      const identified = await identifySingleItem(result.assets[0].base64);
+
+      if (!identified.name) {
+        Alert.alert('Not Recognized', 'Could not identify a food item. Try a clearer photo.');
+        return;
+      }
+
+      setName(identified.name);
+      if (identified.category) setCategory(identified.category);
+      setConfidence(identified.confidence);
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to identify item.');
+    } finally {
+      setScanning(false);
+    }
+  };
+
   return (
     <Modal visible={visible} animationType="slide" transparent>
       <Pressable
@@ -104,13 +143,59 @@ function AddItemModal({
               Add Pantry Item
             </Text>
 
-            <TextInput
-              style={styles.input}
-              placeholder="Item name *"
-              value={name}
-              onChangeText={setName}
-              accessibilityLabel="Item name"
-            />
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <TextInput
+                style={[styles.input, { flex: 1 }]}
+                placeholder="Item name *"
+                value={name}
+                onChangeText={(text) => { setName(text); setConfidence(null); }}
+                accessibilityLabel="Item name"
+              />
+              <TouchableOpacity
+                onPress={handleScanItem}
+                disabled={scanning}
+                accessibilityRole="button"
+                accessibilityLabel="Identify item with camera"
+                style={{
+                  width: 42,
+                  height: 42,
+                  borderRadius: 8,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}
+              >
+                {scanning ? (
+                  <ActivityIndicator size="small" color={colors.primary} />
+                ) : (
+                  <Ionicons name="camera-outline" size={22} color={colors.primary} />
+                )}
+              </TouchableOpacity>
+            </View>
+
+            {confidence !== null && (
+              <View style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 6,
+                paddingVertical: 4,
+              }}>
+                <View style={{
+                  paddingHorizontal: 8,
+                  paddingVertical: 3,
+                  borderRadius: 10,
+                  backgroundColor: confidence >= 80 ? colors.primary : confidence >= 50 ? colors.warning : colors.error,
+                }}>
+                  <Text style={{ color: colors.white, fontSize: 12, fontWeight: '700' }}>
+                    {confidence}%
+                  </Text>
+                </View>
+                <Text style={{ fontSize: 12, color: colors.textSecondary }}>
+                  {confidence >= 80 ? 'High confidence' : confidence >= 50 ? 'Medium confidence' : 'Low confidence — verify name'}
+                </Text>
+              </View>
+            )}
 
             <View style={styles.row}>
               <TextInput

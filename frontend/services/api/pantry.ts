@@ -79,6 +79,25 @@ export interface IdentifiedItem {
   category: string;
 }
 
+export interface SingleItemResult {
+  name: string | null;
+  category: string | null;
+  confidence: number;
+}
+
+export async function identifySingleItem(base64Image: string): Promise<SingleItemResult> {
+  const response = await fetch(`${API_BASE_URL}/api/pantry/identify-single`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+    body: JSON.stringify({ image: base64Image }),
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to identify item');
+  }
+  return response.json();
+}
+
 export async function identifyPantryItems(base64Image: string): Promise<IdentifiedItem[]> {
   const response = await fetch(`${API_BASE_URL}/api/pantry/identify`, {
     method: 'POST',

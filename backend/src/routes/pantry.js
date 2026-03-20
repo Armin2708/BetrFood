@@ -10,6 +10,17 @@ const openai = new OpenAI({
   apiKey: process.env.OPENROUTER_API_KEY,
 });
 
+const IDENTIFY_SINGLE_PROMPT = `You are a food item identifier. Analyze this photo and identify the single main food or grocery item visible.
+
+Return ONLY a JSON object (no markdown, no explanation) with:
+- "name": string (common grocery name, e.g. "Banana", "Whole Milk", "Chicken Breast")
+- "category": string (one of: "Produce", "Dairy", "Proteins", "Grains", "Spices", "Canned Goods", "Frozen", "Beverages", "Snacks", "Other")
+- "confidence": number (0-100, how confident you are in the identification)
+
+Example: {"name":"Banana","category":"Produce","confidence":95}
+
+If no food item is visible, return: {"name":null,"category":null,"confidence":0}`;
+
 const IDENTIFY_PROMPT = `You are a grocery item identifier. Analyze this photo and identify all visible food/grocery items.
 
 Return ONLY a JSON array (no markdown, no explanation) where each element has:
@@ -151,6 +162,52 @@ router.post('/identify', requireAuth, async (req, res) => {
       return res.status(422).json({ error: 'AI response was not valid JSON' });
     }
     res.status(500).json({ error: 'Failed to identify items' });
+  }
+});
+
+// POST /api/pantry/identify-single — identify a single food item from a photo
+router.post('/identify-single', requireAuth, async (req, res) => {
+  const { image } = req.body;
+
+  if (!image || typeof image !== 'string') {
+    return res.status(400).json({ error: 'base64 image is required' });
+  }
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: 'google/gemini-2.0-flash-exp:free',
+      max_tokens: 1024,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: IDENTIFY_SINGLE_PROMPT },
+            {
+              type: 'image_url',
+              image_url: { url: `data:image/jpeg;base64,${image}` },
+            },
+          ],
+        },
+      ],
+    });
+
+    const raw = response.choices[0].message.content.trim();
+
+    // Strip markdown code fences if present
+    const jsonStr = raw.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
+    const item = JSON.parse(jsonStr);
+
+    if (typeof item !== 'object' || Array.isArray(item)) {
+      return res.status(422).json({ error: 'AI did not return a valid item object' });
+    }
+
+    res.json({ name: item.name, category: item.category, confidence: item.confidence });
+  } catch (err) {
+    console.error('[IDENTIFY-SINGLE ERROR]', err.message);
+    if (err instanceof SyntaxError) {
+      return res.status(422).json({ error: 'AI response was not valid JSON' });
+    }
+    res.status(500).json({ error: 'Failed to identify item' });
   }
 });
 
