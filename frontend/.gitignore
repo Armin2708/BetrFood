@@ -45,3 +45,8 @@ app-example
 # IDEs
 .vscode/
 .idea/
+
+# .env
+.env
+frontend/.env
+backend/.env

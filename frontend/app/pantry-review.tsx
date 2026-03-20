@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import * as ImagePicker from 'expo-image-picker';
+import { identifyPantryItems, type VisionPantryItem } from '../services/api/pantryVision';
+import React, { useContext, useState } from 'react';
 import {
   View,
   Text,
@@ -10,10 +12,12 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { usePantry } from '../context/PantryContext';
+import { AuthContext } from '../context/AuthenticationContext';
 import { colors } from '../constants/theme';
 import { PantryItemInput } from '../services/api';
 
@@ -170,7 +174,10 @@ function CandidateRow({
 
 export default function PantryReviewScreen() {
   const { addItems } = usePantry();
+  const { token } = useContext(AuthContext);
   const params = useLocalSearchParams<{ candidates?: string }>();
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [analyzing, setAnalyzing] = useState(false);
 
   // Accept pre-populated candidates passed via navigation params (e.g. from a
   // photo-identification flow), or start with one blank row.
@@ -190,7 +197,7 @@ export default function PantryReviewScreen() {
         // Fall through to blank row
       }
     }
-    return [blankCandidate()];
+    return [];
   });
 
   const [saving, setSaving] = useState(false);
@@ -208,6 +215,58 @@ export default function PantryReviewScreen() {
   const addBlankRow = () => {
     setCandidates((prev) => [...prev, blankCandidate()]);
   };
+
+  const handlePickPhoto = async () => {
+  const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+  if (!permission.granted) {
+    Alert.alert('Permission needed', 'Please allow photo library access.');
+    return;
+  }
+
+  const result = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ImagePicker.MediaTypeOptions.Images,
+    quality: 0.6,
+    base64: false,
+  });
+
+  if (!result.canceled) {
+    setPhotoUri(result.assets[0].uri);
+    setCandidates([]);
+  }
+};
+
+const handleAnalyzePhoto = async () => {
+  if (!photoUri) {
+    Alert.alert('No photo selected', 'Pick a photo first.');
+    return;
+  }
+
+  if (!token) {
+    Alert.alert('Not signed in', 'You need to be signed in to analyze a photo.');
+    return;
+  }
+
+  setAnalyzing(true);
+  try {
+    const result = await identifyPantryItems(token, photoUri);
+
+    const mapped: Candidate[] = result.items.map((item) => ({
+      localId: makeid(),
+      name: item.name,
+      quantity: typeof item.quantity === 'number' ? item.quantity : 1,
+      unit: item.unit || 'pcs',
+      category: item.category || CATEGORIES[0],
+      expirationDate: null,
+    }));
+
+    setCandidates(mapped);
+  } catch (error: any) {
+    Alert.alert('Error', error.message || 'Failed to analyze photo.');
+  } finally {
+    setAnalyzing(false);
+  }
+};
 
   const handleConfirm = async () => {
     // Validate — every item needs at least a name
@@ -293,6 +352,45 @@ export default function PantryReviewScreen() {
       <Text style={styles.subtitle}>
         Review, edit, or remove items before adding them to your pantry.
       </Text>
+
+      <View style={styles.photoSection}>
+  <TouchableOpacity
+    style={styles.photoButton}
+    onPress={handlePickPhoto}
+    accessibilityRole="button"
+    accessibilityLabel="Pick a grocery photo"
+  >
+    <Ionicons name="image-outline" size={18} color={colors.white} />
+    <Text style={styles.photoButtonText}>
+      {photoUri ? 'Choose Different Photo' : 'Pick Grocery Photo'}
+    </Text>
+  </TouchableOpacity>
+
+  {photoUri && (
+    <>
+      <View style={styles.photoPreviewWrapper}>
+        <Image source={{ uri: photoUri }} style={styles.photoPreview} />
+      </View>
+
+      <TouchableOpacity
+        style={[styles.analyzeButton, analyzing && styles.confirmButtonDisabled]}
+        onPress={handleAnalyzePhoto}
+        disabled={analyzing}
+        accessibilityRole="button"
+        accessibilityLabel="Analyze photo for multiple grocery items"
+      >
+        {analyzing ? (
+          <ActivityIndicator size="small" color={colors.white} />
+        ) : (
+          <>
+            <Ionicons name="scan-outline" size={18} color={colors.white} />
+            <Text style={styles.analyzeButtonText}>Analyze Photo</Text>
+          </>
+        )}
+      </TouchableOpacity>
+    </>
+  )}
+</View>
 
       {/* Item list */}
       <FlatList
@@ -503,4 +601,53 @@ const styles = StyleSheet.create({
     color: colors.textTertiary,
     textAlign: 'center',
   },
+
+  photoSection: {
+  paddingHorizontal: 16,
+  paddingTop: 14,
+  paddingBottom: 8,
+  gap: 10,
+},
+photoButton: {
+  backgroundColor: colors.primary,
+  paddingVertical: 12,
+  paddingHorizontal: 14,
+  borderRadius: 10,
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 8,
+},
+photoButtonText: {
+  color: colors.white,
+  fontWeight: '700',
+  fontSize: 14,
+},
+photoPreviewWrapper: {
+  width: '100%',
+  height: 240,
+  borderRadius: 12,
+  overflow: 'hidden',
+  backgroundColor: colors.backgroundSubtle,
+},
+photoPreview: {
+  width: '100%',
+  height: '100%',
+},
+analyzeButton: {
+  backgroundColor: colors.primary,
+  paddingVertical: 12,
+  paddingHorizontal: 14,
+  borderRadius: 10,
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 8,
+},
+analyzeButtonText: {
+  color: colors.white,
+  fontWeight: '700',
+  fontSize: 14,
+},
 });
+ 
