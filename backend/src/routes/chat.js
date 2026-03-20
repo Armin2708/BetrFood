@@ -1,6 +1,7 @@
 const express = require('express');
 const OpenAI = require('openai');
 const pool = require('../db/pool');
+const supabase = require('../db/supabase');
 const { requireAuth } = require('../middleware/auth');
 
 const router = express.Router();
@@ -10,8 +11,47 @@ const openai = new OpenAI({
   apiKey: process.env.OPENROUTER_API_KEY,
 });
 
-const SYSTEM_PROMPT =
+const BASE_SYSTEM_PROMPT =
   "You are BetrFood's AI cooking assistant. You help users with food-related questions including recipes, cooking techniques, ingredient substitutions, meal planning, nutrition information, and food storage tips. Be friendly, concise, and helpful. If asked about non-food topics, gently redirect to food-related assistance.";
+
+async function buildSystemPrompt(userId) {
+  try {
+    const { data: pantryItems } = await supabase
+      .from('pantry_items')
+      .select('name, quantity, unit, category, expiration_date')
+      .eq('user_id', userId);
+
+    if (!pantryItems || pantryItems.length === 0) {
+      return BASE_SYSTEM_PROMPT;
+    }
+
+    const itemList = pantryItems
+      .map((item) => {
+        let entry = `- ${item.name}: ${item.quantity} ${item.unit}`;
+        if (item.category) entry += ` (${item.category})`;
+        if (item.expiration_date) {
+          const exp = new Date(item.expiration_date);
+          const now = new Date();
+          if (exp < now) entry += ' [EXPIRED]';
+          else {
+            const daysLeft = Math.ceil((exp - now) / (1000 * 60 * 60 * 24));
+            if (daysLeft <= 3) entry += ` [expires in ${daysLeft} day${daysLeft === 1 ? '' : 's'}]`;
+          }
+        }
+        return entry;
+      })
+      .join('\n');
+
+    return `${BASE_SYSTEM_PROMPT}
+
+The user's pantry currently contains these items:
+${itemList}
+
+When suggesting recipes or meal ideas, prioritize using ingredients from the user's pantry. If a recipe requires items not in the pantry, clearly flag them as "Extra items needed." Note any pantry items that are expiring soon and suggest using them first.`;
+  } catch {
+    return BASE_SYSTEM_PROMPT;
+  }
+}
 
 function getUserId(req) {
   return req.userId || (req.user && req.user.id) || req.headers['x-user-id'] || 'anonymous';
@@ -45,12 +85,15 @@ router.post('/', requireAuth, async (req, res) => {
       content: msg.content,
     }));
 
+    // Build system prompt with pantry context
+    const systemPrompt = await buildSystemPrompt(userId);
+
     // Call OpenAI API
     const response = await openai.chat.completions.create({
       model: 'google/gemini-2.0-flash-exp:free',
       max_tokens: 1024,
       messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'system', content: systemPrompt },
         ...conversationMessages,
       ],
     });
