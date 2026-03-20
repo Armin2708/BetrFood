@@ -17,11 +17,10 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import * as ImagePicker from 'expo-image-picker';
 import { usePantry } from '../../../context/PantryContext';
 import PantryItemCard from '../../../components/PantryItemCard';
 import ExpiringSoonSection from '../../../components/ExpiringSoonSection';
-import { PantryItem, PantryItemInput, identifyPantryItems, identifySingleItem, scanReceipt } from '../../../services/api';
+import { PantryItem, PantryItemInput } from '../../../services/api';
 import { fetchPreferences } from '../../../services/api';
 import { colors } from '../../../constants/theme';
 
@@ -31,6 +30,10 @@ const CATEGORIES = [
 ];
 
 const UNCATEGORIZED_LABEL = 'Uncategorized';
+
+// All known categories including Uncategorized — used for the summary so that
+// empty categories are always shown as gaps.
+const ALL_SUMMARY_CATEGORIES = [...CATEGORIES, UNCATEGORIZED_LABEL];
 
 // ─── Add Item Modal ────────────────────────────────────────────────────────────
 
@@ -49,8 +52,6 @@ function AddItemModal({
   const [category, setCategory] = useState(CATEGORIES[0]);
   const [expirationDate, setExpirationDate] = useState('');
   const [saving, setSaving] = useState(false);
-  const [scanning, setScanning] = useState(false);
-  const [confidence, setConfidence] = useState<number | null>(null);
 
   const reset = () => {
     setName('');
@@ -58,7 +59,6 @@ function AddItemModal({
     setUnit('');
     setCategory(CATEGORIES[0]);
     setExpirationDate('');
-    setConfidence(null);
   };
 
   const handleAdd = async () => {
@@ -92,110 +92,23 @@ function AddItemModal({
     }
   };
 
-  const handleScanItem = async () => {
-    try {
-      const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
-      if (!permissionResult.granted) {
-        Alert.alert('Permission Required', 'Camera access is needed to identify items.');
-        return;
-      }
-
-      const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ['images'],
-        quality: 0.7,
-        base64: true,
-        allowsEditing: false,
-      });
-
-      if (result.canceled || !result.assets?.[0]?.base64) return;
-
-      setScanning(true);
-      setConfidence(null);
-      const identified = await identifySingleItem(result.assets[0].base64);
-
-      if (!identified.name) {
-        Alert.alert('Not Recognized', 'Could not identify a food item. Try a clearer photo.');
-        return;
-      }
-
-      setName(identified.name);
-      if (identified.category) setCategory(identified.category);
-      setConfidence(identified.confidence);
-    } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to identify item.');
-    } finally {
-      setScanning(false);
-    }
-  };
-
   return (
     <Modal visible={visible} animationType="slide" transparent>
-      <Pressable
-        style={styles.modalOverlay}
-        onPress={() => { reset(); onClose(); }}
-      >
+      <Pressable style={styles.modalOverlay} onPress={() => { reset(); onClose(); }}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.modalOverlay}
         >
           <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
-            <Text style={styles.sheetTitle} accessibilityRole="header">
-              Add Pantry Item
-            </Text>
+            <Text style={styles.sheetTitle} accessibilityRole="header">Add Pantry Item</Text>
 
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <TextInput
-                style={[styles.input, { flex: 1 }]}
-                placeholder="Item name *"
-                value={name}
-                onChangeText={(text) => { setName(text); setConfidence(null); }}
-                accessibilityLabel="Item name"
-              />
-              <TouchableOpacity
-                onPress={handleScanItem}
-                disabled={scanning}
-                accessibilityRole="button"
-                accessibilityLabel="Identify item with camera"
-                style={{
-                  width: 42,
-                  height: 42,
-                  borderRadius: 8,
-                  borderWidth: 1,
-                  borderColor: colors.border,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                }}
-              >
-                {scanning ? (
-                  <ActivityIndicator size="small" color={colors.primary} />
-                ) : (
-                  <Ionicons name="camera-outline" size={22} color={colors.primary} />
-                )}
-              </TouchableOpacity>
-            </View>
-
-            {confidence !== null && (
-              <View style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 6,
-                paddingVertical: 4,
-              }}>
-                <View style={{
-                  paddingHorizontal: 8,
-                  paddingVertical: 3,
-                  borderRadius: 10,
-                  backgroundColor: confidence >= 80 ? colors.primary : confidence >= 50 ? colors.warning : colors.error,
-                }}>
-                  <Text style={{ color: colors.white, fontSize: 12, fontWeight: '700' }}>
-                    {confidence}%
-                  </Text>
-                </View>
-                <Text style={{ fontSize: 12, color: colors.textSecondary }}>
-                  {confidence >= 80 ? 'High confidence' : confidence >= 50 ? 'Medium confidence' : 'Low confidence — verify name'}
-                </Text>
-              </View>
-            )}
+            <TextInput
+              style={styles.input}
+              placeholder="Item name *"
+              value={name}
+              onChangeText={setName}
+              accessibilityLabel="Item name"
+            />
 
             <View style={styles.row}>
               <TextInput
@@ -338,9 +251,7 @@ function EditItemModal({
           style={styles.modalOverlay}
         >
           <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
-            <Text style={styles.sheetTitle} accessibilityRole="header">
-              Edit Item
-            </Text>
+            <Text style={styles.sheetTitle} accessibilityRole="header">Edit Item</Text>
 
             <TextInput
               style={styles.input}
@@ -409,11 +320,7 @@ function EditItemModal({
               )}
             </TouchableOpacity>
 
-            <TouchableOpacity
-              onPress={onClose}
-              accessibilityRole="button"
-              accessibilityLabel="Cancel edit"
-            >
+            <TouchableOpacity onPress={onClose} accessibilityRole="button" accessibilityLabel="Cancel edit">
               <Text style={styles.cancelText}>Cancel</Text>
             </TouchableOpacity>
           </Pressable>
@@ -426,15 +333,9 @@ function EditItemModal({
 // ─── Category Section Header ───────────────────────────────────────────────────
 
 function CategoryHeader({
-  category,
-  count,
-  collapsed,
-  onToggle,
+  category, count, collapsed, onToggle,
 }: {
-  category: string;
-  count: number;
-  collapsed: boolean;
-  onToggle: () => void;
+  category: string; count: number; collapsed: boolean; onToggle: () => void;
 }) {
   return (
     <TouchableOpacity
@@ -451,24 +352,14 @@ function CategoryHeader({
           <Text style={styles.countBadgeText}>{count}</Text>
         </View>
       </View>
-      <Ionicons
-        name={collapsed ? 'chevron-forward' : 'chevron-down'}
-        size={16}
-        color={colors.textTertiary}
-      />
+      <Ionicons name={collapsed ? 'chevron-forward' : 'chevron-down'} size={16} color={colors.textTertiary} />
     </TouchableOpacity>
   );
 }
 
 // ─── View Toggle ───────────────────────────────────────────────────────────────
 
-function ViewToggle({
-  grouped,
-  onToggle,
-}: {
-  grouped: boolean;
-  onToggle: () => void;
-}) {
+function ViewToggle({ grouped, onToggle }: { grouped: boolean; onToggle: () => void }) {
   return (
     <View style={styles.toggleBar}>
       <TouchableOpacity
@@ -478,14 +369,8 @@ function ViewToggle({
         accessibilityLabel="Flat list view"
         accessibilityState={{ selected: !grouped }}
       >
-        <Ionicons
-          name="list-outline"
-          size={16}
-          color={!grouped ? colors.primary : colors.textTertiary}
-        />
-        <Text style={[styles.toggleLabel, !grouped && styles.toggleLabelActive]}>
-          List
-        </Text>
+        <Ionicons name="list-outline" size={16} color={!grouped ? colors.primary : colors.textTertiary} />
+        <Text style={[styles.toggleLabel, !grouped && styles.toggleLabelActive]}>List</Text>
       </TouchableOpacity>
 
       <TouchableOpacity
@@ -495,14 +380,8 @@ function ViewToggle({
         accessibilityLabel="Category grouped view"
         accessibilityState={{ selected: grouped }}
       >
-        <Ionicons
-          name="grid-outline"
-          size={16}
-          color={grouped ? colors.primary : colors.textTertiary}
-        />
-        <Text style={[styles.toggleLabel, grouped && styles.toggleLabelActive]}>
-          By Category
-        </Text>
+        <Ionicons name="grid-outline" size={16} color={grouped ? colors.primary : colors.textTertiary} />
+        <Text style={[styles.toggleLabel, grouped && styles.toggleLabelActive]}>By Category</Text>
       </TouchableOpacity>
     </View>
   );
@@ -511,13 +390,9 @@ function ViewToggle({
 // ─── Search Bar ────────────────────────────────────────────────────────────────
 
 function SearchBar({
-  value,
-  onChangeText,
-  onClear,
+  value, onChangeText, onClear,
 }: {
-  value: string;
-  onChangeText: (text: string) => void;
-  onClear: () => void;
+  value: string; onChangeText: (text: string) => void; onClear: () => void;
 }) {
   return (
     <View style={styles.searchContainer}>
@@ -534,12 +409,7 @@ function SearchBar({
         accessibilityRole="search"
       />
       {value.length > 0 && (
-        <TouchableOpacity
-          onPress={onClear}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          accessibilityRole="button"
-          accessibilityLabel="Clear search"
-        >
+        <TouchableOpacity onPress={onClear} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel="Clear search">
           <Ionicons name="close-circle" size={16} color={colors.textTertiary} />
         </TouchableOpacity>
       )}
@@ -550,31 +420,16 @@ function SearchBar({
 // ─── Category Filter Chips ─────────────────────────────────────────────────────
 
 function CategoryFilterChips({
-  selected,
-  onSelect,
-  onClear,
-  availableCategories,
+  selected, onSelect, onClear, availableCategories,
 }: {
-  selected: string | null;
-  onSelect: (cat: string) => void;
-  onClear: () => void;
-  availableCategories: string[];
+  selected: string | null; onSelect: (cat: string) => void;
+  onClear: () => void; availableCategories: string[];
 }) {
   if (availableCategories.length === 0) return null;
-
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.filterChipScroll}
-    >
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterChipScroll}>
       {selected !== null && (
-        <TouchableOpacity
-          style={styles.clearFilterChip}
-          onPress={onClear}
-          accessibilityRole="button"
-          accessibilityLabel="Clear category filter"
-        >
+        <TouchableOpacity style={styles.clearFilterChip} onPress={onClear} accessibilityRole="button" accessibilityLabel="Clear category filter">
           <Ionicons name="close" size={12} color={colors.textSecondary} />
           <Text style={styles.clearFilterChipText}>Clear</Text>
         </TouchableOpacity>
@@ -582,30 +437,96 @@ function CategoryFilterChips({
       {availableCategories.map((cat) => (
         <TouchableOpacity
           key={cat}
-          style={[
-            styles.filterChip,
-            selected === cat && styles.filterChipSelected,
-          ]}
+          style={[styles.filterChip, selected === cat && styles.filterChipSelected]}
           onPress={() => (selected === cat ? onClear() : onSelect(cat))}
           accessibilityRole="button"
           accessibilityState={{ selected: selected === cat }}
           accessibilityLabel={`Filter by ${cat}`}
         >
-          <Text
-            style={[
-              styles.filterChipText,
-              selected === cat && styles.filterChipTextSelected,
-            ]}
-          >
-            {cat}
-          </Text>
+          <Text style={[styles.filterChipText, selected === cat && styles.filterChipTextSelected]}>{cat}</Text>
         </TouchableOpacity>
       ))}
     </ScrollView>
   );
 }
 
+// ─── Pantry Summary ────────────────────────────────────────────────────────────
+
+function PantrySummary({
+  items,
+  onCategoryPress,
+}: {
+  items: PantryItem[];
+  onCategoryPress: (category: string) => void;
+}) {
+  // Build count map from actual items
+  const countMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const item of items) {
+      const cat = item.category?.trim() || UNCATEGORIZED_LABEL;
+      const label = CATEGORIES.includes(cat) ? cat : UNCATEGORIZED_LABEL;
+      map[label] = (map[label] || 0) + 1;
+    }
+    return map;
+  }, [items]);
+
+  const maxCount = Math.max(...ALL_SUMMARY_CATEGORIES.map((c) => countMap[c] ?? 0), 1);
+
+  return (
+    <ScrollView style={styles.summaryScroll} contentContainerStyle={styles.summaryContent} showsVerticalScrollIndicator={false}>
+      <Text style={styles.summaryHint}>Tap a category to view its items</Text>
+      {ALL_SUMMARY_CATEGORIES.map((cat) => {
+        const count = countMap[cat] ?? 0;
+        const isEmpty = count === 0;
+        const barWidth = isEmpty ? 0 : Math.max((count / maxCount) * 100, 8);
+
+        return (
+          <TouchableOpacity
+            key={cat}
+            style={[styles.summaryRow, isEmpty && styles.summaryRowEmpty]}
+            onPress={() => !isEmpty && onCategoryPress(cat)}
+            activeOpacity={isEmpty ? 1 : 0.7}
+            accessibilityRole={isEmpty ? 'text' : 'button'}
+            accessibilityLabel={
+              isEmpty
+                ? `${cat}: empty`
+                : `${cat}: ${count} item${count !== 1 ? 's' : ''}. Tap to filter.`
+            }
+            disabled={isEmpty}
+          >
+            {/* Category name + count */}
+            <View style={styles.summaryCategoryLabel}>
+              <Text style={[styles.summaryCategoryName, isEmpty && styles.summaryCategoryNameEmpty]}>
+                {cat}
+              </Text>
+              <Text style={[styles.summaryCategoryCount, isEmpty && styles.summaryCategoryCountEmpty]}>
+                {isEmpty ? 'Empty' : `${count} item${count !== 1 ? 's' : ''}`}
+              </Text>
+            </View>
+
+            {/* Bar */}
+            <View style={styles.summaryBarTrack}>
+              {isEmpty ? (
+                <View style={styles.summaryBarEmpty} />
+              ) : (
+                <View style={[styles.summaryBar, { width: `${barWidth}%` as any }]} />
+              )}
+            </View>
+
+            {/* Chevron for non-empty rows */}
+            {!isEmpty && (
+              <Ionicons name="chevron-forward" size={14} color={colors.textTertiary} style={styles.summaryChevron} />
+            )}
+          </TouchableOpacity>
+        );
+      })}
+    </ScrollView>
+  );
+}
+
 // ─── Pantry Screen ─────────────────────────────────────────────────────────────
+
+type ScreenView = 'list' | 'summary';
 
 export default function PantryScreen() {
   const { items, loading, addItem, editItem, removeItem, refreshItems } = usePantry();
@@ -614,105 +535,24 @@ export default function PantryScreen() {
   const [groupedView, setGroupedView] = useState(false);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [expiringItemsThreshold, setExpiringItemsThreshold] = useState(7);
+  const [screenView, setScreenView] = useState<ScreenView>('list');
 
   // ── Search & filter state ───────────────────────────────────────────────────
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
-  const [identifying, setIdentifying] = useState(false);
-  const [scanningReceipt, setScanningReceipt] = useState(false);
-
   const hasActiveFilter = searchQuery.trim().length > 0 || selectedCategory !== null;
-
-  const handlePhotoAdd = async () => {
-    try {
-      const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
-      if (!permissionResult.granted) {
-        Alert.alert('Permission Required', 'Camera access is needed to photograph groceries.');
-        return;
-      }
-
-      const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ['images'],
-        quality: 0.7,
-        base64: true,
-        allowsEditing: false,
-      });
-
-      if (result.canceled || !result.assets?.[0]?.base64) return;
-
-      setIdentifying(true);
-      try {
-        const items = await identifyPantryItems(result.assets[0].base64);
-
-        if (items.length === 0) {
-          Alert.alert('No Items Found', 'No grocery items were identified in the photo. Try a clearer photo.');
-          return;
-        }
-
-        const candidates = items.map((item) => ({
-          name: item.name,
-          quantity: item.quantity,
-          unit: item.unit,
-          category: item.category,
-          expirationDate: null,
-        }));
-        router.push({ pathname: '/pantry-review', params: { candidates: JSON.stringify(candidates) } });
-      } finally {
-        setIdentifying(false);
-      }
-    } catch (error: any) {
-      setIdentifying(false);
-      Alert.alert('Error', error.message || 'Failed to identify grocery items.');
-    }
-  };
-
-  const handleScanReceipt = async () => {
-    try {
-      const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
-      if (!permissionResult.granted) {
-        Alert.alert('Permission Required', 'Camera access is needed to scan receipts.');
-        return;
-      }
-
-      const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ['images'],
-        quality: 0.8,
-        base64: true,
-        allowsEditing: false,
-      });
-
-      if (result.canceled || !result.assets?.[0]?.base64) return;
-
-      setScanningReceipt(true);
-      try {
-        const items = await scanReceipt(result.assets[0].base64);
-
-        if (items.length === 0) {
-          Alert.alert('No Items Found', 'Could not extract items from the receipt. Try a clearer photo with the items visible.');
-          return;
-        }
-
-        const candidates = items.map((item) => ({
-          name: item.name,
-          quantity: item.quantity,
-          unit: item.unit,
-          category: item.category,
-          expirationDate: null,
-        }));
-        router.push({ pathname: '/pantry-review', params: { candidates: JSON.stringify(candidates) } });
-      } finally {
-        setScanningReceipt(false);
-      }
-    } catch (error: any) {
-      setScanningReceipt(false);
-      Alert.alert('Error', error.message || 'Failed to scan receipt.');
-    }
-  };
 
   const handleClearAll = () => {
     setSearchQuery('');
     setSelectedCategory(null);
+  };
+
+  // Tapping a category in the summary switches to list view filtered by that category
+  const handleSummaryCategoryPress = (cat: string) => {
+    setSelectedCategory(cat);
+    setSearchQuery('');
+    setScreenView('list');
   };
 
   useFocusEffect(
@@ -740,8 +580,6 @@ export default function PantryScreen() {
   };
 
   // ── Filtered items ──────────────────────────────────────────────────────────
-  // Real-time filtering: matches name and category against the search query,
-  // and optionally restricts to a selected category chip.
   const filteredItems = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     return items.filter((item) => {
@@ -755,27 +593,23 @@ export default function PantryScreen() {
     });
   }, [items, searchQuery, selectedCategory]);
 
-  // Only show categories that have at least one item (from full list, not filtered)
   const availableCategories = useMemo(() => {
     const cats = new Set(items.map((i) => i.category?.trim() || UNCATEGORIZED_LABEL));
-    return [...CATEGORIES.filter((c) => cats.has(c)),
-      ...(cats.has(UNCATEGORIZED_LABEL) ? [UNCATEGORIZED_LABEL] : [])];
+    return [
+      ...CATEGORIES.filter((c) => cats.has(c)),
+      ...(cats.has(UNCATEGORIZED_LABEL) ? [UNCATEGORIZED_LABEL] : []),
+    ];
   }, [items]);
 
   // ── List row type ───────────────────────────────────────────────────────────
-
   type ListRow =
     | { type: 'header'; key: string; category: string; count: number }
     | { type: 'item'; key: string; item: PantryItem };
-
-  // ── Flat list ───────────────────────────────────────────────────────────────
 
   const flatListData: ListRow[] = filteredItems
     .slice()
     .sort((a, b) => a.name.localeCompare(b.name))
     .map((item) => ({ type: 'item', key: item.id, item }));
-
-  // ── Grouped list ────────────────────────────────────────────────────────────
 
   const grouped = filteredItems.reduce<Record<string, PantryItem[]>>((acc, item) => {
     const cat = item.category?.trim() || '';
@@ -793,19 +627,11 @@ export default function PantryScreen() {
   const groupedListData: ListRow[] = orderedKeys.flatMap((category) => {
     const catItems = grouped[category] ?? [];
     const isCollapsed = !!collapsed[category];
-    const headerRow: ListRow = {
-      type: 'header',
-      key: `header-${category}`,
-      category,
-      count: catItems.length,
-    };
+    const headerRow: ListRow = { type: 'header', key: `header-${category}`, category, count: catItems.length };
     if (isCollapsed) return [headerRow];
     return [
       headerRow,
-      ...catItems
-        .slice()
-        .sort((a, b) => a.name.localeCompare(b.name))
-        .map((item): ListRow => ({ type: 'item', key: item.id, item })),
+      ...catItems.slice().sort((a, b) => a.name.localeCompare(b.name)).map((item): ListRow => ({ type: 'item', key: item.id, item })),
     ];
   });
 
@@ -822,13 +648,7 @@ export default function PantryScreen() {
         />
       );
     }
-    return (
-      <PantryItemCard
-        item={row.item}
-        onDelete={removeItem}
-        onEdit={(item) => setEditingItem(item)}
-      />
-    );
+    return <PantryItemCard item={row.item} onDelete={removeItem} onEdit={(item) => setEditingItem(item)} />;
   };
 
   return (
@@ -837,6 +657,20 @@ export default function PantryScreen() {
       <View style={styles.header}>
         <Text style={styles.title} accessibilityRole="header">My Pantry</Text>
         <View style={styles.headerActions}>
+          {/* Summary / List toggle */}
+          <TouchableOpacity
+            style={[styles.summaryToggleButton, screenView === 'summary' && styles.summaryToggleButtonActive]}
+            onPress={() => setScreenView((v) => (v === 'list' ? 'summary' : 'list'))}
+            accessibilityRole="button"
+            accessibilityLabel={screenView === 'summary' ? 'Switch to list view' : 'Switch to summary view'}
+          >
+            <Ionicons
+              name={screenView === 'summary' ? 'list-outline' : 'bar-chart-outline'}
+              size={18}
+              color={screenView === 'summary' ? colors.primary : colors.textSecondary}
+            />
+          </TouchableOpacity>
+
           <TouchableOpacity
             style={styles.reviewButton}
             onPress={handleOpenReview}
@@ -846,24 +680,7 @@ export default function PantryScreen() {
             <Ionicons name="clipboard-outline" size={18} color={colors.primary} />
             <Text style={styles.reviewButtonText}>Review</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            onPress={handleScanReceipt}
-            disabled={identifying || scanningReceipt}
-            accessibilityRole="button"
-            accessibilityLabel="Scan receipt to add items"
-            style={{ marginRight: 8 }}
-          >
-            <Ionicons name="document-text-outline" size={26} color={colors.primary} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={handlePhotoAdd}
-            disabled={identifying || scanningReceipt}
-            accessibilityRole="button"
-            accessibilityLabel="Add items by photo"
-            style={{ marginRight: 8 }}
-          >
-            <Ionicons name="camera-outline" size={26} color={colors.primary} />
-          </TouchableOpacity>
+
           <TouchableOpacity
             style={styles.addIconButton}
             onPress={() => setModalVisible(true)}
@@ -875,26 +692,15 @@ export default function PantryScreen() {
         </View>
       </View>
 
-      {/* Search bar */}
-      <SearchBar
-        value={searchQuery}
-        onChangeText={setSearchQuery}
-        onClear={() => setSearchQuery('')}
-      />
-
-      {/* Category filter chips */}
-      <CategoryFilterChips
-        selected={selectedCategory}
-        onSelect={setSelectedCategory}
-        onClear={() => setSelectedCategory(null)}
-        availableCategories={availableCategories}
-      />
-
       {loading ? (
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
+      ) : screenView === 'summary' ? (
+        // ── Summary view ──────────────────────────────────────────────────────
+        <PantrySummary items={items} onCategoryPress={handleSummaryCategoryPress} />
       ) : items.length === 0 ? (
+        // ── Empty pantry ──────────────────────────────────────────────────────
         <View style={styles.emptyState}>
           <Ionicons name="basket-outline" size={64} color={colors.textTertiary} />
           <Text style={styles.emptyTitle}>Your pantry is empty</Text>
@@ -911,14 +717,17 @@ export default function PantryScreen() {
           </TouchableOpacity>
         </View>
       ) : (
+        // ── List view ─────────────────────────────────────────────────────────
         <>
-          {/* Hide expiring section and view toggle when searching */}
-          {!hasActiveFilter && (
-            <ExpiringSoonSection items={items} threshold={expiringItemsThreshold} />
-          )}
-          {!hasActiveFilter && (
-            <ViewToggle grouped={groupedView} onToggle={() => setGroupedView((v) => !v)} />
-          )}
+          <SearchBar value={searchQuery} onChangeText={setSearchQuery} onClear={() => setSearchQuery('')} />
+          <CategoryFilterChips
+            selected={selectedCategory}
+            onSelect={setSelectedCategory}
+            onClear={() => setSelectedCategory(null)}
+            availableCategories={availableCategories}
+          />
+          {!hasActiveFilter && <ExpiringSoonSection items={items} threshold={expiringItemsThreshold} />}
+          {!hasActiveFilter && <ViewToggle grouped={groupedView} onToggle={() => setGroupedView((v) => !v)} />}
           <FlatList
             data={activeListData}
             keyExtractor={(row) => row.key}
@@ -931,15 +740,8 @@ export default function PantryScreen() {
               <View style={styles.searchEmpty}>
                 <Ionicons name="search-outline" size={40} color={colors.textTertiary} />
                 <Text style={styles.searchEmptyTitle}>No items found</Text>
-                <Text style={styles.searchEmptySubtitle}>
-                  Try a different name or category.
-                </Text>
-                <TouchableOpacity
-                  onPress={handleClearAll}
-                  style={styles.clearAllButton}
-                  accessibilityRole="button"
-                  accessibilityLabel="Clear search and filters"
-                >
+                <Text style={styles.searchEmptySubtitle}>Try a different name or category.</Text>
+                <TouchableOpacity onPress={handleClearAll} style={styles.clearAllButton} accessibilityRole="button" accessibilityLabel="Clear search and filters">
                   <Text style={styles.clearAllButtonText}>Clear Search</Text>
                 </TouchableOpacity>
               </View>
@@ -948,44 +750,8 @@ export default function PantryScreen() {
         </>
       )}
 
-      <AddItemModal
-        visible={modalVisible}
-        onClose={() => setModalVisible(false)}
-        onAdd={addItem}
-      />
-
-      <EditItemModal
-        visible={editingItem !== null}
-        item={editingItem}
-        onClose={() => setEditingItem(null)}
-        onSave={editItem}
-      />
-
-      {(identifying || scanningReceipt) && (
-        <View style={{
-          ...StyleSheet.absoluteFillObject,
-          backgroundColor: 'rgba(0,0,0,0.5)',
-          justifyContent: 'center',
-          alignItems: 'center',
-          zIndex: 100,
-        }}>
-          <View style={{
-            backgroundColor: colors.white,
-            borderRadius: 16,
-            padding: 32,
-            alignItems: 'center',
-            gap: 16,
-          }}>
-            <ActivityIndicator size="large" color={colors.primary} />
-            <Text style={{ fontSize: 16, fontWeight: '600', color: colors.textPrimary }}>
-              {scanningReceipt ? 'Scanning receipt...' : 'Identifying groceries...'}
-            </Text>
-            <Text style={{ fontSize: 13, color: colors.textSecondary, textAlign: 'center' }}>
-              AI is analyzing your {scanningReceipt ? 'receipt' : 'photo'}
-            </Text>
-          </View>
-        </View>
-      )}
+      <AddItemModal visible={modalVisible} onClose={() => setModalVisible(false)} onAdd={addItem} />
+      <EditItemModal visible={editingItem !== null} item={editingItem} onClose={() => setEditingItem(null)} onSave={editItem} />
     </View>
   );
 }
@@ -993,10 +759,7 @@ export default function PantryScreen() {
 // ─── Styles ────────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.backgroundPrimary,
-  },
+  container: { flex: 1, backgroundColor: colors.backgroundPrimary },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1008,15 +771,17 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     backgroundColor: colors.backgroundPrimary,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
+  title: { fontSize: 24, fontWeight: 'bold', color: colors.textPrimary },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  summaryToggleButton: {
+    padding: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
   },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  summaryToggleButtonActive: {
+    borderColor: colors.primary,
+    backgroundColor: '#FFF3EE',
   },
   reviewButton: {
     flexDirection: 'row',
@@ -1028,88 +793,73 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.primary,
   },
-  reviewButtonText: {
-    fontSize: 13,
-    color: colors.primary,
-    fontWeight: '600',
-  },
-  addIconButton: {
-    padding: 4,
-  },
-  // Search bar
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginHorizontal: 16,
-    marginTop: 10,
-    marginBottom: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    backgroundColor: colors.backgroundSecondary,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-  },
-  searchIcon: {
-    marginRight: 6,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 15,
-    color: colors.textPrimary,
-    padding: 0,
-  },
-  // Category filter chips
-  filterChipScroll: {
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    gap: 8,
-  },
-  clearFilterChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 14,
-    backgroundColor: colors.backgroundTertiary,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-  },
-  clearFilterChipText: {
+  reviewButtonText: { fontSize: 13, color: colors.primary, fontWeight: '600' },
+  addIconButton: { padding: 4 },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  list: { paddingBottom: 32 },
+  // Summary
+  summaryScroll: { flex: 1 },
+  summaryContent: { padding: 16, paddingBottom: 40 },
+  summaryHint: {
     fontSize: 12,
-    color: colors.textSecondary,
-    fontWeight: '500',
+    color: colors.textTertiary,
+    marginBottom: 12,
+    textAlign: 'center',
   },
-  filterChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 14,
+  summaryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderColor: colors.borderLight,
+    gap: 10,
+  },
+  summaryRowEmpty: {
+    opacity: 0.45,
+  },
+  summaryCategoryLabel: {
+    width: 100,
+  },
+  summaryCategoryName: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.textPrimary,
+  },
+  summaryCategoryNameEmpty: {
+    color: colors.textTertiary,
+  },
+  summaryCategoryCount: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    marginTop: 1,
+  },
+  summaryCategoryCountEmpty: {
+    color: colors.textTertiary,
+    fontStyle: 'italic',
+  },
+  summaryBarTrack: {
+    flex: 1,
+    height: 8,
+    backgroundColor: colors.backgroundTertiary,
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  summaryBar: {
+    height: 8,
+    backgroundColor: colors.primary,
+    borderRadius: 4,
+  },
+  summaryBarEmpty: {
+    height: 8,
+    width: '100%',
+    backgroundColor: colors.borderLight,
+    borderRadius: 4,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.backgroundPrimary,
+    borderStyle: 'dashed',
   },
-  filterChipSelected: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  filterChipText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: colors.textSecondary,
-  },
-  filterChipTextSelected: {
-    color: colors.white,
-    fontWeight: '600',
-  },
-  centered: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  list: {
-    paddingBottom: 32,
-  },
+  summaryChevron: { marginLeft: 4 },
+  // Toggle bar
   toggleBar: {
     flexDirection: 'row',
     paddingHorizontal: 16,
@@ -1129,19 +879,51 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.borderLight,
   },
-  toggleButtonActive: {
-    borderColor: colors.primary,
-    backgroundColor: '#FFF3EE',
+  toggleButtonActive: { borderColor: colors.primary, backgroundColor: '#FFF3EE' },
+  toggleLabel: { fontSize: 13, fontWeight: '500', color: colors.textTertiary },
+  toggleLabelActive: { color: colors.primary, fontWeight: '600' },
+  // Search
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 16,
+    marginTop: 10,
+    marginBottom: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    backgroundColor: colors.backgroundSecondary,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
   },
-  toggleLabel: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: colors.textTertiary,
+  searchIcon: { marginRight: 6 },
+  searchInput: { flex: 1, fontSize: 15, color: colors.textPrimary, padding: 0 },
+  // Filter chips
+  filterChipScroll: { paddingHorizontal: 16, paddingVertical: 6, gap: 8 },
+  clearFilterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 14,
+    backgroundColor: colors.backgroundTertiary,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
   },
-  toggleLabelActive: {
-    color: colors.primary,
-    fontWeight: '600',
+  clearFilterChipText: { fontSize: 12, color: colors.textSecondary, fontWeight: '500' },
+  filterChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.backgroundPrimary,
   },
+  filterChipSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
+  filterChipText: { fontSize: 12, fontWeight: '500', color: colors.textSecondary },
+  filterChipTextSelected: { color: colors.white, fontWeight: '600' },
+  // Section headers
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1152,173 +934,53 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderColor: colors.borderLight,
   },
-  sectionHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
+  sectionHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   sectionHeaderText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    fontSize: 13, fontWeight: '700', color: colors.textSecondary,
+    textTransform: 'uppercase', letterSpacing: 0.5,
   },
   countBadge: {
     backgroundColor: colors.backgroundTertiary,
-    borderRadius: 10,
-    paddingHorizontal: 7,
-    paddingVertical: 1,
-    minWidth: 22,
-    alignItems: 'center',
+    borderRadius: 10, paddingHorizontal: 7, paddingVertical: 1, minWidth: 22, alignItems: 'center',
   },
-  countBadgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.textSecondary,
-  },
+  countBadgeText: { fontSize: 11, fontWeight: '700', color: colors.textSecondary },
+  // Empty states
   emptyState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 40,
-    gap: 12,
+    flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 40, gap: 12,
   },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-    textAlign: 'center',
-  },
-  emptySubtitle: {
-    fontSize: 15,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 22,
-  },
+  emptyTitle: { fontSize: 20, fontWeight: 'bold', color: colors.textPrimary, textAlign: 'center' },
+  emptySubtitle: { fontSize: 15, color: colors.textSecondary, textAlign: 'center', lineHeight: 22 },
   emptyAddButton: {
-    marginTop: 8,
-    backgroundColor: colors.primary,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 10,
+    marginTop: 8, backgroundColor: colors.primary,
+    paddingHorizontal: 24, paddingVertical: 12, borderRadius: 10,
   },
-  emptyAddButtonText: {
-    color: colors.white,
-    fontWeight: '600',
-    fontSize: 16,
-  },
-  // Search empty state
-  searchEmpty: {
-    alignItems: 'center',
-    paddingTop: 60,
-    paddingHorizontal: 40,
-    gap: 10,
-  },
-  searchEmptyTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.textSecondary,
-  },
-  searchEmptySubtitle: {
-    fontSize: 14,
-    color: colors.textTertiary,
-    textAlign: 'center',
-  },
+  emptyAddButtonText: { color: colors.white, fontWeight: '600', fontSize: 16 },
+  searchEmpty: { alignItems: 'center', paddingTop: 60, paddingHorizontal: 40, gap: 10 },
+  searchEmptyTitle: { fontSize: 18, fontWeight: '600', color: colors.textSecondary },
+  searchEmptySubtitle: { fontSize: 14, color: colors.textTertiary, textAlign: 'center' },
   clearAllButton: {
-    marginTop: 8,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: colors.primary,
+    marginTop: 8, paddingHorizontal: 20, paddingVertical: 10,
+    borderRadius: 8, borderWidth: 1, borderColor: colors.primary,
   },
-  clearAllButtonText: {
-    color: colors.primary,
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: colors.overlay,
-  },
+  clearAllButtonText: { color: colors.primary, fontWeight: '600', fontSize: 14 },
+  // Modals
+  modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: colors.overlay },
   sheet: {
-    backgroundColor: colors.backgroundPrimary,
-    padding: 20,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    gap: 10,
+    backgroundColor: colors.backgroundPrimary, padding: 20,
+    borderTopLeftRadius: 20, borderTopRightRadius: 20, gap: 10,
   },
-  sheetTitle: {
-    fontWeight: 'bold',
-    fontSize: 18,
-    color: colors.textPrimary,
-    marginBottom: 4,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 8,
-    padding: 10,
-    fontSize: 15,
-    color: colors.textPrimary,
-  },
-  row: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  inputFlex: {
-    flex: 1,
-  },
-  fieldLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.textSecondary,
-    marginBottom: 2,
-  },
-  chipRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  chip: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  chipSelected: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  chipText: {
-    fontSize: 13,
-    color: colors.textSecondary,
-  },
-  chipTextSelected: {
-    color: colors.white,
-    fontWeight: '600',
-  },
-  addButton: {
-    backgroundColor: colors.primary,
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  addButtonDisabled: {
-    opacity: 0.6,
-  },
-  addButtonText: {
-    color: colors.white,
-    fontWeight: '600',
-    fontSize: 16,
-  },
-  cancelText: {
-    textAlign: 'center',
-    color: colors.textTertiary,
-    paddingBottom: 4,
-  },
+  sheetTitle: { fontWeight: 'bold', fontSize: 18, color: colors.textPrimary, marginBottom: 4 },
+  input: { borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 10, fontSize: 15, color: colors.textPrimary },
+  row: { flexDirection: 'row', gap: 10 },
+  inputFlex: { flex: 1 },
+  fieldLabel: { fontSize: 13, fontWeight: '600', color: colors.textSecondary, marginBottom: 2 },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, borderWidth: 1, borderColor: colors.border },
+  chipSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
+  chipText: { fontSize: 13, color: colors.textSecondary },
+  chipTextSelected: { color: colors.white, fontWeight: '600' },
+  addButton: { backgroundColor: colors.primary, padding: 12, borderRadius: 8, alignItems: 'center', marginTop: 4 },
+  addButtonDisabled: { opacity: 0.6 },
+  addButtonText: { color: colors.white, fontWeight: '600', fontSize: 16 },
+  cancelText: { textAlign: 'center', color: colors.textTertiary, paddingBottom: 4 },
 });
