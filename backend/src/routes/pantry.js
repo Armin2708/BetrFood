@@ -1,8 +1,26 @@
 const express = require('express');
 const supabase = require('../db/supabase');
 const { requireAuth } = require('../middleware/auth');
+const OpenAI = require('openai');
 
 const router = express.Router();
+
+const openai = new OpenAI({
+  baseURL: 'https://openrouter.ai/api/v1',
+  apiKey: process.env.OPENROUTER_API_KEY,
+});
+
+const IDENTIFY_PROMPT = `You are a grocery item identifier. Analyze this photo and identify all visible food/grocery items.
+
+Return ONLY a JSON array (no markdown, no explanation) where each element has:
+- "name": string (common grocery name, e.g. "Banana", "Whole Milk")
+- "quantity": number (estimated count or 1 if unsure)
+- "unit": string (e.g. "pcs", "lbs", "oz", "gal", "bunch")
+- "category": string (one of: "Produce", "Dairy", "Proteins", "Grains", "Spices", "Canned Goods", "Frozen", "Beverages", "Snacks", "Other")
+
+Example: [{"name":"Banana","quantity":6,"unit":"pcs","category":"Produce"}]
+
+If no food items are visible, return an empty array: []`;
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 function getUserId(req) {
@@ -88,6 +106,52 @@ router.delete('/:id', requireAuth, async (req, res) => {
 
   if (error) return res.status(404).json({ error: 'Not found or no permission' });
   res.json({ message: 'Deleted' });
+});
+
+// POST /api/pantry/identify — identify grocery items from a photo
+router.post('/identify', requireAuth, async (req, res) => {
+  const { image } = req.body;
+
+  if (!image || typeof image !== 'string') {
+    return res.status(400).json({ error: 'base64 image is required' });
+  }
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: 'google/gemini-2.0-flash-exp:free',
+      max_tokens: 1024,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: IDENTIFY_PROMPT },
+            {
+              type: 'image_url',
+              image_url: { url: `data:image/jpeg;base64,${image}` },
+            },
+          ],
+        },
+      ],
+    });
+
+    const raw = response.choices[0].message.content.trim();
+
+    // Strip markdown code fences if present
+    const jsonStr = raw.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
+    const items = JSON.parse(jsonStr);
+
+    if (!Array.isArray(items)) {
+      return res.status(422).json({ error: 'AI did not return a valid item list' });
+    }
+
+    res.json({ items });
+  } catch (err) {
+    console.error('[IDENTIFY ERROR]', err.message);
+    if (err instanceof SyntaxError) {
+      return res.status(422).json({ error: 'AI response was not valid JSON' });
+    }
+    res.status(500).json({ error: 'Failed to identify items' });
+  }
 });
 
 module.exports = router;

@@ -71,3 +71,24 @@ export async function deletePantryItem(id: string): Promise<{ message: string }>
   }
   return response.json();
 }
+
+export interface IdentifiedItem {
+  name: string;
+  quantity: number;
+  unit: string;
+  category: string;
+}
+
+export async function identifyPantryItems(base64Image: string): Promise<IdentifiedItem[]> {
+  const response = await fetch(`${API_BASE_URL}/api/pantry/identify`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+    body: JSON.stringify({ image: base64Image }),
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to identify items');
+  }
+  const data = await response.json();
+  return data.items;
+}

@@ -17,10 +17,11 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
 import { usePantry } from '../../../context/PantryContext';
 import PantryItemCard from '../../../components/PantryItemCard';
 import ExpiringSoonSection from '../../../components/ExpiringSoonSection';
-import { PantryItem, PantryItemInput } from '../../../services/api';
+import { PantryItem, PantryItemInput, identifyPantryItems } from '../../../services/api';
 import { fetchPreferences } from '../../../services/api';
 import { colors } from '../../../constants/theme';
 
@@ -533,7 +534,52 @@ export default function PantryScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
+  const [identifying, setIdentifying] = useState(false);
+
   const hasActiveFilter = searchQuery.trim().length > 0 || selectedCategory !== null;
+
+  const handlePhotoAdd = async () => {
+    try {
+      const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permissionResult.granted) {
+        Alert.alert('Permission Required', 'Camera access is needed to photograph groceries.');
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ['images'],
+        quality: 0.7,
+        base64: true,
+        allowsEditing: false,
+      });
+
+      if (result.canceled || !result.assets?.[0]?.base64) return;
+
+      setIdentifying(true);
+      try {
+        const items = await identifyPantryItems(result.assets[0].base64);
+
+        if (items.length === 0) {
+          Alert.alert('No Items Found', 'No grocery items were identified in the photo. Try a clearer photo.');
+          return;
+        }
+
+        const candidates = items.map((item) => ({
+          name: item.name,
+          quantity: item.quantity,
+          unit: item.unit,
+          category: item.category,
+          expirationDate: null,
+        }));
+        router.push({ pathname: '/pantry-review', params: { candidates: JSON.stringify(candidates) } });
+      } finally {
+        setIdentifying(false);
+      }
+    } catch (error: any) {
+      setIdentifying(false);
+      Alert.alert('Error', error.message || 'Failed to identify grocery items.');
+    }
+  };
 
   const handleClearAll = () => {
     setSearchQuery('');
@@ -672,6 +718,15 @@ export default function PantryScreen() {
             <Text style={styles.reviewButtonText}>Review</Text>
           </TouchableOpacity>
           <TouchableOpacity
+            onPress={handlePhotoAdd}
+            disabled={identifying}
+            accessibilityRole="button"
+            accessibilityLabel="Add items by photo"
+            style={{ marginRight: 8 }}
+          >
+            <Ionicons name="camera-outline" size={26} color={colors.primary} />
+          </TouchableOpacity>
+          <TouchableOpacity
             style={styles.addIconButton}
             onPress={() => setModalVisible(true)}
             accessibilityRole="button"
@@ -767,6 +822,32 @@ export default function PantryScreen() {
         onClose={() => setEditingItem(null)}
         onSave={editItem}
       />
+
+      {identifying && (
+        <View style={{
+          ...StyleSheet.absoluteFillObject,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 100,
+        }}>
+          <View style={{
+            backgroundColor: colors.white,
+            borderRadius: 16,
+            padding: 32,
+            alignItems: 'center',
+            gap: 16,
+          }}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={{ fontSize: 16, fontWeight: '600', color: colors.textPrimary }}>
+              Identifying groceries...
+            </Text>
+            <Text style={{ fontSize: 13, color: colors.textSecondary, textAlign: 'center' }}>
+              AI is analyzing your photo
+            </Text>
+          </View>
+        </View>
+      )}
     </View>
   );
 }

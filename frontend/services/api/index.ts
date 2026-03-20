@@ -22,7 +22,7 @@ export { fetchNotifications, markNotificationRead, markAllNotificationsRead, fet
 export type { Notification } from './notifications';
 export { fetchAdminUsers, updateUserRole, fetchAdminStats, updateUserVerification } from './admin';
 export type { AdminUser, AdminStats } from './admin';
-export { fetchPantryItems, createPantryItem, updatePantryItem, deletePantryItem } from './pantry';
-export type { PantryItem, PantryItemInput } from './pantry';
+export { fetchPantryItems, createPantryItem, updatePantryItem, deletePantryItem, identifyPantryItems } from './pantry';
+export type { PantryItem, PantryItemInput, IdentifiedItem } from './pantry';
 export { sendChatMessage, fetchChatHistory } from './chat';
 export type { ChatMessage } from './chat';
