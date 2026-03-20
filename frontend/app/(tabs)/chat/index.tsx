@@ -9,10 +9,12 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
+import Markdown from 'react-native-markdown-display';
 import { colors } from '../../../constants/theme';
 import { ChatMessage, sendChatMessage, fetchChatHistory } from '../../../services/api/chat';
 
@@ -90,6 +92,7 @@ export default function ChatScreen() {
       // Remove the optimistic user message on error
       setMessages((prev) => prev.filter((m) => m.id !== tempUserMsg.id));
       setInput(text); // Restore input so user can retry
+      Alert.alert('Oops', 'Failed to get a response. Please try again.');
     } finally {
       setSending(false);
       setTimeout(() => {
@@ -120,9 +123,13 @@ export default function ChatScreen() {
           accessibilityRole="text"
           accessibilityLabel={`${isUser ? 'You' : 'Assistant'}: ${item.content}`}
         >
-          <Text style={[styles.messageText, isUser && styles.userMessageText]}>
-            {item.content}
-          </Text>
+          {isUser ? (
+            <Text style={[styles.messageText, styles.userMessageText]}>
+              {item.content}
+            </Text>
+          ) : (
+            <Markdown style={markdownStyles}>{item.content}</Markdown>
+          )}
           <Text style={[styles.timestamp, isUser && styles.userTimestamp]}>
             {formatRelativeTime(item.created_at)}
           </Text>
@@ -231,6 +238,21 @@ export default function ChatScreen() {
     </SafeAreaView>
   );
 }
+
+const markdownStyles = StyleSheet.create({
+  body: { fontSize: 15, lineHeight: 21, color: colors.textPrimary },
+  strong: { fontWeight: '700' },
+  em: { fontStyle: 'italic' },
+  bullet_list: { marginVertical: 4 },
+  ordered_list: { marginVertical: 4 },
+  list_item: { marginVertical: 2 },
+  heading1: { fontSize: 18, fontWeight: '700', marginVertical: 4 },
+  heading2: { fontSize: 16, fontWeight: '700', marginVertical: 4 },
+  heading3: { fontSize: 15, fontWeight: '700', marginVertical: 2 },
+  paragraph: { marginVertical: 2 },
+  code_inline: { backgroundColor: '#E5E7EB', borderRadius: 4, paddingHorizontal: 4, fontSize: 13, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
+  fence: { backgroundColor: '#E5E7EB', borderRadius: 8, padding: 10, marginVertical: 4, fontSize: 13, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
+});
 
 const styles = StyleSheet.create({
   container: {
