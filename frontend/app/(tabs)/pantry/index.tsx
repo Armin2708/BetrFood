@@ -750,7 +750,9 @@ export default function PantryScreen() {
         </>
       )}
 
-      <AddItemModal visible={modalVisible} onClose={() => setModalVisible(false)} onAdd={addItem} />
+      <AddItemModal visible={modalVisible} onClose={() => setModalVisible(false)} onAdd={async (item) => {
+  await addItem(item);
+}} />
       <EditItemModal visible={editingItem !== null} item={editingItem} onClose={() => setEditingItem(null)} onSave={editItem} />
     </View>
   );
