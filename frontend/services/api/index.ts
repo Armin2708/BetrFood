@@ -24,3 +24,5 @@ export { fetchAdminUsers, updateUserRole, fetchAdminStats, updateUserVerificatio
 export type { AdminUser, AdminStats } from './admin';
 export { fetchPantryItems, createPantryItem, updatePantryItem, deletePantryItem } from './pantry';
 export type { PantryItem, PantryItemInput } from './pantry';
+export { sendChatMessage, fetchChatHistory } from './chat';
+export type { ChatMessage } from './chat';

@@ -248,3 +248,15 @@ CREATE TABLE IF NOT EXISTS pantry_items (
 );
 CREATE INDEX IF NOT EXISTS idx_pantry_items_user_id ON pantry_items(user_id);
 CREATE INDEX IF NOT EXISTS idx_pantry_items_name ON pantry_items(name);
+
+-- ============================================================
+-- 14. Chat Messages
+-- ============================================================
+CREATE TABLE IF NOT EXISTS chat_messages (
+  id SERIAL PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  role TEXT NOT NULL CHECK (role IN ('user', 'assistant')),
+  content TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_chat_messages_user_id ON chat_messages(user_id);

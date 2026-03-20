@@ -20,6 +20,7 @@ const pantryRouter = require('./routes/pantry');
 const preferencesRouter = require("./routes/preferences");
 const blocksRouter = require("./routes/blocks");
 const notificationsRouter = require("./routes/notifications");
+const chatRouter = require('./routes/chat');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -79,6 +80,7 @@ app.use('/api/pantry', pantryRouter);
 app.use("/api/preferences", preferencesRouter);
 app.use("/api/users", blocksRouter);
 app.use("/api/notifications", notificationsRouter);
+app.use('/api/chat', chatRouter);
 
 // Global error handler — catches multer errors and other unhandled middleware errors
 app.use((err, req, res, next) => {
