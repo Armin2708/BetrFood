@@ -26,7 +26,6 @@ const CATEGORIES = [
   'Spices', 'Canned Goods', 'Frozen', 'Beverages', 'Snacks', 'Other',
 ];
 
-// Each candidate row has a local id for list keying (not a DB id)
 type Candidate = {
   localId: string;
   name: string;
@@ -98,7 +97,6 @@ function CandidateRow({
 
   return (
     <View style={styles.candidateCard}>
-      {/* Row header: name field + remove button */}
       <View style={styles.candidateHeader}>
         <TextInput
           style={[styles.input, styles.nameInput]}
@@ -118,7 +116,6 @@ function CandidateRow({
         </TouchableOpacity>
       </View>
 
-      {/* Qty + unit on one line */}
       <View style={styles.row}>
         <TextInput
           style={[styles.input, styles.inputFlex]}
@@ -140,7 +137,6 @@ function CandidateRow({
         />
       </View>
 
-      {/* Expandable category picker */}
       <TouchableOpacity
         style={styles.categoryToggle}
         onPress={() => setExpanded((v) => !v)}
@@ -179,8 +175,6 @@ export default function PantryReviewScreen() {
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
 
-  // Accept pre-populated candidates passed via navigation params (e.g. from a
-  // photo-identification flow), or start with one blank row.
   const [candidates, setCandidates] = useState<Candidate[]>(() => {
     if (params.candidates) {
       try {
@@ -194,7 +188,7 @@ export default function PantryReviewScreen() {
           expirationDate: p.expirationDate ?? null,
         }));
       } catch {
-        // Fall through to blank row
+        // Fall through to empty list
       }
     }
     return [];
@@ -217,59 +211,54 @@ export default function PantryReviewScreen() {
   };
 
   const handlePickPhoto = async () => {
-  const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('Permission needed', 'Please allow photo library access.');
+      return;
+    }
 
-  if (!permission.granted) {
-    Alert.alert('Permission needed', 'Please allow photo library access.');
-    return;
-  }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.6,
+      base64: false,
+    });
 
-  const result = await ImagePicker.launchImageLibraryAsync({
-    mediaTypes: ImagePicker.MediaTypeOptions.Images,
-    quality: 0.6,
-    base64: false,
-  });
+    if (!result.canceled) {
+      setPhotoUri(result.assets[0].uri);
+      setCandidates([]);
+    }
+  };
 
-  if (!result.canceled) {
-    setPhotoUri(result.assets[0].uri);
-    setCandidates([]);
-  }
-};
+  const handleAnalyzePhoto = async () => {
+    if (!photoUri) {
+      Alert.alert('No photo selected', 'Pick a photo first.');
+      return;
+    }
+    if (!token) {
+      Alert.alert('Not signed in', 'You need to be signed in to analyze a photo.');
+      return;
+    }
 
-const handleAnalyzePhoto = async () => {
-  if (!photoUri) {
-    Alert.alert('No photo selected', 'Pick a photo first.');
-    return;
-  }
-
-  if (!token) {
-    Alert.alert('Not signed in', 'You need to be signed in to analyze a photo.');
-    return;
-  }
-
-  setAnalyzing(true);
-  try {
-    const result = await identifyPantryItems(token, photoUri);
-
-    const mapped: Candidate[] = result.items.map((item) => ({
-      localId: makeid(),
-      name: item.name,
-      quantity: typeof item.quantity === 'number' ? item.quantity : 1,
-      unit: item.unit || 'pcs',
-      category: item.category || CATEGORIES[0],
-      expirationDate: null,
-    }));
-
-    setCandidates(mapped);
-  } catch (error: any) {
-    Alert.alert('Error', error.message || 'Failed to analyze photo.');
-  } finally {
-    setAnalyzing(false);
-  }
-};
+    setAnalyzing(true);
+    try {
+      const result = await identifyPantryItems(token, photoUri);
+      const mapped: Candidate[] = result.items.map((item) => ({
+        localId: makeid(),
+        name: item.name,
+        quantity: typeof item.quantity === 'number' ? item.quantity : 1,
+        unit: item.unit || 'pcs',
+        category: item.category || CATEGORIES[0],
+        expirationDate: null,
+      }));
+      setCandidates(mapped);
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to analyze photo.');
+    } finally {
+      setAnalyzing(false);
+    }
+  };
 
   const handleConfirm = async () => {
-    // Validate — every item needs at least a name
     const invalid = candidates.filter((c) => !c.name.trim());
     if (invalid.length > 0) {
       return Alert.alert(
@@ -277,7 +266,6 @@ const handleAnalyzePhoto = async () => {
         'Every item needs a name. Remove or fill in the highlighted rows.'
       );
     }
-
     if (candidates.length === 0) {
       return Alert.alert('Nothing to add', 'Add at least one item before confirming.');
     }
@@ -291,7 +279,6 @@ const handleAnalyzePhoto = async () => {
         category: c.category,
         expirationDate: c.expirationDate,
       }));
-
       await addItems(inputs);
       router.back();
     } catch (error: any) {
@@ -308,12 +295,70 @@ const handleAnalyzePhoto = async () => {
     ]);
   };
 
+  // ── Photo section rendered as FlatList header so it scrolls with the list
+  // and never gets pushed off screen or covered by the list expanding to fill space.
+  const ListHeader = (
+    <>
+      <Text style={styles.subtitle}>
+        Review, edit, or remove items before adding them to your pantry.
+      </Text>
+
+      <View style={styles.photoSection}>
+        <TouchableOpacity
+          style={styles.photoButton}
+          onPress={handlePickPhoto}
+          accessibilityRole="button"
+          accessibilityLabel="Pick a grocery photo"
+        >
+          <Ionicons name="image-outline" size={18} color={colors.white} />
+          <Text style={styles.photoButtonText}>
+            {photoUri ? 'Choose Different Photo' : 'Pick Grocery Photo'}
+          </Text>
+        </TouchableOpacity>
+
+        {photoUri && (
+          <>
+            <View style={styles.photoPreviewWrapper}>
+              <Image source={{ uri: photoUri }} style={styles.photoPreview} />
+            </View>
+
+            <TouchableOpacity
+              style={[styles.analyzeButton, analyzing && styles.analyzeButtonDisabled]}
+              onPress={handleAnalyzePhoto}
+              disabled={analyzing}
+              accessibilityRole="button"
+              accessibilityLabel="Analyze photo for multiple grocery items"
+            >
+              {analyzing ? (
+                <>
+                  <ActivityIndicator size="small" color={colors.white} />
+                  <Text style={styles.analyzeButtonText}>Analyzing…</Text>
+                </>
+              ) : (
+                <>
+                  <Ionicons name="scan-outline" size={18} color={colors.white} />
+                  <Text style={styles.analyzeButtonText}>Analyze Photo</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </>
+        )}
+      </View>
+
+      {candidates.length > 0 && (
+        <Text style={styles.itemsLabel}>
+          {candidates.length} item{candidates.length !== 1 ? 's' : ''} identified — review and edit below
+        </Text>
+      )}
+    </>
+  );
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      {/* Header */}
+      {/* Fixed header with Discard / title / Add N Items */}
       <View style={styles.header}>
         <TouchableOpacity
           onPress={handleDiscard}
@@ -348,51 +393,7 @@ const handleAnalyzePhoto = async () => {
         </TouchableOpacity>
       </View>
 
-      {/* Subtitle */}
-      <Text style={styles.subtitle}>
-        Review, edit, or remove items before adding them to your pantry.
-      </Text>
-
-      <View style={styles.photoSection}>
-  <TouchableOpacity
-    style={styles.photoButton}
-    onPress={handlePickPhoto}
-    accessibilityRole="button"
-    accessibilityLabel="Pick a grocery photo"
-  >
-    <Ionicons name="image-outline" size={18} color={colors.white} />
-    <Text style={styles.photoButtonText}>
-      {photoUri ? 'Choose Different Photo' : 'Pick Grocery Photo'}
-    </Text>
-  </TouchableOpacity>
-
-  {photoUri && (
-    <>
-      <View style={styles.photoPreviewWrapper}>
-        <Image source={{ uri: photoUri }} style={styles.photoPreview} />
-      </View>
-
-      <TouchableOpacity
-        style={[styles.analyzeButton, analyzing && styles.confirmButtonDisabled]}
-        onPress={handleAnalyzePhoto}
-        disabled={analyzing}
-        accessibilityRole="button"
-        accessibilityLabel="Analyze photo for multiple grocery items"
-      >
-        {analyzing ? (
-          <ActivityIndicator size="small" color={colors.white} />
-        ) : (
-          <>
-            <Ionicons name="scan-outline" size={18} color={colors.white} />
-            <Text style={styles.analyzeButtonText}>Analyze Photo</Text>
-          </>
-        )}
-      </TouchableOpacity>
-    </>
-  )}
-</View>
-
-      {/* Item list */}
+      {/* FlatList owns the rest of the screen — photo section is its header */}
       <FlatList
         data={candidates}
         keyExtractor={(c) => c.localId}
@@ -403,13 +404,17 @@ const handleAnalyzePhoto = async () => {
             onRemove={() => removeCandidate(item.localId)}
           />
         )}
+        ListHeaderComponent={ListHeader}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
         ListEmptyComponent={
           <View style={styles.emptyState}>
             <Ionicons name="basket-outline" size={48} color={colors.textTertiary} />
-            <Text style={styles.emptyText}>No items to review.</Text>
-            <Text style={styles.emptySubText}>Tap "Add Item" below to add one manually.</Text>
+            <Text style={styles.emptyText}>No items yet.</Text>
+            <Text style={styles.emptySubText}>
+              Pick a photo and tap Analyze, or add items manually below.
+            </Text>
           </View>
         }
         ListFooterComponent={
@@ -484,11 +489,16 @@ const styles = StyleSheet.create({
     borderColor: colors.borderLight,
   },
   list: {
-    padding: 16,
-    gap: 12,
     paddingBottom: 40,
   },
-  // Candidate card
+  itemsLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 4,
+  },
   candidateCard: {
     backgroundColor: colors.backgroundPrimary,
     borderRadius: 10,
@@ -497,6 +507,7 @@ const styles = StyleSheet.create({
     padding: 12,
     gap: 8,
     marginBottom: 12,
+    marginHorizontal: 16,
   },
   candidateHeader: {
     flexDirection: 'row',
@@ -541,7 +552,6 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontWeight: '600',
   },
-  // Category chips
   chipRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -567,13 +577,13 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontWeight: '600',
   },
-  // Add row button
   addRowButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
     paddingVertical: 14,
+    marginHorizontal: 16,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: colors.primary,
@@ -585,10 +595,10 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontWeight: '600',
   },
-  // Empty state
   emptyState: {
     alignItems: 'center',
-    paddingVertical: 40,
+    paddingVertical: 32,
+    paddingHorizontal: 40,
     gap: 8,
   },
   emptyText: {
@@ -600,54 +610,56 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.textTertiary,
     textAlign: 'center',
+    lineHeight: 18,
   },
-
   photoSection: {
-  paddingHorizontal: 16,
-  paddingTop: 14,
-  paddingBottom: 8,
-  gap: 10,
-},
-photoButton: {
-  backgroundColor: colors.primary,
-  paddingVertical: 12,
-  paddingHorizontal: 14,
-  borderRadius: 10,
-  flexDirection: 'row',
-  alignItems: 'center',
-  justifyContent: 'center',
-  gap: 8,
-},
-photoButtonText: {
-  color: colors.white,
-  fontWeight: '700',
-  fontSize: 14,
-},
-photoPreviewWrapper: {
-  width: '100%',
-  height: 240,
-  borderRadius: 12,
-  overflow: 'hidden',
-  backgroundColor: colors.backgroundSubtle,
-},
-photoPreview: {
-  width: '100%',
-  height: '100%',
-},
-analyzeButton: {
-  backgroundColor: colors.primary,
-  paddingVertical: 12,
-  paddingHorizontal: 14,
-  borderRadius: 10,
-  flexDirection: 'row',
-  alignItems: 'center',
-  justifyContent: 'center',
-  gap: 8,
-},
-analyzeButtonText: {
-  color: colors.white,
-  fontWeight: '700',
-  fontSize: 14,
-},
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 8,
+    gap: 10,
+  },
+  photoButton: {
+    backgroundColor: colors.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  photoButtonText: {
+    color: colors.white,
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  photoPreviewWrapper: {
+    width: '100%',
+    height: 240,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: colors.backgroundSubtle,
+  },
+  photoPreview: {
+    width: '100%',
+    height: '100%',
+  },
+  analyzeButton: {
+    backgroundColor: colors.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  analyzeButtonDisabled: {
+    opacity: 0.7,
+  },
+  analyzeButtonText: {
+    color: colors.white,
+    fontWeight: '700',
+    fontSize: 14,
+  },
 });
- 
