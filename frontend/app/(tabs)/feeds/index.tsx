@@ -350,6 +350,7 @@ export default function HomeScreen() {
             createdAt={item.createdAt}
             initialLiked={item.liked}
             initialLikes={item.likeCount}
+            isCreator={item.isCreator}
             mediaType={item.mediaType}
             commentCount={item.commentCount}
             pantryMatchedCount={item._matchedCount}

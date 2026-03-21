@@ -20,14 +20,17 @@ import * as AuthSession from "expo-auth-session";
 import * as WebBrowser from "expo-web-browser";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import { DEV_BYPASS_AUTH } from "../../utils/devAuth";
 
 WebBrowser.maybeCompleteAuthSession();
 
 export default function Login() {
   const { isSignedIn, isLoaded } = useAuth();
+  const signedIn = DEV_BYPASS_AUTH || isSignedIn;
+  const authReady = DEV_BYPASS_AUTH || isLoaded;
 
   // Already signed in — redirect to home
-  if (isLoaded && isSignedIn) {
+  if (authReady && signedIn) {
     return <Redirect href="/" />;
   }
 

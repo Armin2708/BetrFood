@@ -43,6 +43,7 @@ import { useVideoPlayer, VideoView } from 'expo-video';
 import { AuthContext } from '../context/AuthenticationContext';
 import TagDisplay from '../components/TagDisplay';
 import RecipeDisplay from '../components/RecipeDisplay';
+import CreatorBadge from '../components/CreatorBadge';
 import { colors } from '../constants/theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -394,6 +395,7 @@ export default function PostDetailScreen() {
                   {comment.displayName || comment.username || 'User'}
                 </Text>
               </TouchableOpacity>
+              {comment.isCreator && <CreatorBadge size={14} />}
               <Text style={styles.commentTime}>{formatCommentTime(comment.createdAt)}</Text>
             </View>
 
@@ -462,7 +464,10 @@ export default function PostDetailScreen() {
           )}
           <View style={styles.authorInfo}>
             {post.displayName && (
-              <Text style={styles.displayName}>{post.displayName}</Text>
+              <View style={styles.displayNameRow}>
+                <Text style={styles.displayName}>{post.displayName}</Text>
+                {post.isCreator && <CreatorBadge />}
+              </View>
             )}
             {post.username && (
               <Text style={styles.usernameText}>@{post.username}</Text>
@@ -778,6 +783,10 @@ const styles = StyleSheet.create({
   },
   authorInfo: {
     flex: 1,
+  },
+  displayNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   displayName: {
     fontSize: 16,

@@ -5,10 +5,19 @@ const OpenAI = require('openai');
 
 const router = express.Router();
 
-const openai = new OpenAI({
-  baseURL: 'https://openrouter.ai/api/v1',
-  apiKey: process.env.OPENROUTER_API_KEY,
-});
+const openrouterApiKey = process.env.OPENROUTER_API_KEY;
+const openai = openrouterApiKey
+  ? new OpenAI({
+      baseURL: 'https://openrouter.ai/api/v1',
+      apiKey: openrouterApiKey,
+    })
+  : null;
+
+function requireOpenRouter(res) {
+  if (openai) return true;
+  res.status(503).json({ error: 'AI features are not configured. Missing OPENROUTER_API_KEY.' });
+  return false;
+}
 
 const IDENTIFY_SINGLE_PROMPT = `You are a food item identifier. Analyze this photo and identify the single main food or grocery item visible.
 
@@ -141,6 +150,7 @@ router.delete('/:id', requireAuth, async (req, res) => {
 
 // POST /api/pantry/identify — identify grocery items from a photo
 router.post('/identify', requireAuth, async (req, res) => {
+  if (!requireOpenRouter(res)) return;
   const { image } = req.body;
 
   if (!image || typeof image !== 'string') {
@@ -187,6 +197,7 @@ router.post('/identify', requireAuth, async (req, res) => {
 
 // POST /api/pantry/identify-single — identify a single food item from a photo
 router.post('/identify-single', requireAuth, async (req, res) => {
+  if (!requireOpenRouter(res)) return;
   const { image } = req.body;
 
   if (!image || typeof image !== 'string') {
@@ -233,6 +244,7 @@ router.post('/identify-single', requireAuth, async (req, res) => {
 
 // POST /api/pantry/scan-receipt — extract grocery items from a receipt photo
 router.post('/scan-receipt', requireAuth, async (req, res) => {
+  if (!requireOpenRouter(res)) return;
   const { image } = req.body;
 
   if (!image || typeof image !== 'string') {

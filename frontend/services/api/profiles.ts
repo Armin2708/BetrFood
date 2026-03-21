@@ -9,6 +9,8 @@ export interface UserProfile {
   bio: string | null;
   dietaryPreferences: number[];
   onboardingCompleted: boolean;
+  role: string;
+  isCreator: boolean;
   verified: boolean;
 }
 

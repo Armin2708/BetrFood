@@ -5,6 +5,7 @@ import { useState, useCallback, useContext, useEffect } from 'react';
 import { useActionSheet } from '@expo/react-native-action-sheet';
 import { AuthContext } from '../../../context/AuthenticationContext';
 import VideoThumbnailView from '../../../components/VideoThumbnail';
+import CreatorBadge from '../../../components/CreatorBadge';
 import {
   fetchUserProfile,
   fetchFollowStats,
@@ -279,7 +280,7 @@ export default function UserProfileScreen() {
           {profile?.displayName ? (
             <View style={styles.displayNameRow}>
               <Text style={styles.displayName}>{profile.displayName}</Text>
-              {profile.verified && <Text style={styles.verifiedBadge}>{'\u2713'}</Text>}
+              {profile.isCreator && <CreatorBadge />}
             </View>
           ) : null}
           <Text style={styles.username}>
@@ -399,12 +400,6 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontWeight: 'bold',
     fontSize: 16,
-  },
-  verifiedBadge: {
-    color: colors.verified,
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginLeft: 4,
   },
   username: {
     color: colors.textSecondary,

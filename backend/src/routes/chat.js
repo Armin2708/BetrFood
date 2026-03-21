@@ -6,10 +6,13 @@ const { requireAuth } = require('../middleware/auth');
 
 const router = express.Router();
 
-const openai = new OpenAI({
-  baseURL: 'https://openrouter.ai/api/v1',
-  apiKey: process.env.OPENROUTER_API_KEY,
-});
+const openrouterApiKey = process.env.OPENROUTER_API_KEY;
+const openai = openrouterApiKey
+  ? new OpenAI({
+      baseURL: 'https://openrouter.ai/api/v1',
+      apiKey: openrouterApiKey,
+    })
+  : null;
 
 const BASE_SYSTEM_PROMPT =
   "You are BetrFood's AI cooking assistant. You help users with food-related questions including recipes, cooking techniques, ingredient substitutions, meal planning, nutrition information, and food storage tips. Be friendly, concise, and helpful. If asked about non-food topics, gently redirect to food-related assistance.";
@@ -59,6 +62,9 @@ function getUserId(req) {
 
 // POST /api/chat — send a message, get AI response
 router.post('/', requireAuth, async (req, res) => {
+  if (!openai) {
+    return res.status(503).json({ error: 'Chat is not configured. Missing OPENROUTER_API_KEY.' });
+  }
   const userId = getUserId(req);
   const { message } = req.body;
 

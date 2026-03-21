@@ -16,6 +16,8 @@ export interface Post {
   displayName?: string | null;
   username?: string | null;
   avatarUrl?: string | null;
+  role?: string;
+  isCreator?: boolean;
   likeCount?: number;
   liked?: boolean;
   commentCount?: number;

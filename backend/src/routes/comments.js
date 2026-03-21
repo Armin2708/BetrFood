@@ -177,7 +177,7 @@ async function enrichCommentsWithProfiles(comments) {
   const userIds = [...new Set(comments.map(c => c.user_id))];
   const { data: profiles } = await supabase
     .from('user_profiles')
-    .select('id, display_name, username, avatar_url')
+    .select('id, display_name, username, avatar_url, role')
     .in('id', userIds);
 
   const profileMap = {};
@@ -207,6 +207,8 @@ function mapComment(comment) {
     displayName: profile.display_name || null,
     username: profile.username || null,
     avatarUrl: profile.avatar_url || null,
+    role: profile.role || 'user',
+    isCreator: profile.role === 'creator',
   };
 }
 

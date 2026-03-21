@@ -81,6 +81,8 @@ function formatProfile(row) {
     bio: row.bio,
     dietaryPreferences: row.dietary_preferences || [],
     onboardingCompleted: row.onboarding_completed,
+    role: row.role || 'user',
+    isCreator: row.role === 'creator',
     verified: row.verified || false,
   };
 }

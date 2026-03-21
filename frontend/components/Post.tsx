@@ -4,6 +4,7 @@ import * as Clipboard from 'expo-clipboard';
 import { useActionSheet } from '@expo/react-native-action-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Collection } from "../context/CollectionsContext";
+import CreatorBadge from './CreatorBadge';
 import { Tag, Recipe, deletePost, fetchRecipe, likePost, unlikePost, reportContent } from '../services/api';
 import TagDisplay from './TagDisplay';
 import RecipeDisplay from './RecipeDisplay';
@@ -36,6 +37,7 @@ interface PostProps {
   initialLiked?: boolean;
   initialLikes?: number;
   verified?: boolean;
+  isCreator?: boolean;
   mediaType?: 'image' | 'video';
   commentCount?: number;
   // Pantry match props
@@ -60,6 +62,7 @@ export default function Post({
   initialLiked = false,
   initialLikes = 0,
   verified = false,
+  isCreator = false,
   mediaType,
   commentCount,
   isPantryMatch,
@@ -224,7 +227,7 @@ export default function Post({
         >
           <Image source={{ uri: profilePic }} style={styles.profilePic} />
           <Text style={styles.username}>{username}</Text>
-          {verified && <Text style={styles.verifiedBadge}>{'\u2713'}</Text>}
+          {(isCreator || verified) && <CreatorBadge />}
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.menuButton}
@@ -385,12 +388,6 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   captionUsername: { fontWeight: 'bold' },
-  verifiedBadge: {
-    color: colors.verified,
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginLeft: 4,
-  },
   editedLabel: {
     paddingHorizontal: 10,
     paddingBottom: 10,

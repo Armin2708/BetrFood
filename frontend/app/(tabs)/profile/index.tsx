@@ -5,6 +5,7 @@ import { useState, useCallback, useContext, useRef, useEffect } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { AuthContext } from '../../../context/AuthenticationContext';
 import { fetchMyProfile, fetchFollowStats, fetchUserPosts, getImageUrl, getAvatarUrl, UserProfile, Post as PostType } from '../../../services/api';
+import CreatorBadge from '../../../components/CreatorBadge';
 import VideoThumbnailView from '../../../components/VideoThumbnail';
 import { colors } from '../../../constants/theme';
 
@@ -121,11 +122,7 @@ export default function ProfileScreen() {
       {profile?.displayName ? (
         <View style={styles.displayNameRow}>
           <Text style={styles.displayName}>{profile.displayName}</Text>
-          {profile.verified && (
-            <View style={styles.verifiedBadge}>
-              <Ionicons name="checkmark-circle" size={18} color={colors.primary} />
-            </View>
-          )}
+          {profile.isCreator && <CreatorBadge />}
         </View>
       ) : null}
 
@@ -299,10 +296,6 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     textAlign: 'center',
   },
-  verifiedBadge: {
-    marginLeft: 6,
-  },
-
   /* Username */
   username: {
     fontSize: 12,
