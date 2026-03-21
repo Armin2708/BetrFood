@@ -58,86 +58,11 @@ function getUserId(req) {
   return req.userId || (req.user && req.user.id) || req.headers['x-user-id'] || 'anonymous';
 }
 
-// ─── routes ────────────────────────────────────────────────────────────────
+function stripCodeFences(raw) {
+  return raw.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim();
+}
 
-// GET /api/pantry
-router.get('/', requireAuth, async (req, res) => {
-  const userId = getUserId(req);
-  const { data, error } = await supabase
-    .from('pantry_items')
-    .select('*')
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false });
-
-  if (error) return res.status(500).json({ error: error.message });
-  res.json(data || []);
-});
-
-// GET /api/pantry/:id
-router.get('/:id', requireAuth, async (req, res) => {
-  const userId = getUserId(req);
-  const { data, error } = await supabase
-    .from('pantry_items')
-    .select('*')
-    .eq('id', req.params.id)
-    .eq('user_id', userId)
-    .single();
-
-  if (error) return res.status(404).json({ error: 'Not found' });
-  res.json(data);
-});
-
-// POST /api/pantry
-router.post('/', requireAuth, async (req, res) => {
-  const userId = getUserId(req);
-  const { name, quantity, unit, category, expirationDate } = req.body;
-  if (!name || typeof quantity !== 'number') return res.status(400).json({ error: 'name + numeric quantity required' });
-
-  const payload = {
-    user_id: userId,
-    name,
-    quantity,
-    unit: unit || '',
-    category: category || 'Other',
-    expiration_date: expirationDate || null
-  };
-
-  const { data, error } = await supabase.from('pantry_items').insert(payload).single();
-  if (error) return res.status(500).json({ error: error.message });
-  res.status(201).json(data);
-});
-
-// PUT /api/pantry/:id
-router.put('/:id', requireAuth, async (req, res) => {
-  const userId = getUserId(req);
-  const updates = {
-    ...req.body,
-    updated_at: new Date().toISOString()
-  };
-
-  const { data, error } = await supabase
-    .from('pantry_items')
-    .update(updates)
-    .eq('id', req.params.id)
-    .eq('user_id', userId)
-    .single();
-
-  if (error) return res.status(404).json({ error: 'Not found or no permission' });
-  res.json(data);
-});
-
-// DELETE /api/pantry/:id
-router.delete('/:id', requireAuth, async (req, res) => {
-  const userId = getUserId(req);
-  const { error } = await supabase
-    .from('pantry_items')
-    .delete()
-    .eq('id', req.params.id)
-    .eq('user_id', userId);
-
-  if (error) return res.status(404).json({ error: 'Not found or no permission' });
-  res.json({ message: 'Deleted' });
-});
+// ─── Vision routes (defined BEFORE /:id to avoid path conflicts) ─────────────
 
 // POST /api/pantry/identify — identify grocery items from a photo
 router.post('/identify', requireAuth, async (req, res) => {
@@ -166,10 +91,7 @@ router.post('/identify', requireAuth, async (req, res) => {
     });
 
     const raw = response.choices[0].message.content.trim();
-
-    // Strip markdown code fences if present
-    const jsonStr = raw.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
-    const items = JSON.parse(jsonStr);
+    const items = JSON.parse(stripCodeFences(raw));
 
     if (!Array.isArray(items)) {
       return res.status(422).json({ error: 'AI did not return a valid item list' });
@@ -212,10 +134,7 @@ router.post('/identify-single', requireAuth, async (req, res) => {
     });
 
     const raw = response.choices[0].message.content.trim();
-
-    // Strip markdown code fences if present
-    const jsonStr = raw.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
-    const item = JSON.parse(jsonStr);
+    const item = JSON.parse(stripCodeFences(raw));
 
     if (typeof item !== 'object' || Array.isArray(item)) {
       return res.status(422).json({ error: 'AI did not return a valid item object' });
@@ -258,10 +177,7 @@ router.post('/scan-receipt', requireAuth, async (req, res) => {
     });
 
     const raw = response.choices[0].message.content.trim();
-
-    // Strip markdown code fences if present
-    const jsonStr = raw.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
-    const items = JSON.parse(jsonStr);
+    const items = JSON.parse(stripCodeFences(raw));
 
     if (!Array.isArray(items)) {
       return res.status(422).json({ error: 'AI did not return a valid item list' });
@@ -275,6 +191,103 @@ router.post('/scan-receipt', requireAuth, async (req, res) => {
     }
     res.status(500).json({ error: 'Failed to scan receipt' });
   }
+});
+
+// ─── CRUD routes ─────────────────────────────────────────────────────────────
+
+// GET /api/pantry
+router.get('/', requireAuth, async (req, res) => {
+  const userId = getUserId(req);
+  const { data, error } = await supabase
+    .from('pantry_items')
+    .select('*')
+    .eq('user_id', userId)
+    .order('category', { ascending: true })
+    .order('name', { ascending: true });
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data || []);
+});
+
+// GET /api/pantry/:id
+router.get('/:id', requireAuth, async (req, res) => {
+  const userId = getUserId(req);
+  const { data, error } = await supabase
+    .from('pantry_items')
+    .select('*')
+    .eq('id', req.params.id)
+    .eq('user_id', userId)
+    .single();
+
+  if (error) return res.status(404).json({ error: 'Not found' });
+  res.json(data);
+});
+
+// POST /api/pantry
+router.post('/', requireAuth, async (req, res) => {
+  const userId = getUserId(req);
+  const { name, quantity, unit, category, expirationDate } = req.body;
+
+  if (!name || typeof quantity !== 'number') {
+    return res.status(400).json({ error: 'name + numeric quantity required' });
+  }
+
+  const payload = {
+    user_id: userId,
+    name,
+    quantity,
+    unit: unit || '',
+    category: category || 'Other',
+    expiration_date: expirationDate || null,
+  };
+
+  // .select() is required for supabase-js v2 to return the inserted row
+  const { data, error } = await supabase
+    .from('pantry_items')
+    .insert(payload)
+    .select()
+    .single();
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.status(201).json(data);
+});
+
+// PUT /api/pantry/:id
+router.put('/:id', requireAuth, async (req, res) => {
+  const userId = getUserId(req);
+
+  // Only allow known fields to be updated
+  const { name, quantity, unit, category, expirationDate } = req.body;
+  const updates = { updated_at: new Date().toISOString() };
+  if (name !== undefined) updates.name = name;
+  if (quantity !== undefined) updates.quantity = quantity;
+  if (unit !== undefined) updates.unit = unit;
+  if (category !== undefined) updates.category = category;
+  if (expirationDate !== undefined) updates.expiration_date = expirationDate;
+
+  const { data, error } = await supabase
+    .from('pantry_items')
+    .update(updates)
+    .eq('id', req.params.id)
+    .eq('user_id', userId)
+    .select()
+    .single();
+
+  if (error) return res.status(404).json({ error: 'Not found or no permission' });
+  res.json(data);
+});
+
+// DELETE /api/pantry/:id
+router.delete('/:id', requireAuth, async (req, res) => {
+  const userId = getUserId(req);
+  const { error } = await supabase
+    .from('pantry_items')
+    .delete()
+    .eq('id', req.params.id)
+    .eq('user_id', userId);
+
+  if (error) return res.status(404).json({ error: 'Not found or no permission' });
+  res.json({ message: 'Deleted' });
 });
 
 module.exports = router;
