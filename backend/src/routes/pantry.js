@@ -8,6 +8,10 @@ const router = express.Router();
 const openai = new OpenAI({
   baseURL: 'https://openrouter.ai/api/v1',
   apiKey: process.env.OPENROUTER_API_KEY,
+  defaultHeaders: {
+    'HTTP-Referer': 'http://localhost:3000',
+    'X-Title': 'BetrFood',
+  },
 });
 
 const IDENTIFY_SINGLE_PROMPT = `You are a food item identifier. Analyze this photo and identify the single main food or grocery item visible.
@@ -74,7 +78,7 @@ router.post('/identify', requireAuth, async (req, res) => {
 
   try {
     const response = await openai.chat.completions.create({
-      model: 'google/gemini-2.0-flash-exp:free',
+      model: 'openrouter/free',
       max_tokens: 1024,
       messages: [
         {
@@ -90,6 +94,10 @@ router.post('/identify', requireAuth, async (req, res) => {
       ],
     });
 
+    if (!response.choices || response.choices.length === 0) {
+      return res.status(422).json({ error: 'AI returned no response. Try a clearer photo.' });
+    }
+
     const raw = response.choices[0].message.content.trim();
     const items = JSON.parse(stripCodeFences(raw));
 
@@ -100,6 +108,7 @@ router.post('/identify', requireAuth, async (req, res) => {
     res.json({ items });
   } catch (err) {
     console.error('[IDENTIFY ERROR]', err.message);
+    console.error('[IDENTIFY ERROR DETAIL]', JSON.stringify(err?.response?.data || err?.error || {}, null, 2));
     if (err instanceof SyntaxError) {
       return res.status(422).json({ error: 'AI response was not valid JSON' });
     }
@@ -117,7 +126,7 @@ router.post('/identify-single', requireAuth, async (req, res) => {
 
   try {
     const response = await openai.chat.completions.create({
-      model: 'google/gemini-2.0-flash-exp:free',
+      model: 'openrouter/free',
       max_tokens: 1024,
       messages: [
         {
@@ -133,6 +142,10 @@ router.post('/identify-single', requireAuth, async (req, res) => {
       ],
     });
 
+    if (!response.choices || response.choices.length === 0) {
+      return res.status(422).json({ error: 'AI returned no response. Try a clearer photo.' });
+    }
+
     const raw = response.choices[0].message.content.trim();
     const item = JSON.parse(stripCodeFences(raw));
 
@@ -143,6 +156,7 @@ router.post('/identify-single', requireAuth, async (req, res) => {
     res.json({ name: item.name, category: item.category, confidence: item.confidence });
   } catch (err) {
     console.error('[IDENTIFY-SINGLE ERROR]', err.message);
+    console.error('[IDENTIFY-SINGLE ERROR DETAIL]', JSON.stringify(err?.response?.data || err?.error || {}, null, 2));
     if (err instanceof SyntaxError) {
       return res.status(422).json({ error: 'AI response was not valid JSON' });
     }
@@ -160,7 +174,7 @@ router.post('/scan-receipt', requireAuth, async (req, res) => {
 
   try {
     const response = await openai.chat.completions.create({
-      model: 'google/gemini-2.0-flash-exp:free',
+      model: 'openrouter/free',
       max_tokens: 2048,
       messages: [
         {
@@ -176,6 +190,10 @@ router.post('/scan-receipt', requireAuth, async (req, res) => {
       ],
     });
 
+    if (!response.choices || response.choices.length === 0) {
+      return res.status(422).json({ error: 'AI returned no response. Try a clearer photo.' });
+    }
+
     const raw = response.choices[0].message.content.trim();
     const items = JSON.parse(stripCodeFences(raw));
 
@@ -186,6 +204,7 @@ router.post('/scan-receipt', requireAuth, async (req, res) => {
     res.json({ items });
   } catch (err) {
     console.error('[SCAN-RECEIPT ERROR]', err.message);
+    console.error('[SCAN-RECEIPT ERROR DETAIL]', JSON.stringify(err?.response?.data || err?.error || {}, null, 2));
     if (err instanceof SyntaxError) {
       return res.status(422).json({ error: 'AI response was not valid JSON' });
     }
@@ -241,7 +260,6 @@ router.post('/', requireAuth, async (req, res) => {
     expiration_date: expirationDate || null,
   };
 
-  // .select() is required for supabase-js v2 to return the inserted row
   const { data, error } = await supabase
     .from('pantry_items')
     .insert(payload)
@@ -256,7 +274,6 @@ router.post('/', requireAuth, async (req, res) => {
 router.put('/:id', requireAuth, async (req, res) => {
   const userId = getUserId(req);
 
-  // Only allow known fields to be updated
   const { name, quantity, unit, category, expirationDate } = req.body;
   const updates = { updated_at: new Date().toISOString() };
   if (name !== undefined) updates.name = name;
