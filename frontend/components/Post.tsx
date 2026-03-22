@@ -3,7 +3,7 @@ import SaveCollectionModal from "./SaveCollectionModal";
 import * as Clipboard from 'expo-clipboard';
 import { useActionSheet } from '@expo/react-native-action-sheet';
 import { Ionicons } from '@expo/vector-icons';
-import { Collection } from "../context/CollectionsContext";
+import { Collection, useCollections } from "../context/CollectionsContext";
 import { Tag, Recipe, deletePost, fetchRecipe, likePost, unlikePost, reportContent } from '../services/api';
 import TagDisplay from './TagDisplay';
 import RecipeDisplay from './RecipeDisplay';
@@ -78,11 +78,35 @@ export default function Post({
   const [reportReason, setReportReason] = useState<string | null>(null);
   const [recipe, setRecipe] = useState<Recipe | null>(null);
 
+  const { savePostToCollection, collections, fetchPostsForCollection } = useCollections();
+
   useEffect(() => {
     if (id) {
       fetchRecipe(id).then(setRecipe).catch(() => {});
     }
   }, [id]);
+
+  // Check if this post is saved in any collection
+  useEffect(() => {
+    if (!id || collections.length === 0) return;
+    let cancelled = false;
+    const checkSaved = async () => {
+      try {
+        for (const collection of collections) {
+          const posts = await fetchPostsForCollection(collection.id);
+          if (posts.some((p: any) => p.id === id)) {
+            if (!cancelled) setSaved(true);
+            return;
+          }
+        }
+        if (!cancelled) setSaved(false);
+      } catch {
+        // silently ignore
+      }
+    };
+    checkSaved();
+    return () => { cancelled = true; };
+  }, [id, collections]);
 
   const scaleAnim = React.useRef(new Animated.Value(1)).current;
   const { showActionSheetWithOptions } = useActionSheet();
@@ -122,10 +146,16 @@ export default function Post({
     else setSaved(false);
   };
 
-  const handleSave = (collection: Collection) => {
+  const handleSave = async (collection: Collection) => {
+    if (!id) return;
     setSaved(true);
     setCollectionModalVisible(false);
-    console.log(`Saved to ${collection.name}`);
+    try {
+      await savePostToCollection(collection.id, id);
+    } catch (error: any) {
+      setSaved(false);
+      Alert.alert('Error', error.message || 'Failed to save post.');
+    }
   };
 
   const handleDelete = () => {

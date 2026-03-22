@@ -12,11 +12,11 @@ const { width } = Dimensions.get('window');
 const GRID_GAP = 2;
 const ITEM_SIZE = (width - GRID_GAP * 2) / 3;
 
-type ProfileTab = 'posts' | 'private' | 'liked' | 'recipes';
+type ProfileTab = 'posts' | 'collections' | 'liked' | 'recipes';
 
 const TAB_ICONS: { key: ProfileTab; icon: keyof typeof Ionicons.glyphMap }[] = [
   { key: 'posts', icon: 'albums-outline' },
-  { key: 'private', icon: 'lock-closed-outline' },
+  { key: 'collections', icon: 'bookmark-outline' },
   { key: 'liked', icon: 'thumbs-up-outline' },
   { key: 'recipes', icon: 'receipt-outline' },
 ];
@@ -176,7 +176,13 @@ export default function ProfileScreen() {
           <Pressable
             key={tab.key}
             style={styles.tabItem}
-            onPress={() => setActiveTab(tab.key)}
+            onPress={() => {
+              if (tab.key === 'collections') {
+                router.push('/profile/collections');
+              } else {
+                setActiveTab(tab.key);
+              }
+            }}
             accessibilityRole="tab"
             accessibilityLabel={tab.key}
             accessibilityState={{ selected: activeTab === tab.key }}

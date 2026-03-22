@@ -9,6 +9,7 @@ import {
   Dimensions,
   ActivityIndicator,
   Alert,
+  Modal,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -27,6 +28,7 @@ export default function CollectionDetailScreen() {
   const { fetchPostsForCollection, removePostFromCollection } = useCollections();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
+  const [removeTarget, setRemoveTarget] = useState<string | null>(null);
 
   const loadPosts = useCallback(async () => {
     if (!id) return;
@@ -48,25 +50,19 @@ export default function CollectionDetailScreen() {
   );
 
   const handleRemovePost = (postId: string) => {
-    Alert.alert(
-      "Remove Post",
-      "Remove this post from the collection?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Remove",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await removePostFromCollection(id, postId);
-              setPosts((prev) => prev.filter((p) => p.id !== postId));
-            } catch (error: any) {
-              Alert.alert("Error", error.message || "Failed to remove post");
-            }
-          },
-        },
-      ]
-    );
+    setRemoveTarget(postId);
+  };
+
+  const confirmRemovePost = async () => {
+    if (!removeTarget) return;
+    const postId = removeTarget;
+    setRemoveTarget(null);
+    try {
+      await removePostFromCollection(id, postId);
+      setPosts((prev) => prev.filter((p) => p.id !== postId));
+    } catch (error: any) {
+      Alert.alert("Error", error.message || "Failed to remove post");
+    }
   };
 
   const collectionName = name ? decodeURIComponent(name) : "Collection";
@@ -126,6 +122,29 @@ export default function CollectionDetailScreen() {
           }
         />
       )}
+
+      {/* Remove post confirmation modal */}
+      <Modal
+        visible={!!removeTarget}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setRemoveTarget(null)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setRemoveTarget(null)}>
+          <Pressable style={styles.modalBox} onPress={e => e.stopPropagation()}>
+            <Text style={styles.modalTitle}>Remove Post</Text>
+            <Text style={styles.modalMessage}>Remove this post from the collection?</Text>
+            <View style={styles.modalButtons}>
+              <Pressable style={styles.modalCancelButton} onPress={() => setRemoveTarget(null)}>
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </Pressable>
+              <Pressable style={styles.modalDeleteButton} onPress={confirmRemovePost}>
+                <Text style={styles.modalDeleteText}>Remove</Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -189,5 +208,58 @@ const styles = StyleSheet.create({
     marginTop: 8,
     textAlign: "center",
     paddingHorizontal: 40,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalBox: {
+    backgroundColor: "#fff",
+    borderRadius: 14,
+    padding: 24,
+    width: 300,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#000",
+    marginBottom: 8,
+  },
+  modalMessage: {
+    fontSize: 14,
+    color: "#666",
+    lineHeight: 20,
+    marginBottom: 20,
+  },
+  modalButtons: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  modalCancelButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    alignItems: "center",
+  },
+  modalCancelText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#666",
+  },
+  modalDeleteButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: "#e74c3c",
+    alignItems: "center",
+  },
+  modalDeleteText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#fff",
   },
 });
