@@ -331,6 +331,7 @@ export default function HomeScreen() {
         }
         onEndReached={handleEndReached}
         onEndReachedThreshold={0.5}
+        showsVerticalScrollIndicator={false}
         renderItem={({ item }) => (
           <Post
             id={item.id}

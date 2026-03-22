@@ -17,7 +17,7 @@ export default function RootLayout() {
     <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
       <ClerkLoaded>
         <SafeAreaProvider>
-          <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
+          <SafeAreaView style={{ flex: 1, overflow: 'hidden' }} edges={["top"]}>
             <Providers>
               <Stack screenOptions={{ headerShown: false }} />
             </Providers>
