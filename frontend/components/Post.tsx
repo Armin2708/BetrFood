@@ -72,13 +72,15 @@ export default function Post({
   const [likeCount, setLikeCount] = useState(initialLikes);
   const [likeLoading, setLikeLoading] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [savedInCollections, setSavedInCollections] = useState<Collection[]>([]);
   const [collectionModalVisible, setCollectionModalVisible] = useState(false);
+  const [removeCollectionModalVisible, setRemoveCollectionModalVisible] = useState(false);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [reportModalVisible, setReportModalVisible] = useState(false);
   const [reportReason, setReportReason] = useState<string | null>(null);
   const [recipe, setRecipe] = useState<Recipe | null>(null);
 
-  const { savePostToCollection, collections, fetchPostsForCollection } = useCollections();
+  const { savePostToCollection, collections, fetchPostsForCollection, removePostFromCollection } = useCollections();
 
   useEffect(() => {
     if (id) {
@@ -92,14 +94,17 @@ export default function Post({
     let cancelled = false;
     const checkSaved = async () => {
       try {
+        const matched: Collection[] = [];
         for (const collection of collections) {
           const posts = await fetchPostsForCollection(collection.id);
           if (posts.some((p: any) => p.id === id)) {
-            if (!cancelled) setSaved(true);
-            return;
+            matched.push(collection);
           }
         }
-        if (!cancelled) setSaved(false);
+        if (!cancelled) {
+          setSavedInCollections(matched);
+          setSaved(matched.length > 0);
+        }
       } catch {
         // silently ignore
       }
@@ -142,16 +147,38 @@ export default function Post({
   };
 
   const handleSavePress = () => {
-    if (!saved) setCollectionModalVisible(true);
-    else setSaved(false);
+    if (!saved) {
+      setCollectionModalVisible(true);
+    } else {
+      setRemoveCollectionModalVisible(true);
+    }
   };
 
-  const handleSave = async (collection: Collection) => {
-    if (!id) return;
+  const handleRemoveFromCollection = async (selectedCollections: Collection[]) => {
+    if (!id || selectedCollections.length === 0) return;
+    setRemoveCollectionModalVisible(false);
+    try {
+      await Promise.all(selectedCollections.map(c => removePostFromCollection(c.id, id)));
+      const removedIds = new Set(selectedCollections.map(c => c.id));
+      const remaining = savedInCollections.filter(c => !removedIds.has(c.id));
+      setSavedInCollections(remaining);
+      setSaved(remaining.length > 0);
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to remove from collection.');
+    }
+  };
+
+  const handleSave = async (selectedCollections: Collection[]) => {
+    if (!id || selectedCollections.length === 0) return;
     setSaved(true);
     setCollectionModalVisible(false);
     try {
-      await savePostToCollection(collection.id, id);
+      await Promise.all(selectedCollections.map(c => savePostToCollection(c.id, id)));
+      setSavedInCollections(prev => {
+        const existingIds = new Set(prev.map(c => c.id));
+        const newOnes = selectedCollections.filter(c => !existingIds.has(c.id));
+        return [...prev, ...newOnes];
+      });
     } catch (error: any) {
       setSaved(false);
       Alert.alert('Error', error.message || 'Failed to save post.');
@@ -383,6 +410,16 @@ export default function Post({
         visible={collectionModalVisible}
         onClose={() => setCollectionModalVisible(false)}
         onSave={handleSave}
+        mode="save"
+      />
+
+      <SaveCollectionModal
+        visible={removeCollectionModalVisible}
+        onClose={() => setRemoveCollectionModalVisible(false)}
+        onSave={handleSave}
+        onRemove={handleRemoveFromCollection}
+        mode="remove"
+        savedInCollections={savedInCollections}
       />
 
       {/* Delete confirmation modal */}
