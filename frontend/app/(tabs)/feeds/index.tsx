@@ -152,11 +152,15 @@ export default function HomeScreen() {
 
   const refresh = useCallback(async () => {
     setRefreshing(true);
+    setNextCursor(null);
+    setHasMore(true);
     await loadPosts(selectedTagIds, feedType);
     setRefreshing(false);
+    flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
   }, [loadPosts, selectedTagIds, feedType]);
 
   const hasLoadedRef = useRef(false);
+  const flatListRef = useRef<FlatList>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -241,8 +245,10 @@ export default function HomeScreen() {
   return (
     <View style={styles.container}>
       <FlatList
+        ref={flatListRef}
         data={displayedPosts}
         keyExtractor={(item) => item.id}
+        showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
