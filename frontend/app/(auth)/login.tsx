@@ -20,6 +20,30 @@ import * as AuthSession from "expo-auth-session";
 import * as WebBrowser from "expo-web-browser";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import Svg, { Path } from "react-native-svg";
+
+function GoogleIcon({ size = 24 }: { size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 18 18">
+      <Path
+        d="M17.64 9.2c0-.57-.05-1.12-.14-1.64H9v3.1h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.7-1.57 2.68-3.88 2.68-6.44z"
+        fill="#4285F4"
+      />
+      <Path
+        d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.8.54-1.83.86-3.04.86-2.34 0-4.32-1.58-5.03-3.7H.96v2.33A9 9 0 0 0 9 18z"
+        fill="#34A853"
+      />
+      <Path
+        d="M3.97 10.72A5.41 5.41 0 0 1 3.67 9c0-.6.1-1.18.3-1.72V4.95H.96A9 9 0 0 0 0 9c0 1.45.34 2.83.96 4.05l3.01-2.33z"
+        fill="#FBBC05"
+      />
+      <Path
+        d="M9 3.58c1.32 0 2.51.45 3.44 1.35l2.58-2.58C13.47.9 11.43 0 9 0A9 9 0 0 0 .96 4.95L3.97 7.28C4.68 5.16 6.66 3.58 9 3.58z"
+        fill="#EA4335"
+      />
+    </Svg>
+  );
+}
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -83,8 +107,9 @@ function LoginFormUI({
 
         {/* Title */}
         <Text style={styles.title} accessibilityRole="header">
-          Welcome to <Text style={styles.titleGreen}>BetrFood</Text>
+          Welcome to
         </Text>
+        <Text style={styles.titleGreen}>BetrFood</Text>
 
         {/* Subtitle */}
         <Text style={styles.subtitle}>
@@ -165,7 +190,7 @@ function LoginFormUI({
             accessibilityRole="button"
             accessibilityLabel="Continue with Google"
           >
-            <Ionicons name="logo-google" size={24} color="#333" />
+            <GoogleIcon size={28} />
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -175,7 +200,7 @@ function LoginFormUI({
             accessibilityRole="button"
             accessibilityLabel="Continue with Apple"
           >
-            <Ionicons name="logo-apple" size={24} color="#333" />
+            <Ionicons name="logo-apple" size={28} color="#000000" />
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -188,22 +213,22 @@ function LoginFormUI({
             accessibilityRole="button"
             accessibilityLabel="Continue with Facebook"
           >
-            <Ionicons name="logo-facebook" size={24} color="#1877F2" />
-          </TouchableOpacity>
-        </View>
-
-        {/* Sign up link */}
-        <View style={styles.signupRow}>
-          <Text style={styles.signupText}>Don't have an account? </Text>
-          <TouchableOpacity
-            onPress={onSignup}
-            accessibilityRole="link"
-            accessibilityLabel="Sign up"
-          >
-            <Text style={styles.signupLink}>Sign up</Text>
+            <Ionicons name="logo-facebook" size={28} color="#1877F2" />
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* Sign up link — pinned to bottom */}
+      <View style={styles.signupRow}>
+        <Text style={styles.signupText}>Don't have an account? </Text>
+        <TouchableOpacity
+          onPress={onSignup}
+          accessibilityRole="link"
+          accessibilityLabel="Sign up"
+        >
+          <Text style={styles.signupLink}>Sign up</Text>
+        </TouchableOpacity>
+      </View>
     </KeyboardAvoidingView>
   );
 }
@@ -577,25 +602,27 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingHorizontal: 28,
     paddingTop: 60,
-    paddingBottom: 40,
+    paddingBottom: 24,
     alignItems: "center",
     backgroundColor: "#FFFFFF",
   },
   logo: {
-    width: 80,
-    height: 80,
-    marginBottom: 28,
+    width: 100,
+    height: 100,
+    marginBottom: 20,
   },
   title: {
-    fontSize: 26,
+    fontSize: 28,
     fontWeight: "bold",
     color: "#0F172A",
     textAlign: "center",
-    marginBottom: 8,
   },
   titleGreen: {
+    fontSize: 28,
     color: "#22C55E",
     fontWeight: "bold",
+    textAlign: "center",
+    marginBottom: 8,
   },
   subtitle: {
     fontSize: 14,
@@ -687,6 +714,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    paddingBottom: 36,
+    backgroundColor: "#FFFFFF",
   },
   signupText: {
     fontSize: 14,
