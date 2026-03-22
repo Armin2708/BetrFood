@@ -541,6 +541,11 @@ export default function PantryScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
+  const safeItems = useMemo(
+    () => items.filter((item): item is PantryItem => Boolean(item && item.name)),
+    [items]
+  );
+
   const hasActiveFilter = searchQuery.trim().length > 0 || selectedCategory !== null;
 
   const handleClearAll = () => {
@@ -582,24 +587,25 @@ export default function PantryScreen() {
   // ── Filtered items ──────────────────────────────────────────────────────────
   const filteredItems = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    return items.filter((item) => {
+    return safeItems.filter((item) => {
+      const category = item.category?.toLowerCase() || '';
       const matchesSearch =
         q.length === 0 ||
         item.name.toLowerCase().includes(q) ||
-        item.category.toLowerCase().includes(q);
+        category.includes(q);
       const matchesCategory =
-        selectedCategory === null || item.category === selectedCategory;
+        selectedCategory === null || (item.category || UNCATEGORIZED_LABEL) === selectedCategory;
       return matchesSearch && matchesCategory;
     });
-  }, [items, searchQuery, selectedCategory]);
+  }, [safeItems, searchQuery, selectedCategory]);
 
   const availableCategories = useMemo(() => {
-    const cats = new Set(items.map((i) => i.category?.trim() || UNCATEGORIZED_LABEL));
+    const cats = new Set(safeItems.map((i) => i.category?.trim() || UNCATEGORIZED_LABEL));
     return [
       ...CATEGORIES.filter((c) => cats.has(c)),
       ...(cats.has(UNCATEGORIZED_LABEL) ? [UNCATEGORIZED_LABEL] : []),
     ];
-  }, [items]);
+  }, [safeItems]);
 
   // ── List row type ───────────────────────────────────────────────────────────
   type ListRow =
@@ -698,8 +704,8 @@ export default function PantryScreen() {
         </View>
       ) : screenView === 'summary' ? (
         // ── Summary view ──────────────────────────────────────────────────────
-        <PantrySummary items={items} onCategoryPress={handleSummaryCategoryPress} />
-      ) : items.length === 0 ? (
+        <PantrySummary items={safeItems} onCategoryPress={handleSummaryCategoryPress} />
+      ) : safeItems.length === 0 ? (
         // ── Empty pantry ──────────────────────────────────────────────────────
         <View style={styles.emptyState}>
           <Ionicons name="basket-outline" size={64} color={colors.textTertiary} />
@@ -726,7 +732,7 @@ export default function PantryScreen() {
             onClear={() => setSelectedCategory(null)}
             availableCategories={availableCategories}
           />
-          {!hasActiveFilter && <ExpiringSoonSection items={items} threshold={expiringItemsThreshold} />}
+          {!hasActiveFilter && <ExpiringSoonSection items={safeItems} threshold={expiringItemsThreshold} />}
           {!hasActiveFilter && <ViewToggle grouped={groupedView} onToggle={() => setGroupedView((v) => !v)} />}
           <FlatList
             data={activeListData}

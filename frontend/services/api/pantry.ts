@@ -20,6 +20,32 @@ export interface PantryItemInput {
   expirationDate?: string | null;
 }
 
+type PantryItemResponse = {
+  id: string;
+  user_id: string;
+  name: string;
+  quantity: number;
+  unit: string | null;
+  category: string | null;
+  expiration_date: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+function mapPantryItem(item: PantryItemResponse): PantryItem {
+  return {
+    id: item.id,
+    userId: item.user_id,
+    name: item.name,
+    quantity: item.quantity,
+    unit: item.unit || '',
+    category: item.category || 'Other',
+    expirationDate: item.expiration_date,
+    createdAt: item.created_at,
+    updatedAt: item.updated_at,
+  };
+}
+
 export async function fetchPantryItems(): Promise<PantryItem[]> {
   const response = await fetch(`${API_BASE_URL}/api/pantry`, {
     headers: await authHeaders(),
@@ -28,7 +54,8 @@ export async function fetchPantryItems(): Promise<PantryItem[]> {
     const error = await response.json();
     throw new Error(error.error || 'Failed to fetch pantry items');
   }
-  return response.json();
+  const data: PantryItemResponse[] = await response.json();
+  return data.map(mapPantryItem);
 }
 
 export async function createPantryItem(item: PantryItemInput): Promise<PantryItem> {
@@ -41,7 +68,8 @@ export async function createPantryItem(item: PantryItemInput): Promise<PantryIte
     const error = await response.json();
     throw new Error(error.error || 'Failed to create pantry item');
   }
-  return response.json();
+  const data: PantryItemResponse = await response.json();
+  return mapPantryItem(data);
 }
 
 export async function updatePantryItem(
@@ -57,7 +85,8 @@ export async function updatePantryItem(
     const error = await response.json();
     throw new Error(error.error || 'Failed to update pantry item');
   }
-  return response.json();
+  const data: PantryItemResponse = await response.json();
+  return mapPantryItem(data);
 }
 
 export async function deletePantryItem(id: string): Promise<{ message: string }> {

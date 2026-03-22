@@ -216,6 +216,26 @@ export default function PantryReviewScreen() {
     setCandidates((prev) => [...prev, blankCandidate()]);
   };
 
+  const handleTakePhoto = async () => {
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+
+    if (!permission.granted) {
+      Alert.alert('Permission needed', 'Please allow camera access.');
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.6,
+      base64: false,
+    });
+
+    if (!result.canceled) {
+      setPhotoUri(result.assets[0].uri);
+      setCandidates([]);
+    }
+  };
+
   const handlePickPhoto = async () => {
   const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
@@ -354,17 +374,29 @@ const handleAnalyzePhoto = async () => {
       </Text>
 
       <View style={styles.photoSection}>
-  <TouchableOpacity
-    style={styles.photoButton}
-    onPress={handlePickPhoto}
-    accessibilityRole="button"
-    accessibilityLabel="Pick a grocery photo"
-  >
-    <Ionicons name="image-outline" size={18} color={colors.white} />
-    <Text style={styles.photoButtonText}>
-      {photoUri ? 'Choose Different Photo' : 'Pick Grocery Photo'}
-    </Text>
-  </TouchableOpacity>
+  <View style={styles.photoActionRow}>
+    <TouchableOpacity
+      style={[styles.photoButton, styles.photoActionButton]}
+      onPress={handleTakePhoto}
+      accessibilityRole="button"
+      accessibilityLabel="Take a grocery photo"
+    >
+      <Ionicons name="camera-outline" size={18} color={colors.white} />
+      <Text style={styles.photoButtonText}>
+        {photoUri ? 'Retake Photo' : 'Take Photo'}
+      </Text>
+    </TouchableOpacity>
+
+    <TouchableOpacity
+      style={[styles.photoButton, styles.photoActionButton]}
+      onPress={handlePickPhoto}
+      accessibilityRole="button"
+      accessibilityLabel="Pick a grocery photo"
+    >
+      <Ionicons name="image-outline" size={18} color={colors.white} />
+      <Text style={styles.photoButtonText}>Choose Photo</Text>
+    </TouchableOpacity>
+  </View>
 
   {photoUri && (
     <>
@@ -602,10 +634,14 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  photoSection: {
+photoSection: {
   paddingHorizontal: 16,
   paddingTop: 14,
   paddingBottom: 8,
+  gap: 10,
+},
+photoActionRow: {
+  flexDirection: 'row',
   gap: 10,
 },
 photoButton: {
@@ -617,6 +653,9 @@ photoButton: {
   alignItems: 'center',
   justifyContent: 'center',
   gap: 8,
+},
+photoActionButton: {
+  flex: 1,
 },
 photoButtonText: {
   color: colors.white,
