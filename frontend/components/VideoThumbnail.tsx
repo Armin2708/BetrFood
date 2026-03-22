@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Image, View, StyleSheet, ViewStyle } from 'react-native';
+import { Image, View, StyleSheet, ViewStyle, Platform } from 'react-native';
 import * as VideoThumbnails from 'expo-video-thumbnails';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -12,6 +12,9 @@ export default function VideoThumbnailView({ videoUri, style }: VideoThumbnailPr
   const [thumbnail, setThumbnail] = useState<string | null>(null);
 
   useEffect(() => {
+    // expo-video-thumbnails is native only — skip on web
+    if (Platform.OS === 'web') return;
+
     let mounted = true;
     VideoThumbnails.getThumbnailAsync(videoUri, { time: 1000 })
       .then(({ uri }) => {

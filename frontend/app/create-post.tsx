@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createPostApi, RecipeInput, addTagsToPost } from '../services/api';
 import TagSelector from '../components/TagSelector';
+import VideoThumbnailView from '../components/VideoThumbnail';
 
 const MAX_CAPTION_LENGTH = 500;
 const DIFFICULTY_OPTIONS: Array<'easy' | 'medium' | 'hard'> = ['easy', 'medium', 'hard'];
@@ -45,6 +46,7 @@ export interface Draft {
 export default function CreatePostScreen() {
   const { draftId } = useLocalSearchParams<{ draftId?: string }>();
   const [images, setImages] = useState<string[]>([]);
+  const [mediaTypes, setMediaTypes] = useState<('image' | 'video')[]>([]);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [caption, setCaption] = useState('');
   const [loading, setLoading] = useState(false);
@@ -169,7 +171,9 @@ export default function CreatePostScreen() {
     });
     if (!result.canceled && result.assets.length > 0) {
       const newUris = result.assets.map(a => a.uri);
+      const newTypes = result.assets.map(a => (a.type === 'video' ? 'video' : 'image') as 'image' | 'video');
       setImages(prev => [...prev, ...newUris].slice(0, MAX_IMAGES));
+      setMediaTypes(prev => [...prev, ...newTypes].slice(0, MAX_IMAGES));
     }
   };
 
@@ -189,12 +193,15 @@ export default function CreatePostScreen() {
       videoMaxDuration: 20,
     });
     if (!result.canceled && result.assets[0]) {
-      setImages(prev => [...prev, result.assets[0].uri].slice(0, MAX_IMAGES));
+      const asset = result.assets[0];
+      setImages(prev => [...prev, asset.uri].slice(0, MAX_IMAGES));
+      setMediaTypes(prev => [...prev, asset.type === 'video' ? 'video' : 'image'].slice(0, MAX_IMAGES));
     }
   };
 
   const removeImage = (index: number) => {
     setImages(prev => prev.filter((_, i) => i !== index));
+    setMediaTypes(prev => prev.filter((_, i) => i !== index));
   };
 
   // Ingredient helpers
@@ -324,11 +331,13 @@ export default function CreatePostScreen() {
             <View>
               {/* Main preview of selected thumbnail */}
               <View style={styles.mainPreviewContainer}>
-                <Image source={{ uri: images[selectedImageIndex] }} style={styles.mainPreviewImage} />
-                {isVideoUri(images[selectedImageIndex]) && (
-                  <View style={styles.videoOverlay}>
-                    <Ionicons name="play-circle" size={48} color="rgba(255,255,255,0.9)" />
-                  </View>
+                {mediaTypes[selectedImageIndex] === 'video' ? (
+                  <VideoThumbnailView
+                    videoUri={images[selectedImageIndex]}
+                    style={styles.mainPreviewImage}
+                  />
+                ) : (
+                  <Image source={{ uri: images[selectedImageIndex] }} style={styles.mainPreviewImage} />
                 )}
                 <TouchableOpacity
                   style={styles.removeImageButton}
@@ -352,17 +361,24 @@ export default function CreatePostScreen() {
                       index === selectedImageIndex && styles.thumbnailWrapperSelected,
                     ]}
                   >
-                    <Image source={{ uri }} style={styles.thumbnail} />
-                    {isVideoUri(uri) && (
-                      <View style={styles.thumbnailVideoOverlay}>
-                        <Ionicons name="play-circle" size={18} color="rgba(255,255,255,0.9)" />
-                      </View>
+                    {mediaTypes[index] === 'video' ? (
+                      <VideoThumbnailView videoUri={uri} style={styles.thumbnail} />
+                    ) : (
+                      <Image source={{ uri }} style={styles.thumbnail} />
                     )}
                   </TouchableOpacity>
                 ))}
               </View>
 
-              <Text style={styles.imageCounter}>{images.length} / {MAX_IMAGES} photos selected</Text>
+              <Text style={styles.imageCounter}>
+                {images.length} / {MAX_IMAGES} {
+                  mediaTypes.every(t => t === 'video')
+                    ? images.length === 1 ? 'video' : 'videos'
+                    : mediaTypes.every(t => t === 'image')
+                    ? images.length === 1 ? 'photo' : 'photos'
+                    : 'items'
+                } selected
+              </Text>
 
               {images.length < MAX_IMAGES && (
                 <View style={styles.addMoreRow}>
