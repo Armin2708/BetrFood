@@ -74,6 +74,8 @@ export default function Post({
   const [saved, setSaved] = useState(false);
   const [collectionModalVisible, setCollectionModalVisible] = useState(false);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [reportModalVisible, setReportModalVisible] = useState(false);
+  const [reportReason, setReportReason] = useState<string | null>(null);
   const [recipe, setRecipe] = useState<Recipe | null>(null);
 
   useEffect(() => {
@@ -157,23 +159,23 @@ export default function Post({
     Alert.alert('Link Copied', 'The post link has been copied to your clipboard.');
   };
 
+  const REPORT_REASONS = ['Spam', 'Inappropriate', 'Harassment', 'Other'];
+
   const handleReport = () => {
     if (!id) return;
-    const reasons = ['Spam', 'Inappropriate', 'Harassment', 'Other'];
-    Alert.alert('Report Post', 'Select a reason:', [
-      ...reasons.map((reason) => ({
-        text: reason,
-        onPress: async () => {
-          try {
-            await reportContent('post', id, reason);
-            Alert.alert('Report Submitted', 'Thank you for your report. We will review it shortly.');
-          } catch (error: any) {
-            Alert.alert('Error', error.message || 'Failed to submit report.');
-          }
-        },
-      })),
-      { text: 'Cancel', style: 'cancel' as const },
-    ]);
+    setReportReason(null);
+    setReportModalVisible(true);
+  };
+
+  const submitReport = async () => {
+    if (!id || !reportReason) return;
+    setReportModalVisible(false);
+    try {
+      await reportContent('post', id, reportReason);
+      Alert.alert('Report Submitted', 'Thank you for your report. We will review it shortly.');
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to submit report.');
+    }
   };
 
   const showPostMenu = () => {
@@ -381,6 +383,47 @@ export default function Post({
           </Pressable>
         </Pressable>
       </Modal>
+
+      {/* Report modal */}
+      <Modal
+        visible={reportModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setReportModalVisible(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setReportModalVisible(false)}>
+          <Pressable style={styles.modalBox} onPress={e => e.stopPropagation()}>
+            <Text style={styles.modalTitle}>Report Post</Text>
+            <Text style={styles.modalMessage}>Select a reason for reporting this post:</Text>
+            {REPORT_REASONS.map(reason => (
+              <TouchableOpacity
+                key={reason}
+                style={[styles.reportReasonButton, reportReason === reason && styles.reportReasonButtonActive]}
+                onPress={() => setReportReason(reason)}
+              >
+                <Text style={[styles.reportReasonText, reportReason === reason && styles.reportReasonTextActive]}>
+                  {reason}
+                </Text>
+              </TouchableOpacity>
+            ))}
+            <View style={[styles.modalButtons, { marginTop: 16 }]}>
+              <TouchableOpacity
+                style={styles.modalCancelButton}
+                onPress={() => setReportModalVisible(false)}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalDeleteButton, !reportReason && styles.modalButtonDisabled]}
+                onPress={submitReport}
+                disabled={!reportReason}
+              >
+                <Text style={styles.modalDeleteText}>Submit</Text>
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -517,5 +560,29 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: '#fff',
+  },
+  modalButtonDisabled: {
+    opacity: 0.4,
+  },
+  reportReasonButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: 8,
+  },
+  reportReasonButtonActive: {
+    borderColor: '#22C55E',
+    backgroundColor: '#F0FDF4',
+  },
+  reportReasonText: {
+    fontSize: 15,
+    color: colors.textSecondary,
+    fontWeight: '500',
+  },
+  reportReasonTextActive: {
+    color: '#22C55E',
+    fontWeight: '700',
   },
 });
