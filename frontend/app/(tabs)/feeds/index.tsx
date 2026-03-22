@@ -289,49 +289,13 @@ export default function HomeScreen() {
             <TagFilterBar
               selectedTagIds={selectedTagIds}
               onFilterChange={handleTagFilterChange}
+              pantryFilterActive={pantryFilterActive}
+              onPantryFilterChange={setPantryFilterActive}
             />
-
-            {/* Pantry filter toggle */}
-            {pantryItems.length > 0 && (
-              <TouchableOpacity
-                style={[
-                  styles.pantryFilterBar,
-                  pantryFilterActive && styles.pantryFilterBarActive,
-                ]}
-                onPress={() => setPantryFilterActive((v) => !v)}
-                accessibilityRole="button"
-                accessibilityLabel={
-                  pantryFilterActive
-                    ? 'Showing recipes matching your pantry. Tap to show all.'
-                    : 'Tap to show only recipes matching your pantry'
-                }
-                accessibilityState={{ selected: pantryFilterActive }}
-              >
-                <Ionicons
-                  name="basket-outline"
-                  size={16}
-                  color={pantryFilterActive ? '#fff' : '#22C55E'}
-                />
-                <Text
-                  style={[
-                    styles.pantryFilterText,
-                    pantryFilterActive && styles.pantryFilterTextActive,
-                  ]}
-                >
-                  {pantryFilterActive
-                    ? 'Showing pantry matches'
-                    : 'Filter by pantry'}
-                </Text>
-                {pantryFilterActive && (
-                  <Ionicons name="close-circle" size={16} color="#fff" style={{ marginLeft: 4 }} />
-                )}
-              </TouchableOpacity>
-            )}
           </>
         }
         onEndReached={handleEndReached}
         onEndReachedThreshold={0.5}
-        showsVerticalScrollIndicator={false}
         renderItem={({ item }) => (
           <Post
             id={item.id}
@@ -418,32 +382,6 @@ const styles = StyleSheet.create({
   },
   searchButton: {
     padding: 8,
-  },
-  // Pantry filter toggle bar
-  pantryFilterBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginHorizontal: 12,
-    marginVertical: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#22C55E',
-    alignSelf: 'flex-start',
-  },
-  pantryFilterBarActive: {
-    backgroundColor: '#22C55E',
-    borderColor: '#22C55E',
-  },
-  pantryFilterText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#22C55E',
-  },
-  pantryFilterTextActive: {
-    color: '#fff',
   },
   center: {
     flex: 1,
