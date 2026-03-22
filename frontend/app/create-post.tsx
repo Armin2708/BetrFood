@@ -45,6 +45,7 @@ export interface Draft {
 export default function CreatePostScreen() {
   const { draftId } = useLocalSearchParams<{ draftId?: string }>();
   const [images, setImages] = useState<string[]>([]);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [caption, setCaption] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -321,32 +322,48 @@ export default function CreatePostScreen() {
         <View style={styles.imageSection}>
           {images.length > 0 ? (
             <View>
-              <ScrollView
-                horizontal
-                pagingEnabled
-                showsHorizontalScrollIndicator={false}
-                style={styles.imageCarousel}
-              >
+              {/* Main preview of selected thumbnail */}
+              <View style={styles.mainPreviewContainer}>
+                <Image source={{ uri: images[selectedImageIndex] }} style={styles.mainPreviewImage} />
+                {isVideoUri(images[selectedImageIndex]) && (
+                  <View style={styles.videoOverlay}>
+                    <Ionicons name="play-circle" size={48} color="rgba(255,255,255,0.9)" />
+                  </View>
+                )}
+                <TouchableOpacity
+                  style={styles.removeImageButton}
+                  onPress={() => {
+                    removeImage(selectedImageIndex);
+                    setSelectedImageIndex(prev => Math.max(0, prev - 1));
+                  }}
+                >
+                  <Ionicons name="close-circle" size={28} color="#e74c3c" />
+                </TouchableOpacity>
+              </View>
+
+              {/* Thumbnail grid */}
+              <View style={styles.thumbnailGrid}>
                 {images.map((uri, index) => (
-                  <View key={index} style={styles.carouselSlide}>
-                    <Image source={{ uri }} style={styles.previewImage} />
+                  <TouchableOpacity
+                    key={index}
+                    onPress={() => setSelectedImageIndex(index)}
+                    style={[
+                      styles.thumbnailWrapper,
+                      index === selectedImageIndex && styles.thumbnailWrapperSelected,
+                    ]}
+                  >
+                    <Image source={{ uri }} style={styles.thumbnail} />
                     {isVideoUri(uri) && (
-                      <View style={styles.videoOverlay}>
-                        <Ionicons name="play-circle" size={48} color="rgba(255,255,255,0.9)" />
+                      <View style={styles.thumbnailVideoOverlay}>
+                        <Ionicons name="play-circle" size={18} color="rgba(255,255,255,0.9)" />
                       </View>
                     )}
-                    <TouchableOpacity
-                      style={styles.removeImageButton}
-                      onPress={() => removeImage(index)}
-                    >
-                      <Ionicons name="close-circle" size={28} color="#e74c3c" />
-                    </TouchableOpacity>
-                  </View>
+                  </TouchableOpacity>
                 ))}
-              </ScrollView>
-              {images.length > 1 && (
-                <Text style={styles.imageCounter}>{images.length} / {MAX_IMAGES} items</Text>
-              )}
+              </View>
+
+              <Text style={styles.imageCounter}>{images.length} / {MAX_IMAGES} photos selected</Text>
+
               {images.length < MAX_IMAGES && (
                 <View style={styles.addMoreRow}>
                   <TouchableOpacity style={styles.addMoreButton} onPress={pickMedia}>
@@ -619,11 +636,24 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   imageSection: { paddingVertical: 20 },
-  imageCarousel: { height: 300 },
-  carouselSlide: { width: SCREEN_WIDTH, alignItems: 'center', justifyContent: 'center' },
-  previewImage: { width: SCREEN_WIDTH - 48, height: 280, borderRadius: 12, backgroundColor: '#eee' },
-  removeImageButton: { position: 'absolute', top: 8, right: 32, zIndex: 2 },
+  mainPreviewContainer: { marginHorizontal: 16, position: 'relative', alignItems: 'center' },
+  mainPreviewImage: { width: (SCREEN_WIDTH - 32) * 0.5, height: (SCREEN_WIDTH - 32) * 0.5, borderRadius: 12, backgroundColor: '#eee' },
+  removeImageButton: { position: 'absolute', top: 8, right: 8, zIndex: 2 },
   videoOverlay: { ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center', zIndex: 1 },
+  thumbnailGrid: {
+    flexDirection: 'row', flexWrap: 'wrap',
+    marginTop: 10, paddingHorizontal: 16, gap: 8,
+  },
+  thumbnailWrapper: {
+    width: 72, height: 72, borderRadius: 8, overflow: 'hidden',
+    borderWidth: 2, borderColor: 'transparent',
+  },
+  thumbnailWrapperSelected: { borderColor: '#22C55E' },
+  thumbnail: { width: '100%', height: '100%' },
+  thumbnailVideoOverlay: {
+    ...StyleSheet.absoluteFillObject, justifyContent: 'center',
+    alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.2)',
+  },
   imageCounter: { textAlign: 'center', color: '#666', marginTop: 8, fontSize: 13, fontWeight: '500' },
   addMoreRow: { flexDirection: 'row', justifyContent: 'center', gap: 16, marginTop: 12 },
   addMoreButton: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: '#22C55E' },
@@ -632,7 +662,7 @@ const styles = StyleSheet.create({
   imagePlaceholder: {
     width: 300, height: 300, borderRadius: 12, borderWidth: 2,
     borderColor: '#ddd', borderStyle: 'dashed', justifyContent: 'center',
-    alignItems: 'center', gap: 16,
+    alignItems: 'center', gap: 16, alignSelf: 'center',
   },
   imageButton: { backgroundColor: '#22C55E', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 },
   imageButtonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
