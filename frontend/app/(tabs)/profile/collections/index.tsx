@@ -21,6 +21,9 @@ export default function CollectionsScreen() {
   const [creating, setCreating] = useState(false);
   const [showInput, setShowInput] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleteModal, setBulkDeleteModal] = useState(false);
 
   const handleCreate = async () => {
     const trimmed = newName.trim();
@@ -51,6 +54,30 @@ export default function CollectionsScreen() {
     }
   };
 
+  const exitSelectMode = () => {
+    setSelectMode(false);
+    setSelectedIds(new Set());
+  };
+
+  const toggleSelectItem = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const confirmBulkDelete = async () => {
+    setBulkDeleteModal(false);
+    try {
+      await Promise.all([...selectedIds].map(id => removeCollection(id)));
+      exitSelectMode();
+    } catch (error: any) {
+      Alert.alert("Error", error.message || "Failed to delete collections");
+    }
+  };
+
   if (loading) {
     return (
       <View style={[styles.container, styles.centered]}>
@@ -63,14 +90,44 @@ export default function CollectionsScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#333" />
-        </Pressable>
-        <Text style={styles.headerTitle}>Collections</Text>
-        <Pressable onPress={() => setShowInput(!showInput)} style={styles.addButton}>
-          <Ionicons name="add-circle-outline" size={28} color="#4CAF50" />
-        </Pressable>
+        {selectMode ? (
+          <>
+            <Pressable onPress={exitSelectMode} style={styles.backButton}>
+              <Ionicons name="close" size={24} color="#333" />
+            </Pressable>
+            <Text style={styles.headerTitle}>{selectedIds.size} selected</Text>
+          </>
+        ) : (
+          <>
+            <Pressable onPress={() => router.back()} style={styles.backButton}>
+              <Ionicons name="arrow-back" size={24} color="#333" />
+            </Pressable>
+            <Text style={styles.headerTitle}>Collections</Text>
+            <Pressable onPress={() => setSelectMode(true)} style={styles.selectButton}>
+              <Text style={styles.selectButtonText}>Select</Text>
+            </Pressable>
+            <Pressable onPress={() => setShowInput(!showInput)} style={styles.addButton}>
+              <Ionicons name="add-circle-outline" size={28} color="#4CAF50" />
+            </Pressable>
+          </>
+        )}
       </View>
+
+      {/* Bulk action bar */}
+      {selectMode && (
+        <View style={styles.bulkBar}>
+          <Pressable
+            style={[styles.bulkButton, selectedIds.size === 0 && styles.bulkButtonDisabled]}
+            onPress={() => selectedIds.size > 0 && setBulkDeleteModal(true)}
+            disabled={selectedIds.size === 0}
+          >
+            <Ionicons name="trash-outline" size={16} color="#fff" style={{ marginRight: 6 }} />
+            <Text style={styles.bulkButtonText}>
+              Delete {selectedIds.size > 0 ? `(${selectedIds.size})` : ''}
+            </Text>
+          </Pressable>
+        </View>
+      )}
 
       {/* Create input */}
       {showInput && (
@@ -104,31 +161,55 @@ export default function CollectionsScreen() {
         data={collections}
         keyExtractor={(item) => item.id}
         contentContainerStyle={collections.length === 0 ? styles.centered : undefined}
-        renderItem={({ item }) => (
-          <Pressable
-            style={styles.collectionItem}
-            onPress={() => router.push(`/profile/collections/${item.id}?name=${encodeURIComponent(item.name)}`)}
-            onLongPress={() => handleDelete(item.id, item.name)}
-          >
-            <View style={styles.collectionIcon}>
-              <Ionicons name="folder-outline" size={28} color="#4CAF50" />
-            </View>
-            <View style={styles.collectionInfo}>
-              <Text style={styles.collectionName}>{item.name}</Text>
-              <Text style={styles.collectionCount}>
-                {item.postCount} {item.postCount === 1 ? "post" : "posts"}
-              </Text>
-            </View>
+        renderItem={({ item }) => {
+          const isSelected = selectedIds.has(item.id);
+          return (
             <Pressable
-              onPress={() => handleDelete(item.id, item.name)}
-              hitSlop={8}
-              style={styles.deleteButton}
+              style={styles.collectionItem}
+              onPress={() => {
+                if (selectMode) {
+                  toggleSelectItem(item.id);
+                } else {
+                  router.push(`/profile/collections/${item.id}?name=${encodeURIComponent(item.name)}`);
+                }
+              }}
+              onLongPress={() => {
+                if (!selectMode) {
+                  setSelectMode(true);
+                  setSelectedIds(new Set([item.id]));
+                }
+              }}
             >
-              <Ionicons name="trash-outline" size={20} color="#ccc" />
+              {selectMode ? (
+                <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
+                  {isSelected && <Ionicons name="checkmark" size={14} color="#fff" />}
+                </View>
+              ) : (
+                <View style={styles.collectionIcon}>
+                  <Ionicons name="folder-outline" size={28} color="#4CAF50" />
+                </View>
+              )}
+              <View style={styles.collectionInfo}>
+                <Text style={styles.collectionName}>{item.name}</Text>
+                <Text style={styles.collectionCount}>
+                  {item.postCount} {item.postCount === 1 ? "post" : "posts"}
+                </Text>
+              </View>
+              {!selectMode && (
+                <>
+                  <Pressable
+                    onPress={() => handleDelete(item.id, item.name)}
+                    hitSlop={8}
+                    style={styles.deleteButton}
+                  >
+                    <Ionicons name="trash-outline" size={20} color="#e74c3c" />
+                  </Pressable>
+                  <Ionicons name="chevron-forward" size={20} color="#ccc" />
+                </>
+              )}
             </Pressable>
-            <Ionicons name="chevron-forward" size={20} color="#ccc" />
-          </Pressable>
-        )}
+          );
+        }}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Ionicons name="folder-open-outline" size={64} color="#ccc" />
@@ -159,6 +240,31 @@ export default function CollectionsScreen() {
                 <Text style={styles.modalCancelText}>Cancel</Text>
               </Pressable>
               <Pressable style={styles.modalDeleteButton} onPress={confirmDelete}>
+                <Text style={styles.modalDeleteText}>Delete</Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* Bulk delete modal */}
+      <Modal
+        visible={bulkDeleteModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setBulkDeleteModal(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setBulkDeleteModal(false)}>
+          <Pressable style={styles.modalBox} onPress={e => e.stopPropagation()}>
+            <Text style={styles.modalTitle}>Delete {selectedIds.size} Collection{selectedIds.size !== 1 ? 's' : ''}</Text>
+            <Text style={styles.modalMessage}>
+              Are you sure you want to delete {selectedIds.size} collection{selectedIds.size !== 1 ? 's' : ''}? This cannot be undone.
+            </Text>
+            <View style={styles.modalButtons}>
+              <Pressable style={styles.modalCancelButton} onPress={() => setBulkDeleteModal(false)}>
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </Pressable>
+              <Pressable style={styles.modalDeleteButton} onPress={confirmBulkDelete}>
                 <Text style={styles.modalDeleteText}>Delete</Text>
               </Pressable>
             </View>
@@ -200,6 +306,57 @@ const styles = StyleSheet.create({
   },
   addButton: {
     padding: 4,
+  },
+  selectButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#4CAF50",
+    marginRight: 8,
+  },
+  selectButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#4CAF50",
+  },
+  bulkBar: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0f0f0",
+    backgroundColor: "#fafafa",
+  },
+  bulkButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 10,
+    borderRadius: 8,
+    backgroundColor: "#e74c3c",
+  },
+  bulkButtonDisabled: {
+    opacity: 0.4,
+  },
+  bulkButtonText: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 14,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: "#ddd",
+    backgroundColor: "#fff",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 14,
+  },
+  checkboxSelected: {
+    backgroundColor: "#4CAF50",
+    borderColor: "#4CAF50",
   },
   createRow: {
     flexDirection: "row",
