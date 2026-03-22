@@ -15,7 +15,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { useLocalSearchParams, router } from 'expo-router';
+import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
 import { useActionSheet } from '@expo/react-native-action-sheet';
 import {
@@ -77,10 +77,12 @@ export default function PostDetailScreen() {
   const scaleAnim = React.useRef(new Animated.Value(1)).current;
   const { showActionSheetWithOptions } = useActionSheet();
 
-  useEffect(() => {
-    if (!postId) return;
-    loadData();
-  }, [postId]);
+  useFocusEffect(
+    useCallback(() => {
+      if (!postId) return;
+      loadData();
+    }, [postId])
+  );
 
   async function loadData() {
     try {
