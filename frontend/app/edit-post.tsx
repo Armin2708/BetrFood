@@ -13,6 +13,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
+import { feedEvents } from '../utils/feedEvents';
 import { fetchPost, updatePost, getImageUrl, fetchPostTags, addTagsToPost, removeTagFromPost, fetchRecipe, createRecipe, updateRecipe, RecipeInput, Recipe } from '../services/api';
 import TagSelector from '../components/TagSelector';
 
@@ -136,9 +137,9 @@ export default function EditPostScreen() {
         }
       }
 
-      Alert.alert('Success', 'Post updated successfully.', [
-        { text: 'OK', onPress: () => router.back() },
-      ]);
+      Alert.alert('Success', 'Post updated successfully.');
+      feedEvents.emitRefreshNeeded();
+      router.back();
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to update post.');
     } finally {
@@ -147,7 +148,7 @@ export default function EditPostScreen() {
   }
 
   function handleCancel() {
-    router.replace('/feeds');
+    router.back();
   }
 
   if (loading) {

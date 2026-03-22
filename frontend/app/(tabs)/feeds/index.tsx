@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useContext, useRef } from 'react';
+import React, { useState, useCallback, useContext, useRef, useEffect } from 'react';
 import {
   View,
   FlatList,
@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, router } from 'expo-router';
+import { feedEvents } from '../../../utils/feedEvents';
 import Post from '../../../components/Post';
 import PostSkeleton from '../../../components/PostSkeleton';
 import TagFilterBar from '../../../components/TagFilterBar';
@@ -170,6 +171,14 @@ export default function HomeScreen() {
       }
     }, [fetchInitial])
   );
+
+  // Re-fetch when edit-post signals a change
+  useEffect(() => {
+    const unsub = feedEvents.onRefreshNeeded(() => {
+      loadPosts(selectedTagIds, feedType);
+    });
+    return unsub;
+  }, [loadPosts, selectedTagIds, feedType]);
 
   const handleEndReached = useCallback(() => {
     if (!loadingMore && hasMore) loadMore();

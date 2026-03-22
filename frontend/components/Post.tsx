@@ -179,12 +179,13 @@ export default function Post({
 
   const showPostMenu = () => {
     if (isOwner) {
-      const options = ['Delete', 'Report', 'Cancel'];
+      const options = ['Edit', 'Delete', 'Report', 'Cancel'];
       showActionSheetWithOptions(
-        { options, cancelButtonIndex: 2, destructiveButtonIndex: 0 },
+        { options, cancelButtonIndex: 3, destructiveButtonIndex: 1 },
         (index) => {
-          if (index === 0) handleDelete();
-          if (index === 1) handleReport();
+          if (index === 0) router.push(`/edit-post?postId=${id}`);
+          if (index === 1) handleDelete();
+          if (index === 2) handleReport();
         }
       );
     } else {
@@ -303,7 +304,11 @@ export default function Post({
           <Text style={styles.captionUsername}>{username} </Text>{caption}
         </Text>
       </TouchableOpacity>
-      {editedAt && <Text style={styles.editedLabel}>Edited</Text>}
+      {editedAt && (
+        <Text style={styles.editedLabel}>
+          <Ionicons name="pencil-outline" size={11} color={colors.textQuaternary} /> Edited {new Date(editedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}
+        </Text>
+      )}
 
       {tags && tags.length > 0 && <TagDisplay tags={tags} />}
 
