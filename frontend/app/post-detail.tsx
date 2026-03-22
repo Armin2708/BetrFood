@@ -16,6 +16,7 @@ import {
   Platform,
 } from 'react-native';
 import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
+import { feedEvents } from '../utils/feedEvents';
 import * as Clipboard from 'expo-clipboard';
 import { useActionSheet } from '@expo/react-native-action-sheet';
 import {
@@ -307,9 +308,8 @@ export default function PostDetailScreen() {
         onPress: async () => {
           try {
             await deletePost(postId);
-            Alert.alert('Deleted', 'Post has been deleted.', [
-              { text: 'OK', onPress: () => router.back() },
-            ]);
+            feedEvents.emitRefreshNeeded();
+            router.back();
           } catch (error: any) {
             Alert.alert('Error', error.message || 'Failed to delete post.');
           }

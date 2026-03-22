@@ -17,6 +17,8 @@ import {
   Share,
   Alert,
   Animated,
+  Modal,
+  Pressable,
 } from 'react-native';
 import { router } from 'expo-router';
 
@@ -71,6 +73,7 @@ export default function Post({
   const [likeLoading, setLikeLoading] = useState(false);
   const [saved, setSaved] = useState(false);
   const [collectionModalVisible, setCollectionModalVisible] = useState(false);
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [recipe, setRecipe] = useState<Recipe | null>(null);
 
   useEffect(() => {
@@ -124,22 +127,18 @@ export default function Post({
   };
 
   const handleDelete = () => {
+    setDeleteModalVisible(true);
+  };
+
+  const confirmDelete = async () => {
     if (!id) return;
-    Alert.alert('Delete Post', 'Are you sure?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await deletePost(id);
-            if (onDeleted) onDeleted(id);
-          } catch (error: any) {
-            Alert.alert('Error', error.message || 'Failed to delete post.');
-          }
-        },
-      },
-    ]);
+    setDeleteModalVisible(false);
+    try {
+      await deletePost(id);
+      if (onDeleted) onDeleted(id);
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to delete post.');
+    }
   };
 
   const handleExternalShare = async () => {
@@ -353,6 +352,35 @@ export default function Post({
         onClose={() => setCollectionModalVisible(false)}
         onSave={handleSave}
       />
+
+      {/* Delete confirmation modal */}
+      <Modal
+        visible={deleteModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setDeleteModalVisible(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setDeleteModalVisible(false)}>
+          <Pressable style={styles.modalBox} onPress={e => e.stopPropagation()}>
+            <Text style={styles.modalTitle}>Delete Post</Text>
+            <Text style={styles.modalMessage}>Are you sure you want to delete this post? This cannot be undone.</Text>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.modalCancelButton}
+                onPress={() => setDeleteModalVisible(false)}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.modalDeleteButton}
+                onPress={confirmDelete}
+              >
+                <Text style={styles.modalDeleteText}>Delete</Text>
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -431,5 +459,63 @@ const styles = StyleSheet.create({
   },
   pantryBadgeTextPartial: {
     color: '#92400E',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalBox: {
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    padding: 24,
+    width: 300,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    marginBottom: 8,
+  },
+  modalMessage: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    lineHeight: 20,
+    marginBottom: 20,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalCancelButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+  },
+  modalCancelText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  modalDeleteButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: '#e74c3c',
+    alignItems: 'center',
+  },
+  modalDeleteText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#fff',
   },
 });
