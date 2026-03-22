@@ -77,8 +77,8 @@ export default function ResetPasswordScreen() {
 
         <Text style={styles.title}>Forgot Password?</Text>
         <Text style={styles.subtitle}>
-          No worries! Enter your email address and we'll send you a link to
-          reset your password.
+          Enter your email address and we'll send you a verification
+          code to reset your password.
         </Text>
 
         {/* Email input */}
@@ -113,7 +113,7 @@ export default function ResetPasswordScreen() {
             {loading ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.buttonText}>Send Reset Link</Text>
+              <Text style={styles.buttonText}>Send Code</Text>
             )}
           </LinearGradient>
         </TouchableOpacity>

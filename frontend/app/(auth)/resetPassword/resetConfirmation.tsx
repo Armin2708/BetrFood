@@ -5,22 +5,21 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Image,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import { useAuth } from "@clerk/clerk-expo";
 
 export default function ResetSuccessScreen() {
   const router = useRouter();
+  const { signOut } = useAuth();
+
+  const handleBackToLogin = async () => {
+    await signOut();
+    router.dismissTo("/(auth)/login");
+  };
 
   return (
     <View style={styles.container}>
-      {/* Logo */}
-      <Image
-        source={require("../../../assets/images/Logo.png")}
-        style={styles.logo}
-        resizeMode="contain"
-      />
-
       {/* Success icon */}
       <View style={styles.iconContainer}>
         <LinearGradient
@@ -39,7 +38,7 @@ export default function ResetSuccessScreen() {
 
       <TouchableOpacity
         style={styles.button}
-        onPress={() => router.dismissTo("/(auth)/login")}
+        onPress={handleBackToLogin}
         accessibilityRole="button"
         accessibilityLabel="Go to login"
         activeOpacity={0.85}
@@ -61,16 +60,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: 28,
-    paddingTop: 60,
-    paddingBottom: 40,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#FFFFFF",
-  },
-  logo: {
-    width: 80,
-    height: 80,
-    marginBottom: 32,
   },
   iconContainer: {
     marginBottom: 28,
