@@ -1,7 +1,7 @@
-import { Tabs, Redirect } from 'expo-router';
+import { Tabs, Redirect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ComponentProps, useState, useCallback, useContext } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, Pressable } from 'react-native';
 import { useAuth } from "@clerk/clerk-expo";
 import { useFocusEffect } from '@react-navigation/native';
 import { fetchUnreadNotificationCount } from '../../services/api';
@@ -26,6 +26,7 @@ export default function TabsLayout() {
   const { isSignedIn, isLoaded } = useAuth();
   const { loading: authLoading, token } = useContext(AuthContext);
   const [unreadCount, setUnreadCount] = useState(0);
+  const router = useRouter();
 
   useFocusEffect(
     useCallback(() => {
@@ -65,84 +66,96 @@ export default function TabsLayout() {
   }
 
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: '#FFFFFF',
-        tabBarInactiveTintColor: 'rgba(255,255,255,0.6)',
-        tabBarStyle: {
-          backgroundColor: '#22C55E',
-          borderTopWidth: 0,
-          height: 80,
-          paddingBottom: 20,
-          paddingTop: 8,
-          elevation: 0,
-          shadowOpacity: 0,
-        },
-        tabBarLabelStyle: {
-          fontSize: 10,
-          fontWeight: '700',
-        },
-      }}
-    >
-      <Tabs.Screen
-        name="feeds"
-        options={{
-          title: 'Home',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name={'home' as IoniconName} size={size} color={color} />
-          ),
-        }}
-      />
-
-      <Tabs.Screen
-        name="notifications"
-        options={{
-          title: 'Notifications',
-          tabBarIcon: ({ color, size }) => (
-            <NotificationIcon color={color} size={size} badge={unreadCount} />
-          ),
-        }}
-        listeners={{
-          focus: () => {
-            if (!token) return;
-            fetchUnreadNotificationCount()
-              .then(setUnreadCount)
-              .catch(() => {});
+    <View style={{ flex: 1 }}>
+      <Tabs
+        screenOptions={{
+          headerShown: false,
+          tabBarActiveTintColor: '#FFFFFF',
+          tabBarInactiveTintColor: 'rgba(255,255,255,0.6)',
+          tabBarStyle: {
+            backgroundColor: '#22C55E',
+            borderTopWidth: 0,
+            height: 80,
+            paddingBottom: 20,
+            paddingTop: 8,
+            elevation: 0,
+            shadowOpacity: 0,
+          },
+          tabBarLabelStyle: {
+            fontSize: 10,
+            fontWeight: '700',
           },
         }}
-      />
+      >
+        <Tabs.Screen
+          name="feeds"
+          options={{
+            title: 'Home',
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name={'home' as IoniconName} size={size} color={color} />
+            ),
+          }}
+        />
 
-      <Tabs.Screen
-        name="chat"
-        options={{
-          title: 'Chat',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name={'chatbubble-ellipses-outline' as IoniconName} size={size} color={color} />
-          ),
-        }}
-      />
+        <Tabs.Screen
+          name="notifications"
+          options={{
+            title: 'Notifications',
+            tabBarIcon: ({ color, size }) => (
+              <NotificationIcon color={color} size={size} badge={unreadCount} />
+            ),
+          }}
+          listeners={{
+            focus: () => {
+              if (!token) return;
+              fetchUnreadNotificationCount()
+                .then(setUnreadCount)
+                .catch(() => {});
+            },
+          }}
+        />
 
-      <Tabs.Screen
-        name="pantry"
-        options={{
-          title: 'Pantry',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name={'basket-outline' as IoniconName} size={size} color={color} />
-          ),
-        }}
-      />
+        <Tabs.Screen
+          name="chat"
+          options={{
+            title: 'Chat',
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name={'chatbubble-ellipses-outline' as IoniconName} size={size} color={color} />
+            ),
+          }}
+        />
 
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: 'Profile',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name={'person' as IoniconName} size={size} color={color} />
-          ),
-        }}
-      />
-    </Tabs>
+        <Tabs.Screen
+          name="pantry"
+          options={{
+            title: 'Pantry',
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name={'basket-outline' as IoniconName} size={size} color={color} />
+            ),
+          }}
+        />
+
+        <Tabs.Screen
+          name="profile"
+          options={{
+            title: 'Profile',
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name={'person' as IoniconName} size={size} color={color} />
+            ),
+          }}
+        />
+      </Tabs>
+
+      {/* Floating Create Button */}
+      <Pressable
+        style={styles.fab}
+        onPress={() => router.push('/create-post')}
+        accessibilityRole="button"
+        accessibilityLabel="Create post"
+      >
+        <Ionicons name="add" size={28} color="#FFFFFF" />
+      </Pressable>
+    </View>
   );
 }
 
@@ -163,5 +176,21 @@ const styles = StyleSheet.create({
     color: '#22C55E',
     fontSize: 10,
     fontWeight: '700',
+  },
+  fab: {
+    position: 'absolute',
+    bottom: 96,
+    right: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#22C55E',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
   },
 });
