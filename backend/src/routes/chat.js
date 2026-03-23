@@ -1,6 +1,5 @@
 const express = require('express');
 const OpenAI = require('openai');
-const pool = require('../db/pool');
 const supabase = require('../db/supabase');
 const { requireAuth } = require('../middleware/auth');
 
@@ -99,19 +98,19 @@ router.post('/', requireAuth, async (req, res) => {
 
   try {
     // Save user message
-    await pool.query(
-      'INSERT INTO chat_messages (user_id, role, content) VALUES ($1, $2, $3)',
-      [userId, 'user', message.trim()]
-    );
+    await supabase
+      .from('chat_messages')
+      .insert({ user_id: userId, role: 'user', content: message.trim() });
 
     // Fetch last 20 messages for context
-    const { rows: history } = await pool.query(
-      'SELECT role, content FROM chat_messages WHERE user_id = $1 ORDER BY created_at DESC LIMIT 20',
-      [userId]
-    );
+    const { data: history } = await supabase
+      .from('chat_messages')
+      .select('role, content')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(20);
 
-    // Reverse so oldest is first
-    const conversationMessages = history.reverse().map((msg) => ({
+    const conversationMessages = (history || []).reverse().map((msg) => ({
       role: msg.role,
       content: msg.content,
     }));
@@ -122,7 +121,7 @@ router.post('/', requireAuth, async (req, res) => {
 
     // Call OpenRouter API
     const response = await openai.chat.completions.create({
-      model: 'google/gemini-2.0-flash-exp:free',
+      model: 'openrouter/free',
       max_tokens: 1024,
       messages: [
         { role: 'system', content: systemPrompt },
@@ -133,12 +132,13 @@ router.post('/', requireAuth, async (req, res) => {
     const assistantContent = response.choices[0].message.content;
 
     // Save assistant response
-    const { rows } = await pool.query(
-      'INSERT INTO chat_messages (user_id, role, content) VALUES ($1, $2, $3) RETURNING id, role, content, created_at',
-      [userId, 'assistant', assistantContent]
-    );
+    const { data: saved } = await supabase
+      .from('chat_messages')
+      .insert({ user_id: userId, role: 'assistant', content: assistantContent })
+      .select('id, role, content, created_at')
+      .single();
 
-    res.json(rows[0]);
+    res.json(saved);
   } catch (err) {
     console.error('[CHAT ERROR]', err.message);
     res.status(500).json({ error: 'Failed to get AI response' });
@@ -157,7 +157,10 @@ router.get('/pantry-suggestions', requireAuth, async (req, res) => {
 
     if (!pantryItems || pantryItems.length === 0) {
       return res.json({
-        message: "Your pantry is empty! Add some items to your pantry and I'll suggest recipes you can make with them.",
+        id: Date.now(),
+        role: 'assistant',
+        content: "Your pantry is empty! Add some items to your pantry and I'll suggest recipes you can make with them.",
+        created_at: new Date().toISOString(),
         pantryCount: 0,
       });
     }
@@ -165,7 +168,7 @@ router.get('/pantry-suggestions', requireAuth, async (req, res) => {
     const systemPrompt = await buildSystemPrompt(userId, true);
 
     const response = await openai.chat.completions.create({
-      model: 'google/gemini-2.0-flash-exp:free',
+      model: 'openrouter/free',
       max_tokens: 1024,
       messages: [
         { role: 'system', content: systemPrompt },
@@ -178,17 +181,18 @@ router.get('/pantry-suggestions', requireAuth, async (req, res) => {
 
     const suggestions = response.choices[0].message.content;
 
-    // Save this exchange to chat history so context is maintained
-    await pool.query(
-      'INSERT INTO chat_messages (user_id, role, content) VALUES ($1, $2, $3)',
-      [userId, 'user', 'What can I cook with the items in my pantry?']
-    );
-    const { rows } = await pool.query(
-      'INSERT INTO chat_messages (user_id, role, content) VALUES ($1, $2, $3) RETURNING id, role, content, created_at',
-      [userId, 'assistant', suggestions]
-    );
+    // Save exchange to chat history
+    await supabase
+      .from('chat_messages')
+      .insert({ user_id: userId, role: 'user', content: 'What can I cook with the items in my pantry?' });
 
-    res.json({ ...rows[0], pantryCount: pantryItems.length });
+    const { data: saved } = await supabase
+      .from('chat_messages')
+      .insert({ user_id: userId, role: 'assistant', content: suggestions })
+      .select('id, role, content, created_at')
+      .single();
+
+    res.json({ ...saved, pantryCount: pantryItems.length });
   } catch (err) {
     console.error('[PANTRY SUGGESTIONS ERROR]', err.message);
     res.status(500).json({ error: 'Failed to get pantry suggestions' });
@@ -200,12 +204,16 @@ router.get('/history', requireAuth, async (req, res) => {
   const userId = getUserId(req);
 
   try {
-    const { rows } = await pool.query(
-      'SELECT id, role, content, created_at FROM chat_messages WHERE user_id = $1 ORDER BY created_at ASC LIMIT 50',
-      [userId]
-    );
+    const { data: messages, error } = await supabase
+      .from('chat_messages')
+      .select('id, role, content, created_at')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: true })
+      .limit(50);
 
-    res.json({ messages: rows });
+    if (error) throw error;
+
+    res.json({ messages: messages || [] });
   } catch (err) {
     console.error('[CHAT HISTORY ERROR]', err.message);
     res.status(500).json({ error: 'Failed to fetch chat history' });
