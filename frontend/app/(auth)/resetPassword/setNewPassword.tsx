@@ -35,7 +35,7 @@ export default function NewPasswordScreen() {
   const [loading, setLoading] = useState<boolean>(false);
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [showConfirm, setShowConfirm] = useState<boolean>(false);
-  const { signIn, setActive, isLoaded } = useSignIn();
+  const { signIn, isLoaded } = useSignIn();
   const router = useRouter();
 
   const metCount = REQUIREMENTS.filter((r) => r.test(password)).length;
@@ -71,8 +71,7 @@ export default function NewPasswordScreen() {
     try {
       const result = await signIn.resetPassword({ password });
 
-      if (result.status === "complete" && result.createdSessionId) {
-        await setActive({ session: result.createdSessionId });
+      if (result.status === "complete") {
         router.push("/resetPassword/resetConfirmation");
       } else {
         showError(

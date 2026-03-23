@@ -78,7 +78,7 @@ export default function VerificationCodeScreen() {
   };
 
   const handleVerify = async () => {
-    if (!isLoaded) return;
+    if (!isLoaded || !signIn) return;
     const codeString = code.join("");
     if (codeString.length !== 6) {
       showError("Please enter the full 6-digit code.");
@@ -110,7 +110,7 @@ export default function VerificationCodeScreen() {
   };
 
   const resendCode = async () => {
-    if (!isLoaded || cooldown > 0) return;
+    if (!isLoaded || !signIn || cooldown > 0) return;
     try {
       const emailFactor = signIn.supportedFirstFactors?.find(
         (f: any) => f.strategy === "reset_password_email_code"
@@ -163,7 +163,7 @@ export default function VerificationCodeScreen() {
           {code.map((digit, index) => (
             <TextInput
               key={index}
-              ref={(ref) => (inputs.current[index] = ref)}
+              ref={(ref) => { inputs.current[index] = ref; }}
               style={[styles.codeInput, digit ? styles.codeInputFilled : null]}
               keyboardType="number-pad"
               maxLength={1}
