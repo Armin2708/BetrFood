@@ -16,7 +16,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import Markdown from 'react-native-markdown-display';
 import { colors } from '../../../constants/theme';
-import { ChatMessage, sendChatMessage, fetchChatHistory } from '../../../services/api/chat';
+import {
+  ChatMessage,
+  sendChatMessage,
+  fetchChatHistory,
+  fetchPantrySuggestions,
+} from '../../../services/api/chat';
 
 function formatRelativeTime(dateString: string): string {
   const now = Date.now();
@@ -32,11 +37,18 @@ function formatRelativeTime(dateString: string): string {
   return `${diffDay}d ago`;
 }
 
+const QUICK_ACTIONS = [
+  { id: 'pantry', label: '🥗 What can I cook?', message: 'What can I cook with the items in my pantry?' },
+  { id: 'expiring', label: '⏰ Use expiring items', message: 'What should I cook first using my items that are expiring soon?' },
+  { id: 'ideas', label: '💡 Meal ideas', message: 'Give me some quick and easy meal ideas for today.' },
+];
+
 export default function ChatScreen() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const flatListRef = useRef<FlatList<ChatMessage>>(null);
 
   const loadHistory = useCallback(async () => {
@@ -56,8 +68,14 @@ export default function ChatScreen() {
     }, [loadHistory])
   );
 
-  const handleSend = async () => {
-    const text = input.trim();
+  const scrollToBottom = (animated = true) => {
+    setTimeout(() => {
+      flatListRef.current?.scrollToEnd({ animated });
+    }, 100);
+  };
+
+  const handleSend = async (overrideText?: string) => {
+    const text = (overrideText ?? input).trim();
     if (!text || sending) return;
 
     const tempUserMsg: ChatMessage = {
@@ -68,36 +86,55 @@ export default function ChatScreen() {
     };
 
     setMessages((prev) => [...prev, tempUserMsg]);
-    setInput('');
+    if (!overrideText) setInput('');
     setSending(true);
-
-    // Scroll to bottom after adding user message
-    setTimeout(() => {
-      flatListRef.current?.scrollToEnd({ animated: true });
-    }, 100);
+    scrollToBottom();
 
     try {
-      const response = await sendChatMessage(text);
-      setMessages((prev) => {
-        // Replace temp user message with server version and add assistant response
-        const withoutTemp = prev.filter((m) => m.id !== tempUserMsg.id);
-        // The API returns the assistant message; we keep the user message from the history
-        // or reconstruct it. For simplicity, keep the temp and append assistant.
-        return [...prev.filter((m) => m.id === tempUserMsg.id ? true : true), response];
-      });
-      // Reload full history to get accurate IDs
+      await sendChatMessage(text);
       const history = await fetchChatHistory();
       setMessages(history.reverse());
     } catch {
-      // Remove the optimistic user message on error
       setMessages((prev) => prev.filter((m) => m.id !== tempUserMsg.id));
-      setInput(text); // Restore input so user can retry
+      if (!overrideText) setInput(text);
       Alert.alert('Oops', 'Failed to get a response. Please try again.');
     } finally {
       setSending(false);
-      setTimeout(() => {
-        flatListRef.current?.scrollToEnd({ animated: true });
-      }, 150);
+      scrollToBottom();
+    }
+  };
+
+  const handlePantrySuggestions = async () => {
+    if (sending || loadingSuggestions) return;
+    setLoadingSuggestions(true);
+
+    const tempUserMsg: ChatMessage = {
+      id: Date.now(),
+      role: 'user',
+      content: 'What can I cook with the items in my pantry?',
+      created_at: new Date().toISOString(),
+    };
+    setMessages((prev) => [...prev, tempUserMsg]);
+    scrollToBottom();
+
+    try {
+      await fetchPantrySuggestions();
+      const history = await fetchChatHistory();
+      setMessages(history.reverse());
+    } catch {
+      setMessages((prev) => prev.filter((m) => m.id !== tempUserMsg.id));
+      Alert.alert('Oops', 'Failed to get pantry suggestions. Please try again.');
+    } finally {
+      setLoadingSuggestions(false);
+      scrollToBottom();
+    }
+  };
+
+  const handleQuickAction = (action: typeof QUICK_ACTIONS[0]) => {
+    if (action.id === 'pantry') {
+      handlePantrySuggestions();
+    } else {
+      handleSend(action.message);
     }
   };
 
@@ -143,13 +180,28 @@ export default function ChatScreen() {
     return (
       <View style={styles.emptyState}>
         <Ionicons name="restaurant-outline" size={56} color={colors.textTertiary} />
-        <Text style={styles.emptyTitle}>Ask me anything about food and cooking!</Text>
+        <Text style={styles.emptyTitle}>Your AI cooking assistant</Text>
         <Text style={styles.emptySubtitle}>
-          I can help with recipes, ingredient substitutions, cooking techniques, and more.
+          Ask me anything about food, recipes, or tap a suggestion below to get started.
         </Text>
+        <View style={styles.quickActionsGrid}>
+          {QUICK_ACTIONS.map((action) => (
+            <TouchableOpacity
+              key={action.id}
+              style={styles.quickActionChip}
+              onPress={() => handleQuickAction(action)}
+              disabled={sending || loadingSuggestions}
+              activeOpacity={0.75}
+            >
+              <Text style={styles.quickActionText}>{action.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       </View>
     );
   };
+
+  const isBusy = sending || loadingSuggestions;
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -191,7 +243,7 @@ export default function ChatScreen() {
         )}
 
         {/* Typing indicator */}
-        {sending && (
+        {isBusy && (
           <View style={styles.typingRow}>
             <View style={styles.avatarCircleSmall}>
               <Ionicons name="restaurant-outline" size={12} color={colors.primary} />
@@ -200,6 +252,23 @@ export default function ChatScreen() {
               <ActivityIndicator size="small" color={colors.textTertiary} />
               <Text style={styles.typingText}>Thinking...</Text>
             </View>
+          </View>
+        )}
+
+        {/* Quick action bar (shown when there are messages) */}
+        {messages.length > 0 && (
+          <View style={styles.quickActionsBar}>
+            <TouchableOpacity
+              style={styles.pantryChip}
+              onPress={handlePantrySuggestions}
+              disabled={isBusy}
+              activeOpacity={0.75}
+              accessibilityRole="button"
+              accessibilityLabel="Get pantry recipe suggestions"
+            >
+              <Ionicons name="basket-outline" size={14} color={colors.primary} />
+              <Text style={styles.pantryChipText}>Pantry Recipes</Text>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -214,16 +283,16 @@ export default function ChatScreen() {
             multiline
             maxLength={2000}
             returnKeyType="default"
-            editable={!sending}
+            editable={!isBusy}
             accessibilityLabel="Chat message input"
           />
           <TouchableOpacity
             style={[
               styles.sendButton,
-              (!input.trim() || sending) && styles.sendButtonDisabled,
+              (!input.trim() || isBusy) && styles.sendButtonDisabled,
             ]}
-            onPress={handleSend}
-            disabled={!input.trim() || sending}
+            onPress={() => handleSend()}
+            disabled={!input.trim() || isBusy}
             accessibilityRole="button"
             accessibilityLabel="Send message"
           >
@@ -292,7 +361,7 @@ const styles = StyleSheet.create({
   // Empty state
   emptyState: {
     alignItems: 'center',
-    paddingHorizontal: 40,
+    paddingHorizontal: 32,
     gap: 12,
   },
   emptyTitle: {
@@ -306,6 +375,49 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
+    marginBottom: 4,
+  },
+  quickActionsGrid: {
+    width: '100%',
+    gap: 10,
+    marginTop: 4,
+  },
+  quickActionChip: {
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  quickActionText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: colors.primary,
+  },
+  // Quick action bar (inline, for when messages exist)
+  quickActionsBar: {
+    flexDirection: 'row',
+    paddingHorizontal: 12,
+    paddingBottom: 6,
+    gap: 8,
+  },
+  pantryChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  pantryChipText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: colors.primary,
   },
   // Message rows
   messageBubbleRow: {
