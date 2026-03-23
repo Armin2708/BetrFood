@@ -332,6 +332,7 @@ export default function HomeScreen() {
             initialLikes={item.likeCount}
             mediaType={item.mediaType}
             commentCount={item.commentCount}
+            verified={item.verified}
             pantryMatchedCount={item._matchedCount}
             pantryMissingCount={item._missingCount}
             isPantryMatch={item._isMatch}
