@@ -1,30 +1,46 @@
-import React, { useContext, useEffect, useState, ReactNode } from 'react';
-import { AuthContext } from '../context/AuthenticationContext';
+import React, { ReactNode } from 'react';
+import { useRole } from '../hooks/useRole';
 
-type RoleGuardProps = {
-  /** Roles that are allowed to see the children */
-  allowedRoles: string[];
-  /** Optional fallback to render when the user does not have the required role */
+interface RoleGuardProps {
+  /** Render children only if user has at least this role */
+  minRole?: string;
+  /** Render children only if user has exactly one of these roles */
+  roles?: string[];
+  /** Fallback to render if access is denied (optional) */
   fallback?: ReactNode;
   children: ReactNode;
-};
+}
 
 /**
- * Conditionally renders children based on the authenticated user's role.
- * Uses the role from AuthContext (fetched and cached there).
- * If the user's role is not in allowedRoles, renders the fallback (or nothing).
+ * Conditionally renders children based on the current user's role.
+ *
+ * Usage:
+ *   // Only admins see this
+ *   <RoleGuard minRole="admin">
+ *     <AdminButton />
+ *   </RoleGuard>
+ *
+ *   // Creators and above see this
+ *   <RoleGuard minRole="creator">
+ *     <CreatePostButton />
+ *   </RoleGuard>
+ *
+ *   // Only moderators or admins see this, with a fallback
+ *   <RoleGuard roles={['moderator', 'admin']} fallback={<Text>No access</Text>}>
+ *     <ModerationPanel />
+ *   </RoleGuard>
  */
-export default function RoleGuard({ allowedRoles, fallback = null, children }: RoleGuardProps) {
-  const { user } = useContext(AuthContext);
+export default function RoleGuard({ minRole, roles, fallback = null, children }: RoleGuardProps) {
+  const { isAtLeast, hasRole } = useRole();
 
-  if (!user || !user.role) {
-    // Not logged in or role not yet loaded — show fallback
-    return <>{fallback}</>;
+  let allowed = true;
+
+  if (minRole) {
+    allowed = isAtLeast(minRole);
+  } else if (roles && roles.length > 0) {
+    allowed = hasRole(...roles);
   }
 
-  if (!allowedRoles.includes(user.role)) {
-    return <>{fallback}</>;
-  }
-
+  if (!allowed) return <>{fallback}</>;
   return <>{children}</>;
 }
