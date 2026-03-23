@@ -17,7 +17,6 @@ import {
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { usePantry } from '../context/PantryContext';
-import { AuthContext } from '../context/AuthenticationContext';
 import { colors } from '../constants/theme';
 import { PantryItemInput } from '../services/api';
 
@@ -170,7 +169,6 @@ function CandidateRow({
 
 export default function PantryReviewScreen() {
   const { addItems } = usePantry();
-  const { token } = useContext(AuthContext);
   const params = useLocalSearchParams<{ candidates?: string }>();
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
@@ -234,14 +232,10 @@ export default function PantryReviewScreen() {
       Alert.alert('No photo selected', 'Pick a photo first.');
       return;
     }
-    if (!token) {
-      Alert.alert('Not signed in', 'You need to be signed in to analyze a photo.');
-      return;
-    }
 
     setAnalyzing(true);
     try {
-      const result = await identifyPantryItems(token, photoUri);
+      const result = await identifyPantryItems(photoUri);
       const mapped: Candidate[] = result.items.map((item) => ({
         localId: makeid(),
         name: item.name,

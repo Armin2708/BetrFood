@@ -1,8 +1,5 @@
 import { Platform } from 'react-native';
-
-// Match the same base URL pattern used by every other service file
-const LOCAL_IP = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || `http://${LOCAL_IP}:3000`;
+import { API_BASE_URL, authHeaders } from './client';
 
 export type VisionPantryItem = {
   name: string;
@@ -31,14 +28,15 @@ async function uriToBase64(uri: string): Promise<string> {
   });
 }
 
-export async function identifyPantryItems(token: string, imageUri: string) {
+export async function identifyPantryItems(imageUri: string) {
   const image = await uriToBase64(imageUri);
+  const headers = await authHeaders();
 
   const res = await fetch(`${API_BASE_URL}/api/pantry/identify`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
+      ...headers,
     },
     body: JSON.stringify({ image }),
   });

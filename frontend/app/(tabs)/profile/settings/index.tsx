@@ -1,8 +1,8 @@
-import { View, Text, StyleSheet, Pressable, Alert, ScrollView, Image, Linking } from "react-native";
+import { View, Text, StyleSheet, Pressable, Alert, ScrollView, Image, Linking, Modal } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useClerk } from "@clerk/clerk-expo";
-import { useContext } from "react";
+import { useContext, useState } from "react";
 import { AuthContext } from "../../../../context/AuthenticationContext";
 import { deleteAccount } from "../../../../services/api";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -13,33 +13,27 @@ export default function Settings() {
   const { user } = useContext(AuthContext);
 
   const isAdminOrMod = user?.role === 'admin' || user?.role === 'moderator';
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const handleLogout = async () => {
     await signOut();
     router.replace("/");
   };
 
-  const handleDeleteAccount = () => {
-    Alert.alert(
-      "Delete Account",
-      "Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently removed.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await deleteAccount();
-              await signOut();
-              router.replace("/");
-            } catch {
-              Alert.alert("Error", "Failed to delete account. Please try again.");
-            }
-          },
-        },
-      ]
-    );
+  const handleDeleteAccount = () => setDeleteModalVisible(true);
+
+  const confirmDeleteAccount = async () => {
+    setDeleting(true);
+    try {
+      await deleteAccount();
+      await signOut();
+      router.replace("/");
+    } catch {
+      setDeleteModalVisible(false);
+      setDeleting(false);
+      Alert.alert("Error", "Failed to delete account. Please try again.");
+    }
   };
 
   const openLink = (url: string) => {
@@ -203,6 +197,42 @@ export default function Settings() {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      {/* Delete account confirmation modal */}
+      <Modal
+        visible={deleteModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => !deleting && setDeleteModalVisible(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => !deleting && setDeleteModalVisible(false)}>
+          <Pressable style={styles.modalBox} onPress={e => e.stopPropagation()}>
+            <View style={styles.modalIconRow}>
+              <Ionicons name="warning-outline" size={32} color="#EF4444" />
+            </View>
+            <Text style={styles.modalTitle}>Delete Account</Text>
+            <Text style={styles.modalMessage}>
+              This action is permanent and cannot be undone. All your posts, comments, follows, and data will be permanently removed.
+            </Text>
+            <Pressable
+              style={[styles.modalDeleteButton, deleting && { opacity: 0.6 }]}
+              onPress={confirmDeleteAccount}
+              disabled={deleting}
+            >
+              <Text style={styles.modalDeleteText}>
+                {deleting ? 'Deleting...' : 'Yes, Delete My Account'}
+              </Text>
+            </Pressable>
+            <Pressable
+              style={styles.modalCancelButton}
+              onPress={() => setDeleteModalVisible(false)}
+              disabled={deleting}
+            >
+              <Text style={styles.modalCancelText}>Cancel</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -332,5 +362,58 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
     textAlign: 'center',
     marginTop: 12,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  modalBox: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 340,
+  },
+  modalIconRow: {
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#0F172A',
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  modalMessage: {
+    fontSize: 14,
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 24,
+  },
+  modalDeleteButton: {
+    backgroundColor: '#EF4444',
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  modalDeleteText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 15,
+  },
+  modalCancelButton: {
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  modalCancelText: {
+    color: '#64748B',
+    fontSize: 15,
+    fontWeight: '500',
   },
 });

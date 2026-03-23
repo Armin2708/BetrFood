@@ -114,7 +114,7 @@ export async function fetchUserProfile(userId: string): Promise<UserProfile> {
 }
 
 export async function deleteAccount() {
-  const response = await fetch(`${API_BASE_URL}/api/profiles/me`, {
+  const response = await fetch(`${API_BASE_URL}/api/users/me`, {
     method: 'DELETE',
     headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
   });
