@@ -267,7 +267,7 @@ export default function HomeScreen() {
           />
         }
         ListHeaderComponent={
-          <>
+          <View style={styles.headerContainer}>
             {/* Feed type tabs + search */}
             <View style={styles.feedToggle}>
               <View style={styles.feedToggleTabs}>
@@ -307,7 +307,7 @@ export default function HomeScreen() {
               pantryFilterActive={pantryFilterActive}
               onPantryFilterChange={setPantryFilterActive}
             />
-          </>
+          </View>
         }
         onEndReached={handleEndReached}
         onEndReachedThreshold={0.5}
@@ -346,26 +346,26 @@ export default function HomeScreen() {
           ) : null
         }
         ListEmptyComponent={
-          <View style={styles.empty}>
-            <Text style={styles.emptyTitle}>
-              {pantryFilterActive
-                ? 'No pantry matches'
-                : selectedTagIds.length > 0
-                ? 'No matches'
-                : 'No posts yet'}
-            </Text>
-            <Text style={styles.emptyText}>
-              {pantryFilterActive
-                ? 'No recipes in the feed can be made with your current pantry.'
-                : selectedTagIds.length > 0
-                ? 'No posts match the selected tags.'
-                : 'Be the first to share a meal!'}
-            </Text>
+          <View style={styles.emptyContainer}>
+            <View style={styles.empty}>
+              <Text style={styles.emptyTitle}>
+                {pantryFilterActive
+                  ? 'No pantry matches'
+                  : selectedTagIds.length > 0
+                  ? 'No matches'
+                  : 'No posts yet'}
+              </Text>
+              <Text style={styles.emptyText}>
+                {pantryFilterActive
+                  ? 'No recipes in the feed can be made with your current pantry.'
+                  : selectedTagIds.length > 0
+                  ? 'No posts match the selected tags.'
+                  : 'Be the first to share a meal!'}
+              </Text>
+            </View>
           </View>
         }
-        contentContainerStyle={
-          displayedPosts.length === 0 ? styles.emptyList : undefined
-        }
+        contentContainerStyle={undefined}
       />
     </View>
   );
@@ -373,6 +373,7 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFFFFF' },
+  headerContainer: { width: '100%' },
   feedToggle: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -419,6 +420,7 @@ const styles = StyleSheet.create({
   },
   retryText: { color: '#fff', fontSize: 16, fontWeight: '600' },
   footer: { paddingVertical: 20, alignItems: 'center' },
+  emptyContainer: { flex: 1, justifyContent: 'center', width: '100%' },
   empty: { alignItems: 'center', padding: 40 },
   emptyTitle: {
     fontSize: 20,
@@ -427,5 +429,4 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   emptyText: { fontSize: 16, color: '#999' },
-  emptyList: { flexGrow: 1, justifyContent: 'center' },
 });

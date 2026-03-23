@@ -1,20 +1,18 @@
-import { useState, useEffect } from "react";
 import {
   View,
   Text,
   StyleSheet,
   Pressable,
   ScrollView,
-  Alert,
   ActivityIndicator,
   Switch,
 } from "react-native";
-import { fetchPreferences, updatePreferences } from "../../../../services/api";
+import { colors } from "../../../../constants/theme"
+import { usePreferences } from "../../../../context/PreferencesContext";
 import {
   requestNotificationPermission,
   cancelAllExpiryNotifications,
   scheduleExpiryNotifications,
-  cancelExpiryNotification,
 } from "../../../../utils/pantryNotifications";
 import { fetchPantryItems } from "../../../../services/api";
 
@@ -89,44 +87,17 @@ function ChipGroup({
 }
 
 export default function FoodPreferences() {
-  const [dietaryPreferences, setDietaryPreferences] = useState<string[]>([]);
-  const [allergies, setAllergies] = useState<string[]>([]);
-  const [cuisines, setCuisines] = useState<string[]>([]);
-  const [expiringItemsThreshold, setExpiringItemsThreshold] = useState(7);
-  const [expirationNotificationsEnabled, setExpirationNotificationsEnabled] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    loadPreferences();
-  }, []);
-
-  const loadPreferences = async () => {
-    try {
-      const prefs = await fetchPreferences();
-      setDietaryPreferences(prefs.dietaryPreferences || []);
-      setAllergies(prefs.allergies || []);
-      setCuisines(prefs.cuisines || []);
-      setExpiringItemsThreshold(prefs.expiringItemsThreshold || 7);
-      setExpirationNotificationsEnabled(prefs.expirationNotificationsEnabled ?? false);
-    } catch {
-      // Start with empty selections if fetch fails
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const toggle = (
-    list: string[],
-    setList: (v: string[]) => void,
-    item: string
-  ) => {
-    if (list.includes(item)) {
-      setList(list.filter((i) => i !== item));
-    } else {
-      setList([...list, item]);
-    }
-  };
+  const {
+    preferences,
+    loading,
+    saving,
+    updatePreferences,
+    toggleDietaryPreference,
+    toggleAllergy,
+    toggleCuisine,
+    setExpiringItemsThreshold,
+    setExpirationNotificationsEnabled,
+  } = usePreferences();
 
   // Handle the notification toggle — request permissions when enabling,
   // cancel all notifications when disabling.
@@ -134,22 +105,22 @@ export default function FoodPreferences() {
     if (value) {
       const granted = await requestNotificationPermission();
       if (!granted) {
-        Alert.alert(
-          'Permission Required',
-          'Please enable notifications for BetrFood in your device settings to receive expiration reminders.'
-        );
         return;
       }
+      setExpirationNotificationsEnabled(value);
     } else {
       await cancelAllExpiryNotifications();
+      setExpirationNotificationsEnabled(value);
     }
-    setExpirationNotificationsEnabled(value);
+    await updatePreferences({
+      expirationNotificationsEnabled: value,
+    });
   };
 
   // When threshold changes, reschedule all existing notifications
   const handleThresholdChange = async (days: number) => {
     setExpiringItemsThreshold(days);
-    if (expirationNotificationsEnabled) {
+    if (preferences?.expirationNotificationsEnabled) {
       try {
         const items = await fetchPantryItems();
         await scheduleExpiryNotifications(items, true, days);
@@ -157,27 +128,23 @@ export default function FoodPreferences() {
         // Non-critical — notifications will reschedule on next app load
       }
     }
+    await updatePreferences({
+      expiringItemsThreshold: days,
+    });
   };
 
   const handleSave = async () => {
-    setSaving(true);
-    try {
-      await updatePreferences({
-        dietaryPreferences,
-        allergies,
-        cuisines,
-        expiringItemsThreshold,
-        expirationNotificationsEnabled,
-      });
-      Alert.alert("Saved", "Your preferences have been updated.");
-    } catch {
-      Alert.alert("Error", "Failed to save preferences. Please try again.");
-    } finally {
-      setSaving(false);
-    }
+    if (!preferences) return;
+    await updatePreferences({
+      dietaryPreferences: preferences.dietaryPreferences,
+      allergies: preferences.allergies,
+      cuisines: preferences.cuisines,
+      expiringItemsThreshold: preferences.expiringItemsThreshold,
+      expirationNotificationsEnabled: preferences.expirationNotificationsEnabled,
+    });
   };
 
-  if (loading) {
+  if (loading || !preferences) {
     return (
       <View style={[styles.container, styles.centered]}>
         <ActivityIndicator size="large" color="#007AFF" />
@@ -190,22 +157,22 @@ export default function FoodPreferences() {
       <ChipGroup
         label="Dietary Preferences"
         options={DIETARY_OPTIONS}
-        selected={dietaryPreferences}
-        onToggle={(item) => toggle(dietaryPreferences, setDietaryPreferences, item)}
+        selected={preferences.dietaryPreferences}
+        onToggle={toggleDietaryPreference}
       />
 
       <ChipGroup
         label="Food Allergies"
         options={ALLERGY_OPTIONS}
-        selected={allergies}
-        onToggle={(item) => toggle(allergies, setAllergies, item)}
+        selected={preferences.allergies}
+        onToggle={toggleAllergy}
       />
 
       <ChipGroup
         label="Favorite Cuisines"
         options={CUISINE_OPTIONS}
-        selected={cuisines}
-        onToggle={(item) => toggle(cuisines, setCuisines, item)}
+        selected={preferences.cuisines}
+        onToggle={toggleCuisine}
       />
 
       {/* ── Pantry Preferences ─────────────────────────────────────────── */}
@@ -221,9 +188,9 @@ export default function FoodPreferences() {
             </Text>
           </View>
           <Switch
-            value={expirationNotificationsEnabled}
+            value={preferences.expirationNotificationsEnabled}
             onValueChange={handleNotificationToggle}
-            trackColor={{ false: '#ddd', true: '#007AFF' }}
+            trackColor={{ false: '#ddd', true: colors.primary }}
             thumbColor="#fff"
             accessibilityLabel="Enable expiration notifications"
             accessibilityRole="switch"
@@ -231,11 +198,11 @@ export default function FoodPreferences() {
         </View>
 
         {/* Threshold picker — only shown when notifications are enabled */}
-        {expirationNotificationsEnabled && (
+        {preferences.expirationNotificationsEnabled && (
           <View style={styles.thresholdSection}>
             <Text style={styles.settingLabel}>
               Notify me when items expire within:{' '}
-              <Text style={styles.settingValue}>{expiringItemsThreshold} days</Text>
+              <Text style={styles.settingValue}>{preferences.expiringItemsThreshold} days</Text>
             </Text>
             <View style={styles.sliderButtonContainer}>
               {[3, 7, 14, 30].map((days) => (
@@ -243,17 +210,17 @@ export default function FoodPreferences() {
                   key={days}
                   style={[
                     styles.thresholdButton,
-                    expiringItemsThreshold === days && styles.thresholdButtonActive,
+                    preferences.expiringItemsThreshold === days && styles.thresholdButtonActive,
                   ]}
                   onPress={() => handleThresholdChange(days)}
                   accessibilityRole="button"
-                  accessibilityState={{ selected: expiringItemsThreshold === days }}
+                  accessibilityState={{ selected: preferences.expiringItemsThreshold === days }}
                   accessibilityLabel={`Notify ${days} days before expiry`}
                 >
                   <Text
                     style={[
                       styles.thresholdButtonText,
-                      expiringItemsThreshold === days && styles.thresholdButtonTextActive,
+                      preferences.expiringItemsThreshold === days && styles.thresholdButtonTextActive,
                     ]}
                   >
                     {days}d
@@ -315,8 +282,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#f5f5f5",
   },
   chipActive: {
-    backgroundColor: "#007AFF",
-    borderColor: "#007AFF",
+    backgroundColor: colors.primary,
+    borderColor: colors.primaryDark,
   },
   chipText: {
     fontSize: 14,
@@ -362,7 +329,7 @@ const styles = StyleSheet.create({
   },
   settingValue: {
     fontWeight: "600",
-    color: "#007AFF",
+    color: colors.primary,
   },
   sliderButtonContainer: {
     flexDirection: "row",
@@ -380,8 +347,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   thresholdButtonActive: {
-    backgroundColor: "#007AFF",
-    borderColor: "#007AFF",
+    backgroundColor: colors.primary,
+    borderColor: colors.primaryDark,
   },
   thresholdButtonText: {
     fontSize: 13,
@@ -393,7 +360,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   saveButton: {
-    backgroundColor: "#007AFF",
+    backgroundColor: colors.primary,
     padding: 16,
     borderRadius: 10,
     alignItems: "center",

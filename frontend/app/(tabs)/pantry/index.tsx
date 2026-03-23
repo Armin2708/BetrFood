@@ -427,7 +427,7 @@ function CategoryFilterChips({
 }) {
   if (availableCategories.length === 0) return null;
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterChipScroll}>
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{flexGrow: 0}} contentContainerStyle={styles.filterChipScroll}>
       {selected !== null && (
         <TouchableOpacity style={styles.clearFilterChip} onPress={onClear} accessibilityRole="button" accessibilityLabel="Clear category filter">
           <Ionicons name="close" size={12} color={colors.textSecondary} />
@@ -916,7 +916,7 @@ const styles = StyleSheet.create({
   clearFilterChipText: { fontSize: 12, color: colors.textSecondary, fontWeight: '500' },
   filterChip: {
     paddingHorizontal: 12,
-    paddingVertical: 5,
+    paddingVertical: 4,
     borderRadius: 14,
     borderWidth: 1,
     borderColor: colors.border,

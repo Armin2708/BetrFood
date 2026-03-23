@@ -1,55 +1,33 @@
-import { useState, useEffect } from "react";
 import {
   View,
   Text,
   StyleSheet,
   Switch,
   ActivityIndicator,
-  Alert,
 } from "react-native";
-import { fetchPreferences, updatePreferences } from "../../../../services/api";
+import { usePreferences } from "../../../../context/PreferencesContext";
 
 export default function PrivacySettings() {
-  const [profileVisibility, setProfileVisibility] = useState<"public" | "private">("public");
-  const [dietaryInfoVisible, setDietaryInfoVisible] = useState(true);
-  const [loading, setLoading] = useState(true);
+  const {
+    preferences,
+    loading,
+    updatePreferences,
+    setProfileVisibility,
+    setDietaryInfoVisible,
+  } = usePreferences();
 
-  useEffect(() => {
-    loadSettings();
-  }, []);
-
-  const loadSettings = async () => {
-    try {
-      const prefs = await fetchPreferences();
-      if (prefs.profileVisibility) setProfileVisibility(prefs.profileVisibility);
-      if (prefs.dietaryInfoVisible !== undefined) setDietaryInfoVisible(prefs.dietaryInfoVisible);
-    } catch {
-      // Use defaults on error
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const saveField = async (updates: Parameters<typeof updatePreferences>[0]) => {
-    try {
-      await updatePreferences(updates);
-    } catch {
-      Alert.alert("Error", "Failed to save setting. Please try again.");
-    }
-  };
-
-  const toggleVisibility = (value: boolean) => {
+  const toggleVisibility = async (value: boolean) => {
     const newVisibility = value ? "public" : "private";
     setProfileVisibility(newVisibility);
-    saveField({ profileVisibility: newVisibility });
+    await updatePreferences({ profileVisibility: newVisibility });
   };
 
-  const toggleDietaryInfo = (value: boolean) => {
+  const toggleDietaryInfo = async (value: boolean) => {
     setDietaryInfoVisible(value);
-    saveField({ dietaryInfoVisible: value });
+    await updatePreferences({ dietaryInfoVisible: value });
   };
 
-  if (loading) {
+  if (loading || !preferences) {
     return (
       <View style={[styles.container, styles.centered]}>
         <ActivityIndicator size="large" color="#007AFF" />
@@ -64,13 +42,13 @@ export default function PrivacySettings() {
           <View style={styles.rowInfo}>
             <Text style={styles.rowTitle}>Public Profile</Text>
             <Text style={styles.rowDescription}>
-              {profileVisibility === "public"
+              {preferences.profileVisibility === "public"
                 ? "Anyone can see your profile"
                 : "Only followers can see your profile"}
             </Text>
           </View>
           <Switch
-            value={profileVisibility === "public"}
+            value={preferences.profileVisibility === "public"}
             onValueChange={toggleVisibility}
             trackColor={{ false: "#ccc", true: "#007AFF" }}
             thumbColor="#fff"
@@ -81,13 +59,13 @@ export default function PrivacySettings() {
           <View style={styles.rowInfo}>
             <Text style={styles.rowTitle}>Show Dietary Info</Text>
             <Text style={styles.rowDescription}>
-              {dietaryInfoVisible
+              {preferences.dietaryInfoVisible
                 ? "Your dietary preferences are visible on your profile"
                 : "Your dietary preferences are hidden"}
             </Text>
           </View>
           <Switch
-            value={dietaryInfoVisible}
+            value={preferences.dietaryInfoVisible}
             onValueChange={toggleDietaryInfo}
             trackColor={{ false: "#ccc", true: "#007AFF" }}
             thumbColor="#fff"

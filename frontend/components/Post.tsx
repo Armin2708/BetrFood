@@ -276,7 +276,7 @@ export default function Post({
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.headerUserInfo}
-          onPress={() => userId && router.push(`/user-profile?userId=${userId}`)}
+          onPress={() => userId && router.push(`/feeds/user-profile?userId=${userId}`)}
           activeOpacity={0.7}
           accessibilityRole="button"
           accessibilityLabel={`View ${username}'s profile`}
@@ -313,15 +313,13 @@ export default function Post({
           accessibilityLabel={liked ? `Unlike post, ${likeCount} likes` : `Like post, ${likeCount} likes`}
           accessibilityState={{ selected: liked }}
         >
-          <Animated.Text
-            style={[
-              styles.actionText,
-              liked && styles.liked,
-              { transform: [{ scale: scaleAnim }] },
-            ]}
-          >
-            {liked ? '❤️' : '🤍'} {liked ? 'Liked' : 'Like'}
-          </Animated.Text>
+          <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+            <Ionicons
+              name={liked ? 'thumbs-up' : 'thumbs-up-outline'}
+              size={22}
+              color={liked ? '#22C55E' : colors.textPrimary}
+            />
+          </Animated.View>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -331,9 +329,11 @@ export default function Post({
           accessibilityLabel={saved ? 'Remove from saved' : 'Save post'}
           accessibilityState={{ selected: saved }}
         >
-          <Text style={[styles.actionText, saved && styles.saved]}>
-            {saved ? '🔖 Saved' : '🔖 Save'}
-          </Text>
+          <Ionicons
+            name={saved ? 'bookmark' : 'bookmark-outline'}
+            size={22}
+            color={saved ? '#22C55E' : colors.textPrimary}
+          />
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -342,7 +342,7 @@ export default function Post({
           accessibilityRole="button"
           accessibilityLabel="Share post"
         >
-          <Text style={styles.actionText}>🔗 Share</Text>
+          <Ionicons name="share-social-outline" size={22} color={colors.textPrimary} />
         </TouchableOpacity>
       </View>
 

@@ -25,6 +25,7 @@ router.get('/', requireAuth, async (req, res) => {
         cookingSkill: 'beginner',
         maxCookTime: null,
         expiringItemsThreshold: 7,
+        expirationNotificationsEnabled: false
       });
     }
 
@@ -38,6 +39,7 @@ router.get('/', requireAuth, async (req, res) => {
       cookingSkill: data.cooking_skill || 'beginner',
       maxCookTime: data.max_cook_time || null,
       expiringItemsThreshold: data.expiring_items_threshold || 7,
+      expirationNotificationsEnabled: data.expirationNotificationsEnabled || false
     });
   } catch (error) {
     console.error('Error fetching preferences:', error);
@@ -48,7 +50,7 @@ router.get('/', requireAuth, async (req, res) => {
 // PUT /api/preferences - Update user preferences (auth required)
 router.put('/', requireAuth, async (req, res) => {
   try {
-    const { dietaryPreferences, allergies, cuisines, profileVisibility, dietaryInfoVisible, expiringItemsThreshold } = req.body;
+    const { dietaryPreferences, allergies, cuisines, profileVisibility, dietaryInfoVisible, expiringItemsThreshold, expirationNotificationsEnabled } = req.body;
 
     const updates = {
       user_id: req.userId,
@@ -125,6 +127,13 @@ router.put('/', requireAuth, async (req, res) => {
       updates.expiring_items_threshold = expiringItemsThreshold;
     }
 
+    if (expirationNotificationsEnabled !== undefined) {
+      if (typeof expirationNotificationsEnabled !== 'boolean') {
+        return res.status(400).json({ error: 'expirationNotificationsEnabled must be a boolean.' });
+      }
+      updates.expiration_notifications_enabled = expirationNotificationsEnabled;
+    }
+
     const { data, error } = await supabase
       .from('user_preferences')
       .upsert(updates, { onConflict: 'user_id' })
@@ -143,6 +152,7 @@ router.put('/', requireAuth, async (req, res) => {
       cookingSkill: data.cooking_skill || 'beginner',
       maxCookTime: data.max_cook_time || null,
       expiringItemsThreshold: data.expiring_items_threshold || 7,
+      expirationNotificationsEnabled: data.expiration_notifications_enabled ?? false,
     });
   } catch (error) {
     console.error('Error updating preferences:', error);

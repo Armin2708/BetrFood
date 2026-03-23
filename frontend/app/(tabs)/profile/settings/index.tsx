@@ -43,13 +43,13 @@ export default function Settings() {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       {/* Header */}
-      <View style={styles.header}>
+      {/* <View style={styles.header}>
         <Pressable onPress={() => router.back()} style={styles.backButton} hitSlop={12}>
           <Ionicons name="arrow-back" size={24} color="#0F172A" />
         </Pressable>
         <Text style={styles.headerTitle}>Settings</Text>
         <View style={styles.headerSpacer} />
-      </View>
+      </View> */}
 
       <ScrollView
         style={styles.scrollView}
