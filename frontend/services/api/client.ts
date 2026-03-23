@@ -56,6 +56,10 @@ export async function authHeaders(): Promise<Record<string, string>> {
 }
 
 export function getImageUrl(imagePath: string): string {
+  if (!imagePath) return '';
+  // Already a full URL (Supabase Storage or external)
+  if (imagePath.startsWith('http')) return imagePath;
+  // Legacy local path
   return `${API_BASE_URL}${imagePath}`;
 }
 

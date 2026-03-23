@@ -87,6 +87,16 @@ router.put('/users/:userId/role', requireRole('admin'), async (req, res) => {
 
     if (updateError) throw updateError;
 
+    // Audit log
+    await supabase.from('audit_logs').insert({
+      action: 'role_change',
+      performed_by: req.userId,
+      target_user_id: userId,
+      old_value: existingProfile.role,
+      new_value: role,
+      created_at: new Date().toISOString(),
+    }).then(() => {}).catch(err => console.error('Audit log failed:', err.message));
+
     res.json(updated);
   } catch (err) {
     console.error('Error updating user role:', err);
@@ -176,6 +186,16 @@ router.patch('/users/:userId/verify', requireRole('admin'), async (req, res) => 
       .single();
 
     if (updateError) throw updateError;
+
+    // Audit log
+    await supabase.from('audit_logs').insert({
+      action: 'verification_change',
+      performed_by: req.userId,
+      target_user_id: userId,
+      old_value: String(!verified),
+      new_value: String(verified),
+      created_at: new Date().toISOString(),
+    }).then(() => {}).catch(err => console.error('Audit log failed:', err.message));
 
     res.json(updated);
   } catch (err) {
