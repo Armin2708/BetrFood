@@ -4,6 +4,79 @@ const { requireAuth } = require("../middleware/auth");
 
 const router = express.Router();
 
+// DELETE /api/users/me — permanently delete the current user's account and all data
+router.delete("/me", requireAuth, async (req, res) => {
+  const userId = req.userId;
+  try {
+    // Cascade delete all user data in order (respect FK constraints)
+
+    // 1. Get all post IDs for media cleanup
+    const { data: posts } = await supabase
+      .from("posts")
+      .select("id, image_path")
+      .eq("user_id", userId);
+
+    const postIds = (posts || []).map(p => p.id);
+
+    if (postIds.length > 0) {
+      // Delete media from Supabase Storage
+      const { data: postImages } = await supabase
+        .from("post_images")
+        .select("image_path")
+        .in("post_id", postIds);
+
+      const mediaPaths = new Set();
+      (postImages || []).forEach(img => { if (img.image_path) mediaPaths.add(img.image_path); });
+      (posts || []).forEach(p => { if (p.image_path) mediaPaths.add(p.image_path); });
+
+      for (const mediaPath of mediaPaths) {
+        if (typeof mediaPath === 'string' && mediaPath.includes('/post-media/')) {
+          const filename = mediaPath.split('/post-media/').pop();
+          await supabase.storage.from('post-media').remove([filename]).catch(() => {});
+        }
+      }
+
+      // Delete post-related data
+      await supabase.from("post_images").delete().in("post_id", postIds);
+      await supabase.from("post_tags").delete().in("post_id", postIds);
+      await supabase.from("likes").delete().in("post_id", postIds);
+      await supabase.from("comments").delete().in("post_id", postIds);
+      await supabase.from("saves").delete().in("post_id", postIds);
+      await supabase.from("recipe_ingredients").delete().in("recipe_id",
+        (await supabase.from("recipes").select("id").in("post_id", postIds)).data?.map(r => r.id) || []
+      );
+      await supabase.from("recipe_steps").delete().in("recipe_id",
+        (await supabase.from("recipes").select("id").in("post_id", postIds)).data?.map(r => r.id) || []
+      );
+      await supabase.from("recipes").delete().in("post_id", postIds);
+      await supabase.from("posts").delete().eq("user_id", userId);
+    }
+
+    // 2. Delete other user data
+    await supabase.from("user_follows").delete().or(`follower_id.eq.${userId},following_id.eq.${userId}`);
+    await supabase.from("user_blocks").delete().or(`blocker_id.eq.${userId},blocked_id.eq.${userId}`);
+    await supabase.from("user_mutes").delete().or(`muter_id.eq.${userId},muted_id.eq.${userId}`);
+    await supabase.from("notifications").delete().eq("user_id", userId);
+    await supabase.from("pantry_items").delete().eq("user_id", userId);
+    await supabase.from("chat_messages").delete().eq("user_id", userId);
+    await supabase.from("collection_posts").delete().in("collection_id",
+      (await supabase.from("collections").select("id").eq("user_id", userId)).data?.map(c => c.id) || []
+    );
+    await supabase.from("collections").delete().eq("user_id", userId);
+    await supabase.from("user_preferences").delete().eq("user_id", userId);
+    await supabase.from("comments").delete().eq("user_id", userId);
+    await supabase.from("likes").delete().eq("user_id", userId);
+
+    // 3. Delete profile last
+    await supabase.from("user_profiles").delete().eq("id", userId);
+
+    res.json({ message: "Account deleted successfully." });
+  } catch (err) {
+    console.error("Error deleting account:", err);
+    res.status(500).json({ error: "Failed to delete account." });
+  }
+});
+
 // POST /api/users/:id/follow (auth required)
 router.post("/:id/follow", requireAuth, async (req, res) => {
   const followingId = req.params.id;

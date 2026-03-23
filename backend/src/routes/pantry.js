@@ -78,7 +78,7 @@ router.post('/identify', requireAuth, async (req, res) => {
 
   try {
     const response = await openai.chat.completions.create({
-      model: 'openrouter/free',
+      model: 'google/gemini-2.0-flash-exp:free',
       max_tokens: 1024,
       messages: [
         {
@@ -126,7 +126,7 @@ router.post('/identify-single', requireAuth, async (req, res) => {
 
   try {
     const response = await openai.chat.completions.create({
-      model: 'openrouter/free',
+      model: 'google/gemini-2.0-flash-exp:free',
       max_tokens: 1024,
       messages: [
         {
@@ -174,7 +174,7 @@ router.post('/scan-receipt', requireAuth, async (req, res) => {
 
   try {
     const response = await openai.chat.completions.create({
-      model: 'openrouter/free',
+      model: 'google/gemini-2.0-flash-exp:free',
       max_tokens: 2048,
       messages: [
         {

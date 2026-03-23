@@ -1,12 +1,12 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Modal, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { PantryItem } from '../services/api';
 import { colors } from '../constants/theme';
 
 interface PantryItemCardProps {
   item: PantryItem;
-  onDelete: (id: string) => void;
+  onDelete: (id: string) => Promise<void> | void;
   onEdit: (item: PantryItem) => void;
 }
 
@@ -31,66 +31,89 @@ function getExpirationStatus(expirationDate: string | null): {
 }
 
 export default function PantryItemCard({ item, onDelete, onEdit }: PantryItemCardProps) {
-  const expStatus = getExpirationStatus(item.expirationDate);
+  const expStatus = getExpirationStatus(item.expirationDate ?? null);
+  const [confirmVisible, setConfirmVisible] = React.useState(false);
 
-  const handleDelete = () => {
-    Alert.alert('Remove Item', `Remove "${item.name}" from your pantry?`, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Remove', style: 'destructive', onPress: () => onDelete(item.id) },
-    ]);
+  const handleConfirmDelete = async () => {
+    setConfirmVisible(false);
+    await onDelete(item.id);
   };
 
   return (
-    <View
-      style={styles.card}
-      accessible
-      accessibilityLabel={`${item.name}, ${item.quantity} ${item.unit}, category: ${item.category}`}
-    >
-      {/* Tapping the left content opens the edit form */}
-      <TouchableOpacity
-        style={styles.left}
-        onPress={() => onEdit(item)}
-        activeOpacity={0.6}
-        accessibilityRole="button"
-        accessibilityLabel={`Edit ${item.name}`}
+    <>
+      <View
+        style={styles.card}
+        accessible
+        accessibilityLabel={`${item.name}, ${item.quantity} ${item.unit}, category: ${item.category}`}
       >
-        <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
-        <View style={styles.metaRow}>
-          <View style={styles.categoryChip}>
-            <Text style={styles.categoryText}>{item.category}</Text>
+        <TouchableOpacity
+          style={styles.left}
+          onPress={() => onEdit(item)}
+          activeOpacity={0.6}
+          accessibilityRole="button"
+          accessibilityLabel={`Edit ${item.name}`}
+        >
+          <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
+          <View style={styles.metaRow}>
+            <View style={styles.categoryChip}>
+              <Text style={styles.categoryText}>{item.category}</Text>
+            </View>
+            <Text style={styles.quantity}>
+              {item.quantity} {item.unit}
+            </Text>
           </View>
-          <Text style={styles.quantity}>
-            {item.quantity} {item.unit}
-          </Text>
-        </View>
-        {expStatus && (
-          <Text style={[styles.expiration, { color: expStatus.color }]}>
-            {expStatus.label}
-          </Text>
-        )}
-      </TouchableOpacity>
+          {expStatus && (
+            <Text style={[styles.expiration, { color: expStatus.color }]}>
+              {expStatus.label}
+            </Text>
+          )}
+        </TouchableOpacity>
 
-      {/* Edit pencil button — same tap target as the left side but explicit */}
-      <TouchableOpacity
-        onPress={() => onEdit(item)}
-        style={styles.editButton}
-        accessibilityRole="button"
-        accessibilityLabel={`Edit ${item.name}`}
-        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
-        <Ionicons name="pencil-outline" size={17} color={colors.textTertiary} />
-      </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => onEdit(item)}
+          style={styles.editButton}
+          accessibilityRole="button"
+          accessibilityLabel={`Edit ${item.name}`}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Ionicons name="pencil-outline" size={17} color={colors.textTertiary} />
+        </TouchableOpacity>
 
-      <TouchableOpacity
-        onPress={handleDelete}
-        style={styles.deleteButton}
-        accessibilityRole="button"
-        accessibilityLabel={`Remove ${item.name}`}
-        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        <TouchableOpacity
+          onPress={() => setConfirmVisible(true)}
+          style={styles.deleteButton}
+          accessibilityRole="button"
+          accessibilityLabel={`Remove ${item.name}`}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Ionicons name="trash-outline" size={18} color="#e74c3c" />
+        </TouchableOpacity>
+      </View>
+
+      <Modal
+        visible={confirmVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setConfirmVisible(false)}
       >
-        <Ionicons name="trash-outline" size={18} color={colors.textTertiary} />
-      </TouchableOpacity>
-    </View>
+        <Pressable style={styles.modalOverlay} onPress={() => setConfirmVisible(false)}>
+          <Pressable style={styles.modalBox} onPress={e => e.stopPropagation()}>
+            <Text style={styles.modalTitle}>Remove Item</Text>
+            <Text style={styles.modalMessage}>
+              Remove "{item.name}" from your pantry?
+            </Text>
+            <View style={styles.modalButtons}>
+              <Pressable style={styles.modalCancelButton} onPress={() => setConfirmVisible(false)}>
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </Pressable>
+              <Pressable style={styles.modalDeleteButton} onPress={handleConfirmDelete}>
+                <Text style={styles.modalDeleteText}>Remove</Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+    </>
   );
 }
 
@@ -104,42 +127,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
-  left: {
-    flex: 1,
-    gap: 4,
-  },
-  name: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.textPrimary,
-  },
-  metaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  categoryChip: {
-    borderRadius: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    backgroundColor: '#F0F0F0',
-  },
-  categoryText: {
-    fontSize: 11,
-    fontWeight: '500',
-    color: colors.textSecondary,
-  },
-  quantity: {
-    fontSize: 13,
-    color: colors.textSecondary,
-  },
-  expiration: {
-    fontSize: 12,
-  },
-  editButton: {
-    paddingLeft: 12,
-  },
-  deleteButton: {
-    paddingLeft: 12,
-  },
+  left: { flex: 1, gap: 4 },
+  name: { fontSize: 16, fontWeight: '600', color: colors.textPrimary },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  categoryChip: { borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2, backgroundColor: '#F0F0F0' },
+  categoryText: { fontSize: 11, fontWeight: '500', color: colors.textSecondary },
+  quantity: { fontSize: 13, color: colors.textSecondary },
+  expiration: { fontSize: 12 },
+  editButton: { paddingLeft: 12 },
+  deleteButton: { paddingLeft: 12 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
+  modalBox: { backgroundColor: '#fff', borderRadius: 14, padding: 24, width: 300 },
+  modalTitle: { fontSize: 18, fontWeight: '700', color: '#000', marginBottom: 8 },
+  modalMessage: { fontSize: 14, color: '#666', lineHeight: 20, marginBottom: 20 },
+  modalButtons: { flexDirection: 'row', gap: 12 },
+  modalCancelButton: { flex: 1, paddingVertical: 12, borderRadius: 8, borderWidth: 1, borderColor: '#ddd', alignItems: 'center' },
+  modalCancelText: { fontSize: 15, fontWeight: '600', color: '#666' },
+  modalDeleteButton: { flex: 1, paddingVertical: 12, borderRadius: 8, backgroundColor: '#e74c3c', alignItems: 'center' },
+  modalDeleteText: { fontSize: 15, fontWeight: '600', color: '#fff' },
 });
