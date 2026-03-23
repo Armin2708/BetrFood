@@ -7,7 +7,7 @@ async function enrichPostsWithProfiles(posts) {
   const userIds = [...new Set(posts.map(p => p.user_id))];
   const { data: profiles } = await supabase
     .from('user_profiles')
-    .select('id, display_name, username, avatar_url')
+    .select('id, display_name, username, avatar_url, verified, role')
     .in('id', userIds);
 
   const profileMap = {};
@@ -157,6 +157,8 @@ function mapPost(post) {
     displayName: profile.display_name || null,
     username: profile.username || null,
     avatarUrl: profile.avatar_url || null,
+    verified: profile.verified || false,
+    role: profile.role || 'user',
     commentCount: post._commentCount || 0,
     likeCount: post._likeCount || 0,
     liked: post._liked || false,

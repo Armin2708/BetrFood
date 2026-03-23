@@ -77,10 +77,13 @@ router.put('/users/:userId/role', requireRole('admin'), async (req, res) => {
       return res.status(404).json({ error: 'User profile not found.' });
     }
 
+    // Auto-set verified based on role
+    const autoVerified = ['creator', 'moderator', 'admin'].includes(role);
+
     // Update the role
     const { data: updated, error: updateError } = await supabase
       .from('user_profiles')
-      .update({ role, updated_at: new Date().toISOString() })
+      .update({ role, verified: autoVerified, updated_at: new Date().toISOString() })
       .eq('id', userId)
       .select()
       .single();
