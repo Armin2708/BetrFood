@@ -37,7 +37,38 @@ function compressVideo(inputPath, outputPath) {
       .run();
   });
 }
-// RBAC middleware available for future role-gated features:
+// Upload a local file to Supabase Storage and return its public URL
+async function uploadToSupabaseStorage(localPath, filename, mimeType) {
+  const fileBuffer = fs.readFileSync(localPath);
+  const { data, error } = await supabase.storage
+    .from('post-media')
+    .upload(filename, fileBuffer, {
+      contentType: mimeType,
+      upsert: false,
+    });
+  if (error) throw new Error(`Supabase Storage upload failed: ${error.message}`);
+  const { data: { publicUrl } } = supabase.storage
+    .from('post-media')
+    .getPublicUrl(filename);
+  return publicUrl;
+}
+
+// Delete a file from Supabase Storage by its public URL or path
+async function deleteFromSupabaseStorage(urlOrPath) {
+  try {
+    // Extract filename from full URL or path
+    let filename = urlOrPath;
+    if (urlOrPath.includes('/post-media/')) {
+      filename = urlOrPath.split('/post-media/').pop();
+    } else if (urlOrPath.startsWith('/uploads/')) {
+      // Legacy local path — nothing to delete from storage
+      return;
+    }
+    await supabase.storage.from('post-media').remove([filename]);
+  } catch (err) {
+    console.error('Failed to delete from Supabase Storage:', err.message);
+  }
+}
 // const { requireRole, requireMinRole } = require('../middleware/rbac');
 
 const router = express.Router();
@@ -274,40 +305,64 @@ router.post('/', requireAuth, upload.array('images', 10), async (req, res) => {
       }
     }
 
-    // Process uploaded files — compress images to 720p, videos to 720p
+    // Process uploaded files — compress images to 720p, videos to 720p, then upload to Supabase Storage
     const mediaPaths = [];
     let detectedMediaType = 'image';
 
     for (const file of files) {
       if (file.mimetype.startsWith('video/')) {
-        // Video file — compress to 720p MP4
         detectedMediaType = 'video';
         const compressedFilename = `${uuidv4()}.mp4`;
         const compressedPath = path.join(uploadsDir, compressedFilename);
         try {
           await compressVideo(file.path, compressedPath);
-          fs.unlinkSync(file.path); // Remove original
-          mediaPaths.push(`/uploads/${compressedFilename}`);
-        } catch (ffmpegErr) {
-          console.error('Video compression failed, using original:', ffmpegErr.message);
-          mediaPaths.push(`/uploads/${file.filename}`);
+          fs.unlinkSync(file.path);
+          const publicUrl = await uploadToSupabaseStorage(compressedPath, compressedFilename, 'video/mp4');
+          fs.unlinkSync(compressedPath);
+          mediaPaths.push(publicUrl);
+        } catch (err) {
+          console.error('Video processing/upload failed:', err.message);
+          // Fallback: try uploading original
+          try {
+            const publicUrl = await uploadToSupabaseStorage(file.path, file.filename, file.mimetype);
+            fs.unlinkSync(file.path);
+            mediaPaths.push(publicUrl);
+          } catch (uploadErr) {
+            console.error('Fallback upload also failed:', uploadErr.message);
+            try { fs.unlinkSync(file.path); } catch {}
+          }
         }
       } else {
-        // Image file — compress to 720p JPEG
         const optimizedFilename = `${uuidv4()}.jpg`;
         const optimizedPath = path.join(uploadsDir, optimizedFilename);
+        let uploadPath = file.path;
+        let uploadFilename = file.filename;
+        let uploadMime = file.mimetype;
         try {
           await sharp(file.path)
             .resize(1280, 720, { fit: 'inside', withoutEnlargement: true })
             .jpeg({ quality: 75 })
             .toFile(optimizedPath);
           fs.unlinkSync(file.path);
+          uploadPath = optimizedPath;
+          uploadFilename = optimizedFilename;
+          uploadMime = 'image/jpeg';
         } catch (sharpErr) {
           console.error('Image compression failed, using original:', sharpErr.message);
         }
-        const finalFilename = fs.existsSync(optimizedPath) ? optimizedFilename : file.filename;
-        mediaPaths.push(`/uploads/${finalFilename}`);
+        try {
+          const publicUrl = await uploadToSupabaseStorage(uploadPath, uploadFilename, uploadMime);
+          fs.unlinkSync(uploadPath);
+          mediaPaths.push(publicUrl);
+        } catch (uploadErr) {
+          console.error('Image upload to Supabase Storage failed:', uploadErr.message);
+          try { fs.unlinkSync(uploadPath); } catch {}
+        }
       }
+    }
+
+    if (mediaPaths.length === 0) {
+      return res.status(500).json({ error: 'Failed to upload media files.' });
     }
 
     const caption = (req.body.caption || '').slice(0, 500);
@@ -453,7 +508,7 @@ router.delete('/:id', requireAuth, async (req, res) => {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
-    // Clean up all media files (multi-image support)
+    // Clean up all media files from Supabase Storage (and legacy local files)
     const { data: postImages } = await supabase
       .from('post_images')
       .select('image_path')
@@ -465,13 +520,18 @@ router.delete('/:id', requireAuth, async (req, res) => {
         if (img.image_path) mediaPaths.add(img.image_path);
       }
     }
-    // Also include the primary image_path in case it's not in post_images
     if (post.image_path) mediaPaths.add(post.image_path);
 
     for (const mediaPath of mediaPaths) {
-      const fullPath = path.join(__dirname, '..', '..', mediaPath);
-      if (fs.existsSync(fullPath)) {
-        try { fs.unlinkSync(fullPath); } catch {}
+      if (mediaPath.startsWith('http')) {
+        // Supabase Storage URL
+        await deleteFromSupabaseStorage(mediaPath);
+      } else {
+        // Legacy local file
+        const fullPath = path.join(__dirname, '..', '..', mediaPath);
+        if (fs.existsSync(fullPath)) {
+          try { fs.unlinkSync(fullPath); } catch {}
+        }
       }
     }
 

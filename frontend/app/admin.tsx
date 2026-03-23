@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext, useCallback } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput,
-  Alert, ActivityIndicator, RefreshControl, ActionSheetIOS, Platform, Image,
+  Alert, ActivityIndicator, RefreshControl, Modal, Pressable, Image,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -24,6 +24,8 @@ export default function AdminScreen() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [totalUsers, setTotalUsers] = useState(0);
+  const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
+  const [actionModalVisible, setActionModalVisible] = useState(false);
 
   // Check access
   const isAllowed = user?.role === 'admin' || user?.role === 'moderator';
@@ -86,98 +88,24 @@ export default function AdminScreen() {
   };
 
   const handleUserAction = (targetUser: AdminUser) => {
-    const isAdmin = user?.role === 'admin';
-
-    const options = [
-      ...ROLE_OPTIONS.map((r) => `Set role: ${r}${targetUser.role === r ? ' (current)' : ''}`),
-      targetUser.verified ? 'Remove verification' : 'Verify user',
-      'Cancel',
-    ];
-    const cancelIndex = options.length - 1;
-
-    if (Platform.OS === 'ios') {
-      ActionSheetIOS.showActionSheetWithOptions(
-        {
-          options,
-          cancelButtonIndex: cancelIndex,
-          title: `${targetUser.displayName || targetUser.username || 'User'}`,
-          message: `Current role: ${targetUser.role}`,
-        },
-        (buttonIndex) => handleActionSelection(buttonIndex, targetUser, isAdmin, cancelIndex)
-      );
-    } else {
-      // Android fallback: use Alert with buttons
-      Alert.alert(
-        targetUser.displayName || targetUser.username || 'User',
-        `Current role: ${targetUser.role}\nVerified: ${targetUser.verified ? 'Yes' : 'No'}`,
-        [
-          ...ROLE_OPTIONS.map((r) => ({
-            text: `Role: ${r}`,
-            onPress: () => {
-              if (!isAdmin) {
-                Alert.alert('Permission denied', 'Only admins can change roles.');
-                return;
-              }
-              if (r !== targetUser.role) {
-                changeRole(targetUser, r);
-              }
-            },
-          })),
-          {
-            text: targetUser.verified ? 'Remove verification' : 'Verify user',
-            onPress: () => {
-              if (!isAdmin) {
-                Alert.alert('Permission denied', 'Only admins can change verification.');
-                return;
-              }
-              toggleVerification(targetUser);
-            },
-          },
-          { text: 'Cancel', style: 'cancel' },
-        ]
-      );
-    }
-  };
-
-  const handleActionSelection = (
-    buttonIndex: number,
-    targetUser: AdminUser,
-    isAdmin: boolean,
-    cancelIndex: number
-  ) => {
-    if (buttonIndex === cancelIndex) return;
-
-    if (buttonIndex < ROLE_OPTIONS.length) {
-      const newRole = ROLE_OPTIONS[buttonIndex];
-      if (!isAdmin) {
-        Alert.alert('Permission denied', 'Only admins can change roles.');
-        return;
-      }
-      if (newRole !== targetUser.role) {
-        changeRole(targetUser, newRole);
-      }
-    } else if (buttonIndex === ROLE_OPTIONS.length) {
-      if (!isAdmin) {
-        Alert.alert('Permission denied', 'Only admins can change verification.');
-        return;
-      }
-      toggleVerification(targetUser);
-    }
+    setSelectedUser(targetUser);
+    setActionModalVisible(true);
   };
 
   const changeRole = async (targetUser: AdminUser, newRole: string) => {
+    setActionModalVisible(false);
     try {
       await updateUserRole(targetUser.id, newRole);
       setUsers((prev) =>
         prev.map((u) => (u.id === targetUser.id ? { ...u, role: newRole } : u))
       );
-      Alert.alert('Success', `Role updated to ${newRole}`);
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to update role');
     }
   };
 
   const toggleVerification = async (targetUser: AdminUser) => {
+    setActionModalVisible(false);
     try {
       await updateUserVerification(targetUser.id, !targetUser.verified);
       setUsers((prev) =>
@@ -185,7 +113,6 @@ export default function AdminScreen() {
           u.id === targetUser.id ? { ...u, verified: !targetUser.verified } : u
         )
       );
-      Alert.alert('Success', targetUser.verified ? 'Verification removed' : 'User verified');
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to update verification');
     }
@@ -323,6 +250,7 @@ export default function AdminScreen() {
         contentContainerStyle={styles.list}
         onEndReached={loadMore}
         onEndReachedThreshold={0.5}
+        showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#22C55E" />
         }
@@ -334,6 +262,79 @@ export default function AdminScreen() {
           </View>
         }
       />
+
+      {/* User action modal */}
+      <Modal
+        visible={actionModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setActionModalVisible(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setActionModalVisible(false)}>
+          <Pressable style={styles.modalSheet} onPress={e => e.stopPropagation()}>
+            {selectedUser && (
+              <>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>
+                    {selectedUser.displayName || selectedUser.username || 'User'}
+                  </Text>
+                  <Text style={styles.modalSubtitle}>
+                    Current role: <Text style={styles.modalRoleBold}>{selectedUser.role}</Text>
+                    {' · '}Verified: {selectedUser.verified ? 'Yes' : 'No'}
+                  </Text>
+                </View>
+
+                {user?.role === 'admin' && (
+                  <>
+                    <Text style={styles.modalSectionLabel}>Change Role</Text>
+                    <View style={styles.roleGrid}>
+                      {ROLE_OPTIONS.map(r => (
+                        <Pressable
+                          key={r}
+                          style={[
+                            styles.roleOption,
+                            selectedUser.role === r && styles.roleOptionActive,
+                          ]}
+                          onPress={() => selectedUser.role !== r && changeRole(selectedUser, r)}
+                        >
+                          <Text style={[
+                            styles.roleOptionText,
+                            selectedUser.role === r && styles.roleOptionTextActive,
+                          ]}>
+                            {r}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </View>
+
+                    <Pressable
+                      style={[styles.verifyButton, selectedUser.verified && styles.verifyButtonActive]}
+                      onPress={() => toggleVerification(selectedUser)}
+                    >
+                      <Ionicons
+                        name={selectedUser.verified ? 'close-circle-outline' : 'checkmark-circle-outline'}
+                        size={18}
+                        color={selectedUser.verified ? '#e74c3c' : '#22C55E'}
+                        style={{ marginRight: 8 }}
+                      />
+                      <Text style={[styles.verifyButtonText, selectedUser.verified && styles.verifyButtonTextActive]}>
+                        {selectedUser.verified ? 'Remove Verification' : 'Verify User'}
+                      </Text>
+                    </Pressable>
+                  </>
+                )}
+
+                <Pressable
+                  style={styles.modalCancelButton}
+                  onPress={() => setActionModalVisible(false)}
+                >
+                  <Text style={styles.modalCancelText}>Cancel</Text>
+                </Pressable>
+              </>
+            )}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -553,5 +554,100 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '600',
     fontSize: 16,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    paddingBottom: 36,
+  },
+  modalHeader: {
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#333',
+  },
+  modalSubtitle: {
+    fontSize: 13,
+    color: '#999',
+    marginTop: 4,
+  },
+  modalRoleBold: {
+    fontWeight: '700',
+    color: '#333',
+    textTransform: 'capitalize',
+  },
+  modalSectionLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#999',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 10,
+  },
+  roleGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 16,
+  },
+  roleOption: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    backgroundColor: '#f9f9f9',
+  },
+  roleOptionActive: {
+    backgroundColor: '#22C55E',
+    borderColor: '#22C55E',
+  },
+  roleOptionText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666',
+    textTransform: 'capitalize',
+  },
+  roleOptionTextActive: {
+    color: '#fff',
+  },
+  verifyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#22C55E',
+    marginBottom: 12,
+  },
+  verifyButtonActive: {
+    borderColor: '#e74c3c',
+  },
+  verifyButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#22C55E',
+  },
+  verifyButtonTextActive: {
+    color: '#e74c3c',
+  },
+  modalCancelButton: {
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  modalCancelText: {
+    fontSize: 15,
+    color: '#999',
+    fontWeight: '500',
   },
 });
