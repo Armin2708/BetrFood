@@ -126,7 +126,7 @@ function WebSignup() {
     }
   };
 
-  const handleOAuth = async (strategy: "oauth_google" | "oauth_apple") => {
+  const handleOAuth = async (strategy: "oauth_google" | "oauth_apple" | "oauth_facebook" | "oauth_x") => {
     if (!isLoaded || !signUp) return;
     setLoading(true);
     try {
@@ -242,9 +242,17 @@ function WebSignup() {
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.socialButton}
+          onPress={() => handleOAuth("oauth_facebook")}
           disabled={loading}
         >
           <Ionicons name="logo-facebook" size={28} color="#1877F2" />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.socialButton}
+          onPress={() => handleOAuth("oauth_x")}
+          disabled={loading}
+        >
+          <Ionicons name="logo-twitter" size={28} color="#000" />
         </TouchableOpacity>
       </View>
 
@@ -413,7 +421,7 @@ function NativeSignup() {
   };
 
   const handleOAuth = useCallback(
-    async (strategy: "oauth_google" | "oauth_apple") => {
+    async (strategy: "oauth_google" | "oauth_apple" | "oauth_facebook" | "oauth_x") => {
       if (!isLoaded) return;
       setLoading(true);
       try {
@@ -532,9 +540,18 @@ function NativeSignup() {
 
           <TouchableOpacity
             style={styles.socialButton}
+            onPress={() => handleOAuth("oauth_facebook")}
             disabled={loading}
           >
             <Ionicons name="logo-facebook" size={28} color="#1877F2" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.socialButton}
+            onPress={() => handleOAuth("oauth_x")}
+            disabled={loading}
+          >
+            <Ionicons name="logo-twitter" size={28} color="#000" />
           </TouchableOpacity>
         </View>
 

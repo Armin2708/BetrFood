@@ -17,11 +17,13 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
 import { usePantry } from '../../../context/PantryContext';
 import PantryItemCard from '../../../components/PantryItemCard';
 import ExpiringSoonSection from '../../../components/ExpiringSoonSection';
 import { PantryItem, PantryItemInput } from '../../../services/api';
 import { fetchPreferences } from '../../../services/api';
+import { identifyPantryItems, VisionPantryItem } from '../../../services/api/pantryVision';
 import { colors } from '../../../constants/theme';
 
 const CATEGORIES = [
@@ -541,7 +543,68 @@ export default function PantryScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
+  const [scanning, setScanning] = useState(false);
+
   const hasActiveFilter = searchQuery.trim().length > 0 || selectedCategory !== null;
+
+  const handleScanPhoto = async (useCamera: boolean) => {
+    try {
+      const permissionFn = useCamera
+        ? ImagePicker.requestCameraPermissionsAsync
+        : ImagePicker.requestMediaLibraryPermissionsAsync;
+      const { status } = await permissionFn();
+      if (status !== 'granted') {
+        return Alert.alert('Permission needed', `Please grant ${useCamera ? 'camera' : 'photo library'} access to scan items.`);
+      }
+
+      const launchFn = useCamera
+        ? ImagePicker.launchCameraAsync
+        : ImagePicker.launchImageLibraryAsync;
+      const result = await launchFn({
+        mediaTypes: ['images'],
+        quality: 0.7,
+      });
+
+      if (result.canceled || !result.assets?.[0]?.uri) return;
+
+      setScanning(true);
+      const { items: identified } = await identifyPantryItems(result.assets[0].uri);
+
+      if (!identified || identified.length === 0) {
+        Alert.alert('No items found', 'Could not identify any food items in the photo. Try a clearer image.');
+        return;
+      }
+
+      // Add all identified items
+      let added = 0;
+      for (const item of identified) {
+        try {
+          await addItem({
+            name: item.name,
+            quantity: item.quantity || 1,
+            unit: item.unit || 'pcs',
+            category: CATEGORIES.includes(item.category) ? item.category : 'Other',
+            expirationDate: null,
+          });
+          added++;
+        } catch {}
+      }
+
+      Alert.alert('Items added', `Added ${added} item${added !== 1 ? 's' : ''} to your pantry.`);
+    } catch (err: any) {
+      Alert.alert('Scan failed', err?.message || 'Failed to identify items from photo.');
+    } finally {
+      setScanning(false);
+    }
+  };
+
+  const handleScanPress = () => {
+    Alert.alert('Scan Pantry Items', 'Choose how to add items by photo', [
+      { text: 'Take Photo', onPress: () => handleScanPhoto(true) },
+      { text: 'Choose from Library', onPress: () => handleScanPhoto(false) },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  };
 
   const handleClearAll = () => {
     setSearchQuery('');
@@ -672,6 +735,20 @@ export default function PantryScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
+            style={styles.scanButton}
+            onPress={handleScanPress}
+            disabled={scanning}
+            accessibilityRole="button"
+            accessibilityLabel="Scan items from photo"
+          >
+            {scanning ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (
+              <Ionicons name="camera-outline" size={18} color={colors.primary} />
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
             style={styles.reviewButton}
             onPress={handleOpenReview}
             accessibilityRole="button"
@@ -784,6 +861,12 @@ const styles = StyleSheet.create({
   summaryToggleButtonActive: {
     borderColor: colors.primary,
     backgroundColor: '#FFF3EE',
+  },
+  scanButton: {
+    padding: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.primary,
   },
   reviewButton: {
     flexDirection: 'row',

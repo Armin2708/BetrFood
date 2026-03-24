@@ -5,10 +5,12 @@ const { requireAuth } = require('../middleware/auth');
 
 const router = express.Router();
 
-const openai = new OpenAI({
-  baseURL: 'https://openrouter.ai/api/v1',
-  apiKey: process.env.OPENROUTER_API_KEY,
-});
+const openai = process.env.OPENROUTER_API_KEY
+  ? new OpenAI({
+      baseURL: 'https://openrouter.ai/api/v1',
+      apiKey: process.env.OPENROUTER_API_KEY,
+    })
+  : null;
 
 const BASE_SYSTEM_PROMPT =
   "You are BetrFood's AI cooking assistant. You help users with food-related questions including recipes, cooking techniques, ingredient substitutions, meal planning, nutrition information, and food storage tips. Be friendly, concise, and helpful. If asked about non-food topics, gently redirect to food-related assistance.";
@@ -37,16 +39,18 @@ function hasPantryIntent(message) {
 
 async function buildSystemPrompt(userId, isPantryQuery = false) {
   try {
-    const { data: pantryItems } = await supabase
+    const { data: pantryItems, error: pantryError } = await supabase
       .from('pantry_items')
       .select('name, quantity, unit, category, expiration_date')
       .eq('user_id', userId);
 
+    if (pantryError) {
+      console.error('[CHAT] Pantry query failed:', pantryError.message);
+    }
+    console.log('[CHAT] Pantry items for', userId, ':', pantryItems?.length ?? 0);
+
     if (!pantryItems || pantryItems.length === 0) {
-      const base = isPantryQuery
-        ? `${BASE_SYSTEM_PROMPT}\n\nThe user's pantry is currently empty. Suggest that they add items to their pantry first, then offer some general recipe ideas based on common pantry staples.`
-        : BASE_SYSTEM_PROMPT;
-      return isPantryQuery ? base + RECIPE_FORMAT_INSTRUCTIONS : base;
+      return `${BASE_SYSTEM_PROMPT}\n\nThe user's pantry is currently empty. If they ask about cooking or recipes, let them know their pantry is empty and suggest they add items to their pantry first. You can still answer general food questions.${isPantryQuery ? RECIPE_FORMAT_INSTRUCTIONS : ''}`;
     }
 
     const now = new Date();
@@ -78,7 +82,8 @@ When suggesting recipes or meal ideas, prioritize using ingredients from the use
     }
 
     return `${BASE_SYSTEM_PROMPT}${pantrySection}`;
-  } catch {
+  } catch (err) {
+    console.error('[CHAT] buildSystemPrompt error:', err.message);
     return BASE_SYSTEM_PROMPT;
   }
 }
@@ -94,6 +99,10 @@ router.post('/', requireAuth, async (req, res) => {
 
   if (!message || typeof message !== 'string' || !message.trim()) {
     return res.status(400).json({ error: 'message is required' });
+  }
+
+  if (!openai) {
+    return res.status(503).json({ error: 'AI service not configured (missing OPENROUTER_API_KEY)' });
   }
 
   try {
@@ -115,13 +124,30 @@ router.post('/', requireAuth, async (req, res) => {
       content: msg.content,
     }));
 
-    // Build system prompt — use enriched recipe format when pantry intent detected
+    // Check if pantry query with empty pantry — respond directly without AI
     const isPantryQuery = hasPantryIntent(message.trim());
+    if (isPantryQuery) {
+      const { data: pantryCheck } = await supabase
+        .from('pantry_items')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', userId);
+
+      if (!pantryCheck || pantryCheck.length === 0) {
+        const emptyMsg = "Your pantry is currently empty! Head over to the **Pantry** tab to add ingredients, and then I can suggest recipes based on what you have.";
+        const { data: saved } = await supabase
+          .from('chat_messages')
+          .insert({ user_id: userId, role: 'assistant', content: emptyMsg })
+          .select('id, role, content, created_at')
+          .single();
+        return res.json(saved);
+      }
+    }
+
     const systemPrompt = await buildSystemPrompt(userId, isPantryQuery);
 
     // Call OpenRouter API
     const response = await openai.chat.completions.create({
-      model: 'openrouter/free',
+      model: 'google/gemini-2.0-flash-001',
       max_tokens: 1024,
       messages: [
         { role: 'system', content: systemPrompt },
@@ -140,14 +166,18 @@ router.post('/', requireAuth, async (req, res) => {
 
     res.json(saved);
   } catch (err) {
-    console.error('[CHAT ERROR]', err.message);
-    res.status(500).json({ error: 'Failed to get AI response' });
+    console.error('[CHAT ERROR]', err.message, err.stack);
+    res.status(500).json({ error: 'Failed to get AI response', details: err.message });
   }
 });
 
 // GET /api/chat/pantry-suggestions — generate recipe suggestions from current pantry
 router.get('/pantry-suggestions', requireAuth, async (req, res) => {
   const userId = getUserId(req);
+
+  if (!openai) {
+    return res.status(503).json({ error: 'AI service not configured (missing OPENROUTER_API_KEY)' });
+  }
 
   try {
     const { data: pantryItems } = await supabase
@@ -156,19 +186,22 @@ router.get('/pantry-suggestions', requireAuth, async (req, res) => {
       .eq('user_id', userId);
 
     if (!pantryItems || pantryItems.length === 0) {
-      return res.json({
-        id: Date.now(),
-        role: 'assistant',
-        content: "Your pantry is empty! Add some items to your pantry and I'll suggest recipes you can make with them.",
-        created_at: new Date().toISOString(),
-        pantryCount: 0,
-      });
+      const emptyMsg = "Your pantry is currently empty! Head over to the **Pantry** tab to add ingredients, and then I can suggest recipes based on what you have.";
+      await supabase
+        .from('chat_messages')
+        .insert({ user_id: userId, role: 'user', content: 'What can I cook with the items in my pantry?' });
+      const { data: saved } = await supabase
+        .from('chat_messages')
+        .insert({ user_id: userId, role: 'assistant', content: emptyMsg })
+        .select('id, role, content, created_at')
+        .single();
+      return res.json({ ...saved, pantryCount: 0 });
     }
 
     const systemPrompt = await buildSystemPrompt(userId, true);
 
     const response = await openai.chat.completions.create({
-      model: 'openrouter/free',
+      model: 'google/gemini-2.0-flash-001',
       max_tokens: 1024,
       messages: [
         { role: 'system', content: systemPrompt },
@@ -194,8 +227,8 @@ router.get('/pantry-suggestions', requireAuth, async (req, res) => {
 
     res.json({ ...saved, pantryCount: pantryItems.length });
   } catch (err) {
-    console.error('[PANTRY SUGGESTIONS ERROR]', err.message);
-    res.status(500).json({ error: 'Failed to get pantry suggestions' });
+    console.error('[PANTRY SUGGESTIONS ERROR]', err.message, err.stack);
+    res.status(500).json({ error: 'Failed to get pantry suggestions', details: err.message });
   }
 });
 
@@ -215,8 +248,8 @@ router.get('/history', requireAuth, async (req, res) => {
 
     res.json({ messages: messages || [] });
   } catch (err) {
-    console.error('[CHAT HISTORY ERROR]', err.message);
-    res.status(500).json({ error: 'Failed to fetch chat history' });
+    console.error('[CHAT HISTORY ERROR]', err.message, err.stack);
+    res.status(500).json({ error: 'Failed to fetch chat history', details: err.message });
   }
 });
 

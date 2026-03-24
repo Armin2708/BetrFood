@@ -1,6 +1,7 @@
 import { createContext, useContext, ReactNode, useEffect, useState } from "react";
 import { fetchPreferences, updatePreferences } from "../services/api";
 import { Alert } from "react-native";
+import { AuthContext } from "./AuthenticationContext";
 
 export interface Preferences {
   dietaryPreferences: string[];
@@ -42,13 +43,15 @@ const DEFAULT_PREFERENCES: Preferences = {
 };
 
 export function PreferencesProvider({ children }: { children: ReactNode }) {
+  const { token, loading: authLoading } = useContext(AuthContext);
   const [preferences, setPreferences] = useState<Preferences | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    if (authLoading || !token) return;
     loadPreferencesData();
-  }, []);
+  }, [authLoading, token]);
 
   const loadPreferencesData = async () => {
     try {

@@ -74,6 +74,8 @@ function LoginFormUI({
   onLogin,
   onOAuthGoogle,
   onOAuthApple,
+  onOAuthFacebook,
+  onOAuthX,
   onForgotPassword,
   onSignup,
 }: {
@@ -85,6 +87,8 @@ function LoginFormUI({
   onLogin: () => void;
   onOAuthGoogle: () => void;
   onOAuthApple: () => void;
+  onOAuthFacebook: () => void;
+  onOAuthX: () => void;
   onForgotPassword: () => void;
   onSignup: () => void;
 }) {
@@ -205,15 +209,22 @@ function LoginFormUI({
 
           <TouchableOpacity
             style={styles.socialButton}
-            onPress={() => {
-              const msg = "Facebook sign-in is not yet available.";
-              Platform.OS === "web" ? window.alert(msg) : Alert.alert("Coming Soon", msg);
-            }}
+            onPress={onOAuthFacebook}
             disabled={loading}
             accessibilityRole="button"
             accessibilityLabel="Continue with Facebook"
           >
             <Ionicons name="logo-facebook" size={28} color="#1877F2" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.socialButton}
+            onPress={onOAuthX}
+            disabled={loading}
+            accessibilityRole="button"
+            accessibilityLabel="Continue with X"
+          >
+            <Ionicons name="logo-twitter" size={28} color="#000000" />
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -372,7 +383,7 @@ function WebLogin() {
     }
   };
 
-  const handleOAuth = async (strategy: "oauth_google" | "oauth_apple") => {
+  const handleOAuth = async (strategy: "oauth_google" | "oauth_apple" | "oauth_facebook" | "oauth_x") => {
     if (!isLoaded || !signIn) return;
     setLoading(true);
     try {
@@ -425,6 +436,8 @@ function WebLogin() {
       onLogin={handleLogin}
       onOAuthGoogle={() => handleOAuth("oauth_google")}
       onOAuthApple={() => handleOAuth("oauth_apple")}
+      onOAuthFacebook={() => handleOAuth("oauth_facebook")}
+      onOAuthX={() => handleOAuth("oauth_x")}
       onForgotPassword={() => router.push("/(auth)/resetPassword")}
       onSignup={() => router.push("/(auth)/signup")}
     />
@@ -508,7 +521,7 @@ function NativeLogin() {
   };
 
   const handleOAuth = useCallback(
-    async (strategy: "oauth_google" | "oauth_apple") => {
+    async (strategy: "oauth_google" | "oauth_apple" | "oauth_facebook" | "oauth_x") => {
       if (!isLoaded) return;
       setLoading(true);
       try {
@@ -587,6 +600,8 @@ function NativeLogin() {
       onLogin={handleLogin}
       onOAuthGoogle={() => handleOAuth("oauth_google")}
       onOAuthApple={() => handleOAuth("oauth_apple")}
+      onOAuthFacebook={() => handleOAuth("oauth_facebook")}
+      onOAuthX={() => handleOAuth("oauth_x")}
       onForgotPassword={() => router.push("/(auth)/resetPassword")}
       onSignup={() => router.push("/(auth)/signup")}
     />

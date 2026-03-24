@@ -1,4 +1,4 @@
-import { Tabs, Redirect, useRouter } from 'expo-router';
+import { Tabs, Redirect, useRouter, useSegments } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ComponentProps, useState, useCallback, useContext } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, Pressable } from 'react-native';
@@ -27,6 +27,8 @@ export default function TabsLayout() {
   const { loading: authLoading, token } = useContext(AuthContext);
   const [unreadCount, setUnreadCount] = useState(0);
   const router = useRouter();
+  const segments = useSegments();
+  const activeTab = segments[1] ?? 'feeds';
 
   useFocusEffect(
     useCallback(() => {
@@ -146,15 +148,17 @@ export default function TabsLayout() {
         />
       </Tabs>
 
-      {/* Floating Create Button */}
-      <Pressable
-        style={styles.fab}
-        onPress={() => router.push('/create-post')}
-        accessibilityRole="button"
-        accessibilityLabel="Create post"
-      >
-        <Ionicons name="add" size={28} color="#FFFFFF" />
-      </Pressable>
+      {/* Floating Create Button — only on Home tab */}
+      {activeTab === 'feeds' && (
+        <Pressable
+          style={styles.fab}
+          onPress={() => router.push('/create-post')}
+          accessibilityRole="button"
+          accessibilityLabel="Create post"
+        >
+          <Ionicons name="add" size={28} color="#FFFFFF" />
+        </Pressable>
+      )}
     </View>
   );
 }

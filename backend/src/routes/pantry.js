@@ -5,14 +5,16 @@ const OpenAI = require('openai');
 
 const router = express.Router();
 
-const openai = new OpenAI({
-  baseURL: 'https://openrouter.ai/api/v1',
-  apiKey: process.env.OPENROUTER_API_KEY,
-  defaultHeaders: {
-    'HTTP-Referer': 'http://localhost:3000',
-    'X-Title': 'BetrFood',
-  },
-});
+const openai = process.env.OPENROUTER_API_KEY
+  ? new OpenAI({
+      baseURL: 'https://openrouter.ai/api/v1',
+      apiKey: process.env.OPENROUTER_API_KEY,
+      defaultHeaders: {
+        'HTTP-Referer': 'http://localhost:3000',
+        'X-Title': 'BetrFood',
+      },
+    })
+  : null;
 
 const IDENTIFY_SINGLE_PROMPT = `You are a food item identifier. Analyze this photo and identify the single main food or grocery item visible.
 
@@ -75,10 +77,13 @@ router.post('/identify', requireAuth, async (req, res) => {
   if (!image || typeof image !== 'string') {
     return res.status(400).json({ error: 'base64 image is required' });
   }
+  if (!openai) {
+    return res.status(503).json({ error: 'AI service not configured (missing OPENROUTER_API_KEY)' });
+  }
 
   try {
     const response = await openai.chat.completions.create({
-      model: 'google/gemini-2.0-flash-exp:free',
+      model: 'google/gemini-2.0-flash-001',
       max_tokens: 1024,
       messages: [
         {
@@ -123,10 +128,13 @@ router.post('/identify-single', requireAuth, async (req, res) => {
   if (!image || typeof image !== 'string') {
     return res.status(400).json({ error: 'base64 image is required' });
   }
+  if (!openai) {
+    return res.status(503).json({ error: 'AI service not configured (missing OPENROUTER_API_KEY)' });
+  }
 
   try {
     const response = await openai.chat.completions.create({
-      model: 'google/gemini-2.0-flash-exp:free',
+      model: 'google/gemini-2.0-flash-001',
       max_tokens: 1024,
       messages: [
         {
@@ -171,10 +179,13 @@ router.post('/scan-receipt', requireAuth, async (req, res) => {
   if (!image || typeof image !== 'string') {
     return res.status(400).json({ error: 'base64 image is required' });
   }
+  if (!openai) {
+    return res.status(503).json({ error: 'AI service not configured (missing OPENROUTER_API_KEY)' });
+  }
 
   try {
     const response = await openai.chat.completions.create({
-      model: 'google/gemini-2.0-flash-exp:free',
+      model: 'google/gemini-2.0-flash-001',
       max_tokens: 2048,
       messages: [
         {

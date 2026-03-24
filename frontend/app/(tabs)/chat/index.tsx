@@ -54,7 +54,7 @@ export default function ChatScreen() {
   const loadHistory = useCallback(async () => {
     try {
       const history = await fetchChatHistory();
-      setMessages(history.reverse());
+      setMessages(history);
     } catch {
       // silently ignore - empty chat is fine
     } finally {
@@ -93,11 +93,11 @@ export default function ChatScreen() {
     try {
       await sendChatMessage(text);
       const history = await fetchChatHistory();
-      setMessages(history.reverse());
-    } catch {
+      setMessages(history);
+    } catch (err: any) {
       setMessages((prev) => prev.filter((m) => m.id !== tempUserMsg.id));
       if (!overrideText) setInput(text);
-      Alert.alert('Oops', 'Failed to get a response. Please try again.');
+      Alert.alert('Chat Error', err?.message || 'Failed to get a response. Please try again.');
     } finally {
       setSending(false);
       scrollToBottom();
@@ -120,10 +120,10 @@ export default function ChatScreen() {
     try {
       await fetchPantrySuggestions();
       const history = await fetchChatHistory();
-      setMessages(history.reverse());
-    } catch {
+      setMessages(history);
+    } catch (err: any) {
       setMessages((prev) => prev.filter((m) => m.id !== tempUserMsg.id));
-      Alert.alert('Oops', 'Failed to get pantry suggestions. Please try again.');
+      Alert.alert('Chat Error', err?.message || 'Failed to get pantry suggestions. Please try again.');
     } finally {
       setLoadingSuggestions(false);
       scrollToBottom();
@@ -280,9 +280,10 @@ export default function ChatScreen() {
             placeholderTextColor={colors.placeholder}
             value={input}
             onChangeText={setInput}
-            multiline
             maxLength={2000}
-            returnKeyType="default"
+            returnKeyType="send"
+            blurOnSubmit={false}
+            onSubmitEditing={() => handleSend()}
             editable={!isBusy}
             accessibilityLabel="Chat message input"
           />
