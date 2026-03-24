@@ -396,6 +396,7 @@ export default function PostDetailScreen() {
                   {comment.displayName || comment.username || 'User'}
                 </Text>
               </TouchableOpacity>
+              {comment.verified && <Text style={styles.commentVerifiedBadge}>{'\u2713'}</Text>}
               <Text style={styles.commentTime}>{formatCommentTime(comment.createdAt)}</Text>
             </View>
 
@@ -463,9 +464,12 @@ export default function PostDetailScreen() {
             </View>
           )}
           <View style={styles.authorInfo}>
-            {post.displayName && (
-              <Text style={styles.displayName}>{post.displayName}</Text>
-            )}
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              {post.displayName && (
+                <Text style={styles.displayName}>{post.displayName}</Text>
+              )}
+              {post.verified && <Text style={styles.verifiedBadge}>{'\u2713'}</Text>}
+            </View>
             {post.username && (
               <Text style={styles.usernameText}>@{post.username}</Text>
             )}
@@ -902,6 +906,18 @@ const styles = StyleSheet.create({
   commentTime: {
     fontSize: 12,
     color: colors.textQuaternary,
+  },
+  verifiedBadge: {
+    color: colors.verified,
+    fontSize: 16,
+    fontWeight: 'bold' as const,
+    marginLeft: 4,
+  },
+  commentVerifiedBadge: {
+    color: colors.verified,
+    fontSize: 13,
+    fontWeight: 'bold' as const,
+    marginRight: 4,
   },
   commentContent: {
     fontSize: 14,

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext, useCallback } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput,
-  Alert, ActivityIndicator, RefreshControl, Modal, Pressable, Image,
+  Alert, ActivityIndicator, RefreshControl, Modal, Pressable, Image, Platform,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -93,14 +93,32 @@ export default function AdminScreen() {
   };
 
   const changeRole = async (targetUser: AdminUser, newRole: string) => {
-    setActionModalVisible(false);
-    try {
-      await updateUserRole(targetUser.id, newRole);
-      setUsers((prev) =>
-        prev.map((u) => (u.id === targetUser.id ? { ...u, role: newRole } : u))
+    const doChange = async () => {
+      setActionModalVisible(false);
+      try {
+        await updateUserRole(targetUser.id, newRole);
+        setUsers((prev) =>
+          prev.map((u) => (u.id === targetUser.id ? { ...u, role: newRole } : u))
+        );
+      } catch (error: any) {
+        Alert.alert('Error', error.message || 'Failed to update role');
+      }
+    };
+
+    const displayName = targetUser.displayName || targetUser.username || 'this user';
+    if (Platform.OS === 'web') {
+      if (window.confirm(`Change ${displayName}'s role to ${newRole}?`)) {
+        await doChange();
+      }
+    } else {
+      Alert.alert(
+        'Confirm Role Change',
+        `Change ${displayName}'s role to ${newRole}?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Confirm', style: 'destructive', onPress: doChange },
+        ]
       );
-    } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to update role');
     }
   };
 
@@ -287,25 +305,31 @@ export default function AdminScreen() {
                 {user?.role === 'admin' && (
                   <>
                     <Text style={styles.modalSectionLabel}>Change Role</Text>
-                    <View style={styles.roleGrid}>
-                      {ROLE_OPTIONS.map(r => (
-                        <Pressable
-                          key={r}
-                          style={[
-                            styles.roleOption,
-                            selectedUser.role === r && styles.roleOptionActive,
-                          ]}
-                          onPress={() => selectedUser.role !== r && changeRole(selectedUser, r)}
-                        >
-                          <Text style={[
-                            styles.roleOptionText,
-                            selectedUser.role === r && styles.roleOptionTextActive,
-                          ]}>
-                            {r}
-                          </Text>
-                        </Pressable>
-                      ))}
-                    </View>
+                    {selectedUser.id === user?.id ? (
+                      <Text style={{ color: '#999', fontSize: 14, marginBottom: 16 }}>
+                        Cannot change your own role.
+                      </Text>
+                    ) : (
+                      <View style={styles.roleGrid}>
+                        {ROLE_OPTIONS.map(r => (
+                          <Pressable
+                            key={r}
+                            style={[
+                              styles.roleOption,
+                              selectedUser.role === r && styles.roleOptionActive,
+                            ]}
+                            onPress={() => selectedUser.role !== r && changeRole(selectedUser, r)}
+                          >
+                            <Text style={[
+                              styles.roleOptionText,
+                              selectedUser.role === r && styles.roleOptionTextActive,
+                            ]}>
+                              {r}
+                            </Text>
+                          </Pressable>
+                        ))}
+                      </View>
+                    )}
 
                     <Pressable
                       style={[styles.verifyButton, selectedUser.verified && styles.verifyButtonActive]}

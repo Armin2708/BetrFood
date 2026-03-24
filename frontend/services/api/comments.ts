@@ -10,6 +10,7 @@ export interface Comment {
   username?: string | null;
   displayName?: string | null;
   avatarUrl?: string | null;
+  verified?: boolean;
   replies?: Comment[];
 }
 

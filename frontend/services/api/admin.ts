@@ -22,7 +22,7 @@ export async function fetchAdminUsers(page: number = 1, limit: number = 20): Pro
   page: number;
   limit: number;
 }> {
-  const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+  const params = new URLSearchParams({ offset: String((page - 1) * limit), limit: String(limit) });
   const response = await fetch(`${API_BASE_URL}/api/admin/users?${params}`, {
     headers: await authHeaders(),
   });

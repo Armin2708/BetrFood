@@ -43,7 +43,7 @@ export default function VerificationCodeScreen() {
       });
     }, 1000);
     return () => clearInterval(timer);
-  }, []);
+  }, [cooldown]);
 
   const formatTime = (secs: number) => {
     const m = Math.floor(secs / 60);
@@ -180,10 +180,10 @@ export default function VerificationCodeScreen() {
           <Text style={styles.resendText}>Didn't receive the code? </Text>
           <Pressable
             onPress={resendCode}
-            disabled={cooldown > 0}
+            disabled={cooldown > 0 || loading}
             accessibilityRole="button"
           >
-            <Text style={[styles.resendLink, cooldown > 0 && styles.resendDisabled]}>
+            <Text style={[styles.resendLink, (cooldown > 0 || loading) && styles.resendDisabled]}>
               Resend
             </Text>
           </Pressable>

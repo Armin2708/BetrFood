@@ -69,7 +69,7 @@ async function deleteFromSupabaseStorage(urlOrPath) {
     console.error('Failed to delete from Supabase Storage:', err.message);
   }
 }
-// const { requireRole, requireMinRole } = require('../middleware/rbac');
+const { requireRole, requireMinRole } = require('../middleware/rbac');
 
 const router = express.Router();
 
@@ -279,8 +279,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // POST /api/posts - create post with image upload (auth required)
-// Future: gate to creator+ with requireMinRole('creator') after requireAuth
-router.post('/', requireAuth, upload.array('images', 10), async (req, res) => {
+router.post('/', requireAuth, requireMinRole('creator'), upload.array('images', 10), async (req, res) => {
   try {
     // Support both multi-image (images) and legacy single-image (image) uploads
     const files = req.files && req.files.length > 0 ? req.files : (req.file ? [req.file] : []);
@@ -494,8 +493,8 @@ router.put('/:id', requireAuth, async (req, res) => {
   }
 });
 
-// DELETE /api/posts/:id - delete post (owner only, auth required)
-router.delete('/:id', requireAuth, async (req, res) => {
+// DELETE /api/posts/:id - delete post (owner or moderator+, auth required)
+router.delete('/:id', requireAuth, requireMinRole('user'), async (req, res) => {
   try {
     const { data: post, error: fetchError } = await supabase
       .from('posts')
@@ -504,7 +503,8 @@ router.delete('/:id', requireAuth, async (req, res) => {
       .single();
 
     if (fetchError || !post) return res.status(404).json({ error: 'Post not found' });
-    if (post.user_id !== req.userId) {
+    const isModerator = ['moderator', 'admin'].includes(req.userRole);
+    if (post.user_id !== req.userId && !isModerator) {
       return res.status(403).json({ error: 'Not authorized' });
     }
 

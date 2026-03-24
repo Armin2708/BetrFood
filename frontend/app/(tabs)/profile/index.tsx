@@ -122,9 +122,7 @@ export default function ProfileScreen() {
         <View style={styles.displayNameRow}>
           <Text style={styles.displayName}>{profile.displayName}</Text>
           {profile.verified && (
-            <View style={styles.verifiedBadge}>
-              <Ionicons name="checkmark-circle" size={18} color={colors.primary} />
-            </View>
+            <Text style={styles.verifiedBadge}>{'\u2713'}</Text>
           )}
         </View>
       ) : null}
@@ -306,6 +304,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   verifiedBadge: {
+    color: colors.verified,
+    fontSize: 16,
+    fontWeight: 'bold' as const,
     marginLeft: 6,
   },
 
