@@ -544,6 +544,7 @@ export default function PantryScreen() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   const [scanning, setScanning] = useState(false);
+  const [scanModalVisible, setScanModalVisible] = useState(false);
 
   const hasActiveFilter = searchQuery.trim().length > 0 || selectedCategory !== null;
 
@@ -599,11 +600,7 @@ export default function PantryScreen() {
   };
 
   const handleScanPress = () => {
-    Alert.alert('Scan Pantry Items', 'Choose how to add items by photo', [
-      { text: 'Take Photo', onPress: () => handleScanPhoto(true) },
-      { text: 'Choose from Library', onPress: () => handleScanPhoto(false) },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
+    setScanModalVisible(true);
   };
 
   const handleClearAll = () => {
@@ -831,6 +828,38 @@ export default function PantryScreen() {
   await addItem(item);
 }} />
       <EditItemModal visible={editingItem !== null} item={editingItem} onClose={() => setEditingItem(null)} onSave={editItem} />
+
+      {/* Scan Photo Modal */}
+      <Modal visible={scanModalVisible} animationType="fade" transparent>
+        <Pressable style={styles.modalOverlay} onPress={() => setScanModalVisible(false)}>
+          <Pressable style={styles.scanSheet} onPress={(e) => e.stopPropagation()}>
+            <Text style={styles.sheetTitle}>Scan Pantry Items</Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 14, marginBottom: 16 }}>
+              Add items by taking a photo or choosing from your library
+            </Text>
+            <TouchableOpacity
+              style={styles.scanOption}
+              onPress={() => { setScanModalVisible(false); handleScanPhoto(true); }}
+            >
+              <Ionicons name="camera-outline" size={22} color={colors.primary} />
+              <Text style={styles.scanOptionText}>Take Photo</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.scanOption}
+              onPress={() => { setScanModalVisible(false); handleScanPhoto(false); }}
+            >
+              <Ionicons name="images-outline" size={22} color={colors.primary} />
+              <Text style={styles.scanOptionText}>Choose from Library</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.scanOption, { borderBottomWidth: 0 }]}
+              onPress={() => setScanModalVisible(false)}
+            >
+              <Text style={[styles.scanOptionText, { color: colors.textTertiary }]}>Cancel</Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -1068,4 +1097,24 @@ const styles = StyleSheet.create({
   addButtonDisabled: { opacity: 0.6 },
   addButtonText: { color: colors.white, fontWeight: '600', fontSize: 16 },
   cancelText: { textAlign: 'center', color: colors.textTertiary, paddingBottom: 4 },
+  scanSheet: {
+    backgroundColor: colors.white,
+    borderRadius: 16,
+    padding: 20,
+    marginHorizontal: 32,
+    width: '80%',
+  },
+  scanOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderColor: colors.border,
+  },
+  scanOptionText: {
+    fontSize: 16,
+    color: colors.textPrimary,
+    fontWeight: '500',
+  },
 });
