@@ -32,12 +32,102 @@ const PANTRY_INTENT_KEYWORDS = [
   'meal suggestion', 'dinner idea', 'lunch idea', 'breakfast idea',
 ];
 
+const POST_SUGGESTION_KEYWORDS = [
+  'show me', 'find me', 'suggest a post', 'suggest posts', 'betrfood posts',
+  'posts about', 'recipes on betrfood', 'find a recipe', 'search for',
+  'any posts', 'any recipes', 'pasta recipe', 'chicken recipe', 'vegan recipe',
+  'show me recipes', 'find recipes', 'look up', 'browse',
+];
+
 function hasPantryIntent(message) {
   const lower = message.toLowerCase();
   return PANTRY_INTENT_KEYWORDS.some((kw) => lower.includes(kw));
 }
 
-async function buildSystemPrompt(userId, isPantryQuery = false) {
+function hasPostSuggestionIntent(message) {
+  const lower = message.toLowerCase();
+  return POST_SUGGESTION_KEYWORDS.some((kw) => lower.includes(kw));
+}
+
+// Extract search keywords from a message for post search
+function extractSearchKeywords(message) {
+  // Strip common filler words and extract meaningful terms
+  const stopWords = new Set(['show', 'me', 'find', 'a', 'the', 'some', 'any', 'posts', 'about',
+    'recipes', 'for', 'with', 'on', 'betrfood', 'suggest', 'get', 'look', 'up', 'search',
+    'please', 'can', 'you', 'i', 'want', 'need', 'like', 'give', 'have']);
+  return message.toLowerCase()
+    .replace(/[^a-z0-9 ]/g, '')
+    .split(' ')
+    .filter(w => w.length > 2 && !stopWords.has(w))
+    .slice(0, 5);
+}
+
+// Search posts by keyword matching caption and tags
+async function searchPosts(keywords, limit = 3) {
+  if (!keywords.length) return [];
+  try {
+    // Search by caption keywords
+    const searchTerm = keywords.join(' | ');
+    const { data: posts } = await supabase
+      .from('posts')
+      .select(`
+        id, caption, image_path, user_id, media_type,
+        user_profiles!inner(username, display_name, avatar_url)
+      `)
+      .ilike('caption', `%${keywords[0]}%`)
+      .limit(limit * 2);
+
+    // Also search by tags
+    const { data: taggedPosts } = await supabase
+      .from('tags')
+      .select('id, name, post_tags(post_id)')
+      .or(keywords.map(k => `name.ilike.%${k}%`).join(','));
+
+    const taggedPostIds = new Set();
+    (taggedPosts || []).forEach(tag => {
+      (tag.post_tags || []).forEach(pt => taggedPostIds.add(pt.post_id));
+    });
+
+    // Fetch tag-matched posts if any
+    let tagMatches = [];
+    if (taggedPostIds.size > 0) {
+      const { data } = await supabase
+        .from('posts')
+        .select(`
+          id, caption, image_path, user_id, media_type,
+          user_profiles!inner(username, display_name, avatar_url)
+        `)
+        .in('id', [...taggedPostIds])
+        .limit(limit);
+      tagMatches = data || [];
+    }
+
+    // Merge and deduplicate
+    const seen = new Set();
+    const merged = [...(posts || []), ...tagMatches].filter(p => {
+      if (seen.has(p.id)) return false;
+      seen.add(p.id);
+      return true;
+    }).slice(0, limit);
+
+    return merged.map(p => ({
+      id: p.id,
+      caption: p.caption || '',
+      imagePath: p.image_path || null,
+      username: p.user_profiles?.display_name || p.user_profiles?.username || 'Unknown',
+      mediaType: p.media_type || 'image',
+    }));
+  } catch (err) {
+    console.error('[SEARCH POSTS ERROR]', err.message);
+    return [];
+  }
+}
+
+async function buildSystemPrompt(userId, isPantryQuery = false, isPostSuggestionQuery = false) {
+  // For post suggestion queries, skip pantry context entirely
+  if (isPostSuggestionQuery) {
+    return `${BASE_SYSTEM_PROMPT}\n\nThe user is asking to find posts on BetrFood. You will be provided with a list of matching posts. Describe each one briefly and explain why it's relevant to the user's query. Encourage them to tap the post cards below to view the full recipes.`;
+  }
   try {
     const { data: pantryItems, error: pantryError } = await supabase
       .from('pantry_items')
@@ -125,8 +215,10 @@ router.post('/', requireAuth, async (req, res) => {
     }));
 
     // Check if pantry query with empty pantry — respond directly without AI
+    // But skip this if the user is asking for post suggestions
     const isPantryQuery = hasPantryIntent(message.trim());
-    if (isPantryQuery && !postContext) {
+    const isPostSuggestionQuery = hasPostSuggestionIntent(message.trim());
+    if (isPantryQuery && !postContext && !isPostSuggestionQuery) {
       const { data: pantryCheck } = await supabase
         .from('pantry_items')
         .select('id', { count: 'exact', head: true })
@@ -143,7 +235,7 @@ router.post('/', requireAuth, async (req, res) => {
       }
     }
 
-    let systemPrompt = await buildSystemPrompt(userId, isPantryQuery);
+    let systemPrompt = await buildSystemPrompt(userId, isPantryQuery, isPostSuggestionQuery);
 
     // Inject post context if provided
     if (postContext) {
@@ -162,6 +254,19 @@ router.post('/', requireAuth, async (req, res) => {
       }
       postSection += '\n\nAnswer questions specifically about this post/recipe. If asked about substitutions, variations, or techniques related to it, give detailed helpful answers.';
       systemPrompt += postSection;
+    }
+
+    // Check if user wants post suggestions from BetrFood
+    let suggestedPosts = [];
+    if (isPostSuggestionQuery && !postContext) {
+      const keywords = extractSearchKeywords(message.trim());
+      suggestedPosts = await searchPosts(keywords, 3);
+      if (suggestedPosts.length > 0) {
+        const postList = suggestedPosts.map((p, i) =>
+          `${i + 1}. "${p.caption?.slice(0, 80) || 'Untitled'}" by ${p.username}`
+        ).join('\n');
+        systemPrompt += `\n\nI found these relevant BetrFood posts that match the user's query:\n${postList}\n\nMention these posts in your response and explain briefly why each is relevant. Tell the user they can tap on a post card below to view it.`;
+      }
     }
 
     // Call OpenRouter API
@@ -183,7 +288,7 @@ router.post('/', requireAuth, async (req, res) => {
       .select('id, role, content, created_at')
       .single();
 
-    res.json(saved);
+    res.json({ ...saved, suggestedPosts: suggestedPosts.length > 0 ? suggestedPosts : undefined });
   } catch (err) {
     console.error('[CHAT ERROR]', err.message, err.stack);
     res.status(500).json({ error: 'Failed to get AI response', details: err.message });

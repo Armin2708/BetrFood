@@ -1,10 +1,19 @@
 import { API_BASE_URL, authHeaders } from './client';
 
+export interface SuggestedPost {
+  id: string;
+  caption: string;
+  imagePath: string | null;
+  username: string;
+  mediaType: string;
+}
+
 export interface ChatMessage {
   id: number;
   role: 'user' | 'assistant';
   content: string;
   created_at: string;
+  suggestedPosts?: SuggestedPost[];
 }
 
 async function handleResponse(response: Response) {
@@ -39,7 +48,7 @@ export async function sendChatMessage(message: string, postContext?: PostContext
     body: JSON.stringify({ message, postContext: postContext || null }),
   });
   await handleResponse(response);
-  return response.json();
+  return response.json() as Promise<ChatMessage>;
 }
 
 export async function fetchChatHistory(): Promise<ChatMessage[]> {
