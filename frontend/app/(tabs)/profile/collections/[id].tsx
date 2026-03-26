@@ -187,12 +187,20 @@ export default function CollectionDetailScreen() {
                   <Image source={{ uri: getImageUrl(item.imagePath) }} style={[styles.gridItem, isSelected && styles.gridItemSelected]} />
                 )}
 
-                {selectMode && (
+                {selectMode ? (
                   <View style={styles.selectionOverlay}>
                     <View style={[styles.selectionCircle, isSelected && styles.selectionCircleActive]}>
                       {isSelected && <Ionicons name="checkmark" size={14} color="#fff" />}
                     </View>
                   </View>
+                ) : (
+                  <Pressable
+                    style={styles.removeButton}
+                    onPress={() => handleRemovePost(item.id)}
+                    hitSlop={8}
+                  >
+                    <Ionicons name="close-circle" size={22} color="rgba(0,0,0,0.6)" />
+                  </Pressable>
                 )}
               </Pressable>
             );

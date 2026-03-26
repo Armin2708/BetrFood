@@ -273,7 +273,7 @@ export default function PostDetailScreen() {
   const handleExternalShare = async () => {
     try {
       await Share.share({
-        message: `Check out this post from ${post?.username || 'BetrFood'}: betrfood://posts/${postId}`,
+        message: `Check out this post from ${post?.username || 'BetrFood'}: ${process.env.EXPO_PUBLIC_APP_URL || 'http://localhost:8081'}/post-detail?postId=${postId}`,
       });
     } catch {
       Alert.alert('Error', 'Could not share the post.');
@@ -281,7 +281,7 @@ export default function PostDetailScreen() {
   };
 
   const handleCopyLink = async () => {
-    const link = `betrfood://posts/${postId}`;
+    const link = `${process.env.EXPO_PUBLIC_APP_URL || 'http://localhost:8081'}/post-detail?postId=${postId}`;
     await Clipboard.setStringAsync(link);
     Alert.alert('Link Copied', 'The post link has been copied to your clipboard.');
   };

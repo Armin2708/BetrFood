@@ -258,6 +258,7 @@ export default function HomeScreen() {
         data={displayedPosts}
         keyExtractor={(item) => item.id}
         showsVerticalScrollIndicator={false}
+        stickyHeaderIndices={[0]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -333,6 +334,7 @@ export default function HomeScreen() {
             mediaType={item.mediaType}
             commentCount={item.commentCount}
             verified={item.verified}
+            hasRecipe={!!item.recipeId || !!item._recipe}
             pantryMatchedCount={item._matchedCount}
             pantryMissingCount={item._missingCount}
             isPantryMatch={item._isMatch}
@@ -373,7 +375,16 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFFFFF' },
-  headerContainer: { width: '100%' },
+  headerContainer: {
+    width: '100%',
+    backgroundColor: '#fff',
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    overflow: 'hidden',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+    elevation: 3,
+    zIndex: 10,
+  },
   feedToggle: {
     flexDirection: 'row',
     alignItems: 'center',

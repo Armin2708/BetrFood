@@ -137,7 +137,6 @@ async function buildSystemPrompt(userId, isPantryQuery = false, isPostSuggestion
     if (pantryError) {
       console.error('[CHAT] Pantry query failed:', pantryError.message);
     }
-    console.log('[CHAT] Pantry items for', userId, ':', pantryItems?.length ?? 0);
 
     if (!pantryItems || pantryItems.length === 0) {
       return `${BASE_SYSTEM_PROMPT}\n\nThe user's pantry is currently empty. If they ask about cooking or recipes, let them know their pantry is empty and suggest they add items to their pantry first. You can still answer general food questions.${isPantryQuery ? RECIPE_FORMAT_INSTRUCTIONS : ''}`;
@@ -182,10 +181,98 @@ function getUserId(req) {
   return req.userId || (req.user && req.user.id) || req.headers['x-user-id'] || 'anonymous';
 }
 
+// Generate a short title from the first user message
+async function generateTitle(message) {
+  const truncated = message.trim().substring(0, 60);
+  return truncated.length < message.trim().length ? truncated + '...' : truncated;
+}
+
+// GET /api/chat/conversations — list all conversations
+router.get('/conversations', requireAuth, async (req, res) => {
+  const userId = getUserId(req);
+  try {
+    const { data, error } = await supabase
+      .from('chat_conversations')
+      .select('id, title, created_at, updated_at')
+      .eq('user_id', userId)
+      .order('updated_at', { ascending: false });
+
+    if (error) throw error;
+    res.json({ conversations: data || [] });
+  } catch (err) {
+    console.error('[CONVERSATIONS ERROR]', err.message);
+    res.status(500).json({ error: 'Failed to fetch conversations' });
+  }
+});
+
+// POST /api/chat/conversations — create a new conversation
+router.post('/conversations', requireAuth, async (req, res) => {
+  const userId = getUserId(req);
+  try {
+    const { data, error } = await supabase
+      .from('chat_conversations')
+      .insert({ user_id: userId, title: 'New Chat' })
+      .select('id, title, created_at, updated_at')
+      .single();
+
+    if (error) throw error;
+    res.json(data);
+  } catch (err) {
+    console.error('[CREATE CONVERSATION ERROR]', err.message);
+    res.status(500).json({ error: 'Failed to create conversation' });
+  }
+});
+
+// PATCH /api/chat/conversations/:id — rename a conversation
+router.patch('/conversations/:id', requireAuth, async (req, res) => {
+  const userId = getUserId(req);
+  const { id } = req.params;
+  const { title } = req.body;
+
+  if (!title || typeof title !== 'string' || !title.trim()) {
+    return res.status(400).json({ error: 'title is required' });
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('chat_conversations')
+      .update({ title: title.trim(), updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .eq('user_id', userId)
+      .select('id, title, created_at, updated_at')
+      .single();
+
+    if (error) throw error;
+    res.json(data);
+  } catch (err) {
+    console.error('[RENAME CONVERSATION ERROR]', err.message);
+    res.status(500).json({ error: 'Failed to rename conversation' });
+  }
+});
+
+// DELETE /api/chat/conversations/:id — delete a conversation
+router.delete('/conversations/:id', requireAuth, async (req, res) => {
+  const userId = getUserId(req);
+  const { id } = req.params;
+  try {
+    const { error } = await supabase
+      .from('chat_conversations')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', userId);
+
+    if (error) throw error;
+    res.json({ message: 'Conversation deleted' });
+  } catch (err) {
+    console.error('[DELETE CONVERSATION ERROR]', err.message);
+    res.status(500).json({ error: 'Failed to delete conversation' });
+  }
+});
+
 // POST /api/chat — send a message, get AI response
 router.post('/', requireAuth, async (req, res) => {
   const userId = getUserId(req);
-  const { message, postContext } = req.body;
+  const { message, postContext, conversationId, conversationTitle } = req.body;
 
   if (!message || typeof message !== 'string' || !message.trim()) {
     return res.status(400).json({ error: 'message is required' });
@@ -196,16 +283,46 @@ router.post('/', requireAuth, async (req, res) => {
   }
 
   try {
+    // Get or create conversation
+    let convId = conversationId;
+    if (!convId) {
+      const { data: newConv, error: convErr } = await supabase
+        .from('chat_conversations')
+        .insert({ user_id: userId, title: conversationTitle || await generateTitle(message.trim()) })
+        .select('id')
+        .single();
+      if (convErr) throw convErr;
+      convId = newConv.id;
+    }
+
     // Save user message
     await supabase
       .from('chat_messages')
-      .insert({ user_id: userId, role: 'user', content: message.trim() });
+      .insert({ user_id: userId, conversation_id: convId, role: 'user', content: message.trim() });
 
-    // Fetch last 20 messages for context
+    // Update conversation title if first message
+    const { data: msgCount } = await supabase
+      .from('chat_messages')
+      .select('id', { count: 'exact', head: true })
+      .eq('conversation_id', convId);
+
+    if (msgCount && msgCount.length <= 1) {
+      await supabase
+        .from('chat_conversations')
+        .update({ title: await generateTitle(message.trim()), updated_at: new Date().toISOString() })
+        .eq('id', convId);
+    } else {
+      await supabase
+        .from('chat_conversations')
+        .update({ updated_at: new Date().toISOString() })
+        .eq('id', convId);
+    }
+
+    // Fetch conversation history for context
     const { data: history } = await supabase
       .from('chat_messages')
       .select('role, content')
-      .eq('user_id', userId)
+      .eq('conversation_id', convId)
       .order('created_at', { ascending: false })
       .limit(20);
 
@@ -228,10 +345,10 @@ router.post('/', requireAuth, async (req, res) => {
         const emptyMsg = "Your pantry is currently empty! Head over to the **Pantry** tab to add ingredients, and then I can suggest recipes based on what you have.";
         const { data: saved } = await supabase
           .from('chat_messages')
-          .insert({ user_id: userId, role: 'assistant', content: emptyMsg })
+          .insert({ user_id: userId, conversation_id: convId, role: 'assistant', content: emptyMsg })
           .select('id, role, content, created_at')
           .single();
-        return res.json(saved);
+        return res.json({ ...saved, conversationId: convId });
       }
     }
 
@@ -269,7 +386,6 @@ router.post('/', requireAuth, async (req, res) => {
       }
     }
 
-    // Call OpenRouter API
     const response = await openai.chat.completions.create({
       model: 'google/gemini-2.0-flash-001',
       max_tokens: 1024,
@@ -281,14 +397,17 @@ router.post('/', requireAuth, async (req, res) => {
 
     const assistantContent = response.choices[0].message.content;
 
-    // Save assistant response
     const { data: saved } = await supabase
       .from('chat_messages')
-      .insert({ user_id: userId, role: 'assistant', content: assistantContent })
+      .insert({ user_id: userId, conversation_id: convId, role: 'assistant', content: assistantContent })
       .select('id, role, content, created_at')
       .single();
 
+<<<<<<< HEAD
     res.json({ ...saved, suggestedPosts: suggestedPosts.length > 0 ? suggestedPosts : undefined });
+=======
+    res.json({ ...saved, conversationId: convId });
+>>>>>>> 1fd37eb (feat: inline comments modal, multi-conversation chat, post/feed UI overhaul)
   } catch (err) {
     console.error('[CHAT ERROR]', err.message, err.stack);
     res.status(500).json({ error: 'Failed to get AI response', details: err.message });
@@ -298,12 +417,24 @@ router.post('/', requireAuth, async (req, res) => {
 // GET /api/chat/pantry-suggestions — generate recipe suggestions from current pantry
 router.get('/pantry-suggestions', requireAuth, async (req, res) => {
   const userId = getUserId(req);
+  const conversationId = req.query.conversationId;
 
   if (!openai) {
     return res.status(503).json({ error: 'AI service not configured (missing OPENROUTER_API_KEY)' });
   }
 
   try {
+    let convId = conversationId;
+    if (!convId) {
+      const { data: newConv, error: convErr } = await supabase
+        .from('chat_conversations')
+        .insert({ user_id: userId, title: 'Pantry Recipes' })
+        .select('id')
+        .single();
+      if (convErr) throw convErr;
+      convId = newConv.id;
+    }
+
     const { data: pantryItems } = await supabase
       .from('pantry_items')
       .select('name, quantity, unit, category, expiration_date')
@@ -313,13 +444,13 @@ router.get('/pantry-suggestions', requireAuth, async (req, res) => {
       const emptyMsg = "Your pantry is currently empty! Head over to the **Pantry** tab to add ingredients, and then I can suggest recipes based on what you have.";
       await supabase
         .from('chat_messages')
-        .insert({ user_id: userId, role: 'user', content: 'What can I cook with the items in my pantry?' });
+        .insert({ user_id: userId, conversation_id: convId, role: 'user', content: 'What can I cook with the items in my pantry?' });
       const { data: saved } = await supabase
         .from('chat_messages')
-        .insert({ user_id: userId, role: 'assistant', content: emptyMsg })
+        .insert({ user_id: userId, conversation_id: convId, role: 'assistant', content: emptyMsg })
         .select('id, role, content, created_at')
         .single();
-      return res.json({ ...saved, pantryCount: 0 });
+      return res.json({ ...saved, pantryCount: 0, conversationId: convId });
     }
 
     const systemPrompt = await buildSystemPrompt(userId, true);
@@ -338,36 +469,47 @@ router.get('/pantry-suggestions', requireAuth, async (req, res) => {
 
     const suggestions = response.choices[0].message.content;
 
-    // Save exchange to chat history
     await supabase
       .from('chat_messages')
-      .insert({ user_id: userId, role: 'user', content: 'What can I cook with the items in my pantry?' });
+      .insert({ user_id: userId, conversation_id: convId, role: 'user', content: 'What can I cook with the items in my pantry?' });
 
     const { data: saved } = await supabase
       .from('chat_messages')
-      .insert({ user_id: userId, role: 'assistant', content: suggestions })
+      .insert({ user_id: userId, conversation_id: convId, role: 'assistant', content: suggestions })
       .select('id, role, content, created_at')
       .single();
 
-    res.json({ ...saved, pantryCount: pantryItems.length });
+    await supabase
+      .from('chat_conversations')
+      .update({ updated_at: new Date().toISOString() })
+      .eq('id', convId);
+
+    res.json({ ...saved, pantryCount: pantryItems.length, conversationId: convId });
   } catch (err) {
     console.error('[PANTRY SUGGESTIONS ERROR]', err.message, err.stack);
     res.status(500).json({ error: 'Failed to get pantry suggestions', details: err.message });
   }
 });
 
-// GET /api/chat/history — get conversation history
+// GET /api/chat/history — get conversation history (supports conversationId query param)
 router.get('/history', requireAuth, async (req, res) => {
   const userId = getUserId(req);
+  const conversationId = req.query.conversationId;
 
   try {
-    const { data: messages, error } = await supabase
+    let query = supabase
       .from('chat_messages')
-      .select('id, role, content, created_at')
+      .select('id, role, content, created_at, conversation_id')
       .eq('user_id', userId)
-      .order('created_at', { ascending: true })
-      .limit(50);
+      .order('created_at', { ascending: true });
 
+    if (conversationId) {
+      query = query.eq('conversation_id', conversationId);
+    }
+
+    query = query.limit(50);
+
+    const { data: messages, error } = await query;
     if (error) throw error;
 
     res.json({ messages: messages || [] });

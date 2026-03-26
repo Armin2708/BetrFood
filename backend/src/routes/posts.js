@@ -279,7 +279,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // POST /api/posts - create post with image upload (auth required)
-router.post('/', requireAuth, requireMinRole('creator'), upload.array('images', 10), async (req, res) => {
+router.post('/', requireAuth, upload.array('images', 10), async (req, res) => {
   try {
     // Support both multi-image (images) and legacy single-image (image) uploads
     const files = req.files && req.files.length > 0 ? req.files : (req.file ? [req.file] : []);

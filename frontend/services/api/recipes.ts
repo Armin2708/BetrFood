@@ -32,10 +32,13 @@ export interface RecipeInput {
   steps?: Array<{ instruction: string }>;
 }
 
-export async function fetchRecipe(postId: string): Promise<Recipe> {
+export async function fetchRecipe(postId: string): Promise<Recipe | null> {
   const response = await fetch(`${API_BASE_URL}/api/posts/${postId}/recipe`, {
     headers: await authHeaders(),
   });
+  if (response.status === 404) {
+    return null;
+  }
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.error || 'Failed to fetch recipe');

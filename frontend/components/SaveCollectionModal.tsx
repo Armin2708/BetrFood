@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Modal,
   View,
@@ -8,6 +8,9 @@ import {
   StyleSheet,
   ScrollView,
   ActivityIndicator,
+  Animated,
+  Dimensions,
+  Pressable,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Collection, useCollections } from "../context/CollectionsContext";
@@ -24,6 +27,8 @@ type Props = {
   savedInCollections?: Collection[];
 };
 
+const SCREEN_HEIGHT = Dimensions.get('window').height;
+
 export default function SaveCollectionModal({
   visible,
   onClose,
@@ -36,14 +41,38 @@ export default function SaveCollectionModal({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [newName, setNewName] = useState("");
   const [creating, setCreating] = useState(false);
+  const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
 
   useEffect(() => {
-    if (visible && mode === "remove") {
+    if (visible) {
+      slideAnim.setValue(SCREEN_HEIGHT);
+      Animated.spring(slideAnim, {
+        toValue: 0,
+        useNativeDriver: true,
+        speed: 14,
+        bounciness: 4,
+      }).start();
+    }
+  }, [visible]);
+
+  useEffect(() => {
+    if (!visible) return;
+    if (mode === "remove") {
       setSelected(new Set(savedInCollections.map(c => c.id)));
-    } else if (visible && mode === "save") {
+    } else {
       setSelected(new Set());
     }
   }, [visible, mode]);
+
+  const handleClose = () => {
+    Animated.timing(slideAnim, {
+      toValue: SCREEN_HEIGHT,
+      duration: 250,
+      useNativeDriver: true,
+    }).start(() => {
+      onClose();
+    });
+  };
 
   const toggleCollection = (id: string) => {
     setSelected(prev => {
@@ -56,13 +85,19 @@ export default function SaveCollectionModal({
 
   const handleConfirm = () => {
     const selectedCollections = collections.filter(c => selected.has(c.id));
-    if (mode === "save") {
-      onSave(selectedCollections);
-    } else {
-      if (onRemove) onRemove(selectedCollections);
-    }
-    setSelected(new Set());
-    setNewName("");
+    Animated.timing(slideAnim, {
+      toValue: SCREEN_HEIGHT,
+      duration: 250,
+      useNativeDriver: true,
+    }).start(() => {
+      if (mode === "save") {
+        onSave(selectedCollections);
+      } else {
+        if (onRemove) onRemove(selectedCollections);
+      }
+      setSelected(new Set());
+      setNewName("");
+    });
   };
 
   const handleCreate = async () => {
@@ -88,92 +123,95 @@ export default function SaveCollectionModal({
       : `Save to ${selected.size} collection${selected.size !== 1 ? 's' : ''}`;
 
   return (
-    <Modal visible={visible} animationType="slide" transparent>
-      <View style={styles.overlay}>
-        <View style={styles.sheet}>
-          <View style={styles.header}>
-            <Text style={styles.title}>{title}</Text>
-            <TouchableOpacity onPress={onClose}>
-              <Ionicons name="close" size={22} color={colors.textPrimary} />
-            </TouchableOpacity>
-          </View>
-
-          <ScrollView style={styles.list} showsVerticalScrollIndicator={false}>
-            {collections.map((collection) => {
-              const isSelected = selected.has(collection.id);
-              return (
-                <TouchableOpacity
-                  key={collection.id}
-                  onPress={() => toggleCollection(collection.id)}
-                  style={styles.collectionItem}
-                  accessibilityRole="checkbox"
-                  accessibilityLabel={`${isSelected ? 'Deselect' : 'Select'} ${collection.name}`}
-                  accessibilityState={{ checked: isSelected }}
-                >
-                  <View style={styles.collectionLeft}>
-                    <View style={styles.folderIcon}>
-                      <Ionicons
-                        name="folder-outline"
-                        size={22}
-                        color={isRemoveMode ? '#e74c3c' : colors.primary}
-                      />
-                    </View>
-                    <Text style={styles.collectionName}>{collection.name}</Text>
-                  </View>
-                  <View style={[
-                    styles.checkbox,
-                    isSelected && (isRemoveMode ? styles.checkboxSelectedRemove : styles.checkboxSelectedSave),
-                  ]}>
-                    {isSelected && <Ionicons name="checkmark" size={14} color="#fff" />}
-                  </View>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-
-          {/* Create new collection — save mode only */}
-          {!isRemoveMode && (
-            <View style={styles.createRow}>
-              <TextInput
-                placeholder="New collection name..."
-                value={newName}
-                onChangeText={setNewName}
-                style={styles.input}
-                accessibilityLabel="New collection name"
-                onSubmitEditing={handleCreate}
-                returnKeyType="done"
-              />
-              <TouchableOpacity
-                onPress={handleCreate}
-                style={[styles.createButton, !newName.trim() && styles.createButtonDisabled]}
-                disabled={creating || !newName.trim()}
-              >
-                {creating ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <Text style={styles.createButtonText}>Create</Text>
-                )}
+    <Modal visible={visible} animationType="fade" transparent onRequestClose={handleClose}>
+      <Pressable style={styles.overlay} onPress={handleClose}>
+        <Animated.View style={[styles.sheet, { transform: [{ translateY: slideAnim }] }]}>
+          <Pressable onPress={(e) => e.stopPropagation()}>
+            <View style={styles.handle} />
+            <View style={styles.header}>
+              <Text style={styles.title}>{title}</Text>
+              <TouchableOpacity onPress={handleClose}>
+                <Ionicons name="close" size={22} color={colors.textPrimary} />
               </TouchableOpacity>
             </View>
-          )}
 
-          <TouchableOpacity
-            style={[
-              styles.confirmButton,
-              isRemoveMode && styles.confirmButtonRemove,
-              selected.size === 0 && styles.confirmButtonDisabled,
-            ]}
-            onPress={handleConfirm}
-            disabled={selected.size === 0}
-          >
-            <Text style={styles.confirmButtonText}>{confirmLabel}</Text>
-          </TouchableOpacity>
+            <ScrollView style={styles.list} showsVerticalScrollIndicator={false}>
+              {(isRemoveMode ? savedInCollections : collections).map((collection) => {
+                const isSelected = selected.has(collection.id);
+                return (
+                  <TouchableOpacity
+                    key={collection.id}
+                    onPress={() => toggleCollection(collection.id)}
+                    style={styles.collectionItem}
+                    accessibilityRole="checkbox"
+                    accessibilityLabel={`${isSelected ? 'Deselect' : 'Select'} ${collection.name}`}
+                    accessibilityState={{ checked: isSelected }}
+                  >
+                    <View style={styles.collectionLeft}>
+                      <View style={styles.folderIcon}>
+                        <Ionicons
+                          name="folder-outline"
+                          size={22}
+                          color={isRemoveMode ? '#e74c3c' : colors.primary}
+                        />
+                      </View>
+                      <Text style={styles.collectionName}>{collection.name}</Text>
+                    </View>
+                    <View style={[
+                      styles.checkbox,
+                      isSelected && (isRemoveMode ? styles.checkboxSelectedRemove : styles.checkboxSelectedSave),
+                    ]}>
+                      {isSelected && <Ionicons name="checkmark" size={14} color="#fff" />}
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
 
-          <TouchableOpacity onPress={onClose} style={styles.cancelButton}>
-            <Text style={styles.cancelText}>Cancel</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+            {/* Create new collection — save mode only */}
+            {!isRemoveMode && (
+              <View style={styles.createRow}>
+                <TextInput
+                  placeholder="New collection name..."
+                  value={newName}
+                  onChangeText={setNewName}
+                  style={styles.input}
+                  accessibilityLabel="New collection name"
+                  onSubmitEditing={handleCreate}
+                  returnKeyType="done"
+                />
+                <TouchableOpacity
+                  onPress={handleCreate}
+                  style={[styles.createButton, !newName.trim() && styles.createButtonDisabled]}
+                  disabled={creating || !newName.trim()}
+                >
+                  {creating ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Text style={styles.createButtonText}>Create</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            )}
+
+            <TouchableOpacity
+              style={[
+                styles.confirmButton,
+                isRemoveMode && styles.confirmButtonRemove,
+                selected.size === 0 && styles.confirmButtonDisabled,
+              ]}
+              onPress={handleConfirm}
+              disabled={selected.size === 0}
+            >
+              <Text style={styles.confirmButtonText}>{confirmLabel}</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity onPress={handleClose} style={styles.cancelButton}>
+              <Text style={styles.cancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Animated.View>
+      </Pressable>
     </Modal>
   );
 }
@@ -184,9 +222,19 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
     backgroundColor: colors.overlay,
   },
+  handle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.border,
+    alignSelf: 'center',
+    marginTop: 10,
+    marginBottom: 4,
+  },
   sheet: {
     backgroundColor: colors.backgroundPrimary,
     padding: 20,
+    paddingTop: 0,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     maxHeight: '75%',
@@ -196,6 +244,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
+    marginTop: 12,
   },
   title: {
     fontWeight: "bold",
