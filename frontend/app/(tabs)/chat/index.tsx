@@ -10,11 +10,13 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import Markdown from 'react-native-markdown-display';
+import * as Clipboard from 'expo-clipboard';
 import { colors } from '../../../constants/theme';
 import {
   ChatMessage,
@@ -22,6 +24,22 @@ import {
   fetchChatHistory,
   fetchPantrySuggestions,
 } from '../../../services/api/chat';
+
+function stripMarkdown(text: string): string {
+  return text
+    .replace(/```[\s\S]*?```/g, (match) => match.replace(/```[^\n]*\n?|```/g, ''))
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/#{1,6}\s+/gm, '')
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/\*([^*]+)\*/g, '$1')
+    .replace(/__([^_]+)__/g, '$1')
+    .replace(/_([^_]+)_/g, '$1')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/^[-*+]\s+/gm, '• ')
+    .replace(/^\d+\.\s+/gm, (m) => m)
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
 
 function formatRelativeTime(dateString: string): string {
   const now = Date.now();
@@ -50,6 +68,31 @@ export default function ChatScreen() {
   const [sending, setSending] = useState(false);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const flatListRef = useRef<FlatList<ChatMessage>>(null);
+  const toastOpacity = useRef(new Animated.Value(0)).current;
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showToast = useCallback(() => {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    Animated.sequence([
+      Animated.timing(toastOpacity, { toValue: 1, duration: 200, useNativeDriver: true }),
+      Animated.delay(1600),
+      Animated.timing(toastOpacity, { toValue: 0, duration: 300, useNativeDriver: true }),
+    ]).start();
+    toastTimer.current = setTimeout(() => {
+      toastOpacity.setValue(0);
+    }, 2200);
+  }, [toastOpacity]);
+
+  const handleCopy = useCallback(async (content: string) => {
+    await Clipboard.setStringAsync(stripMarkdown(content));
+    showToast();
+  }, [showToast]);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimer.current) clearTimeout(toastTimer.current);
+    };
+  }, []);
 
   const loadHistory = useCallback(async () => {
     try {
@@ -152,24 +195,38 @@ export default function ChatScreen() {
             <Ionicons name="restaurant-outline" size={16} color={colors.primary} />
           </View>
         )}
-        <View
-          style={[
-            styles.messageBubble,
-            isUser ? styles.userBubble : styles.assistantBubble,
-          ]}
-          accessibilityRole="text"
-          accessibilityLabel={`${isUser ? 'You' : 'Assistant'}: ${item.content}`}
-        >
-          {isUser ? (
-            <Text style={[styles.messageText, styles.userMessageText]}>
-              {item.content}
+        <View style={isUser ? undefined : styles.assistantBubbleColumn}>
+          <View
+            style={[
+              styles.messageBubble,
+              isUser ? styles.userBubble : styles.assistantBubble,
+            ]}
+            accessibilityRole="text"
+            accessibilityLabel={`${isUser ? 'You' : 'Assistant'}: ${item.content}`}
+          >
+            {isUser ? (
+              <Text style={[styles.messageText, styles.userMessageText]}>
+                {item.content}
+              </Text>
+            ) : (
+              <Markdown style={markdownStyles}>{item.content}</Markdown>
+            )}
+            <Text style={[styles.timestamp, isUser && styles.userTimestamp]}>
+              {formatRelativeTime(item.created_at)}
             </Text>
-          ) : (
-            <Markdown style={markdownStyles}>{item.content}</Markdown>
+          </View>
+          {!isUser && (
+            <TouchableOpacity
+              style={styles.copyButton}
+              onPress={() => handleCopy(item.content)}
+              accessibilityRole="button"
+              accessibilityLabel="Copy response to clipboard"
+              hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+            >
+              <Ionicons name="copy-outline" size={14} color={colors.textTertiary} />
+              <Text style={styles.copyButtonText}>Copy</Text>
+            </TouchableOpacity>
           )}
-          <Text style={[styles.timestamp, isUser && styles.userTimestamp]}>
-            {formatRelativeTime(item.created_at)}
-          </Text>
         </View>
       </View>
     );
@@ -304,6 +361,15 @@ export default function ChatScreen() {
             />
           </TouchableOpacity>
         </View>
+
+        {/* Copy toast */}
+        <Animated.View
+          style={[styles.toast, { opacity: toastOpacity }]}
+          pointerEvents="none"
+        >
+          <Ionicons name="checkmark-circle" size={16} color={colors.white} />
+          <Text style={styles.toastText}>Copied to clipboard</Text>
+        </Animated.View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -443,12 +509,12 @@ const styles = StyleSheet.create({
   },
   // Bubbles
   messageBubble: {
-    maxWidth: '75%',
     borderRadius: 18,
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
   userBubble: {
+    maxWidth: '75%',
     backgroundColor: colors.primary,
     borderBottomRightRadius: 4,
   },
@@ -537,5 +603,41 @@ const styles = StyleSheet.create({
   },
   sendButtonDisabled: {
     opacity: 0.4,
+  },
+  // Assistant bubble column (bubble + copy button stacked)
+  assistantBubbleColumn: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    maxWidth: '75%',
+  },
+  // Copy button
+  copyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+    paddingHorizontal: 4,
+  },
+  copyButtonText: {
+    fontSize: 12,
+    color: colors.textTertiary,
+  },
+  // Toast notification
+  toast: {
+    position: 'absolute',
+    bottom: 80,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(30,30,30,0.85)',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  toastText: {
+    color: colors.white,
+    fontSize: 13,
+    fontWeight: '500',
   },
 });
