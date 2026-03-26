@@ -570,7 +570,31 @@ export default function PostDetailScreen() {
           </Text>
         )}
 
-        {/* Recipe section */}
+        {/* Ask AI button */}
+        <TouchableOpacity
+          style={styles.askAiButton}
+          onPress={() => {
+            const context = {
+              postId,
+              caption: post.caption,
+              username: post.displayName || post.username,
+              tags: tags.map(t => t.name),
+              recipe: recipe ? {
+                cookTime: recipe.cookTime,
+                servings: recipe.servings,
+                difficulty: recipe.difficulty,
+                ingredients: recipe.ingredients?.map(i => `${i.quantity || ''} ${i.unit || ''} ${i.name}`.trim()),
+                steps: recipe.steps?.map(s => s.instruction),
+              } : null,
+            };
+            router.push(`/(tabs)/chat?postContext=${encodeURIComponent(JSON.stringify(context))}`);
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Ask AI about this post"
+        >
+          <Ionicons name="chatbubble-ellipses-outline" size={16} color="#fff" style={{ marginRight: 6 }} />
+          <Text style={styles.askAiButtonText}>Ask AI about this {recipe ? 'recipe' : 'post'}</Text>
+        </TouchableOpacity>
         {recipe && (
           <View style={styles.recipeSection}>
             <RecipeDisplay recipe={recipe} />
@@ -825,6 +849,22 @@ const styles = StyleSheet.create({
   },
   likeCountBold: {
     fontWeight: 'bold',
+  },
+  askAiButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary,
+    marginHorizontal: 16,
+    marginTop: 12,
+    marginBottom: 4,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  askAiButtonText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 14,
   },
   recipeSection: {
     marginTop: 4,

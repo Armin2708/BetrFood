@@ -14,14 +14,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
+import { useLocalSearchParams } from 'expo-router';
 import Markdown from 'react-native-markdown-display';
 import { colors } from '../../../constants/theme';
-import {
-  ChatMessage,
-  sendChatMessage,
-  fetchChatHistory,
-  fetchPantrySuggestions,
-} from '../../../services/api/chat';
+import { ChatMessage, PostContext, sendChatMessage, fetchChatHistory } from '../../../services/api/chat';
 
 function formatRelativeTime(dateString: string): string {
   const now = Date.now();
@@ -37,24 +33,52 @@ function formatRelativeTime(dateString: string): string {
   return `${diffDay}d ago`;
 }
 
-const QUICK_ACTIONS = [
-  { id: 'pantry', label: '🥗 What can I cook?', message: 'What can I cook with the items in my pantry?' },
-  { id: 'expiring', label: '⏰ Use expiring items', message: 'What should I cook first using my items that are expiring soon?' },
-  { id: 'ideas', label: '💡 Meal ideas', message: 'Give me some quick and easy meal ideas for today.' },
-];
+// Post reference card shown at top of chat when opened from a post
+function PostContextCard({ context }: { context: PostContext }) {
+  return (
+    <View style={styles.postContextCard}>
+      <View style={styles.postContextIconRow}>
+        <Ionicons name="document-text-outline" size={16} color={colors.primary} />
+        <Text style={styles.postContextLabel}>Asking about a post</Text>
+      </View>
+      {context.username && (
+        <Text style={styles.postContextUsername}>by @{context.username}</Text>
+      )}
+      {context.caption ? (
+        <Text style={styles.postContextCaption} numberOfLines={2}>{context.caption}</Text>
+      ) : null}
+      {context.recipe && (
+        <View style={styles.postContextRecipeBadge}>
+          <Ionicons name="restaurant-outline" size={12} color={colors.primary} />
+          <Text style={styles.postContextRecipeText}>Recipe included</Text>
+        </View>
+      )}
+    </View>
+  );
+}
 
 export default function ChatScreen() {
+  const params = useLocalSearchParams<{ postContext?: string }>();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
-  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const flatListRef = useRef<FlatList<ChatMessage>>(null);
+
+  // Parse postContext from route params
+  const postContext: PostContext | null = (() => {
+    if (!params.postContext) return null;
+    try {
+      return JSON.parse(decodeURIComponent(params.postContext));
+    } catch {
+      return null;
+    }
+  })();
 
   const loadHistory = useCallback(async () => {
     try {
       const history = await fetchChatHistory();
-      setMessages(history);
+      setMessages(history.reverse());
     } catch {
       // silently ignore - empty chat is fine
     } finally {
@@ -68,14 +92,8 @@ export default function ChatScreen() {
     }, [loadHistory])
   );
 
-  const scrollToBottom = (animated = true) => {
-    setTimeout(() => {
-      flatListRef.current?.scrollToEnd({ animated });
-    }, 100);
-  };
-
-  const handleSend = async (overrideText?: string) => {
-    const text = (overrideText ?? input).trim();
+  const handleSend = async () => {
+    const text = input.trim();
     if (!text || sending) return;
 
     const tempUserMsg: ChatMessage = {
@@ -86,84 +104,47 @@ export default function ChatScreen() {
     };
 
     setMessages((prev) => [...prev, tempUserMsg]);
-    if (!overrideText) setInput('');
+    setInput('');
     setSending(true);
-    scrollToBottom();
+
+    setTimeout(() => {
+      flatListRef.current?.scrollToEnd({ animated: true });
+    }, 100);
 
     try {
-      await sendChatMessage(text);
+      // Only send postContext on the first message in a post-context session
+      const isFirstMessage = messages.length === 0;
+      const response = await sendChatMessage(text, isFirstMessage && postContext ? postContext : undefined);
       const history = await fetchChatHistory();
-      setMessages(history);
-    } catch (err: any) {
+      setMessages(history.reverse());
+    } catch {
       setMessages((prev) => prev.filter((m) => m.id !== tempUserMsg.id));
-      if (!overrideText) setInput(text);
-      Alert.alert('Chat Error', err?.message || 'Failed to get a response. Please try again.');
+      setInput(text);
+      Alert.alert('Oops', 'Failed to get a response. Please try again.');
     } finally {
       setSending(false);
-      scrollToBottom();
-    }
-  };
-
-  const handlePantrySuggestions = async () => {
-    if (sending || loadingSuggestions) return;
-    setLoadingSuggestions(true);
-
-    const tempUserMsg: ChatMessage = {
-      id: Date.now(),
-      role: 'user',
-      content: 'What can I cook with the items in my pantry?',
-      created_at: new Date().toISOString(),
-    };
-    setMessages((prev) => [...prev, tempUserMsg]);
-    scrollToBottom();
-
-    try {
-      await fetchPantrySuggestions();
-      const history = await fetchChatHistory();
-      setMessages(history);
-    } catch (err: any) {
-      setMessages((prev) => prev.filter((m) => m.id !== tempUserMsg.id));
-      Alert.alert('Chat Error', err?.message || 'Failed to get pantry suggestions. Please try again.');
-    } finally {
-      setLoadingSuggestions(false);
-      scrollToBottom();
-    }
-  };
-
-  const handleQuickAction = (action: typeof QUICK_ACTIONS[0]) => {
-    if (action.id === 'pantry') {
-      handlePantrySuggestions();
-    } else {
-      handleSend(action.message);
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      }, 150);
     }
   };
 
   const renderMessage = ({ item }: { item: ChatMessage }) => {
     const isUser = item.role === 'user';
     return (
-      <View
-        style={[
-          styles.messageBubbleRow,
-          isUser ? styles.userRow : styles.assistantRow,
-        ]}
-      >
+      <View style={[styles.messageBubbleRow, isUser ? styles.userRow : styles.assistantRow]}>
         {!isUser && (
           <View style={styles.avatarCircle}>
             <Ionicons name="restaurant-outline" size={16} color={colors.primary} />
           </View>
         )}
         <View
-          style={[
-            styles.messageBubble,
-            isUser ? styles.userBubble : styles.assistantBubble,
-          ]}
+          style={[styles.messageBubble, isUser ? styles.userBubble : styles.assistantBubble]}
           accessibilityRole="text"
           accessibilityLabel={`${isUser ? 'You' : 'Assistant'}: ${item.content}`}
         >
           {isUser ? (
-            <Text style={[styles.messageText, styles.userMessageText]}>
-              {item.content}
-            </Text>
+            <Text style={[styles.messageText, styles.userMessageText]}>{item.content}</Text>
           ) : (
             <Markdown style={markdownStyles}>{item.content}</Markdown>
           )}
@@ -180,38 +161,27 @@ export default function ChatScreen() {
     return (
       <View style={styles.emptyState}>
         <Ionicons name="restaurant-outline" size={56} color={colors.textTertiary} />
-        <Text style={styles.emptyTitle}>Your AI cooking assistant</Text>
-        <Text style={styles.emptySubtitle}>
-          Ask me anything about food, recipes, or tap a suggestion below to get started.
+        <Text style={styles.emptyTitle}>
+          {postContext ? 'Ask me anything about this post!' : 'Ask me anything about food and cooking!'}
         </Text>
-        <View style={styles.quickActionsGrid}>
-          {QUICK_ACTIONS.map((action) => (
-            <TouchableOpacity
-              key={action.id}
-              style={styles.quickActionChip}
-              onPress={() => handleQuickAction(action)}
-              disabled={sending || loadingSuggestions}
-              activeOpacity={0.75}
-            >
-              <Text style={styles.quickActionText}>{action.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        <Text style={styles.emptySubtitle}>
+          {postContext
+            ? 'I can help with substitutions, techniques, nutrition, and more.'
+            : 'I can help with recipes, ingredient substitutions, cooking techniques, and more.'}
+        </Text>
       </View>
     );
   };
 
-  const isBusy = sending || loadingSuggestions;
-
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Header */}
       <View style={styles.header}>
         <Ionicons name="chatbubble-ellipses" size={22} color={colors.white} />
-        <Text style={styles.headerTitle} accessibilityRole="header">
-          AI Chat
-        </Text>
+        <Text style={styles.headerTitle} accessibilityRole="header">AI Chat</Text>
       </View>
+
+      {/* Post context card */}
+      {postContext && <PostContextCard context={postContext} />}
 
       <KeyboardAvoidingView
         style={styles.flex}
@@ -242,8 +212,7 @@ export default function ChatScreen() {
           />
         )}
 
-        {/* Typing indicator */}
-        {isBusy && (
+        {sending && (
           <View style={styles.typingRow}>
             <View style={styles.avatarCircleSmall}>
               <Ionicons name="restaurant-outline" size={12} color={colors.primary} />
@@ -255,53 +224,27 @@ export default function ChatScreen() {
           </View>
         )}
 
-        {/* Quick action bar (shown when there are messages) */}
-        {messages.length > 0 && (
-          <View style={styles.quickActionsBar}>
-            <TouchableOpacity
-              style={styles.pantryChip}
-              onPress={handlePantrySuggestions}
-              disabled={isBusy}
-              activeOpacity={0.75}
-              accessibilityRole="button"
-              accessibilityLabel="Get pantry recipe suggestions"
-            >
-              <Ionicons name="basket-outline" size={14} color={colors.primary} />
-              <Text style={styles.pantryChipText}>Pantry Recipes</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* Input bar */}
         <View style={styles.inputBar}>
           <TextInput
             style={styles.textInput}
-            placeholder="Ask about food or cooking..."
+            placeholder={postContext ? 'Ask about this post...' : 'Ask about food or cooking...'}
             placeholderTextColor={colors.placeholder}
             value={input}
             onChangeText={setInput}
+            multiline
             maxLength={2000}
-            returnKeyType="send"
-            blurOnSubmit={false}
-            onSubmitEditing={() => handleSend()}
-            editable={!isBusy}
+            returnKeyType="default"
+            editable={!sending}
             accessibilityLabel="Chat message input"
           />
           <TouchableOpacity
-            style={[
-              styles.sendButton,
-              (!input.trim() || isBusy) && styles.sendButtonDisabled,
-            ]}
-            onPress={() => handleSend()}
-            disabled={!input.trim() || isBusy}
+            style={[styles.sendButton, (!input.trim() || sending) && styles.sendButtonDisabled]}
+            onPress={handleSend}
+            disabled={!input.trim() || sending}
             accessibilityRole="button"
             accessibilityLabel="Send message"
           >
-            <Ionicons
-              name="arrow-up"
-              size={20}
-              color={colors.white}
-            />
+            <Ionicons name="arrow-up" size={20} color={colors.white} />
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -325,13 +268,8 @@ const markdownStyles = StyleSheet.create({
 });
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.white,
-  },
-  flex: {
-    flex: 1,
-  },
+  container: { flex: 1, backgroundColor: colors.white },
+  flex: { flex: 1 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -340,202 +278,72 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
   },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.white,
-  },
-  centered: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  messageList: {
-    paddingHorizontal: 12,
-    paddingVertical: 16,
-    gap: 12,
-  },
-  emptyList: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  // Empty state
-  emptyState: {
-    alignItems: 'center',
-    paddingHorizontal: 32,
-    gap: 12,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.textPrimary,
-    textAlign: 'center',
-  },
-  emptySubtitle: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: 4,
-  },
-  quickActionsGrid: {
-    width: '100%',
-    gap: 10,
-    marginTop: 4,
-  },
-  quickActionChip: {
+  headerTitle: { fontSize: 18, fontWeight: '700', color: colors.white },
+  // Post context card
+  postContextCard: {
     backgroundColor: '#F0FDF4',
-    borderWidth: 1,
+    borderBottomWidth: 1,
     borderColor: '#BBF7D0',
-    borderRadius: 12,
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  quickActionText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: colors.primary,
-  },
-  // Quick action bar (inline, for when messages exist)
-  quickActionsBar: {
-    flexDirection: 'row',
-    paddingHorizontal: 12,
-    paddingBottom: 6,
-    gap: 8,
-  },
-  pantryChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: '#F0FDF4',
-    borderWidth: 1,
-    borderColor: '#BBF7D0',
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  pantryChipText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: colors.primary,
-  },
-  // Message rows
-  messageBubbleRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 8,
-  },
-  userRow: {
-    justifyContent: 'flex-end',
-  },
-  assistantRow: {
-    justifyContent: 'flex-start',
-  },
-  avatarCircle: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: '#F0FDF4',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 2,
-  },
-  // Bubbles
-  messageBubble: {
-    maxWidth: '75%',
-    borderRadius: 18,
-    paddingHorizontal: 14,
     paddingVertical: 10,
+    gap: 4,
   },
-  userBubble: {
-    backgroundColor: colors.primary,
-    borderBottomRightRadius: 4,
-  },
-  assistantBubble: {
-    backgroundColor: '#F3F4F6',
-    borderBottomLeftRadius: 4,
-  },
-  messageText: {
-    fontSize: 15,
-    lineHeight: 21,
-    color: colors.textPrimary,
-  },
-  userMessageText: {
-    color: colors.white,
-  },
-  timestamp: {
-    fontSize: 11,
-    color: colors.textTertiary,
-    marginTop: 4,
-    alignSelf: 'flex-end',
-  },
-  userTimestamp: {
-    color: 'rgba(255,255,255,0.7)',
-  },
-  // Typing indicator
-  typingRow: {
+  postContextIconRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  postContextLabel: { fontSize: 12, fontWeight: '600', color: colors.primary },
+  postContextUsername: { fontSize: 12, color: colors.textSecondary },
+  postContextCaption: { fontSize: 13, color: colors.textPrimary, fontStyle: 'italic' },
+  postContextRecipeBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingBottom: 8,
+    gap: 4,
+    marginTop: 2,
   },
+  postContextRecipeText: { fontSize: 11, color: colors.primary, fontWeight: '600' },
+  // Rest of styles
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  messageList: { paddingHorizontal: 12, paddingVertical: 16, gap: 12 },
+  emptyList: { flex: 1, justifyContent: 'center' },
+  emptyState: { alignItems: 'center', paddingHorizontal: 40, gap: 12 },
+  emptyTitle: { fontSize: 18, fontWeight: '600', color: colors.textPrimary, textAlign: 'center' },
+  emptySubtitle: { fontSize: 14, color: colors.textSecondary, textAlign: 'center', lineHeight: 20 },
+  messageBubbleRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8 },
+  userRow: { justifyContent: 'flex-end' },
+  assistantRow: { justifyContent: 'flex-start' },
+  avatarCircle: {
+    width: 30, height: 30, borderRadius: 15,
+    backgroundColor: '#F0FDF4', alignItems: 'center', justifyContent: 'center', marginBottom: 2,
+  },
+  messageBubble: { maxWidth: '75%', borderRadius: 18, paddingHorizontal: 14, paddingVertical: 10 },
+  userBubble: { backgroundColor: colors.primary, borderBottomRightRadius: 4 },
+  assistantBubble: { backgroundColor: '#F3F4F6', borderBottomLeftRadius: 4 },
+  messageText: { fontSize: 15, lineHeight: 21, color: colors.textPrimary },
+  userMessageText: { color: colors.white },
+  timestamp: { fontSize: 11, color: colors.textTertiary, marginTop: 4, alignSelf: 'flex-end' },
+  userTimestamp: { color: 'rgba(255,255,255,0.7)' },
+  typingRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingBottom: 8 },
   avatarCircleSmall: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#F0FDF4',
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 24, height: 24, borderRadius: 12,
+    backgroundColor: '#F0FDF4', alignItems: 'center', justifyContent: 'center',
   },
   typingBubble: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#F3F4F6',
-    borderRadius: 14,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: '#F3F4F6', borderRadius: 14, paddingHorizontal: 12, paddingVertical: 8,
   },
-  typingText: {
-    fontSize: 13,
-    color: colors.textTertiary,
-  },
-  // Input bar
+  typingText: { fontSize: 13, color: colors.textTertiary },
   inputBar: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderTopWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.white,
+    flexDirection: 'row', alignItems: 'flex-end', gap: 8,
+    paddingHorizontal: 12, paddingVertical: 10,
+    borderTopWidth: 1, borderColor: colors.border, backgroundColor: colors.white,
   },
   textInput: {
-    flex: 1,
-    minHeight: 40,
-    maxHeight: 120,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 10,
-    fontSize: 15,
-    color: colors.textPrimary,
-    backgroundColor: colors.backgroundSecondary,
+    flex: 1, minHeight: 40, maxHeight: 120,
+    borderWidth: 1, borderColor: colors.border, borderRadius: 20,
+    paddingHorizontal: 16, paddingTop: 10, paddingBottom: 10,
+    fontSize: 15, color: colors.textPrimary, backgroundColor: colors.backgroundSecondary,
   },
   sendButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center',
   },
-  sendButtonDisabled: {
-    opacity: 0.4,
-  },
+  sendButtonDisabled: { opacity: 0.4 },
 });

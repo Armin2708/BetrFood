@@ -18,11 +18,25 @@ async function handleResponse(response: Response) {
   }
 }
 
-export async function sendChatMessage(message: string): Promise<ChatMessage> {
+export interface PostContext {
+  postId?: string;
+  caption?: string;
+  username?: string;
+  tags?: string[];
+  recipe?: {
+    cookTime?: string;
+    servings?: number;
+    difficulty?: string;
+    ingredients?: string[];
+    steps?: string[];
+  } | null;
+}
+
+export async function sendChatMessage(message: string, postContext?: PostContext): Promise<ChatMessage> {
   const response = await fetch(`${API_BASE_URL}/api/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
-    body: JSON.stringify({ message }),
+    body: JSON.stringify({ message, postContext: postContext || null }),
   });
   await handleResponse(response);
   return response.json();
