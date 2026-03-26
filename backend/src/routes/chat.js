@@ -95,7 +95,7 @@ function getUserId(req) {
 // POST /api/chat — send a message, get AI response
 router.post('/', requireAuth, async (req, res) => {
   const userId = getUserId(req);
-  const { message } = req.body;
+  const { message, postContext } = req.body;
 
   if (!message || typeof message !== 'string' || !message.trim()) {
     return res.status(400).json({ error: 'message is required' });
@@ -126,7 +126,7 @@ router.post('/', requireAuth, async (req, res) => {
 
     // Check if pantry query with empty pantry — respond directly without AI
     const isPantryQuery = hasPantryIntent(message.trim());
-    if (isPantryQuery) {
+    if (isPantryQuery && !postContext) {
       const { data: pantryCheck } = await supabase
         .from('pantry_items')
         .select('id', { count: 'exact', head: true })
@@ -143,7 +143,26 @@ router.post('/', requireAuth, async (req, res) => {
       }
     }
 
-    const systemPrompt = await buildSystemPrompt(userId, isPantryQuery);
+    let systemPrompt = await buildSystemPrompt(userId, isPantryQuery);
+
+    // Inject post context if provided
+    if (postContext) {
+      let postSection = '\n\nThe user is asking about a specific post:';
+      if (postContext.username) postSection += `\nPosted by: ${postContext.username}`;
+      if (postContext.caption) postSection += `\nCaption: "${postContext.caption}"`;
+      if (postContext.tags?.length) postSection += `\nTags: ${postContext.tags.join(', ')}`;
+      if (postContext.recipe) {
+        const r = postContext.recipe;
+        postSection += '\nThis post includes a recipe:';
+        if (r.cookTime) postSection += `\n- Cook time: ${r.cookTime}`;
+        if (r.servings) postSection += `\n- Servings: ${r.servings}`;
+        if (r.difficulty) postSection += `\n- Difficulty: ${r.difficulty}`;
+        if (r.ingredients?.length) postSection += `\n- Ingredients: ${r.ingredients.join(', ')}`;
+        if (r.steps?.length) postSection += `\n- Steps: ${r.steps.map((s, i) => `${i + 1}. ${s}`).join(' ')}`;
+      }
+      postSection += '\n\nAnswer questions specifically about this post/recipe. If asked about substitutions, variations, or techniques related to it, give detailed helpful answers.';
+      systemPrompt += postSection;
+    }
 
     // Call OpenRouter API
     const response = await openai.chat.completions.create({
