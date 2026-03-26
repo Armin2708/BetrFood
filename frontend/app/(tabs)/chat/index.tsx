@@ -10,14 +10,16 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, router } from 'expo-router';
 import Markdown from 'react-native-markdown-display';
 import { colors } from '../../../constants/theme';
-import { ChatMessage, PostContext, sendChatMessage, fetchChatHistory } from '../../../services/api/chat';
+import { getImageUrl } from '../../../services/api';
+import { ChatMessage, PostContext, SuggestedPost, sendChatMessage, fetchChatHistory } from '../../../services/api/chat';
 
 function formatRelativeTime(dateString: string): string {
   const now = Date.now();
@@ -54,6 +56,35 @@ function PostContextCard({ context }: { context: PostContext }) {
         </View>
       )}
     </View>
+  );
+}
+
+// Suggested post card rendered inside assistant messages
+function SuggestedPostCard({ post }: { post: SuggestedPost }) {
+  const imageUri = post.imagePath ? getImageUrl(post.imagePath) : null;
+  return (
+    <TouchableOpacity
+      style={styles.suggestedCard}
+      onPress={() => router.push(`/post-detail?postId=${post.id}`)}
+      activeOpacity={0.8}
+      accessibilityRole="button"
+      accessibilityLabel={`View post: ${post.caption || 'Untitled'}`}
+    >
+      {imageUri ? (
+        <Image source={{ uri: imageUri }} style={styles.suggestedCardImage} resizeMode="cover" />
+      ) : (
+        <View style={[styles.suggestedCardImage, styles.suggestedCardImagePlaceholder]}>
+          <Ionicons name="image-outline" size={20} color={colors.textTertiary} />
+        </View>
+      )}
+      <View style={styles.suggestedCardInfo}>
+        <Text style={styles.suggestedCardCaption} numberOfLines={2}>
+          {post.caption || 'Untitled post'}
+        </Text>
+        <Text style={styles.suggestedCardUsername}>by {post.username}</Text>
+      </View>
+      <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+    </TouchableOpacity>
   );
 }
 
@@ -115,8 +146,15 @@ export default function ChatScreen() {
       // Only send postContext on the first message in a post-context session
       const isFirstMessage = messages.length === 0;
       const response = await sendChatMessage(text, isFirstMessage && postContext ? postContext : undefined);
+      // Reload history but preserve suggestedPosts from the live response
       const history = await fetchChatHistory();
-      setMessages(history.reverse());
+      const reversed = history.reverse();
+      // Attach suggestedPosts to the last assistant message if present
+      if (response.suggestedPosts?.length) {
+        const lastIdx = reversed.findIndex(m => m.role === 'assistant' && String(m.id) === String(response.id));
+        if (lastIdx >= 0) reversed[lastIdx] = { ...reversed[lastIdx], suggestedPosts: response.suggestedPosts };
+      }
+      setMessages(reversed);
     } catch {
       setMessages((prev) => prev.filter((m) => m.id !== tempUserMsg.id));
       setInput(text);
@@ -132,26 +170,36 @@ export default function ChatScreen() {
   const renderMessage = ({ item }: { item: ChatMessage }) => {
     const isUser = item.role === 'user';
     return (
-      <View style={[styles.messageBubbleRow, isUser ? styles.userRow : styles.assistantRow]}>
-        {!isUser && (
-          <View style={styles.avatarCircle}>
-            <Ionicons name="restaurant-outline" size={16} color={colors.primary} />
+      <View>
+        <View style={[styles.messageBubbleRow, isUser ? styles.userRow : styles.assistantRow]}>
+          {!isUser && (
+            <View style={styles.avatarCircle}>
+              <Ionicons name="restaurant-outline" size={16} color={colors.primary} />
+            </View>
+          )}
+          <View
+            style={[styles.messageBubble, isUser ? styles.userBubble : styles.assistantBubble]}
+            accessibilityRole="text"
+            accessibilityLabel={`${isUser ? 'You' : 'Assistant'}: ${item.content}`}
+          >
+            {isUser ? (
+              <Text style={[styles.messageText, styles.userMessageText]}>{item.content}</Text>
+            ) : (
+              <Markdown style={markdownStyles}>{item.content}</Markdown>
+            )}
+            <Text style={[styles.timestamp, isUser && styles.userTimestamp]}>
+              {formatRelativeTime(item.created_at)}
+            </Text>
+          </View>
+        </View>
+        {/* Suggested post cards below assistant messages */}
+        {!isUser && item.suggestedPosts && item.suggestedPosts.length > 0 && (
+          <View style={styles.suggestedPostsContainer}>
+            {item.suggestedPosts.map(post => (
+              <SuggestedPostCard key={post.id} post={post} />
+            ))}
           </View>
         )}
-        <View
-          style={[styles.messageBubble, isUser ? styles.userBubble : styles.assistantBubble]}
-          accessibilityRole="text"
-          accessibilityLabel={`${isUser ? 'You' : 'Assistant'}: ${item.content}`}
-        >
-          {isUser ? (
-            <Text style={[styles.messageText, styles.userMessageText]}>{item.content}</Text>
-          ) : (
-            <Markdown style={markdownStyles}>{item.content}</Markdown>
-          )}
-          <Text style={[styles.timestamp, isUser && styles.userTimestamp]}>
-            {formatRelativeTime(item.created_at)}
-          </Text>
-        </View>
       </View>
     );
   };
@@ -346,4 +394,45 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center',
   },
   sendButtonDisabled: { opacity: 0.4 },
+  // Suggested post cards
+  suggestedPostsContainer: {
+    marginLeft: 38,
+    marginTop: 6,
+    gap: 8,
+  },
+  suggestedCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    overflow: 'hidden',
+    padding: 8,
+    gap: 10,
+  },
+  suggestedCardImage: {
+    width: 52,
+    height: 52,
+    borderRadius: 8,
+    backgroundColor: colors.backgroundSecondary,
+  },
+  suggestedCardImagePlaceholder: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  suggestedCardInfo: {
+    flex: 1,
+    gap: 2,
+  },
+  suggestedCardCaption: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    lineHeight: 18,
+  },
+  suggestedCardUsername: {
+    fontSize: 12,
+    color: colors.textSecondary,
+  },
 });
