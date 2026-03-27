@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS user_preferences (
 );
 -- Add the column if the table already exists
 ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS expiring_items_threshold INTEGER DEFAULT 7;
-
+ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS expiration_notifications_enabled BOOLEAN DEFAULT false;
 -- ============================================================
 -- 3. Posts
 -- ============================================================

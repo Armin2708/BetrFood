@@ -9,6 +9,11 @@ import { AuthContext } from '../../context/AuthenticationContext';
 
 type IoniconName = ComponentProps<typeof Ionicons>['name'];
 
+const shouldHideTabs = (segments: string[]): boolean => {
+  const hiddenRoutes = ['settings', 'editProfile', 'FollowersScreen', 'FollowingScreen'];
+  return hiddenRoutes.some(route => segments.join('/').includes(route));
+};
+
 function TabIcon({ name, focusedName, color, focused }: { name: IoniconName; focusedName: IoniconName; color: string; focused: boolean }) {
   return (
     <View style={styles.tabIconWrap}>
@@ -41,6 +46,7 @@ export default function TabsLayout() {
   const router = useRouter();
   const segments = useSegments();
   const activeTab = segments[1] ?? 'feeds';
+  const hideTabs = shouldHideTabs(segments);
 
   useFocusEffect(
     useCallback(() => {
@@ -87,6 +93,7 @@ export default function TabsLayout() {
           tabBarActiveTintColor: '#FFFFFF',
           tabBarInactiveTintColor: 'rgba(255,255,255,0.55)',
           tabBarStyle: {
+            display: hideTabs ? 'none' : 'flex',
             backgroundColor: '#16A34A',
             borderTopWidth: 0,
             height: Platform.OS === 'ios' ? 88 : 68,
@@ -171,7 +178,7 @@ export default function TabsLayout() {
       </Tabs>
 
       {/* Floating Create Button — only on Home tab */}
-      {activeTab === 'feeds' && (
+      {activeTab === 'feeds' && !hideTabs && (
         <Pressable
           style={styles.fab}
           onPress={() => router.push('/create-post')}
