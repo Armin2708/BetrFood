@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import {
   View,
   Text,
@@ -7,36 +7,19 @@ import {
   TouchableOpacity,
   StyleSheet,
   RefreshControl,
+  ActivityIndicator,
 } from 'react-native';
-
-type Follower = {
-  id: string;
-  username: string;
-  name: string;
-  avatar: string;
-  isFollowingBack: boolean;
-};
-
-const initialFollowers: Follower[] = Array.from({length: 1000}, (_, i) => ({
-  id: i.toString(),
-  username: 'standinUser' + (i+1).toString(),
-  name: 'user' + (i+1).toString(),
-  avatar: `https://picsum.photos/id/${i+40}/60`,
-  isFollowingBack: i%4 === 0,
-})
-
-);
+import { AuthContext } from '../../../../context/AuthenticationContext';
+import { fetchFollowers, followUser, unfollowUser, type FollowerUser } from '../../../../services/api/follows';
 
 type FollowerRowProps = {
-  follower: Follower;
+  follower: FollowerUser;
   onToggleFollowBack: (id: string) => void;
-  onRemoveFollower: (id: string) => void;
 };
 
 const FollowerRow: React.FC<FollowerRowProps> = ({
   follower,
   onToggleFollowBack,
-  onRemoveFollower,
 }) => {
   return (
     <View style={styles.row}>
@@ -63,24 +46,38 @@ const FollowerRow: React.FC<FollowerRowProps> = ({
           {follower.isFollowingBack ? 'Following' : 'Follow Back'}
         </Text>
       </TouchableOpacity>
-
-      <TouchableOpacity
-        style={[styles.button, styles.remove]}
-        onPress={() => onRemoveFollower(follower.id)}
-      >
-        <Text style={[styles.buttonText, styles.removeText]}>
-          Remove
-        </Text>
-      </TouchableOpacity>
     </View>
   );
 };
 
 export default function FollowersScreen() {
-  const [followers, setFollowers] = useState<Follower[]>(initialFollowers);
-  const [refreshing, setRefreshing] = useState(false)
+  const { user } = useContext(AuthContext);
+  const [followers, setFollowers] = useState<FollowerUser[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const toggleFollowBack = (id: string) => {
+  const loadFollowers = async () => {
+    if (!user?.id) return;
+
+    try {
+      const data = await fetchFollowers(user.id);
+      setFollowers(data);
+    } catch (error) {
+      console.error('Error loading followers:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadFollowers();
+  }, [user?.id]);
+
+  const toggleFollowBack = async (id: string) => {
+    const followerToUpdate = followers.find(f => f.id === id);
+    if (!followerToUpdate) return;
+
+    // Optimistic update
     setFollowers(prev =>
       prev.map(f =>
         f.id === id
@@ -88,21 +85,39 @@ export default function FollowersScreen() {
           : f
       )
     );
+
+    try {
+      if (followerToUpdate.isFollowingBack) {
+        await unfollowUser(id);
+      } else {
+        await followUser(id);
+      }
+    } catch (error) {
+      console.error('Error toggling follow back:', error);
+      // Revert on error
+      setFollowers(prev =>
+        prev.map(f =>
+          f.id === id
+            ? { ...f, isFollowingBack: !f.isFollowingBack }
+            : f
+        )
+      );
+    }
   };
 
-  const removeFollower = (id: string) => {
-    setFollowers(prev => prev.filter(f => f.id !== id));
-  };
-
-  const onRefresh = () => {
+  const onRefresh = async () => {
     setRefreshing(true);
-
-    // TODO: for testing, replace with api call
-    setTimeout(() => {
-      console.log('"reload" complete');
-      setRefreshing(false);
-    }, 1000)
+    await loadFollowers();
+    setRefreshing(false);
   };
+
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <ActivityIndicator size="large" color="#0095f6" />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -116,9 +131,13 @@ export default function FollowersScreen() {
           <FollowerRow
             follower={item}
             onToggleFollowBack={toggleFollowBack}
-            onRemoveFollower={removeFollower}
           />
         )}
+        ListEmptyComponent={
+          <View style={styles.centered}>
+            <Text style={styles.emptyText}>No followers yet</Text>
+          </View>
+        }
       />
     </View>
   );
@@ -130,6 +149,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     paddingHorizontal: 16,
     paddingTop: 16,
+  },
+  centered: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 16,
+    color: 'gray',
+    marginTop: 40,
   },
   row: {
     flexDirection: 'row',
@@ -164,9 +192,6 @@ const styles = StyleSheet.create({
   following: {
     backgroundColor: '#eee',
   },
-  remove: {
-    backgroundColor: '#f2f2f2',
-  },
   buttonText: {
     fontWeight: '600',
     fontSize: 14,
@@ -175,9 +200,6 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   followingText: {
-    color: '#000',
-  },
-  removeText: {
     color: '#000',
   },
 });

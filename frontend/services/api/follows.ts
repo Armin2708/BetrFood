@@ -45,3 +45,41 @@ export async function fetchFollowStats(userId: string): Promise<{ userId: string
   }
   return response.json();
 }
+
+export type FollowerUser = {
+  id: string;
+  username: string;
+  name: string;
+  avatar: string;
+  isFollowingBack: boolean;
+};
+
+export type FollowingUser = {
+  id: string;
+  username: string;
+  name: string;
+  avatar: string;
+  isFollowing: boolean;
+};
+
+export async function fetchFollowers(userId: string): Promise<FollowerUser[]> {
+  const response = await fetch(`${API_BASE_URL}/api/users/${userId}/followers`, {
+    headers: await authHeaders(),
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to fetch followers');
+  }
+  return response.json();
+}
+
+export async function fetchFollowing(userId: string): Promise<FollowingUser[]> {
+  const response = await fetch(`${API_BASE_URL}/api/users/${userId}/following`, {
+    headers: await authHeaders(),
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to fetch following');
+  }
+  return response.json();
+}
