@@ -68,6 +68,20 @@ function stripCodeFences(raw) {
   return raw.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim();
 }
 
+function formatPantryItem(row) {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    name: row.name,
+    quantity: row.quantity,
+    unit: row.unit,
+    category: row.category,
+    expirationDate: row.expiration_date,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
 // ─── Vision routes (defined BEFORE /:id to avoid path conflicts) ─────────────
 
 // POST /api/pantry/identify — identify grocery items from a photo
@@ -236,7 +250,7 @@ router.get('/', requireAuth, async (req, res) => {
     .order('name', { ascending: true });
 
   if (error) return res.status(500).json({ error: error.message });
-  res.json(data || []);
+  res.json((data || []).map(formatPantryItem));
 });
 
 // GET /api/pantry/:id
@@ -250,7 +264,7 @@ router.get('/:id', requireAuth, async (req, res) => {
     .single();
 
   if (error) return res.status(404).json({ error: 'Not found' });
-  res.json(data);
+  res.json(formatPantryItem(data));
 });
 
 // POST /api/pantry
@@ -278,7 +292,7 @@ router.post('/', requireAuth, async (req, res) => {
     .single();
 
   if (error) return res.status(500).json({ error: error.message });
-  res.status(201).json(data);
+  res.status(201).json(formatPantryItem(data));
 });
 
 // PUT /api/pantry/:id
@@ -302,7 +316,7 @@ router.put('/:id', requireAuth, async (req, res) => {
     .single();
 
   if (error) return res.status(404).json({ error: 'Not found or no permission' });
-  res.json(data);
+  res.json(formatPantryItem(data));
 });
 
 // DELETE /api/pantry/:id

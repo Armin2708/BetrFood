@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { usePreferences } from '../context/PreferencesContext';
 import { PantryItem } from '../services/api';
 import { colors } from '../constants/theme';
 
@@ -10,20 +11,23 @@ interface PantryItemCardProps {
   onEdit: (item: PantryItem) => void;
 }
 
-function getExpirationStatus(expirationDate: string | null): {
+function getExpirationStatus(expirationDate: string | null, threshold: number | undefined): {
   label: string;
   color: string;
 } | null {
   if (!expirationDate) return null;
+
+  const [year, month, day] = expirationDate.split('T')[0].split('-').map(Number);
+  const exp = new Date(year, month - 1, day);
+
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const exp = new Date(expirationDate);
   exp.setHours(0, 0, 0, 0);
   const diffDays = Math.round((exp.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
   if (diffDays < 0) return { label: 'Expired', color: '#D32F2F' };
   if (diffDays === 0) return { label: 'Expires today', color: '#F57C00' };
-  if (diffDays <= 3) return { label: `Expires in ${diffDays}d`, color: '#F57C00' };
+  if (threshold && diffDays <= threshold) return { label: `Expires in ${diffDays}d`, color: '#F57C00' };
   return {
     label: exp.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }),
     color: colors.textTertiary,
@@ -31,7 +35,9 @@ function getExpirationStatus(expirationDate: string | null): {
 }
 
 export default function PantryItemCard({ item, onDelete, onEdit }: PantryItemCardProps) {
-  const expStatus = getExpirationStatus(item.expirationDate ?? null);
+  const { preferences } = usePreferences();
+  const threshold = preferences?.expiringItemsThreshold;
+  const expStatus = getExpirationStatus(item.expirationDate ?? null, threshold);
   const [confirmVisible, setConfirmVisible] = React.useState(false);
 
   const handleConfirmDelete = async () => {

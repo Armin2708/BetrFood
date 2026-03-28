@@ -44,7 +44,7 @@ router.get('/', requireAuth, async (req, res) => {
       cookingSkill: data.cooking_skill || 'beginner',
       maxCookTime: data.max_cook_time || null,
       expiringItemsThreshold: data.expiring_items_threshold || 7,
-      expirationNotificationsEnabled: data.expirationNotificationsEnabled || false
+      expirationNotificationsEnabled: data.expiration_notifications_enabled || false
     });
   } catch (error) {
     console.error('Error fetching preferences:', error);
