@@ -10,7 +10,7 @@ import { AuthContext } from '../../context/AuthenticationContext';
 type IoniconName = ComponentProps<typeof Ionicons>['name'];
 
 const shouldHideTabs = (segments: string[]): boolean => {
-  const hiddenRoutes = ['settings', 'editProfile', 'FollowersScreen', 'FollowingScreen'];
+  const hiddenRoutes = ['settings', 'editProfile', 'FollowersScreen', 'FollowingScreen', 'chat/[id]'];
   return hiddenRoutes.some(route => segments.join('/').includes(route));
 };
 
