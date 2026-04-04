@@ -19,13 +19,6 @@ interface PreferencesContextType {
   saving: boolean;
   loadPreferences: () => Promise<void>;
   updatePreferences: (updates: Partial<Preferences>) => Promise<void>;
-  toggleDietaryPreference: (item: string) => void;
-  toggleAllergy: (item: string) => void;
-  toggleCuisine: (item: string) => void;
-  setExpiringItemsThreshold: (days: number) => void;
-  setExpirationNotificationsEnabled: (enabled: boolean) => void;
-  setProfileVisibility: (visibility: "public" | "private") => void;
-  setDietaryInfoVisible: (visible: boolean) => void;
 }
 
 const PreferencesContext = createContext<PreferencesContextType | undefined>(
@@ -75,85 +68,17 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
   const updatePreferencesData = async (updates: Partial<Preferences>) => {
     setSaving(true);
     try {
-      await updatePreferences(updates);
+      const updatedPrefs = await updatePreferences(updates);
+      // Update context with the response from the server
       setPreferences((prev) => ({
         ...prev!,
-        ...updates,
+        ...updatedPrefs,
       }));
       Alert.alert("Saved", "Your preferences have been updated.");
     } catch {
       Alert.alert("Error", "Failed to save preferences. Please try again.");
     } finally {
       setSaving(false);
-    }
-  };
-
-  const toggleDietaryPreference = (item: string) => {
-    if (!preferences) return;
-    const updated = preferences.dietaryPreferences.includes(item)
-      ? preferences.dietaryPreferences.filter((i) => i !== item)
-      : [...preferences.dietaryPreferences, item];
-    setPreferences({
-      ...preferences,
-      dietaryPreferences: updated,
-    });
-  };
-
-  const toggleAllergy = (item: string) => {
-    if (!preferences) return;
-    const updated = preferences.allergies.includes(item)
-      ? preferences.allergies.filter((i) => i !== item)
-      : [...preferences.allergies, item];
-    setPreferences({
-      ...preferences,
-      allergies: updated,
-    });
-  };
-
-  const toggleCuisine = (item: string) => {
-    if (!preferences) return;
-    const updated = preferences.cuisines.includes(item)
-      ? preferences.cuisines.filter((i) => i !== item)
-      : [...preferences.cuisines, item];
-    setPreferences({
-      ...preferences,
-      cuisines: updated,
-    });
-  };
-
-  const setExpiringItemsThreshold = (days: number) => {
-    if (preferences) {
-      setPreferences({
-        ...preferences,
-        expiringItemsThreshold: days,
-      });
-    }
-  };
-
-  const setExpirationNotificationsEnabled = (enabled: boolean) => {
-    if (preferences) {
-      setPreferences({
-        ...preferences,
-        expirationNotificationsEnabled: enabled,
-      });
-    }
-  };
-
-  const setProfileVisibility = (visibility: "public" | "private") => {
-    if (preferences) {
-      setPreferences({
-        ...preferences,
-        profileVisibility: visibility,
-      });
-    }
-  };
-
-  const setDietaryInfoVisible = (visible: boolean) => {
-    if (preferences) {
-      setPreferences({
-        ...preferences,
-        dietaryInfoVisible: visible,
-      });
     }
   };
 
@@ -165,13 +90,6 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
         saving,
         loadPreferences: loadPreferencesData,
         updatePreferences: updatePreferencesData,
-        toggleDietaryPreference,
-        toggleAllergy,
-        toggleCuisine,
-        setExpiringItemsThreshold,
-        setExpirationNotificationsEnabled,
-        setProfileVisibility,
-        setDietaryInfoVisible,
       }}
     >
       {children}

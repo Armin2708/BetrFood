@@ -1,26 +1,73 @@
 import React, { useState, useEffect } from 'react';
 import { Image, View, StyleSheet, ViewStyle, Platform } from 'react-native';
-import * as VideoThumbnails from 'expo-video-thumbnails';
 import { Ionicons } from '@expo/vector-icons';
+
+let VideoThumbnails: typeof import('expo-video-thumbnails') | null = null;
+if (Platform.OS !== 'web') {
+  VideoThumbnails = require('expo-video-thumbnails');
+}
 
 interface VideoThumbnailProps {
   videoUri: string;
   style?: ViewStyle;
 }
 
+function getWebThumbnail(videoUri: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const video = document.createElement('video');
+    video.crossOrigin = 'anonymous';
+    video.muted = true;
+    video.preload = 'metadata';
+
+    video.onloadeddata = () => {
+      video.currentTime = 0.5;
+    };
+
+    video.onseeked = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(video, 0, 0);
+          resolve(canvas.toDataURL('image/jpeg', 0.7));
+        } else {
+          reject(new Error('No canvas context'));
+        }
+      } catch {
+        reject(new Error('Failed to capture frame'));
+      } finally {
+        video.remove();
+      }
+    };
+
+    video.onerror = () => {
+      video.remove();
+      reject(new Error('Video load failed'));
+    };
+
+    video.src = videoUri;
+    video.load();
+  });
+}
+
 export default function VideoThumbnailView({ videoUri, style }: VideoThumbnailProps) {
   const [thumbnail, setThumbnail] = useState<string | null>(null);
 
   useEffect(() => {
-    // expo-video-thumbnails is native only — skip on web
-    if (Platform.OS === 'web') return;
-
     let mounted = true;
-    VideoThumbnails.getThumbnailAsync(videoUri, { time: 1000 })
-      .then(({ uri }) => {
-        if (mounted) setThumbnail(uri);
-      })
-      .catch(() => {});
+
+    if (Platform.OS === 'web') {
+      getWebThumbnail(videoUri)
+        .then((uri) => { if (mounted) setThumbnail(uri); })
+        .catch(() => {});
+    } else if (VideoThumbnails) {
+      VideoThumbnails.getThumbnailAsync(videoUri, { time: 1000 })
+        .then(({ uri }) => { if (mounted) setThumbnail(uri); })
+        .catch(() => {});
+    }
+
     return () => { mounted = false; };
   }, [videoUri]);
 

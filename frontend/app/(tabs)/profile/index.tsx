@@ -140,7 +140,7 @@ export default function ProfileScreen() {
       {/* Followers / Following stats */}
       <View style={styles.followRow}>
         <Pressable
-          onPress={() => router.push('/profile/info/followersScreen')}
+          onPress={() => router.push('/profile/info/FollowersScreen')}
           style={styles.followItem}
           accessibilityLabel={`${followStats.followerCount} Followers`}
         >
@@ -149,7 +149,7 @@ export default function ProfileScreen() {
         </Pressable>
         <View style={styles.followSpacer} />
         <Pressable
-          onPress={() => router.push('/profile/info/followingScreen')}
+          onPress={() => router.push('/profile/info/FollowingScreen')}
           style={styles.followItem}
           accessibilityLabel={`${followStats.followingCount} Following`}
         >

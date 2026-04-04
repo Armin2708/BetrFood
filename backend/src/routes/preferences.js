@@ -29,17 +29,22 @@ router.get('/', requireAuth, async (req, res) => {
       });
     }
 
+    // Normalize allergies to string array for frontend compatibility
+    const allergies = Array.isArray(data.allergies) 
+      ? data.allergies.map(a => typeof a === 'object' ? a.name : a)
+      : [];
+
     res.json({
       userId: data.user_id,
       dietaryPreferences: data.dietary_preferences || [],
-      allergies: data.allergies || [],
+      allergies,
       cuisines: data.cuisines || [],
       profileVisibility: data.profile_visibility || 'public',
       dietaryInfoVisible: data.dietary_info_visible !== false,
       cookingSkill: data.cooking_skill || 'beginner',
       maxCookTime: data.max_cook_time || null,
       expiringItemsThreshold: data.expiring_items_threshold || 7,
-      expirationNotificationsEnabled: data.expirationNotificationsEnabled || false
+      expirationNotificationsEnabled: data.expiration_notifications_enabled || false
     });
   } catch (error) {
     console.error('Error fetching preferences:', error);
@@ -68,19 +73,23 @@ router.put('/', requireAuth, async (req, res) => {
       if (!Array.isArray(allergies)) {
         return res.status(400).json({ error: 'allergies must be an array.' });
       }
-      const validSeverities = ['mild', 'moderate', 'severe'];
-      for (const allergy of allergies) {
-        if (typeof allergy !== 'object' || !allergy.name) {
-          return res.status(400).json({ error: 'Each allergy must be an object with a "name" field.' });
+      // Accept both string arrays and object arrays for backward compatibility
+      const normalizedAllergies = allergies.map(allergy => {
+        if (typeof allergy === 'string') {
+          // Convert string to object format
+          return { name: allergy, severity: 'moderate' };
+        } else if (typeof allergy === 'object' && allergy.name) {
+          // Already in object format, validate severity
+          const validSeverities = ['mild', 'moderate', 'severe'];
+          if (allergy.severity && !validSeverities.includes(allergy.severity)) {
+            return res.status(400).json({ error: 'Allergy severity must be "mild", "moderate", or "severe".' });
+          }
+          return { name: allergy.name, severity: allergy.severity || 'moderate' };
+        } else {
+          return res.status(400).json({ error: 'Each allergy must be a string or an object with a "name" field.' });
         }
-        if (allergy.severity && !validSeverities.includes(allergy.severity)) {
-          return res.status(400).json({ error: 'Allergy severity must be "mild", "moderate", or "severe".' });
-        }
-        if (!allergy.severity) {
-          allergy.severity = 'moderate';
-        }
-      }
-      updates.allergies = allergies;
+      });
+      updates.allergies = normalizedAllergies;
     }
 
     if (cuisines !== undefined) {
@@ -142,10 +151,15 @@ router.put('/', requireAuth, async (req, res) => {
 
     if (error) throw error;
 
+    // Normalize allergies to string array for frontend compatibility
+    const allergyData = Array.isArray(data.allergies)
+      ? data.allergies.map(a => typeof a === 'object' ? a.name : a)
+      : [];
+
     res.json({
       userId: data.user_id,
       dietaryPreferences: data.dietary_preferences || [],
-      allergies: data.allergies || [],
+      allergies: allergyData,
       cuisines: data.cuisines || [],
       profileVisibility: data.profile_visibility || 'public',
       dietaryInfoVisible: data.dietary_info_visible !== false,

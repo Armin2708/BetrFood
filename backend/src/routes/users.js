@@ -211,4 +211,112 @@ router.get("/:id/follow-status", requireAuth, async (req, res) => {
   }
 });
 
+// GET /api/users/:id/followers (auth required) - list of users who follow the target user
+router.get("/:id/followers", requireAuth, async (req, res) => {
+  const targetUserId = req.params.id;
+  const currentUserId = req.userId;
+
+  try {
+    // Get all follower IDs for the target user
+    const { data: followRelations, error: followError } = await supabase
+      .from("user_follows")
+      .select("follower_id")
+      .eq("following_id", targetUserId);
+
+    if (followError) throw followError;
+
+    const followerIds = (followRelations || []).map(f => f.follower_id);
+
+    if (followerIds.length === 0) {
+      return res.json([]);
+    }
+
+    // Get user profiles for all followers
+    const { data: followerProfiles, error: profileError } = await supabase
+      .from("user_profiles")
+      .select("id, username, display_name, avatar_url")
+      .in("id", followerIds);
+
+    if (profileError) throw profileError;
+
+    // Get the list of users that the current user is following to determine isFollowingBack
+    const { data: currentUserFollowing, error: followingError } = await supabase
+      .from("user_follows")
+      .select("following_id")
+      .eq("follower_id", currentUserId);
+
+    if (followingError) throw followingError;
+
+    const followingIds = new Set((currentUserFollowing || []).map(f => f.following_id));
+
+    // Format the response
+    const formattedFollowers = (followerProfiles || []).map(profile => ({
+      id: profile.id,
+      username: profile.username || '',
+      name: profile.display_name || '',
+      avatar: profile.avatar_url || '',
+      isFollowingBack: followingIds.has(profile.id),
+    }));
+
+    res.json(formattedFollowers);
+  } catch (error) {
+    console.error("Error fetching followers:", error);
+    res.status(500).json({ error: "Failed to fetch followers." });
+  }
+});
+
+// GET /api/users/:id/following (auth required) - list of users that the target user follows
+router.get("/:id/following", requireAuth, async (req, res) => {
+  const targetUserId = req.params.id;
+  const currentUserId = req.userId;
+
+  try {
+    // Get all following IDs for the target user
+    const { data: followRelations, error: followError } = await supabase
+      .from("user_follows")
+      .select("following_id")
+      .eq("follower_id", targetUserId);
+
+    if (followError) throw followError;
+
+    const followingUserIds = (followRelations || []).map(f => f.following_id);
+
+    if (followingUserIds.length === 0) {
+      return res.json([]);
+    }
+
+    // Get user profiles for all users being followed
+    const { data: followingProfiles, error: profileError } = await supabase
+      .from("user_profiles")
+      .select("id, username, display_name, avatar_url")
+      .in("id", followingUserIds);
+
+    if (profileError) throw profileError;
+
+    // Get the list of users that the current user is following to determine isFollowing
+    const { data: currentUserFollowing, error: followingError } = await supabase
+      .from("user_follows")
+      .select("following_id")
+      .eq("follower_id", currentUserId);
+
+    if (followingError) throw followingError;
+
+    const currentUserFollowingIds = new Set((currentUserFollowing || []).map(f => f.following_id));
+
+    // Format the response
+    const formattedFollowing = (followingProfiles || []).map(profile => ({
+      id: profile.id,
+      username: profile.username || '',
+      name: profile.display_name || '',
+      avatar: profile.avatar_url || '',
+      isFollowing: currentUserFollowingIds.has(profile.id),
+    }));
+
+    res.json(formattedFollowing);
+  } catch (error) {
+    console.error("Error fetching following:", error);
+    res.status(500).json({ error: "Failed to fetch following." });
+  }
+});
+
 module.exports = router;

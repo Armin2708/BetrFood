@@ -37,58 +37,115 @@ const UNCATEGORIZED_LABEL = 'Uncategorized';
 // empty categories are always shown as gaps.
 const ALL_SUMMARY_CATEGORIES = [...CATEGORIES, UNCATEGORIZED_LABEL];
 
-// ─── Add Item Modal ────────────────────────────────────────────────────────────
+// ─── Pantry Item Modal ────────────────────────────────────────────────────────────
 
-function AddItemModal({
+function PantryItemModal({
   visible,
+  item,
   onClose,
   onAdd,
+  onSave,
 }: {
   visible: boolean;
+  item: PantryItem | null; // null => add mode, non-null => edit mode
   onClose: () => void;
   onAdd: (item: PantryItemInput) => Promise<void>;
+  onSave: (id: string, updates: Partial<PantryItemInput>) => Promise<void>;
 }) {
+  const isEdit = !!item;
+
   const [name, setName] = useState('');
   const [quantity, setQuantity] = useState('');
   const [unit, setUnit] = useState('');
   const [category, setCategory] = useState(CATEGORIES[0]);
   const [expirationDate, setExpirationDate] = useState('');
+  const [month, setMonth] = useState('');
+  const [day, setDay] = useState('');
+  const [year, setYear] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const reset = () => {
+  const reset = useCallback(() => {
     setName('');
     setQuantity('');
     setUnit('');
     setCategory(CATEGORIES[0]);
     setExpirationDate('');
-  };
+    setYear('');
+    setMonth('');
+    setDay('');
+  }, []);
 
-  const handleAdd = async () => {
-    if (!name.trim()) return Alert.alert('Required', 'Please enter an item name.');
+  useEffect(() => {
+    if (!visible) return;
+
+    if (item) {
+      setName(item.name);
+      setQuantity(String(item.quantity));
+      setUnit(item.unit);
+      setCategory(CATEGORIES.includes(item.category) ? item.category : CATEGORIES[0]);
+
+      if (item.expirationDate) {
+        const timestamp = item.expirationDate.split(/[T ]/)[0]
+        const [y, m, d] = timestamp.split('-');
+        setYear(y || '');
+        setMonth(m || '');
+        setDay(d || '');
+        setExpirationDate(item.expirationDate);
+      } else {
+        setYear('');
+        setMonth('');
+        setDay('');
+        setExpirationDate('');
+      }
+    } else {
+      reset();
+    }
+  }, [visible, item, reset]);
+
+  const handleSubmit = async () => {
+    if (!name.trim()) return Alert.alert('Required', isEdit ? 'Item name cannot be empty.' : 'Please enter an item name.');
     const qty = parseFloat(quantity);
     if (isNaN(qty) || qty < 0) return Alert.alert('Invalid', 'Please enter a valid quantity.');
     if (!unit.trim()) return Alert.alert('Required', 'Please enter a unit (e.g. cups, lbs, pcs).');
 
-    if (expirationDate.trim()) {
-      const d = new Date(expirationDate.trim());
-      if (isNaN(d.getTime())) {
-        return Alert.alert('Invalid Date', 'Enter expiration date as YYYY-MM-DD.');
+    let formattedDate: string | null = null;
+
+    if (month || day || year) {
+      if (!month || !day || !year) {
+        return Alert.alert('Invalid Date', 'Please fill out month, day, and year.');
       }
+
+      const mm = month.padStart(2, '0');
+      const dd = day.padStart(2, '0');
+      const yyyy = year;
+
+      const constructed = `${yyyy}-${mm}-${dd}`;
+      const d = new Date(constructed);
+
+      if (isNaN(d.getTime())) {
+        return Alert.alert('Invalid Date', 'Please enter a valid date.');
+      }
+
+      formattedDate = constructed;
     }
+
+    const payload: PantryItemInput = {
+      name: name.trim(),
+      quantity: qty,
+      unit: unit.trim(),
+      category,
+      expirationDate: formattedDate || null,
+    };
 
     setSaving(true);
     try {
-      await onAdd({
-        name: name.trim(),
-        quantity: qty,
-        unit: unit.trim(),
-        category,
-        expirationDate: expirationDate.trim() || null,
-      });
+      if (item) await onSave(item.id, payload);
+      else await onAdd(payload);
+
       reset();
       onClose();
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to add item.');
+      Alert.alert('Error', error.message || (isEdit ? 'Failed to save changes.' : 'Failed to add item.'));
     } finally {
       setSaving(false);
     }
@@ -102,7 +159,9 @@ function AddItemModal({
           style={styles.modalOverlay}
         >
           <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
-            <Text style={styles.sheetTitle} accessibilityRole="header">Add Pantry Item</Text>
+            <Text style={styles.sheetTitle} accessibilityRole="header">
+              {isEdit ? 'Edit Item' : 'Add Pantry Item'}
+            </Text>
 
             <TextInput
               style={styles.input}
@@ -110,6 +169,7 @@ function AddItemModal({
               value={name}
               onChangeText={setName}
               accessibilityLabel="Item name"
+              autoFocus={isEdit}
             />
 
             <View style={styles.row}>
@@ -148,181 +208,52 @@ function AddItemModal({
               ))}
             </View>
 
-            <TextInput
-              style={styles.input}
-              placeholder="Expiration date (YYYY-MM-DD, optional)"
-              value={expirationDate}
-              onChangeText={setExpirationDate}
-              accessibilityLabel="Expiration date"
-            />
-
-            <TouchableOpacity
-              style={[styles.addButton, saving && styles.addButtonDisabled]}
-              onPress={handleAdd}
-              disabled={saving}
-              accessibilityRole="button"
-              accessibilityLabel="Add item to pantry"
-            >
-              {saving ? (
-                <ActivityIndicator color={colors.white} />
-              ) : (
-                <Text style={styles.addButtonText}>Add Item</Text>
-              )}
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={() => { reset(); onClose(); }}
-              accessibilityRole="button"
-              accessibilityLabel="Cancel"
-            >
-              <Text style={styles.cancelText}>Cancel</Text>
-            </TouchableOpacity>
-          </Pressable>
-        </KeyboardAvoidingView>
-      </Pressable>
-    </Modal>
-  );
-}
-
-// ─── Edit Item Modal ───────────────────────────────────────────────────────────
-
-function EditItemModal({
-  visible,
-  item,
-  onClose,
-  onSave,
-}: {
-  visible: boolean;
-  item: PantryItem | null;
-  onClose: () => void;
-  onSave: (id: string, updates: Partial<PantryItemInput>) => Promise<void>;
-}) {
-  const [name, setName] = useState('');
-  const [quantity, setQuantity] = useState('');
-  const [unit, setUnit] = useState('');
-  const [category, setCategory] = useState(CATEGORIES[0]);
-  const [expirationDate, setExpirationDate] = useState('');
-  const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    if (item) {
-      setName(item.name);
-      setQuantity(String(item.quantity));
-      setUnit(item.unit);
-      setCategory(CATEGORIES.includes(item.category) ? item.category : CATEGORIES[0]);
-      setExpirationDate(item.expirationDate ?? '');
-    }
-  }, [item]);
-
-  const handleSave = async () => {
-    if (!name.trim()) return Alert.alert('Required', 'Item name cannot be empty.');
-    const qty = parseFloat(quantity);
-    if (isNaN(qty) || qty < 0) return Alert.alert('Invalid', 'Please enter a valid quantity.');
-    if (!unit.trim()) return Alert.alert('Required', 'Please enter a unit (e.g. cups, lbs, pcs).');
-
-    if (expirationDate.trim()) {
-      const d = new Date(expirationDate.trim());
-      if (isNaN(d.getTime())) {
-        return Alert.alert('Invalid Date', 'Enter expiration date as YYYY-MM-DD.');
-      }
-    }
-
-    if (!item) return;
-    setSaving(true);
-    try {
-      await onSave(item.id, {
-        name: name.trim(),
-        quantity: qty,
-        unit: unit.trim(),
-        category,
-        expirationDate: expirationDate.trim() || null,
-      });
-      onClose();
-    } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to save changes.');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <Modal visible={visible} animationType="slide" transparent>
-      <Pressable style={styles.modalOverlay} onPress={onClose}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.modalOverlay}
-        >
-          <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
-            <Text style={styles.sheetTitle} accessibilityRole="header">Edit Item</Text>
-
-            <TextInput
-              style={styles.input}
-              placeholder="Item name *"
-              value={name}
-              onChangeText={setName}
-              accessibilityLabel="Item name"
-              autoFocus
-            />
-
+            <Text style={styles.fieldLabel}>Expiration Date (optional)</Text>
             <View style={styles.row}>
               <TextInput
                 style={[styles.input, styles.inputFlex]}
-                placeholder="Qty *"
-                value={quantity}
-                onChangeText={setQuantity}
-                keyboardType="decimal-pad"
-                accessibilityLabel="Quantity"
+                placeholder="MM"
+                value={month}
+                onChangeText={setMonth}
+                keyboardType="number-pad"
+                maxLength={2}
+                accessibilityLabel="Expiration month"
               />
               <TextInput
                 style={[styles.input, styles.inputFlex]}
-                placeholder="Unit *"
-                value={unit}
-                onChangeText={setUnit}
-                accessibilityLabel="Unit"
+                placeholder="DD"
+                value={day}
+                onChangeText={setDay}
+                keyboardType="number-pad"
+                maxLength={2}
+                accessibilityLabel="Expiration day"
+              />
+              <TextInput
+                style={[styles.input, styles.inputFlex]}
+                placeholder="YYYY"
+                value={year}
+                onChangeText={setYear}
+                keyboardType="number-pad"
+                maxLength={4}
+                accessibilityLabel="Expiration year"
               />
             </View>
 
-            <Text style={styles.fieldLabel}>Category</Text>
-            <View style={styles.chipRow}>
-              {CATEGORIES.map((cat) => (
-                <TouchableOpacity
-                  key={cat}
-                  style={[styles.chip, category === cat && styles.chipSelected]}
-                  onPress={() => setCategory(cat)}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: category === cat }}
-                  accessibilityLabel={cat}
-                >
-                  <Text style={[styles.chipText, category === cat && styles.chipTextSelected]}>
-                    {cat}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            <TextInput
-              style={styles.input}
-              placeholder="Expiration date (YYYY-MM-DD, optional)"
-              value={expirationDate}
-              onChangeText={setExpirationDate}
-              accessibilityLabel="Expiration date"
-            />
-
             <TouchableOpacity
               style={[styles.addButton, saving && styles.addButtonDisabled]}
-              onPress={handleSave}
+              onPress={handleSubmit}
               disabled={saving}
               accessibilityRole="button"
-              accessibilityLabel="Save changes"
+              accessibilityLabel={isEdit ? 'Save changes' : 'Add item to pantry'}
             >
               {saving ? (
                 <ActivityIndicator color={colors.white} />
               ) : (
-                <Text style={styles.addButtonText}>Save Changes</Text>
+                <Text style={styles.addButtonText}>{isEdit ? 'Save Changes' : 'Add Item'}</Text>
               )}
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={onClose} accessibilityRole="button" accessibilityLabel="Cancel edit">
+            <TouchableOpacity onPress={() => { reset(); onClose(); }} accessibilityRole="button" accessibilityLabel="Cancel">
               <Text style={styles.cancelText}>Cancel</Text>
             </TouchableOpacity>
           </Pressable>
@@ -708,7 +639,13 @@ export default function PantryScreen() {
         />
       );
     }
-    return <PantryItemCard item={row.item} onDelete={removeItem} onEdit={(item) => setEditingItem(item)} />;
+    return <PantryItemCard 
+      item={row.item} 
+      onDelete={removeItem} 
+      onEdit={(item) => {
+        setEditingItem(item)
+        setModalVisible(false)
+      }} />;
   };
 
   return (
@@ -800,8 +737,8 @@ export default function PantryScreen() {
             onClear={() => setSelectedCategory(null)}
             availableCategories={availableCategories}
           />
-          {!hasActiveFilter && <ExpiringSoonSection items={items} threshold={expiringItemsThreshold} />}
           {!hasActiveFilter && <ViewToggle grouped={groupedView} onToggle={() => setGroupedView((v) => !v)} />}
+          {!hasActiveFilter && <ExpiringSoonSection items={items} threshold={expiringItemsThreshold} />}
           <FlatList
             data={activeListData}
             keyExtractor={(row) => row.key}
@@ -824,10 +761,16 @@ export default function PantryScreen() {
         </>
       )}
 
-      <AddItemModal visible={modalVisible} onClose={() => setModalVisible(false)} onAdd={async (item) => {
-  await addItem(item);
-}} />
-      <EditItemModal visible={editingItem !== null} item={editingItem} onClose={() => setEditingItem(null)} onSave={editItem} />
+      <PantryItemModal
+        visible={modalVisible || editingItem !== null}
+        item={editingItem}
+        onClose={() => {
+          setModalVisible(false);
+          setEditingItem(null);
+        }}
+        onAdd={addItem}
+        onSave={editItem}
+      />
 
       {/* Scan Photo Modal */}
       <Modal visible={scanModalVisible} animationType="fade" transparent>

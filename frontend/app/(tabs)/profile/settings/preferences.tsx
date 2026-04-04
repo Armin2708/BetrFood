@@ -7,8 +7,11 @@ import {
   ActivityIndicator,
   Switch,
 } from "react-native";
+import { useState, useEffect } from "react";
+import { useFocusEffect } from "@react-navigation/native";
+import { useCallback } from "react";
 import { colors } from "../../../../constants/theme"
-import { usePreferences } from "../../../../context/PreferencesContext";
+import { usePreferences, Preferences } from "../../../../context/PreferencesContext";
 import {
   requestNotificationPermission,
   cancelAllExpiryNotifications,
@@ -88,63 +91,117 @@ function ChipGroup({
 
 export default function FoodPreferences() {
   const {
-    preferences,
+    preferences: contextPreferences,
     loading,
     saving,
     updatePreferences,
-    toggleDietaryPreference,
-    toggleAllergy,
-    toggleCuisine,
-    setExpiringItemsThreshold,
-    setExpirationNotificationsEnabled,
   } = usePreferences();
 
-  // Handle the notification toggle — request permissions when enabling,
-  // cancel all notifications when disabling.
+  // Local state for editing - separate from global context
+  const [localPreferences, setLocalPreferences] = useState<Preferences | null>(null);
+
+  // Initialize local state from context preferences when they load or change
+  useEffect(() => {
+    if (contextPreferences) {
+      setLocalPreferences({ ...contextPreferences });
+    }
+  }, [contextPreferences]);
+
+  // Reset local state to database values when screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      if (contextPreferences) {
+        setLocalPreferences({ ...contextPreferences });
+      }
+    }, [contextPreferences])
+  );
+
+  // Local toggle handlers
+  const toggleDietaryPreference = (item: string) => {
+    if (!localPreferences) return;
+    const updated = localPreferences.dietaryPreferences.includes(item)
+      ? localPreferences.dietaryPreferences.filter((i) => i !== item)
+      : [...localPreferences.dietaryPreferences, item];
+    setLocalPreferences({
+      ...localPreferences,
+      dietaryPreferences: updated,
+    });
+  };
+
+  const toggleAllergy = (item: string) => {
+    if (!localPreferences) return;
+    const updated = localPreferences.allergies.includes(item)
+      ? localPreferences.allergies.filter((i) => i !== item)
+      : [...localPreferences.allergies, item];
+    setLocalPreferences({
+      ...localPreferences,
+      allergies: updated,
+    });
+  };
+
+  const toggleCuisine = (item: string) => {
+    if (!localPreferences) return;
+    const updated = localPreferences.cuisines.includes(item)
+      ? localPreferences.cuisines.filter((i) => i !== item)
+      : [...localPreferences.cuisines, item];
+    setLocalPreferences({
+      ...localPreferences,
+      cuisines: updated,
+    });
+  };
+
   const handleNotificationToggle = async (value: boolean) => {
     if (value) {
       const granted = await requestNotificationPermission();
       if (!granted) {
         return;
       }
-      setExpirationNotificationsEnabled(value);
-    } else {
-      await cancelAllExpiryNotifications();
-      setExpirationNotificationsEnabled(value);
     }
-    await updatePreferences({
-      expirationNotificationsEnabled: value,
-    });
+    if (localPreferences) {
+      setLocalPreferences({
+        ...localPreferences,
+        expirationNotificationsEnabled: value,
+      });
+    }
   };
 
-  // When threshold changes, reschedule all existing notifications
-  const handleThresholdChange = async (days: number) => {
-    setExpiringItemsThreshold(days);
-    if (preferences?.expirationNotificationsEnabled) {
-      try {
-        const items = await fetchPantryItems();
-        await scheduleExpiryNotifications(items, true, days);
-      } catch {
-        // Non-critical — notifications will reschedule on next app load
-      }
+  const handleThresholdChange = (days: number) => {
+    if (localPreferences) {
+      setLocalPreferences({
+        ...localPreferences,
+        expiringItemsThreshold: days,
+      });
     }
-    await updatePreferences({
-      expiringItemsThreshold: days,
-    });
   };
 
   const handleSave = async () => {
-    if (!preferences) return;
+    if (!localPreferences) return;
+    
+    // Handle notification-specific actions before saving
+    if (localPreferences.expirationNotificationsEnabled) {
+      // Reschedule notifications with the new threshold
+      try {
+        const items = await fetchPantryItems();
+        await scheduleExpiryNotifications(items, true, localPreferences.expiringItemsThreshold);
+      } catch {
+        // Non-critical — notifications will reschedule on next app load
+      }
+    } else {
+      // Cancel all notifications if disabled
+      await cancelAllExpiryNotifications();
+    }
+    
+    // Save all preferences at once - this will update the context
     await updatePreferences({
-      dietaryPreferences: preferences.dietaryPreferences,
-      allergies: preferences.allergies,
-      cuisines: preferences.cuisines,
-      expiringItemsThreshold: preferences.expiringItemsThreshold,
-      expirationNotificationsEnabled: preferences.expirationNotificationsEnabled,
+      dietaryPreferences: localPreferences.dietaryPreferences,
+      allergies: localPreferences.allergies,
+      cuisines: localPreferences.cuisines,
+      expiringItemsThreshold: localPreferences.expiringItemsThreshold,
+      expirationNotificationsEnabled: localPreferences.expirationNotificationsEnabled,
     });
   };
 
-  if (loading || !preferences) {
+  if (loading || !localPreferences) {
     return (
       <View style={[styles.container, styles.centered]}>
         <ActivityIndicator size="large" color="#007AFF" />
@@ -157,21 +214,21 @@ export default function FoodPreferences() {
       <ChipGroup
         label="Dietary Preferences"
         options={DIETARY_OPTIONS}
-        selected={preferences.dietaryPreferences}
+        selected={localPreferences.dietaryPreferences}
         onToggle={toggleDietaryPreference}
       />
 
       <ChipGroup
         label="Food Allergies"
         options={ALLERGY_OPTIONS}
-        selected={preferences.allergies}
+        selected={localPreferences.allergies}
         onToggle={toggleAllergy}
       />
 
       <ChipGroup
         label="Favorite Cuisines"
         options={CUISINE_OPTIONS}
-        selected={preferences.cuisines}
+        selected={localPreferences.cuisines}
         onToggle={toggleCuisine}
       />
 
@@ -188,7 +245,7 @@ export default function FoodPreferences() {
             </Text>
           </View>
           <Switch
-            value={preferences.expirationNotificationsEnabled}
+            value={localPreferences.expirationNotificationsEnabled}
             onValueChange={handleNotificationToggle}
             trackColor={{ false: '#ddd', true: colors.primary }}
             thumbColor="#fff"
@@ -198,11 +255,11 @@ export default function FoodPreferences() {
         </View>
 
         {/* Threshold picker — only shown when notifications are enabled */}
-        {preferences.expirationNotificationsEnabled && (
+        {localPreferences.expirationNotificationsEnabled && (
           <View style={styles.thresholdSection}>
             <Text style={styles.settingLabel}>
               Notify me when items expire within:{' '}
-              <Text style={styles.settingValue}>{preferences.expiringItemsThreshold} days</Text>
+              <Text style={styles.settingValue}>{localPreferences.expiringItemsThreshold} days</Text>
             </Text>
             <View style={styles.sliderButtonContainer}>
               {[3, 7, 14, 30].map((days) => (
@@ -210,17 +267,17 @@ export default function FoodPreferences() {
                   key={days}
                   style={[
                     styles.thresholdButton,
-                    preferences.expiringItemsThreshold === days && styles.thresholdButtonActive,
+                    localPreferences.expiringItemsThreshold === days && styles.thresholdButtonActive,
                   ]}
                   onPress={() => handleThresholdChange(days)}
                   accessibilityRole="button"
-                  accessibilityState={{ selected: preferences.expiringItemsThreshold === days }}
+                  accessibilityState={{ selected: localPreferences.expiringItemsThreshold === days }}
                   accessibilityLabel={`Notify ${days} days before expiry`}
                 >
                   <Text
                     style={[
                       styles.thresholdButtonText,
-                      preferences.expiringItemsThreshold === days && styles.thresholdButtonTextActive,
+                      localPreferences.expiringItemsThreshold === days && styles.thresholdButtonTextActive,
                     ]}
                   >
                     {days}d

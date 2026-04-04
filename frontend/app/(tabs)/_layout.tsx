@@ -1,7 +1,7 @@
 import { Tabs, Redirect, useRouter, useSegments } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ComponentProps, useState, useCallback, useContext } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, Pressable, Platform } from 'react-native';
 import { useAuth } from "@clerk/clerk-expo";
 import { useFocusEffect } from '@react-navigation/native';
 import { fetchUnreadNotificationCount } from '../../services/api';
@@ -9,15 +9,32 @@ import { AuthContext } from '../../context/AuthenticationContext';
 
 type IoniconName = ComponentProps<typeof Ionicons>['name'];
 
-function NotificationIcon({ color, size, badge }: { color: string; size: number; badge: number }) {
+const shouldHideTabs = (segments: string[]): boolean => {
+  const hiddenRoutes = ['settings', 'editProfile', 'FollowersScreen', 'FollowingScreen', 'chat/[id]'];
+  return hiddenRoutes.some(route => segments.join('/').includes(route));
+};
+
+function TabIcon({ name, focusedName, color, focused }: { name: IoniconName; focusedName: IoniconName; color: string; focused: boolean }) {
   return (
-    <View>
-      <Ionicons name={'notifications-outline' as IoniconName} size={size} color={color} />
-      {badge > 0 && (
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>{badge > 99 ? '99+' : badge}</Text>
-        </View>
-      )}
+    <View style={styles.tabIconWrap}>
+      {focused && <View style={styles.activeIndicator} />}
+      <Ionicons name={focused ? focusedName : name} size={22} color={color} />
+    </View>
+  );
+}
+
+function NotificationIcon({ color, focused, badge }: { color: string; focused: boolean; badge: number }) {
+  return (
+    <View style={styles.tabIconWrap}>
+      {focused && <View style={styles.activeIndicator} />}
+      <View>
+        <Ionicons name={focused ? 'notifications' : 'notifications-outline'} size={22} color={color} />
+        {badge > 0 && (
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>{badge > 99 ? '99+' : badge}</Text>
+          </View>
+        )}
+      </View>
     </View>
   );
 }
@@ -29,6 +46,7 @@ export default function TabsLayout() {
   const router = useRouter();
   const segments = useSegments();
   const activeTab = segments[1] ?? 'feeds';
+  const hideTabs = shouldHideTabs(segments);
 
   useFocusEffect(
     useCallback(() => {
@@ -73,19 +91,30 @@ export default function TabsLayout() {
         screenOptions={{
           headerShown: false,
           tabBarActiveTintColor: '#FFFFFF',
-          tabBarInactiveTintColor: 'rgba(255,255,255,0.6)',
+          tabBarInactiveTintColor: 'rgba(255,255,255,0.55)',
           tabBarStyle: {
-            backgroundColor: '#22C55E',
+            display: hideTabs ? 'none' : 'flex',
+            backgroundColor: '#16A34A',
             borderTopWidth: 0,
-            height: 80,
-            paddingBottom: 20,
-            paddingTop: 8,
+            height: Platform.OS === 'ios' ? 88 : 68,
+            paddingBottom: Platform.OS === 'ios' ? 28 : 10,
+            paddingTop: 6,
             elevation: 0,
             shadowOpacity: 0,
+            borderTopLeftRadius: 20,
+            borderTopRightRadius: 20,
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            bottom: 0,
           },
           tabBarLabelStyle: {
             fontSize: 10,
-            fontWeight: '700',
+            fontWeight: '600',
+            letterSpacing: 0.2,
+          },
+          tabBarItemStyle: {
+            paddingTop: 4,
           },
         }}
       >
@@ -93,8 +122,8 @@ export default function TabsLayout() {
           name="feeds"
           options={{
             title: 'Home',
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name={'home' as IoniconName} size={size} color={color} />
+            tabBarIcon: ({ color, focused }) => (
+              <TabIcon name="home-outline" focusedName="home" color={color} focused={focused} />
             ),
           }}
         />
@@ -102,9 +131,9 @@ export default function TabsLayout() {
         <Tabs.Screen
           name="notifications"
           options={{
-            title: 'Notifications',
-            tabBarIcon: ({ color, size }) => (
-              <NotificationIcon color={color} size={size} badge={unreadCount} />
+            title: 'Activity',
+            tabBarIcon: ({ color, focused }) => (
+              <NotificationIcon color={color} focused={focused} badge={unreadCount} />
             ),
           }}
           listeners={{
@@ -121,8 +150,8 @@ export default function TabsLayout() {
           name="chat"
           options={{
             title: 'Chat',
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name={'chatbubble-ellipses-outline' as IoniconName} size={size} color={color} />
+            tabBarIcon: ({ color, focused }) => (
+              <TabIcon name="chatbubble-ellipses-outline" focusedName="chatbubble-ellipses" color={color} focused={focused} />
             ),
           }}
         />
@@ -131,8 +160,8 @@ export default function TabsLayout() {
           name="pantry"
           options={{
             title: 'Pantry',
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name={'basket-outline' as IoniconName} size={size} color={color} />
+            tabBarIcon: ({ color, focused }) => (
+              <TabIcon name="basket-outline" focusedName="basket" color={color} focused={focused} />
             ),
           }}
         />
@@ -141,22 +170,22 @@ export default function TabsLayout() {
           name="profile"
           options={{
             title: 'Profile',
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name={'person' as IoniconName} size={size} color={color} />
+            tabBarIcon: ({ color, focused }) => (
+              <TabIcon name="person-outline" focusedName="person" color={color} focused={focused} />
             ),
           }}
         />
       </Tabs>
 
       {/* Floating Create Button — only on Home tab */}
-      {activeTab === 'feeds' && (
+      {activeTab === 'feeds' && !hideTabs && (
         <Pressable
           style={styles.fab}
           onPress={() => router.push('/create-post')}
           accessibilityRole="button"
           accessibilityLabel="Create post"
         >
-          <Ionicons name="add" size={28} color="#FFFFFF" />
+          <Ionicons name="add" size={26} color="#16A34A" />
         </Pressable>
       )}
     </View>
@@ -164,37 +193,47 @@ export default function TabsLayout() {
 }
 
 const styles = StyleSheet.create({
+  tabIconWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  activeIndicator: {
+    position: 'absolute',
+    top: -8,
+    width: 20,
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: '#FFFFFF',
+  },
   badge: {
     position: 'absolute',
-    right: -8,
-    top: -4,
+    right: -9,
+    top: -5,
     backgroundColor: '#FFFFFF',
-    borderRadius: 9,
-    minWidth: 18,
-    height: 18,
+    borderRadius: 8,
+    minWidth: 16,
+    height: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 4,
+    paddingHorizontal: 3,
   },
   badgeText: {
-    color: '#22C55E',
-    fontSize: 10,
-    fontWeight: '700',
+    color: '#16A34A',
+    fontSize: 9,
+    fontWeight: '800',
   },
   fab: {
     position: 'absolute',
-    bottom: 96,
+    bottom: Platform.OS === 'ios' ? 104 : 80,
     right: 20,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#22C55E',
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
+    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+    elevation: 8,
   },
 });

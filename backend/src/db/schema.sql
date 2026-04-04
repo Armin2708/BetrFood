@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS user_preferences (
 );
 -- Add the column if the table already exists
 ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS expiring_items_threshold INTEGER DEFAULT 7;
-
+ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS expiration_notifications_enabled BOOLEAN DEFAULT false;
 -- ============================================================
 -- 3. Posts
 -- ============================================================
@@ -252,11 +252,22 @@ CREATE INDEX IF NOT EXISTS idx_pantry_items_name ON pantry_items(name);
 -- ============================================================
 -- 14. Chat Messages
 -- ============================================================
+CREATE TABLE IF NOT EXISTS chat_conversations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id TEXT NOT NULL,
+  title TEXT DEFAULT 'New Chat',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_chat_conversations_user_id ON chat_conversations(user_id);
+
 CREATE TABLE IF NOT EXISTS chat_messages (
   id SERIAL PRIMARY KEY,
   user_id TEXT NOT NULL,
+  conversation_id UUID REFERENCES chat_conversations(id) ON DELETE CASCADE,
   role TEXT NOT NULL CHECK (role IN ('user', 'assistant')),
   content TEXT NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_chat_messages_user_id ON chat_messages(user_id);
+CREATE INDEX IF NOT EXISTS idx_chat_messages_conversation_id ON chat_messages(conversation_id);

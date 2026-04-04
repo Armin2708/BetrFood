@@ -16,10 +16,13 @@ function getExpirationStatus(expirationDate: string | null): {
 } | null {
   if (!expirationDate) return null;
 
+  const [year, month, day] = expirationDate.split('T')[0].split('-').map(Number);
+  const exp = new Date(year, month - 1, day);
+
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const exp = new Date(expirationDate);
   exp.setHours(0, 0, 0, 0);
+  
   const diffDays = Math.round((exp.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
   if (diffDays < 0) {
@@ -45,8 +48,10 @@ export default function ExpiringSoonSection({ items, threshold }: ExpiringSoonSe
       return status.isExpired || status.daysUntilExpiry <= threshold;
     })
     .sort((a, b) => {
-      const aExp = new Date(a.expirationDate || '');
-      const bExp = new Date(b.expirationDate || '');
+      const [aYear, aMonth, aDay] = (a.expirationDate || '').split('T')[0].split('-').map(Number);
+      const [bYear, bMonth, bDay] = (b.expirationDate || '').split('T')[0].split('-').map(Number);
+      const aExp = new Date(aYear, aMonth - 1, aDay);
+      const bExp = new Date(bYear, bMonth - 1, bDay);
       return aExp.getTime() - bExp.getTime();
     });
 
@@ -110,7 +115,7 @@ export default function ExpiringSoonSection({ items, threshold }: ExpiringSoonSe
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: colors.backgroundSecondary,
+    backgroundColor: '#ffa8d4',
     borderBottomWidth: 1,
     borderColor: colors.border,
   },
@@ -144,7 +149,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: colors.backgroundPrimary,
+    backgroundColor: '#ffe0f0',
     borderBottomWidth: 1,
     borderColor: colors.borderLight,
     paddingHorizontal: 16,

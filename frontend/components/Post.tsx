@@ -1,13 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useContext } from 'react';
 import SaveCollectionModal from "./SaveCollectionModal";
 import * as Clipboard from 'expo-clipboard';
-import { useActionSheet } from '@expo/react-native-action-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Collection, useCollections } from "../context/CollectionsContext";
-import { Tag, Recipe, deletePost, fetchRecipe, likePost, unlikePost, reportContent } from '../services/api';
+import { Tag, Recipe, Comment, deletePost, fetchRecipe, likePost, unlikePost, reportContent, fetchComments, createComment, deleteComment, checkSaveStatus } from '../services/api';
 import TagDisplay from './TagDisplay';
 import RecipeDisplay from './RecipeDisplay';
+import { useVideoPlayer, VideoView } from 'expo-video';
 import { colors } from '../constants/theme';
+import { AuthContext } from '../context/AuthenticationContext';
 import {
   View,
   Text,
@@ -19,6 +20,12 @@ import {
   Animated,
   Modal,
   Pressable,
+  TextInput,
+  ActivityIndicator,
+  FlatList,
+  Dimensions,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { router } from 'expo-router';
 
@@ -40,6 +47,7 @@ interface PostProps {
   verified?: boolean;
   mediaType?: 'image' | 'video';
   commentCount?: number;
+  hasRecipe?: boolean;
   // Pantry match props
   isPantryMatch?: boolean;
   pantryMatchedCount?: number;
@@ -64,6 +72,7 @@ export default function Post({
   verified = false,
   mediaType,
   commentCount,
+  hasRecipe,
   isPantryMatch,
   pantryMatchedCount,
   pantryMissingCount,
@@ -79,42 +88,212 @@ export default function Post({
   const [reportModalVisible, setReportModalVisible] = useState(false);
   const [reportReason, setReportReason] = useState<string | null>(null);
   const [recipe, setRecipe] = useState<Recipe | null>(null);
+  const [avatarError, setAvatarError] = useState(false);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [commentTotal, setCommentTotal] = useState(0);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [commentsOffset, setCommentsOffset] = useState(0);
+  const [hasMoreComments, setHasMoreComments] = useState(false);
+  const [commentText, setCommentText] = useState('');
+  const [submittingComment, setSubmittingComment] = useState(false);
+  const [replyTarget, setReplyTarget] = useState<Comment | null>(null);
+  const [showComments, setShowComments] = useState(false);
+  const [commentsModalVisible, setCommentsModalVisible] = useState(false);
+  const commentSlideAnim = useRef(new Animated.Value(Dimensions.get('window').height)).current;
+  const [shareModalVisible, setShareModalVisible] = useState(false);
+  const [shareModalShown, setShareModalShown] = useState(false);
+  const shareSlideAnim = useRef(new Animated.Value(Dimensions.get('window').height)).current;
+  const [menuModalShown, setMenuModalShown] = useState(false);
+  const [menuModalVisible, setMenuModalVisible] = useState(false);
+  const menuSlideAnim = useRef(new Animated.Value(Dimensions.get('window').height)).current;
+  const commentInputRef = useRef<TextInput>(null);
+  const { user } = useContext(AuthContext);
+
+  const COMMENTS_LIMIT = 20;
 
   const { savePostToCollection, collections, fetchPostsForCollection, removePostFromCollection } = useCollections();
 
   useEffect(() => {
-    if (id) {
-      fetchRecipe(id).then(setRecipe).catch(() => {});
+    if (id && hasRecipe !== false) {
+      fetchRecipe(id).then(r => { if (r) setRecipe(r); }).catch(() => {});
     }
+  }, [id, hasRecipe]);
+
+  const loadComments = async (offset: number) => {
+    if (!id) return;
+    try {
+      setCommentsLoading(true);
+      const data = await fetchComments(id, offset, COMMENTS_LIMIT);
+      if (offset === 0) {
+        setComments(data.comments);
+      } else {
+        setComments((prev) => [...prev, ...data.comments]);
+      }
+      setCommentTotal(data.total);
+      setCommentsOffset(offset + data.comments.length);
+      setHasMoreComments(offset + data.comments.length < data.total);
+    } catch {
+      // silently fail
+    } finally {
+      setCommentsLoading(false);
+    }
+  };
+
+  const handleOpenComments = () => {
+    if (comments.length === 0) {
+      loadComments(0);
+    }
+    setCommentsModalVisible(true);
+    setShowComments(true);
+    Animated.spring(commentSlideAnim, {
+      toValue: 0,
+      useNativeDriver: true,
+      speed: 14,
+      bounciness: 4,
+    }).start();
+  };
+
+  const handleCloseComments = () => {
+    Animated.timing(commentSlideAnim, {
+      toValue: Dimensions.get('window').height,
+      duration: 250,
+      useNativeDriver: true,
+    }).start(() => {
+      setCommentsModalVisible(false);
+      setShowComments(false);
+      setReplyTarget(null);
+    });
+  };
+
+  const handleSubmitComment = async () => {
+    if (!id || !commentText.trim() || submittingComment) return;
+    try {
+      setSubmittingComment(true);
+      await createComment(id, commentText.trim(), replyTarget?.id);
+      setCommentText('');
+      setReplyTarget(null);
+      await loadComments(0);
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to post comment.');
+    } finally {
+      setSubmittingComment(false);
+    }
+  };
+
+  const handleDeleteComment = (commentId: string) => {
+    Alert.alert('Delete Comment', 'Are you sure you want to delete this comment?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await deleteComment(commentId);
+            await loadComments(0);
+          } catch (error: any) {
+            Alert.alert('Error', error.message || 'Failed to delete comment.');
+          }
+        },
+      },
+    ]);
+  };
+
+  const handleReply = (comment: Comment) => {
+    setReplyTarget(comment);
+    setTimeout(() => commentInputRef.current?.focus(), 100);
+  };
+
+  const formatCommentTime = (dateString: string) => {
+    const now = new Date();
+    const date = new Date(dateString);
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 1) return 'just now';
+    if (diffMins < 60) return `${diffMins}m`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours}h`;
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffDays < 7) return `${diffDays}d`;
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
+
+  const renderComment = (comment: Comment, depth: number = 0) => {
+    const isCommentOwner = user && user.id === comment.userId;
+    const maxIndent = 3;
+    const indentLevel = Math.min(depth, maxIndent);
+
+    return (
+      <View key={comment.id}>
+        <View style={[styles.commentItem, { marginLeft: indentLevel * 24 }]}>
+          <TouchableOpacity
+            onPress={() => router.push(`/feeds/user-profile?userId=${comment.userId}`)}
+            accessibilityRole="button"
+            accessibilityLabel={`View ${comment.displayName || comment.username || 'user'}'s profile`}
+          >
+            {comment.avatarUrl ? (
+              <Image source={{ uri: comment.avatarUrl }} style={styles.commentAvatar} />
+            ) : (
+              <View style={[styles.commentAvatar, styles.commentAvatarPlaceholder]}>
+                <Text style={styles.commentAvatarText}>
+                  {(comment.displayName || comment.username || '?').charAt(0).toUpperCase()}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+
+          <View style={styles.commentBody}>
+            <View style={styles.commentHeader}>
+              <TouchableOpacity
+                onPress={() => router.push(`/feeds/user-profile?userId=${comment.userId}`)}
+                accessibilityRole="button"
+                accessibilityLabel={`View ${comment.displayName || comment.username || 'user'}'s profile`}
+              >
+                <Text style={styles.commentUsername}>
+                  {comment.displayName || comment.username || 'User'}
+                </Text>
+              </TouchableOpacity>
+              {comment.verified && <Text style={styles.commentVerifiedBadge}>{'\u2713'}</Text>}
+              <Text style={styles.commentTime}>{formatCommentTime(comment.createdAt)}</Text>
+            </View>
+
+            <Text style={styles.commentContent}>{comment.content}</Text>
+
+            <View style={styles.commentActions}>
+              <TouchableOpacity onPress={() => handleReply(comment)} style={styles.commentActionBtn} accessibilityRole="button" accessibilityLabel={`Reply to ${comment.displayName || comment.username || 'user'}`}>
+                <Text style={styles.commentActionText}>Reply</Text>
+              </TouchableOpacity>
+              {isCommentOwner && (
+                <TouchableOpacity
+                  onPress={() => handleDeleteComment(comment.id)}
+                  style={styles.commentActionBtn}
+                  accessibilityRole="button"
+                  accessibilityLabel="Delete comment"
+                >
+                  <Text style={[styles.commentActionText, styles.commentDeleteText]}>Delete</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        </View>
+
+        {comment.replies && comment.replies.length > 0 &&
+          comment.replies.map((reply) => renderComment(reply, depth + 1))
+        }
+      </View>
+    );
+  };
+
+  // Check if this post is saved (lightweight single API call)
+  useEffect(() => {
+    if (!id) return;
+    let cancelled = false;
+    checkSaveStatus(id)
+      .then(({ isSaved }) => { if (!cancelled) setSaved(isSaved); })
+      .catch(() => {});
+    return () => { cancelled = true; };
   }, [id]);
 
-  // Check if this post is saved in any collection
-  useEffect(() => {
-    if (!id || collections.length === 0) return;
-    let cancelled = false;
-    const checkSaved = async () => {
-      try {
-        const matched: Collection[] = [];
-        for (const collection of collections) {
-          const posts = await fetchPostsForCollection(collection.id);
-          if (posts.some((p: any) => p.id === id)) {
-            matched.push(collection);
-          }
-        }
-        if (!cancelled) {
-          setSavedInCollections(matched);
-          setSaved(matched.length > 0);
-        }
-      } catch {
-        // silently ignore
-      }
-    };
-    checkSaved();
-    return () => { cancelled = true; };
-  }, [id, collections]);
-
   const scaleAnim = React.useRef(new Animated.Value(1)).current;
-  const { showActionSheetWithOptions } = useActionSheet();
 
   const isOwner = currentUserId && userId && currentUserId === userId;
 
@@ -146,10 +325,23 @@ export default function Post({
     }
   };
 
-  const handleSavePress = () => {
+  const handleSavePress = async () => {
     if (!saved) {
       setCollectionModalVisible(true);
     } else {
+      // Lazily load which collections this post is in
+      if (id && collections.length > 0) {
+        try {
+          const matched: Collection[] = [];
+          for (const collection of collections) {
+            const posts = await fetchPostsForCollection(collection.id);
+            if (posts.some((p: any) => p.id === id)) {
+              matched.push(collection);
+            }
+          }
+          setSavedInCollections(matched);
+        } catch {}
+      }
       setRemoveCollectionModalVisible(true);
     }
   };
@@ -203,7 +395,7 @@ export default function Post({
   const handleExternalShare = async () => {
     try {
       await Share.share({
-        message: `Check out this post from ${username}: betrfood://posts/${id}`,
+        message: `Check out this post from ${username}: ${process.env.EXPO_PUBLIC_APP_URL || 'http://localhost:8081'}/post-detail?postId=${id}`,
       });
     } catch {
       Alert.alert('Error', 'Could not share the post.');
@@ -211,7 +403,7 @@ export default function Post({
   };
 
   const handleCopyLink = async () => {
-    const link = `betrfood://posts/${id}`;
+    const link = `${process.env.EXPO_PUBLIC_APP_URL || 'http://localhost:8081'}/post-detail?postId=${id}`;
     await Clipboard.setStringAsync(link);
     Alert.alert('Link Copied', 'The post link has been copied to your clipboard.');
   };
@@ -235,33 +427,47 @@ export default function Post({
     }
   };
 
-  const showPostMenu = () => {
-    if (isOwner) {
-      const options = ['Edit', 'Delete', 'Report', 'Cancel'];
-      showActionSheetWithOptions(
-        { options, cancelButtonIndex: 3, destructiveButtonIndex: 1 },
-        (index) => {
-          if (index === 0) router.push(`/edit-post?postId=${id}`);
-          if (index === 1) handleDelete();
-          if (index === 2) handleReport();
-        }
-      );
-    } else {
-      const options = ['Report', 'Cancel'];
-      showActionSheetWithOptions(
-        { options, cancelButtonIndex: 1, destructiveButtonIndex: 0 },
-        (index) => {
-          if (index === 0) handleReport();
-        }
-      );
-    }
+  const handleOpenMenu = () => {
+    setMenuModalShown(true);
+    setMenuModalVisible(true);
+    Animated.spring(menuSlideAnim, {
+      toValue: 0,
+      useNativeDriver: true,
+      speed: 14,
+      bounciness: 4,
+    }).start();
   };
 
-  const showShareMenu = () => {
-    const options = ['Share Externally', 'Copy Link', 'Cancel'];
-    showActionSheetWithOptions({ options, cancelButtonIndex: 2 }, (index) => {
-      if (index === 0) handleExternalShare();
-      if (index === 1) handleCopyLink();
+  const handleCloseMenu = () => {
+    Animated.timing(menuSlideAnim, {
+      toValue: Dimensions.get('window').height,
+      duration: 250,
+      useNativeDriver: true,
+    }).start(() => {
+      setMenuModalShown(false);
+      setMenuModalVisible(false);
+    });
+  };
+
+  const handleOpenShare = () => {
+    setShareModalShown(true);
+    setShareModalVisible(true);
+    Animated.spring(shareSlideAnim, {
+      toValue: 0,
+      useNativeDriver: true,
+      speed: 14,
+      bounciness: 4,
+    }).start();
+  };
+
+  const handleCloseShare = () => {
+    Animated.timing(shareSlideAnim, {
+      toValue: Dimensions.get('window').height,
+      duration: 250,
+      useNativeDriver: true,
+    }).start(() => {
+      setShareModalShown(false);
+      setShareModalVisible(false);
     });
   };
 
@@ -276,18 +482,31 @@ export default function Post({
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.headerUserInfo}
-          onPress={() => userId && router.push(`/feeds/user-profile?userId=${userId}`)}
+          onPress={() => {
+            if (!userId) return;
+            if (currentUserId && currentUserId === userId) {
+              router.push('/(tabs)/profile');
+            } else {
+              router.push(`/feeds/user-profile?userId=${userId}`);
+            }
+          }}
           activeOpacity={0.7}
           accessibilityRole="button"
           accessibilityLabel={`View ${username}'s profile`}
         >
-          <Image source={{ uri: profilePic }} style={styles.profilePic} />
+          {!avatarError ? (
+            <Image source={{ uri: profilePic }} style={styles.profilePic} onError={() => setAvatarError(true)} />
+          ) : (
+            <View style={[styles.profilePic, styles.profilePicFallback]}>
+              <Text style={styles.profilePicFallbackText}>{(username || '?').charAt(0).toUpperCase()}</Text>
+            </View>
+          )}
           <Text style={styles.username}>{username}</Text>
           {verified && <Text style={styles.verifiedBadge}>{'\u2713'}</Text>}
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.menuButton}
-          onPress={showPostMenu}
+          onPress={handleOpenMenu}
           accessibilityRole="button"
           accessibilityLabel="Post options"
         >
@@ -295,13 +514,11 @@ export default function Post({
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity
-        activeOpacity={0.9}
-        onPress={() => id && router.push(`/post-detail?postId=${id}`)}
-        accessibilityLabel={`Post by ${username}: ${caption?.substring(0, 80) || 'photo'}`}
-      >
-        <Image source={{ uri: postImage }} style={styles.postImage} />
-      </TouchableOpacity>
+      {mediaType === 'video' ? (
+        <PostVideo uri={postImage} />
+      ) : (
+        <Image source={{ uri: postImage }} style={styles.postImage} accessibilityLabel={`Post by ${username}: ${caption?.substring(0, 80) || 'photo'}`} />
+      )}
 
       <View style={styles.actions}>
         <TouchableOpacity
@@ -323,6 +540,15 @@ export default function Post({
         </TouchableOpacity>
 
         <TouchableOpacity
+          onPress={handleOpenComments}
+          style={styles.actionButton}
+          accessibilityRole="button"
+          accessibilityLabel={`${commentCount ?? commentTotal} comments`}
+        >
+          <Ionicons name="chatbubble-outline" size={22} color={colors.textPrimary} />
+        </TouchableOpacity>
+
+        <TouchableOpacity
           onPress={handleSavePress}
           style={styles.actionButton}
           accessibilityRole="button"
@@ -337,7 +563,7 @@ export default function Post({
         </TouchableOpacity>
 
         <TouchableOpacity
-          onPress={showShareMenu}
+          onPress={handleOpenShare}
           style={styles.actionButton}
           accessibilityRole="button"
           accessibilityLabel="Share post"
@@ -353,20 +579,9 @@ export default function Post({
         {likeCount} {likeCount === 1 ? 'like' : 'likes'}
       </Text>
 
-      <TouchableOpacity
-        activeOpacity={0.8}
-        onPress={() => id && router.push(`/post-detail?postId=${id}`)}
-        accessibilityLabel={`${username}: ${caption}`}
-      >
-        <Text style={styles.caption}>
-          <Text style={styles.captionUsername}>{username} </Text>{caption}
-        </Text>
-      </TouchableOpacity>
-      {editedAt && (
-        <Text style={styles.editedLabel}>
-          <Ionicons name="pencil-outline" size={11} color={colors.textQuaternary} /> Edited {new Date(editedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}
-        </Text>
-      )}
+      <Text style={styles.caption}>
+        <Text style={styles.captionUsername}>{username} </Text>{caption}
+      </Text>
 
       {tags && tags.length > 0 && <TagDisplay tags={tags} />}
 
@@ -405,6 +620,219 @@ export default function Post({
       )}
 
       {recipe && <RecipeDisplay recipe={recipe} />}
+
+      {/* View comments link */}
+      {(commentCount ?? commentTotal) > 0 && (
+        <TouchableOpacity onPress={handleOpenComments} style={styles.viewCommentsButton}>
+          <Text style={styles.viewCommentsText}>
+            View {commentCount ?? commentTotal} {(commentCount ?? commentTotal) === 1 ? 'comment' : 'comments'}
+          </Text>
+        </TouchableOpacity>
+      )}
+
+      {/* Comments Bottom Sheet Modal */}
+      <Modal
+        visible={commentsModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={handleCloseComments}
+      >
+        <Pressable style={styles.commentsModalOverlay} onPress={handleCloseComments}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={styles.commentsModalKeyboard}
+          >
+            <Animated.View style={[styles.commentsModalSheet, { transform: [{ translateY: commentSlideAnim }] }]}>
+              <Pressable onPress={(e) => e.stopPropagation()}>
+                {/* Drag handle */}
+                <View style={styles.commentsModalHandle} />
+
+                {/* Header */}
+                <View style={styles.commentsModalHeader}>
+                  <Text style={styles.commentsModalTitle}>Comments</Text>
+                  <TouchableOpacity onPress={handleCloseComments} style={styles.commentsModalClose}>
+                    <Ionicons name="close" size={24} color={colors.textPrimary} />
+                  </TouchableOpacity>
+                </View>
+              </Pressable>
+
+              {/* Comments list */}
+              <FlatList
+                data={comments}
+                keyExtractor={(item) => item.id}
+                renderItem={({ item }) => renderComment(item, 0)}
+                style={styles.commentsModalList}
+                contentContainerStyle={styles.commentsModalListContent}
+                ListEmptyComponent={
+                  !commentsLoading ? (
+                    <Text style={styles.noCommentsText}>No comments yet. Be the first to comment!</Text>
+                  ) : null
+                }
+                ListFooterComponent={
+                  <>
+                    {commentsLoading && (
+                      <ActivityIndicator size="small" color={colors.primary} style={styles.commentsLoader} />
+                    )}
+                    {hasMoreComments && !commentsLoading && (
+                      <TouchableOpacity onPress={() => loadComments(commentsOffset)} style={styles.loadMoreButton}>
+                        <Text style={styles.loadMoreText}>Load more comments</Text>
+                      </TouchableOpacity>
+                    )}
+                  </>
+                }
+              />
+
+              {/* Comment Input */}
+              <View style={styles.commentsModalInputContainer}>
+                {replyTarget && (
+                  <View style={styles.replyIndicator}>
+                    <Text style={styles.replyIndicatorText} numberOfLines={1}>
+                      Replying to @{replyTarget.username || replyTarget.displayName || 'User'}
+                    </Text>
+                    <TouchableOpacity onPress={() => setReplyTarget(null)}>
+                      <Text style={styles.replyCancel}>Cancel</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+                <View style={styles.commentInputRow}>
+                  <TextInput
+                    ref={commentInputRef}
+                    style={styles.commentInput}
+                    placeholder="Add a comment..."
+                    placeholderTextColor={colors.placeholder}
+                    value={commentText}
+                    onChangeText={setCommentText}
+                    multiline
+                    maxLength={1000}
+                  />
+                  <TouchableOpacity
+                    onPress={handleSubmitComment}
+                    disabled={!commentText.trim() || submittingComment}
+                    style={[styles.sendButton, (!commentText.trim() || submittingComment) && styles.sendButtonDisabled]}
+                  >
+                    {submittingComment ? (
+                      <ActivityIndicator size="small" color={colors.white} />
+                    ) : (
+                      <Ionicons name="arrow-up" size={20} color={colors.white} />
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </Animated.View>
+          </KeyboardAvoidingView>
+        </Pressable>
+      </Modal>
+
+      {/* Share Bottom Sheet Modal */}
+      <Modal
+        visible={shareModalShown}
+        transparent
+        animationType="fade"
+        onRequestClose={handleCloseShare}
+      >
+        <Pressable style={styles.commentsModalOverlay} onPress={handleCloseShare}>
+          <Animated.View style={[styles.shareModalSheet, { transform: [{ translateY: shareSlideAnim }] }]}>
+            <Pressable onPress={(e) => e.stopPropagation()}>
+              <View style={styles.commentsModalHandle} />
+              <View style={styles.commentsModalHeader}>
+                <Text style={styles.commentsModalTitle}>Share</Text>
+                <TouchableOpacity onPress={handleCloseShare} style={styles.commentsModalClose}>
+                  <Ionicons name="close" size={24} color={colors.textPrimary} />
+                </TouchableOpacity>
+              </View>
+
+              <TouchableOpacity
+                style={styles.shareOption}
+                onPress={() => { handleCloseShare(); handleExternalShare(); }}
+                activeOpacity={0.7}
+              >
+                <View style={styles.shareOptionIcon}>
+                  <Ionicons name="share-outline" size={22} color={colors.primary} />
+                </View>
+                <Text style={styles.shareOptionText}>Share Externally</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.shareOption}
+                onPress={() => { handleCloseShare(); handleCopyLink(); }}
+                activeOpacity={0.7}
+              >
+                <View style={styles.shareOptionIcon}>
+                  <Ionicons name="link-outline" size={22} color={colors.primary} />
+                </View>
+                <Text style={styles.shareOptionText}>Copy Link</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity onPress={handleCloseShare} style={styles.shareCancel}>
+                <Text style={styles.shareCancelText}>Cancel</Text>
+              </TouchableOpacity>
+            </Pressable>
+          </Animated.View>
+        </Pressable>
+      </Modal>
+
+      {/* Post Menu Bottom Sheet Modal */}
+      <Modal
+        visible={menuModalShown}
+        transparent
+        animationType="fade"
+        onRequestClose={handleCloseMenu}
+      >
+        <Pressable style={styles.commentsModalOverlay} onPress={handleCloseMenu}>
+          <Animated.View style={[styles.shareModalSheet, { transform: [{ translateY: menuSlideAnim }] }]}>
+            <Pressable onPress={(e) => e.stopPropagation()}>
+              <View style={styles.commentsModalHandle} />
+              <View style={styles.commentsModalHeader}>
+                <Text style={styles.commentsModalTitle}>Options</Text>
+                <TouchableOpacity onPress={handleCloseMenu} style={styles.commentsModalClose}>
+                  <Ionicons name="close" size={24} color={colors.textPrimary} />
+                </TouchableOpacity>
+              </View>
+
+              {isOwner && (
+                <TouchableOpacity
+                  style={styles.shareOption}
+                  onPress={() => { handleCloseMenu(); router.push(`/edit-post?postId=${id}`); }}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.shareOptionIcon}>
+                    <Ionicons name="create-outline" size={22} color={colors.primary} />
+                  </View>
+                  <Text style={styles.shareOptionText}>Edit</Text>
+                </TouchableOpacity>
+              )}
+
+              {isOwner && (
+                <TouchableOpacity
+                  style={styles.shareOption}
+                  onPress={() => { handleCloseMenu(); handleDelete(); }}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.shareOptionIcon, { backgroundColor: '#FEE2E2' }]}>
+                    <Ionicons name="trash-outline" size={22} color="#e74c3c" />
+                  </View>
+                  <Text style={[styles.shareOptionText, { color: '#e74c3c' }]}>Delete</Text>
+                </TouchableOpacity>
+              )}
+
+              <TouchableOpacity
+                style={styles.shareOption}
+                onPress={() => { handleCloseMenu(); handleReport(); }}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.shareOptionIcon, { backgroundColor: '#FEF3C7' }]}>
+                  <Ionicons name="flag-outline" size={22} color="#D97706" />
+                </View>
+                <Text style={styles.shareOptionText}>Report</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity onPress={handleCloseMenu} style={styles.shareCancel}>
+                <Text style={styles.shareCancelText}>Cancel</Text>
+              </TouchableOpacity>
+            </Pressable>
+          </Animated.View>
+        </Pressable>
+      </Modal>
 
       <SaveCollectionModal
         visible={collectionModalVisible}
@@ -495,6 +923,23 @@ export default function Post({
   );
 }
 
+function PostVideo({ uri }: { uri: string }) {
+  const player = useVideoPlayer(uri, p => {
+    p.loop = false;
+  });
+  return (
+    <View style={{ width: '100%', aspectRatio: 9 / 16, backgroundColor: '#000', alignItems: 'center', justifyContent: 'center' }}>
+      <VideoView
+        player={player}
+        style={{ width: '100%', height: '100%' }}
+        contentFit="cover"
+        allowsFullscreen
+        allowsPictureInPicture
+      />
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   container: {
     marginVertical: 10,
@@ -505,6 +950,16 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', padding: 10 },
   headerUserInfo: { flexDirection: 'row', alignItems: 'center', flex: 1 },
   profilePic: { width: 40, height: 40, borderRadius: 20, marginRight: 10 },
+  profilePicFallback: {
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  profilePicFallbackText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: colors.white,
+  },
   username: { fontWeight: 'bold', fontSize: 16, flex: 1 },
   menuButton: { padding: 8 },
   postImage: { width: '100%', aspectRatio: 4 / 3, backgroundColor: colors.borderLight },
@@ -533,13 +988,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     marginLeft: 4,
-  },
-  editedLabel: {
-    paddingHorizontal: 10,
-    paddingBottom: 10,
-    fontSize: 12,
-    color: colors.textQuaternary,
-    fontStyle: 'italic',
   },
   // Pantry match badge
   pantryBadge: {
@@ -581,10 +1029,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     padding: 24,
     width: 300,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
+    boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
     elevation: 8,
   },
   modalTitle: {
@@ -651,5 +1096,248 @@ const styles = StyleSheet.create({
   reportReasonTextActive: {
     color: '#22C55E',
     fontWeight: '700',
+  },
+  // Comments
+  viewCommentsButton: {
+    paddingHorizontal: 10,
+    paddingBottom: 10,
+  },
+  viewCommentsText: {
+    fontSize: 14,
+    color: colors.textTertiary,
+    fontWeight: '500',
+  },
+  // Comments modal (bottom sheet)
+  commentsModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  commentsModalKeyboard: {
+    justifyContent: 'flex-end',
+    maxHeight: '100%',
+  },
+  commentsModalSheet: {
+    backgroundColor: colors.backgroundPrimary,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    maxHeight: Dimensions.get('window').height * 0.75,
+    minHeight: Dimensions.get('window').height * 0.45,
+  },
+  commentsModalHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.border,
+    alignSelf: 'center',
+    marginTop: 10,
+    marginBottom: 4,
+  },
+  commentsModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+  },
+  commentsModalTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  commentsModalClose: {
+    position: 'absolute',
+    right: 16,
+    padding: 4,
+  },
+  commentsModalList: {
+    flex: 1,
+  },
+  commentsModalListContent: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 8,
+  },
+  commentsModalInputContainer: {
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLight,
+    paddingHorizontal: 12,
+    paddingTop: 8,
+    paddingBottom: Platform.OS === 'ios' ? 28 : 12,
+    backgroundColor: colors.backgroundPrimary,
+  },
+  noCommentsText: {
+    fontSize: 14,
+    color: colors.textQuaternary,
+    textAlign: 'center',
+    paddingVertical: 32,
+  },
+  commentItem: {
+    flexDirection: 'row',
+    marginBottom: 16,
+  },
+  commentAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    marginRight: 10,
+    backgroundColor: colors.borderLight,
+  },
+  commentAvatarPlaceholder: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.primary,
+  },
+  commentAvatarText: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    color: colors.white,
+  },
+  commentBody: {
+    flex: 1,
+  },
+  commentHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
+  commentUsername: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    marginRight: 8,
+  },
+  commentVerifiedBadge: {
+    color: colors.verified,
+    fontSize: 13,
+    fontWeight: 'bold' as const,
+    marginRight: 4,
+  },
+  commentTime: {
+    fontSize: 12,
+    color: colors.textQuaternary,
+  },
+  commentContent: {
+    fontSize: 14,
+    color: colors.textPrimary,
+    lineHeight: 20,
+  },
+  commentActions: {
+    flexDirection: 'row',
+    marginTop: 4,
+    gap: 16,
+  },
+  commentActionBtn: {
+    paddingVertical: 4,
+    paddingHorizontal: 4,
+  },
+  commentActionText: {
+    fontSize: 12,
+    color: colors.textTertiary,
+    fontWeight: '500',
+  },
+  commentDeleteText: {
+    color: colors.delete,
+  },
+  commentsLoader: {
+    paddingVertical: 12,
+  },
+  loadMoreButton: {
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  loadMoreText: {
+    fontSize: 14,
+    color: colors.primary,
+    fontWeight: '600',
+  },
+  replyIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    backgroundColor: colors.backgroundSubtle,
+    borderRadius: 8,
+    marginBottom: 6,
+  },
+  replyIndicatorText: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    flex: 1,
+    marginRight: 8,
+  },
+  replyCancel: {
+    fontSize: 13,
+    color: colors.primary,
+    fontWeight: '600',
+  },
+  commentInputRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+  },
+  commentInput: {
+    flex: 1,
+    minHeight: 36,
+    maxHeight: 100,
+    backgroundColor: colors.backgroundSecondary,
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    fontSize: 14,
+    color: colors.textPrimary,
+    marginRight: 8,
+  },
+  sendButton: {
+    backgroundColor: colors.primary,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  sendButtonDisabled: {
+    backgroundColor: colors.border,
+  },
+  // Share modal
+  shareModalSheet: {
+    backgroundColor: colors.backgroundPrimary,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    paddingBottom: Platform.OS === 'ios' ? 28 : 12,
+  },
+  shareOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+  },
+  shareOptionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.backgroundSecondary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 14,
+  },
+  shareOptionText: {
+    fontSize: 16,
+    color: colors.textPrimary,
+    fontWeight: '500',
+  },
+  shareCancel: {
+    alignItems: 'center',
+    paddingVertical: 14,
+    marginTop: 4,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLight,
+  },
+  shareCancelText: {
+    fontSize: 15,
+    color: colors.textTertiary,
+    fontWeight: '500',
   },
 });

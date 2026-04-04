@@ -1,45 +1,26 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
   FlatList,
-  TextInput,
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
   Alert,
-  Animated,
+  Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import Markdown from 'react-native-markdown-display';
-import * as Clipboard from 'expo-clipboard';
+import { router } from 'expo-router';
 import { colors } from '../../../constants/theme';
 import {
-  ChatMessage,
-  sendChatMessage,
-  fetchChatHistory,
-  fetchPantrySuggestions,
+  Conversation,
+  fetchConversations,
+  deleteConversation,
+  renameConversation,
 } from '../../../services/api/chat';
-
-function stripMarkdown(text: string): string {
-  return text
-    .replace(/```[\s\S]*?```/g, (match) => match.replace(/```[^\n]*\n?|```/g, ''))
-    .replace(/`([^`]+)`/g, '$1')
-    .replace(/#{1,6}\s+/gm, '')
-    .replace(/\*\*([^*]+)\*\*/g, '$1')
-    .replace(/\*([^*]+)\*/g, '$1')
-    .replace(/__([^_]+)__/g, '$1')
-    .replace(/_([^_]+)_/g, '$1')
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-    .replace(/^[-*+]\s+/gm, '• ')
-    .replace(/^\d+\.\s+/gm, (m) => m)
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
-}
+import { PromptModal } from '../../../components/PromptModal';
 
 function formatRelativeTime(dateString: string): string {
   const now = Date.now();
@@ -55,349 +36,181 @@ function formatRelativeTime(dateString: string): string {
   return `${diffDay}d ago`;
 }
 
-const QUICK_ACTIONS = [
-  { id: 'pantry', label: '🥗 What can I cook?', message: 'What can I cook with the items in my pantry?' },
-  { id: 'expiring', label: '⏰ Use expiring items', message: 'What should I cook first using my items that are expiring soon?' },
-  { id: 'ideas', label: '💡 Meal ideas', message: 'Give me some quick and easy meal ideas for today.' },
-];
+export default function ConversationListScreen() {
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [conversationsLoading, setConversationsLoading] = useState(true);
 
-export default function ChatScreen() {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [input, setInput] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [sending, setSending] = useState(false);
-  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
-  const flatListRef = useRef<FlatList<ChatMessage>>(null);
-  const toastOpacity = useRef(new Animated.Value(0)).current;
-  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Prompt modal state
+  const [promptVisible, setPromptVisible] = useState(false);
+  const [promptValue, setPromptValue] = useState('');
+  const [promptConversation, setPromptConversation] = useState<Conversation | null>(null);
 
-  const showToast = useCallback(() => {
-    if (toastTimer.current) clearTimeout(toastTimer.current);
-    Animated.sequence([
-      Animated.timing(toastOpacity, { toValue: 1, duration: 200, useNativeDriver: true }),
-      Animated.delay(1600),
-      Animated.timing(toastOpacity, { toValue: 0, duration: 300, useNativeDriver: true }),
-    ]).start();
-    toastTimer.current = setTimeout(() => {
-      toastOpacity.setValue(0);
-    }, 2200);
-  }, [toastOpacity]);
+  const showPrompt = (conversation: Conversation | null) => {
+    setPromptConversation(conversation);
+    setPromptValue(conversation?.title || '');
+    setPromptVisible(true);
+  };
 
-  const handleCopy = useCallback(async (content: string) => {
-    await Clipboard.setStringAsync(stripMarkdown(content));
-    showToast();
-  }, [showToast]);
+  const handlePromptSubmit = async () => {
+    const newTitle = promptValue.trim();
+    setPromptVisible(false);
+    
+    if (!newTitle) {
+      setPromptValue('');
+      setPromptConversation(null);
+      return;
+    }
 
-  useEffect(() => {
-    return () => {
-      if (toastTimer.current) clearTimeout(toastTimer.current);
-    };
-  }, []);
+    if (promptConversation) {
+      // Rename existing conversation
+      try {
+        const updated = await renameConversation(promptConversation.id, newTitle);
+        setConversations((prev) =>
+          prev.map((c) => (c.id === promptConversation.id ? { ...c, title: updated.title } : c))
+        );
+      } catch {
+        Alert.alert('Error', 'Failed to rename conversation.');
+      }
+    } else {
+      // Create new conversation
+      router.push({
+        pathname: `/chat/new`,
+        params: { title: newTitle }
+      });
+    }
+    
+    setPromptValue('');
+    setPromptConversation(null);
+  };
 
-  const loadHistory = useCallback(async () => {
+  const handlePromptCancel = () => {
+    setPromptVisible(false);
+    setPromptValue('');
+    setPromptConversation(null);
+  };
+
+  const loadConversations = useCallback(async () => {
     try {
-      const history = await fetchChatHistory();
-      setMessages(history);
+      setConversationsLoading(true);
+      const convs = await fetchConversations();
+      setConversations(convs);
     } catch {
-      // silently ignore - empty chat is fine
+      // silently ignore
     } finally {
-      setLoading(false);
+      setConversationsLoading(false);
     }
   }, []);
 
   useFocusEffect(
     useCallback(() => {
-      loadHistory();
-    }, [loadHistory])
+      loadConversations();
+    }, [loadConversations])
   );
 
-  const scrollToBottom = (animated = true) => {
-    setTimeout(() => {
-      flatListRef.current?.scrollToEnd({ animated });
-    }, 100);
+  const openConversation = (conv: Conversation) => {
+    router.push({
+      pathname: `/chat/${conv.id}`,
+      params: { title: conv.title }
+    });
   };
 
-  const handleSend = async (overrideText?: string) => {
-    const text = (overrideText ?? input).trim();
-    if (!text || sending) return;
-
-    const tempUserMsg: ChatMessage = {
-      id: Date.now(),
-      role: 'user',
-      content: text,
-      created_at: new Date().toISOString(),
-    };
-
-    setMessages((prev) => [...prev, tempUserMsg]);
-    if (!overrideText) setInput('');
-    setSending(true);
-    scrollToBottom();
-
-    try {
-      await sendChatMessage(text);
-      const history = await fetchChatHistory();
-      setMessages(history);
-    } catch (err: any) {
-      setMessages((prev) => prev.filter((m) => m.id !== tempUserMsg.id));
-      if (!overrideText) setInput(text);
-      Alert.alert('Chat Error', err?.message || 'Failed to get a response. Please try again.');
-    } finally {
-      setSending(false);
-      scrollToBottom();
-    }
+  const startNewConversation = () => {
+    showPrompt(null);
   };
 
-  const handlePantrySuggestions = async () => {
-    if (sending || loadingSuggestions) return;
-    setLoadingSuggestions(true);
-
-    const tempUserMsg: ChatMessage = {
-      id: Date.now(),
-      role: 'user',
-      content: 'What can I cook with the items in my pantry?',
-      created_at: new Date().toISOString(),
-    };
-    setMessages((prev) => [...prev, tempUserMsg]);
-    scrollToBottom();
-
-    try {
-      await fetchPantrySuggestions();
-      const history = await fetchChatHistory();
-      setMessages(history);
-    } catch (err: any) {
-      setMessages((prev) => prev.filter((m) => m.id !== tempUserMsg.id));
-      Alert.alert('Chat Error', err?.message || 'Failed to get pantry suggestions. Please try again.');
-    } finally {
-      setLoadingSuggestions(false);
-      scrollToBottom();
-    }
+  const handleDeleteConversation = (conv: Conversation) => {
+    Alert.alert('Delete Chat', `Delete "${conv.title}"?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await deleteConversation(conv.id);
+            setConversations((prev) => prev.filter((c) => c.id !== conv.id));
+          } catch {
+            Alert.alert('Error', 'Failed to delete conversation.');
+          }
+        },
+      },
+    ]);
   };
-
-  const handleQuickAction = (action: typeof QUICK_ACTIONS[0]) => {
-    if (action.id === 'pantry') {
-      handlePantrySuggestions();
-    } else {
-      handleSend(action.message);
-    }
-  };
-
-  const renderMessage = ({ item }: { item: ChatMessage }) => {
-    const isUser = item.role === 'user';
-    return (
-      <View
-        style={[
-          styles.messageBubbleRow,
-          isUser ? styles.userRow : styles.assistantRow,
-        ]}
-      >
-        {!isUser && (
-          <View style={styles.avatarCircle}>
-            <Ionicons name="restaurant-outline" size={16} color={colors.primary} />
-          </View>
-        )}
-        <View style={isUser ? undefined : styles.assistantBubbleColumn}>
-          <View
-            style={[
-              styles.messageBubble,
-              isUser ? styles.userBubble : styles.assistantBubble,
-            ]}
-            accessibilityRole="text"
-            accessibilityLabel={`${isUser ? 'You' : 'Assistant'}: ${item.content}`}
-          >
-            {isUser ? (
-              <Text style={[styles.messageText, styles.userMessageText]}>
-                {item.content}
-              </Text>
-            ) : (
-              <Markdown style={markdownStyles}>{item.content}</Markdown>
-            )}
-            <Text style={[styles.timestamp, isUser && styles.userTimestamp]}>
-              {formatRelativeTime(item.created_at)}
-            </Text>
-          </View>
-          {!isUser && (
-            <TouchableOpacity
-              style={styles.copyButton}
-              onPress={() => handleCopy(item.content)}
-              accessibilityRole="button"
-              accessibilityLabel="Copy response to clipboard"
-              hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
-            >
-              <Ionicons name="copy-outline" size={14} color={colors.textTertiary} />
-              <Text style={styles.copyButtonText}>Copy</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
-    );
-  };
-
-  const renderEmpty = () => {
-    if (loading) return null;
-    return (
-      <View style={styles.emptyState}>
-        <Ionicons name="restaurant-outline" size={56} color={colors.textTertiary} />
-        <Text style={styles.emptyTitle}>Your AI cooking assistant</Text>
-        <Text style={styles.emptySubtitle}>
-          Ask me anything about food, recipes, or tap a suggestion below to get started.
-        </Text>
-        <View style={styles.quickActionsGrid}>
-          {QUICK_ACTIONS.map((action) => (
-            <TouchableOpacity
-              key={action.id}
-              style={styles.quickActionChip}
-              onPress={() => handleQuickAction(action)}
-              disabled={sending || loadingSuggestions}
-              activeOpacity={0.75}
-            >
-              <Text style={styles.quickActionText}>{action.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-    );
-  };
-
-  const isBusy = sending || loadingSuggestions;
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Header */}
       <View style={styles.header}>
         <Ionicons name="chatbubble-ellipses" size={22} color={colors.white} />
-        <Text style={styles.headerTitle} accessibilityRole="header">
-          AI Chat
-        </Text>
+        <Text style={styles.headerTitle}>AI Chat</Text>
+        <TouchableOpacity onPress={startNewConversation} style={styles.newChatButton}>
+          <Ionicons name="create-outline" size={22} color={colors.white} />
+        </TouchableOpacity>
       </View>
 
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={0}
-      >
-        {loading ? (
-          <View style={styles.centered}>
-            <ActivityIndicator size="large" color={colors.primary} />
-          </View>
-        ) : (
-          <FlatList
-            ref={flatListRef}
-            data={messages}
-            keyExtractor={(item) => String(item.id)}
-            renderItem={renderMessage}
-            contentContainerStyle={[
-              styles.messageList,
-              messages.length === 0 && styles.emptyList,
-            ]}
-            ListEmptyComponent={renderEmpty}
-            showsVerticalScrollIndicator={false}
-            onContentSizeChange={() => {
-              if (messages.length > 0) {
-                flatListRef.current?.scrollToEnd({ animated: false });
-              }
-            }}
-          />
-        )}
-
-        {/* Typing indicator */}
-        {isBusy && (
-          <View style={styles.typingRow}>
-            <View style={styles.avatarCircleSmall}>
-              <Ionicons name="restaurant-outline" size={12} color={colors.primary} />
-            </View>
-            <View style={styles.typingBubble}>
-              <ActivityIndicator size="small" color={colors.textTertiary} />
-              <Text style={styles.typingText}>Thinking...</Text>
-            </View>
-          </View>
-        )}
-
-        {/* Quick action bar (shown when there are messages) */}
-        {messages.length > 0 && (
-          <View style={styles.quickActionsBar}>
-            <TouchableOpacity
-              style={styles.pantryChip}
-              onPress={handlePantrySuggestions}
-              disabled={isBusy}
-              activeOpacity={0.75}
-              accessibilityRole="button"
-              accessibilityLabel="Get pantry recipe suggestions"
-            >
-              <Ionicons name="basket-outline" size={14} color={colors.primary} />
-              <Text style={styles.pantryChipText}>Pantry Recipes</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* Input bar */}
-        <View style={styles.inputBar}>
-          <TextInput
-            style={styles.textInput}
-            placeholder="Ask about food or cooking..."
-            placeholderTextColor={colors.placeholder}
-            value={input}
-            onChangeText={setInput}
-            maxLength={2000}
-            returnKeyType="send"
-            blurOnSubmit={false}
-            onSubmitEditing={() => handleSend()}
-            editable={!isBusy}
-            accessibilityLabel="Chat message input"
-          />
-          <TouchableOpacity
-            style={[
-              styles.sendButton,
-              (!input.trim() || isBusy) && styles.sendButtonDisabled,
-            ]}
-            onPress={() => handleSend()}
-            disabled={!input.trim() || isBusy}
-            accessibilityRole="button"
-            accessibilityLabel="Send message"
-          >
-            <Ionicons
-              name="arrow-up"
-              size={20}
-              color={colors.white}
-            />
+      {conversationsLoading ? (
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      ) : conversations.length === 0 ? (
+        <View style={styles.emptyConversations}>
+          <Ionicons name="chatbubbles-outline" size={56} color={colors.textTertiary} />
+          <Text style={styles.emptyTitle}>No conversations yet</Text>
+          <Text style={styles.emptySubtitle}>Start a new chat with your AI cooking assistant.</Text>
+          <TouchableOpacity style={styles.startChatButton} onPress={startNewConversation}>
+            <Ionicons name="add" size={20} color={colors.white} />
+            <Text style={styles.startChatButtonText}>New Chat</Text>
           </TouchableOpacity>
         </View>
-
-        {/* Copy toast */}
-        <Animated.View
-          style={[styles.toast, { opacity: toastOpacity }]}
-          pointerEvents="none"
-        >
-          <Ionicons name="checkmark-circle" size={16} color={colors.white} />
-          <Text style={styles.toastText}>Copied to clipboard</Text>
-        </Animated.View>
-      </KeyboardAvoidingView>
+      ) : (
+        <FlatList
+          data={conversations}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.conversationList}
+          renderItem={({ item }) => (
+            <Pressable
+              style={styles.conversationItem}
+              onPress={() => openConversation(item)}
+              onLongPress={() => showPrompt(item)}
+            >
+              <View style={styles.conversationIcon}>
+                <Ionicons name="chatbubble-outline" size={20} color={colors.primary} />
+              </View>
+              <View style={styles.conversationInfo}>
+                <Text style={styles.conversationTitle} numberOfLines={1}>{item.title}</Text>
+                <Text style={styles.conversationTime}>{formatRelativeTime(item.updated_at)}</Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => showPrompt(item)}
+                style={styles.conversationAction}
+                hitSlop={8}
+              >
+                <Ionicons name="pencil-outline" size={16} color={colors.textTertiary} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => handleDeleteConversation(item)}
+                style={styles.conversationAction}
+                hitSlop={8}
+              >
+                <Ionicons name="trash-outline" size={16} color={colors.textTertiary} />
+              </TouchableOpacity>
+            </Pressable>
+          )}
+        />
+      )}
+      
+      <PromptModal
+        visible={promptVisible}
+        title={promptConversation ? 'Rename Chat' : 'New Chat'}
+        value={promptValue}
+        onChangeText={setPromptValue}
+        onSubmit={handlePromptSubmit}
+        onCancel={handlePromptCancel}
+      />
     </SafeAreaView>
   );
 }
 
-const markdownStyles = StyleSheet.create({
-  body: { fontSize: 15, lineHeight: 21, color: colors.textPrimary },
-  strong: { fontWeight: '700' },
-  em: { fontStyle: 'italic' },
-  bullet_list: { marginVertical: 4 },
-  ordered_list: { marginVertical: 4 },
-  list_item: { marginVertical: 2 },
-  heading1: { fontSize: 18, fontWeight: '700', marginVertical: 4 },
-  heading2: { fontSize: 16, fontWeight: '700', marginVertical: 4 },
-  heading3: { fontSize: 15, fontWeight: '700', marginVertical: 2 },
-  paragraph: { marginVertical: 2 },
-  code_inline: { backgroundColor: '#E5E7EB', borderRadius: 4, paddingHorizontal: 4, fontSize: 13, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
-  fence: { backgroundColor: '#E5E7EB', borderRadius: 8, padding: 10, marginVertical: 4, fontSize: 13, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
-});
-
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.white,
-  },
-  flex: {
-    flex: 1,
-  },
+  container: { flex: 1, backgroundColor: colors.white },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -405,204 +218,83 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     paddingHorizontal: 16,
     paddingVertical: 14,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
   },
   headerTitle: {
+    flex: 1,
     fontSize: 18,
     fontWeight: '700',
     color: colors.white,
   },
-  centered: {
-    flex: 1,
-    justifyContent: 'center',
+  newChatButton: { padding: 4 },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  
+  // Conversation list
+  conversationList: { paddingVertical: 8 },
+  conversationItem: {
+    flexDirection: 'row',
     alignItems: 'center',
-  },
-  messageList: {
-    paddingHorizontal: 12,
-    paddingVertical: 16,
-    gap: 12,
-  },
-  emptyList: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  // Empty state
-  emptyState: {
-    alignItems: 'center',
-    paddingHorizontal: 32,
-    gap: 12,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.textPrimary,
-    textAlign: 'center',
-  },
-  emptySubtitle: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: 4,
-  },
-  quickActionsGrid: {
-    width: '100%',
-    gap: 10,
-    marginTop: 4,
-  },
-  quickActionChip: {
-    backgroundColor: '#F0FDF4',
-    borderWidth: 1,
-    borderColor: '#BBF7D0',
-    borderRadius: 12,
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    alignItems: 'center',
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
   },
-  quickActionText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: colors.primary,
-  },
-  // Quick action bar (inline, for when messages exist)
-  quickActionsBar: {
-    flexDirection: 'row',
-    paddingHorizontal: 12,
-    paddingBottom: 6,
-    gap: 8,
-  },
-  pantryChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: '#F0FDF4',
-    borderWidth: 1,
-    borderColor: '#BBF7D0',
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  pantryChipText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: colors.primary,
-  },
-  // Message rows
-  messageBubbleRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 8,
-  },
-  userRow: {
-    justifyContent: 'flex-end',
-  },
-  assistantRow: {
-    justifyContent: 'flex-start',
-  },
-  avatarCircle: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: '#F0FDF4',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 2,
-  },
-  // Bubbles
-  messageBubble: {
-    borderRadius: 18,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-  userBubble: {
-    maxWidth: '75%',
-    backgroundColor: colors.primary,
-    borderBottomRightRadius: 4,
-  },
-  assistantBubble: {
-    backgroundColor: '#F3F4F6',
-    borderBottomLeftRadius: 4,
-  },
-  messageText: {
-    fontSize: 15,
-    lineHeight: 21,
-    color: colors.textPrimary,
-  },
-  userMessageText: {
-    color: colors.white,
-  },
-  timestamp: {
-    fontSize: 11,
-    color: colors.textTertiary,
-    marginTop: 4,
-    alignSelf: 'flex-end',
-  },
-  userTimestamp: {
-    color: 'rgba(255,255,255,0.7)',
-  },
-  // Typing indicator
-  typingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingBottom: 8,
-  },
-  avatarCircleSmall: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#F0FDF4',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  typingBubble: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#F3F4F6',
-    borderRadius: 14,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  typingText: {
-    fontSize: 13,
-    color: colors.textTertiary,
-  },
-  // Input bar
-  inputBar: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderTopWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.white,
-  },
-  textInput: {
-    flex: 1,
-    minHeight: 40,
-    maxHeight: 120,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 10,
-    fontSize: 15,
-    color: colors.textPrimary,
-    backgroundColor: colors.backgroundSecondary,
-  },
-  sendButton: {
+  conversationIcon: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: colors.primary,
+    backgroundColor: '#F0FDF4',
     alignItems: 'center',
     justifyContent: 'center',
+    marginRight: 12,
   },
-  sendButtonDisabled: {
-    opacity: 0.4,
+  conversationInfo: { flex: 1 },
+  conversationTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.textPrimary,
+  },
+  conversationTime: {
+    fontSize: 12,
+    color: colors.textTertiary,
+    marginTop: 2,
+  },
+  conversationAction: { padding: 8 },
+  emptyConversations: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+    gap: 12,
+  },
+  emptyTitle: { 
+    fontSize: 18, 
+    fontWeight: '600', 
+    color: colors.textPrimary, 
+    textAlign: 'center' 
+  },
+  emptySubtitle: { 
+    fontSize: 14, 
+    color: colors.textSecondary, 
+    textAlign: 'center', 
+    lineHeight: 20, 
+    marginBottom: 4 
+  },
+  startChatButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 24,
+    marginTop: 8,
+  },
+  startChatButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.white,
   },
   // Assistant bubble column (bubble + copy button stacked)
   assistantBubbleColumn: {

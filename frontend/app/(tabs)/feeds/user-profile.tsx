@@ -73,7 +73,7 @@ export default function UserProfileScreen() {
               await blockUser(userId);
               setIsBlocked(true);
               Alert.alert('User Blocked', 'This user has been blocked.', [
-                { text: 'OK', onPress: () => router.back() },
+                { text: 'OK', onPress: () => router.canGoBack() ? router.back() : router.replace('/(tabs)/feeds') },
               ]);
             } catch (error: any) {
               Alert.alert('Error', error.message || 'Failed to block user.');
@@ -234,7 +234,7 @@ export default function UserProfileScreen() {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
         <Stack.Screen options={{ title: '', headerShown: true, headerLeft: () => (
-          <Pressable onPress={() => router.back()} style={{ paddingRight: 16 }}>
+          <Pressable onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/feeds')} style={{ paddingRight: 16 }}>
             <Ionicons name="arrow-back" size={24} color="#000" />
           </Pressable>
         )}} />
@@ -250,7 +250,7 @@ export default function UserProfileScreen() {
           headerShown: true,
           title: profile?.username ? `@${profile.username}` : 'Profile',
           headerLeft: () => (
-            <Pressable onPress={() => router.back()} style={{ paddingRight: 16 }}>
+            <Pressable onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/feeds')} style={{ paddingRight: 16 }}>
               <Ionicons name="arrow-back" size={24} color="#000" />
             </Pressable>
           ),
@@ -289,6 +289,20 @@ export default function UserProfileScreen() {
             <Text style={styles.bio}>{profile.bio}</Text>
           ) : null}
         </View>
+
+        {/* Blocked/Muted indicators */}
+        {isBlocked && (
+          <View style={styles.statusBanner}>
+            <Ionicons name="ban-outline" size={16} color="#DC2626" />
+            <Text style={styles.statusBannerText}>You have blocked this user</Text>
+          </View>
+        )}
+        {isMuted && !isBlocked && (
+          <View style={[styles.statusBanner, styles.statusBannerMuted]}>
+            <Ionicons name="volume-mute-outline" size={16} color="#D97706" />
+            <Text style={[styles.statusBannerText, styles.statusBannerTextMuted]}>You have muted this user</Text>
+          </View>
+        )}
 
         {/* Follow/Unfollow Button */}
         <Pressable
@@ -440,6 +454,28 @@ const styles = StyleSheet.create({
   },
   followingButtonText: {
     color: colors.textPrimary,
+  },
+  statusBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#FEE2E2',
+    marginHorizontal: 16,
+    marginBottom: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  statusBannerMuted: {
+    backgroundColor: '#FEF3C7',
+  },
+  statusBannerText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#DC2626',
+  },
+  statusBannerTextMuted: {
+    color: '#D97706',
   },
   gridItem: {
     width: ITEM_SIZE,

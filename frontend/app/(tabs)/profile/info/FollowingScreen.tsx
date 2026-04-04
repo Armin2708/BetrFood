@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import {
   View,
   Text,
@@ -7,30 +7,13 @@ import {
   TouchableOpacity,
   StyleSheet,
   RefreshControl,
+  ActivityIndicator,
 } from 'react-native';
-
-type User = {
-  id: string;
-  username: string;
-  name: string;
-  avatar: string;
-  isFollowing: boolean;
-};
-
-
-// Generates random users
-const initialUsers: User[] = Array.from({length:1000}, (_,i) => ({
-  id: i.toString(),
-  username: 'standinUser' + (i+1).toString(),
-  name: 'user' + (i+1).toString(),
-  avatar: `https://picsum.photos/id/${i+80}/60`,
-  isFollowing: true,
-}));
-
-
+import { AuthContext } from '../../../../context/AuthenticationContext';
+import { fetchFollowing, followUser, unfollowUser, type FollowingUser } from '../../../../services/api/follows';
 
 type UserRowProps = {
-  user: User;
+  user: FollowingUser;
   onToggleFollow: (id: string) => void;
 };
 
@@ -65,12 +48,33 @@ const UserRow: React.FC<UserRowProps> = ({ user, onToggleFollow }) => {
 };
 
 export default function FollowingScreen() {
-  // TODO: replace with api call for user's following list; remove initialUsers array
-  const [users, setUsers] = useState<User[]>(initialUsers);
-  const [refreshing, setRefreshing] = useState(false)
+  const { user } = useContext(AuthContext);
+  const [users, setUsers] = useState<FollowingUser[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  // TODO: requires wiring to backend
-  const toggleFollow = (id: string) => {
+  const loadFollowing = async () => {
+    if (!user?.id) return;
+
+    try {
+      const data = await fetchFollowing(user.id);
+      setUsers(data);
+    } catch (error) {
+      console.error('Error loading following:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadFollowing();
+  }, [user?.id]);
+
+  const toggleFollow = async (id: string) => {
+    const userToUpdate = users.find(u => u.id === id);
+    if (!userToUpdate) return;
+
+    // Optimistic update
     setUsers(prev =>
       prev.map(user =>
         user.id === id
@@ -78,17 +82,39 @@ export default function FollowingScreen() {
           : user
       )
     );
+
+    try {
+      if (userToUpdate.isFollowing) {
+        await unfollowUser(id);
+      } else {
+        await followUser(id);
+      }
+    } catch (error) {
+      console.error('Error toggling follow:', error);
+      // Revert on error
+      setUsers(prev =>
+        prev.map(user =>
+          user.id === id
+            ? { ...user, isFollowing: !user.isFollowing }
+            : user
+        )
+      );
+    }
   };
 
-  const onRefresh = () => {
+  const onRefresh = async () => {
     setRefreshing(true);
-
-    // TODO: for testing, replace with api call
-    setTimeout(() => {
-      console.log('"reload" complete');
-      setRefreshing(false);
-    }, 1000)
+    await loadFollowing();
+    setRefreshing(false);
   };
+
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <ActivityIndicator size="large" color="#0095f6" />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -101,6 +127,11 @@ export default function FollowingScreen() {
         renderItem={({ item }) => (
           <UserRow user={item} onToggleFollow={toggleFollow} />
         )}
+        ListEmptyComponent={
+          <View style={styles.centered}>
+            <Text style={styles.emptyText}>Not following anyone yet</Text>
+          </View>
+        }
       />
     </View>
   );
@@ -112,6 +143,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     paddingHorizontal: 16,
     paddingTop: 16,
+  },
+  centered: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 16,
+    color: 'gray',
+    marginTop: 40,
   },
   row: {
     flexDirection: 'row',
