@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Animated,
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -17,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import Markdown from 'react-native-markdown-display';
+import * as Clipboard from 'expo-clipboard';
 import { colors } from '../../../constants/theme';
 import { getImageUrl } from '../../../services/api';
 import {
@@ -42,6 +44,22 @@ function formatRelativeTime(dateString: string): string {
   if (diffHr < 24) return `${diffHr}h ago`;
   const diffDay = Math.floor(diffHr / 24);
   return `${diffDay}d ago`;
+}
+
+function stripMarkdown(text: string): string {
+  return text
+    .replace(/```[\s\S]*?```/g, (match) => match.replace(/```[^\n]*\n?|```/g, ''))
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/#{1,6}\s+/gm, '')
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/\*([^*]+)\*/g, '$1')
+    .replace(/__([^_]+)__/g, '$1')
+    .replace(/_([^_]+)_/g, '$1')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/^[-*+]\s+/gm, '• ')
+    .replace(/^\d+\.\s+/gm, (m) => m)
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
 }
 
 const QUICK_ACTIONS = [
@@ -94,15 +112,14 @@ export function SuggestedPostCard({ post }: { post: SuggestedPost }) {
 }
 
 export default function ConversationScreen() {
-  const params = useLocalSearchParams<{ 
-    id?: string; 
-    title?: string; 
-    isNew?: string;
+  const params = useLocalSearchParams<{
+    id?: string;
+    title?: string;
     postContext?: string;
   }>();
 
   const conversationId = params.id;
-  const isNewConversation = params.isNew === 'true';
+  const isNewConversation = !conversationId;
   const initialTitle = params.title || 'New Chat';
 
   const postContext: PostContext | null = (() => {
@@ -112,7 +129,7 @@ export default function ConversationScreen() {
   })();
 
   const [activeConversationId, setActiveConversationId] = useState<string | null>(
-    isNewConversation ? 'new' : conversationId || null
+    isNewConversation ? null : conversationId || null
   );
   const [conversationTitle, setConversationTitle] = useState(initialTitle);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -121,6 +138,32 @@ export default function ConversationScreen() {
   const [sending, setSending] = useState(false);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const flatListRef = useRef<FlatList<ChatMessage>>(null);
+
+  const toastOpacity = useRef(new Animated.Value(0)).current;
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showToast = useCallback(() => {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    Animated.sequence([
+      Animated.timing(toastOpacity, { toValue: 1, duration: 200, useNativeDriver: true }),
+      Animated.delay(1600),
+      Animated.timing(toastOpacity, { toValue: 0, duration: 300, useNativeDriver: true }),
+    ]).start();
+    toastTimer.current = setTimeout(() => {
+      toastOpacity.setValue(0);
+    }, 2200);
+  }, [toastOpacity]);
+
+  const handleCopy = useCallback(async (content: string) => {
+    await Clipboard.setStringAsync(stripMarkdown(content));
+    showToast();
+  }, [showToast]);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimer.current) clearTimeout(toastTimer.current);
+    };
+  }, []);
 
   // Prompt modal state
   const [promptVisible, setPromptVisible] = useState(false);
@@ -168,8 +211,8 @@ export default function ConversationScreen() {
   );
 
   const handleRename = async (newTitle: string) => {
-    if (!activeConversationId || activeConversationId === 'new') return;
-    
+    if (!activeConversationId) return;
+
     try {
       await renameConversation(activeConversationId, newTitle);
       setConversationTitle(newTitle);
@@ -179,7 +222,7 @@ export default function ConversationScreen() {
   };
 
   const handleRenamePress = () => {
-    if (activeConversationId === 'new') return;
+    if (!activeConversationId) return;
     showPrompt(conversationTitle, handleRename);
   };
 
@@ -206,14 +249,14 @@ export default function ConversationScreen() {
     scrollToBottom();
 
     try {
-      const convId = activeConversationId === 'new' ? undefined : activeConversationId ?? undefined;
-      const title = activeConversationId === 'new' ? conversationTitle : undefined;
+      const convId = activeConversationId === 'new' || !activeConversationId ? undefined : activeConversationId;
+      const title = !activeConversationId ? conversationTitle : undefined;
       const result = await sendChatMessage(text, convId, title);
-      
-      if (result.conversationId && (activeConversationId === 'new' || !activeConversationId)) {
+
+      if (result.conversationId && !activeConversationId) {
         setActiveConversationId(result.conversationId);
       }
-      
+
       const history = await fetchChatHistory(result.conversationId);
       setMessages(history);
     } catch (err: any) {
@@ -240,13 +283,13 @@ export default function ConversationScreen() {
     scrollToBottom();
 
     try {
-      const convId = activeConversationId === 'new' ? undefined : activeConversationId ?? undefined;
+      const convId = activeConversationId === 'new' || !activeConversationId ? undefined : activeConversationId;
       const result = await fetchPantrySuggestions(convId);
-      
-      if (result.conversationId && (activeConversationId === 'new' || !activeConversationId)) {
+
+      if (result.conversationId && !activeConversationId) {
         setActiveConversationId(result.conversationId);
       }
-      
+
       const history = await fetchChatHistory(result.conversationId);
       setMessages(history);
     } catch (err: any) {
@@ -280,32 +323,39 @@ export default function ConversationScreen() {
             <Ionicons name="restaurant-outline" size={16} color={colors.primary} />
           </View>
         )}
-        <View
-          style={[
-            styles.messageBubble,
-            isUser ? styles.userBubble : styles.assistantBubble,
-          ]}
-          accessibilityRole="text"
-          accessibilityLabel={`${isUser ? 'You' : 'Assistant'}: ${item.content}`}
-        >
-          {isUser ? (
-            <Text style={[styles.messageText, styles.userMessageText]}>
-              {item.content}
+        <View style={isUser ? undefined : styles.assistantBubbleColumn}>
+          <View
+            style={[
+              styles.messageBubble,
+              isUser ? styles.userBubble : styles.assistantBubble,
+            ]}
+            accessibilityRole="text"
+            accessibilityLabel={`${isUser ? 'You' : 'Assistant'}: ${item.content}`}
+          >
+            {isUser ? (
+              <Text style={[styles.messageText, styles.userMessageText]}>
+                {item.content}
+              </Text>
+            ) : (
+              <Markdown style={markdownStyles}>{item.content}</Markdown>
+            )}
+            <Text style={[styles.timestamp, isUser && styles.userTimestamp]}>
+              {formatRelativeTime(item.created_at)}
             </Text>
-          ) : (
-            <Markdown style={markdownStyles}>{item.content}</Markdown>
-          )}
-          <Text style={[styles.timestamp, isUser && styles.userTimestamp]}>
-            {formatRelativeTime(item.created_at)}
-          </Text>
-        </View>
-        {!isUser && item.suggestedPosts && item.suggestedPosts.length > 0 && (
-          <View style={styles.suggestedPostsContainer}>
-            {item.suggestedPosts.map(post => (
-              <SuggestedPostCard key={post.id} post={post} />
-            ))}
           </View>
-        )}
+          {!isUser && (
+            <TouchableOpacity
+              style={styles.copyButton}
+              onPress={() => handleCopy(item.content)}
+              accessibilityRole="button"
+              accessibilityLabel="Copy response to clipboard"
+              hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+            >
+              <Ionicons name="copy-outline" size={14} color={colors.textTertiary} />
+              <Text style={styles.copyButtonText}>Copy</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
     );
   };
@@ -346,14 +396,14 @@ export default function ConversationScreen() {
           <Ionicons name="chevron-back" size={24} color={colors.white} />
         </TouchableOpacity>
         <TouchableOpacity
-          onPress={activeConversationId !== 'new' ? handleRenamePress : undefined}
+          onPress={activeConversationId ? handleRenamePress : undefined}
           style={styles.headerTitleButton}
-          activeOpacity={activeConversationId !== 'new' ? 0.7 : 1}
+          activeOpacity={activeConversationId ? 0.7 : 1}
         >
           <Text style={styles.headerTitle} numberOfLines={1}>
             {conversationTitle}
           </Text>
-          {activeConversationId !== 'new' && (
+          {activeConversationId && (
             <Ionicons name="pencil-outline" size={14} color="rgba(255,255,255,0.7)" />
           )}
         </TouchableOpacity>
@@ -439,6 +489,15 @@ export default function ConversationScreen() {
             <Ionicons name="arrow-up" size={20} color={colors.white} />
           </TouchableOpacity>
         </View>
+
+        {/* Copy toast */}
+        <Animated.View
+          style={[styles.toast, { opacity: toastOpacity }]}
+          pointerEvents="none"
+        >
+          <Ionicons name="checkmark-circle" size={16} color={colors.white} />
+          <Text style={styles.toastText}>Copied to clipboard</Text>
+        </Animated.View>
       </KeyboardAvoidingView>
       
       <PromptModal
@@ -569,13 +628,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center', 
     marginBottom: 2,
   },
-  messageBubble: { 
-    maxWidth: '75%', 
+  messageBubble: {
     borderRadius: 18, 
     paddingHorizontal: 14, 
     paddingVertical: 10 
   },
-  userBubble: { backgroundColor: colors.primary, borderBottomRightRadius: 4 },
+  userBubble: {
+    maxWidth: '75%',
+    backgroundColor: colors.primary,
+    borderBottomRightRadius: 4,
+  },
   assistantBubble: { backgroundColor: '#F3F4F6', borderBottomLeftRadius: 4 },
   messageText: { fontSize: 15, lineHeight: 21, color: colors.textPrimary },
   userMessageText: { color: colors.white },
@@ -692,4 +754,41 @@ const styles = StyleSheet.create({
     lineHeight: 18 
   },
   suggestedCardUsername: { fontSize: 12, color: colors.textSecondary },
+
+  // Assistant bubble column (bubble + copy button stacked)
+  assistantBubbleColumn: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    maxWidth: '75%',
+  },
+  // Copy button
+  copyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+    paddingHorizontal: 4,
+  },
+  copyButtonText: {
+    fontSize: 12,
+    color: colors.textTertiary,
+  },
+  // Toast notification
+  toast: {
+    position: 'absolute',
+    bottom: 80,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(30,30,30,0.85)',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  toastText: {
+    color: colors.white,
+    fontSize: 13,
+    fontWeight: '500',
+  },
 });

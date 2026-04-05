@@ -75,7 +75,7 @@ export default function ConversationListScreen() {
       // Create new conversation
       router.push({
         pathname: '/chat/[id]',
-        params: { isNew: 'true', title: newTitle }
+        params: { title: newTitle }
       });
     }
     
@@ -109,8 +109,8 @@ export default function ConversationListScreen() {
 
   const openConversation = (conv: Conversation) => {
     router.push({
-      pathname: '/chat/[id]',
-      params: { id: conv.id, title: conv.title }
+      pathname: `/chat/${conv.id}`,
+      params: { title: conv.title }
     });
   };
 
@@ -295,5 +295,41 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: colors.white,
+  },
+  // Assistant bubble column (bubble + copy button stacked)
+  assistantBubbleColumn: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    maxWidth: '75%',
+  },
+  // Copy button
+  copyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+    paddingHorizontal: 4,
+  },
+  copyButtonText: {
+    fontSize: 12,
+    color: colors.textTertiary,
+  },
+  // Toast notification
+  toast: {
+    position: 'absolute',
+    bottom: 80,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(30,30,30,0.85)',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  toastText: {
+    color: colors.white,
+    fontSize: 13,
+    fontWeight: '500',
   },
 });

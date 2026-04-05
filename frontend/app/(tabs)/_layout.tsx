@@ -10,8 +10,17 @@ import { AuthContext } from '../../context/AuthenticationContext';
 type IoniconName = ComponentProps<typeof Ionicons>['name'];
 
 const shouldHideTabs = (segments: string[]): boolean => {
-  const hiddenRoutes = ['settings', 'editProfile', 'FollowersScreen', 'FollowingScreen', 'chat/[id]'];
-  return hiddenRoutes.some(route => segments.join('/').includes(route));
+  const path = segments.join('/');
+  console.log(path)
+  const hiddenRoutePatterns: RegExp[] = [
+    /(^|\/)settings(\/|$)/,
+    /(^|\/)editProfile$/,
+    /(^|\/)FollowersScreen$/,
+    /(^|\/)FollowingScreen$/,
+    /(^|\/)chat\/\[id\]$/
+  ];
+
+  return hiddenRoutePatterns.some(pattern => pattern.test(path));
 };
 
 function TabIcon({ name, focusedName, color, focused }: { name: IoniconName; focusedName: IoniconName; color: string; focused: boolean }) {
