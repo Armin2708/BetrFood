@@ -13,7 +13,7 @@ import {
   Animated,
   Alert,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
@@ -112,6 +112,7 @@ export function SuggestedPostCard({ post }: { post: SuggestedPost }) {
 }
 
 export default function ConversationScreen() {
+  const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{
     id?: string;
     title?: string;
@@ -390,7 +391,7 @@ export default function ConversationScreen() {
   const isBusy = sending || loadingSuggestions;
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="chevron-back" size={24} color={colors.white} />
@@ -465,7 +466,7 @@ export default function ConversationScreen() {
           </View>
         )}
 
-        <View style={styles.inputBar}>
+        <View style={[styles.inputBar, { paddingBottom: Math.max(insets.bottom, 10) }]}>
           <TextInput
             style={styles.textInput}
             placeholder="Ask about food or cooking..."

@@ -2,6 +2,11 @@ const express = require('express');
 const OpenAI = require('openai');
 const supabase = require('../db/supabase');
 const { requireAuth } = require('../middleware/auth');
+const {
+  normalizeStringList,
+  normalizeAllergies,
+  buildDietaryProfileSection,
+} = require('../utils/chatDietaryContext');
 
 const router = express.Router();
 
@@ -123,12 +128,45 @@ async function searchPosts(keywords, limit = 3) {
   }
 }
 
+async function fetchUserDietaryContext(userId) {
+  try {
+    const { data, error } = await supabase
+      .from('user_preferences')
+      .select('dietary_preferences, allergies')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (error) {
+      console.error('[CHAT] Preferences query failed:', error.message);
+      return {
+        dietaryPreferences: [],
+        allergies: [],
+      };
+    }
+
+    const dietaryPreferences = normalizeStringList(data?.dietary_preferences);
+    const allergies = normalizeAllergies(data?.allergies);
+
+    return { dietaryPreferences, allergies };
+  } catch (err) {
+    console.error('[CHAT] fetchUserDietaryContext error:', err.message);
+    return {
+      dietaryPreferences: [],
+      allergies: [],
+    };
+  }
+}
+
 async function buildSystemPrompt(userId, isPantryQuery = false, isPostSuggestionQuery = false) {
   // For post suggestion queries, skip pantry context entirely
   if (isPostSuggestionQuery) {
-    return `${BASE_SYSTEM_PROMPT}\n\nThe user is asking to find posts on BetrFood. You will be provided with a list of matching posts. Describe each one briefly and explain why it's relevant to the user's query. Encourage them to tap the post cards below to view the full recipes.`;
+    const { dietaryPreferences, allergies } = await fetchUserDietaryContext(userId);
+    const dietarySection = buildDietaryProfileSection({ dietaryPreferences, allergies });
+
+    return `${BASE_SYSTEM_PROMPT}\n\nThe user is asking to find posts on BetrFood. You will be provided with a list of matching posts. Describe each one briefly and explain why it's relevant to the user's query. Encourage them to tap the post cards below to view the full recipes.${dietarySection}`;
   }
   try {
+    const { dietaryPreferences, allergies } = await fetchUserDietaryContext(userId);
     const { data: pantryItems, error: pantryError } = await supabase
       .from('pantry_items')
       .select('name, quantity, unit, category, expiration_date')
@@ -138,8 +176,10 @@ async function buildSystemPrompt(userId, isPantryQuery = false, isPostSuggestion
       console.error('[CHAT] Pantry query failed:', pantryError.message);
     }
 
+    const dietarySection = buildDietaryProfileSection({ dietaryPreferences, allergies });
+
     if (!pantryItems || pantryItems.length === 0) {
-      return `${BASE_SYSTEM_PROMPT}\n\nThe user's pantry is currently empty. If they ask about cooking or recipes, let them know their pantry is empty and suggest they add items to their pantry first. You can still answer general food questions.${isPantryQuery ? RECIPE_FORMAT_INSTRUCTIONS : ''}`;
+      return `${BASE_SYSTEM_PROMPT}${dietarySection}\n\nThe user's pantry is currently empty. If they ask about cooking or recipes, let them know their pantry is empty and suggest they add items to their pantry first. You can still answer general food questions.${isPantryQuery ? RECIPE_FORMAT_INSTRUCTIONS : ''}`;
     }
 
     const now = new Date();
@@ -167,10 +207,10 @@ ${itemList}
 When suggesting recipes or meal ideas, prioritize using ingredients from the user's pantry. Clearly flag any ingredients a recipe needs that are NOT in the pantry as "Extra items needed." Note items expiring soon and suggest using them first.`;
 
     if (isPantryQuery) {
-      return `${BASE_SYSTEM_PROMPT}${pantrySection}${RECIPE_FORMAT_INSTRUCTIONS}`;
+      return `${BASE_SYSTEM_PROMPT}${dietarySection}${pantrySection}${RECIPE_FORMAT_INSTRUCTIONS}`;
     }
 
-    return `${BASE_SYSTEM_PROMPT}${pantrySection}`;
+    return `${BASE_SYSTEM_PROMPT}${dietarySection}${pantrySection}`;
   } catch (err) {
     console.error('[CHAT] buildSystemPrompt error:', err.message);
     return BASE_SYSTEM_PROMPT;
