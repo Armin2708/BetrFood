@@ -74,7 +74,7 @@ export default function ConversationListScreen() {
     } else {
       // Create new conversation
       router.push({
-        pathname: `/chat/new`,
+        pathname: '/chat/[id]',
         params: { title: newTitle }
       });
     }
