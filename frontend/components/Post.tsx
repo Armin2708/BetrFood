@@ -4,6 +4,7 @@ import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
 import { Collection, useCollections } from "../context/CollectionsContext";
 import { Tag, Recipe, Comment, deletePost, fetchRecipe, likePost, unlikePost, reportContent, fetchComments, createComment, deleteComment, checkSaveStatus, blockUser, unblockUser, muteUser, unmuteUser, checkBlockStatus, checkMuteStatus } from '../services/api';
+import { feedEvents } from '../utils/feedEvents';
 import TagDisplay from './TagDisplay';
 import RecipeDisplay from './RecipeDisplay';
 import { useVideoPlayer, VideoView } from 'expo-video';
@@ -470,79 +471,87 @@ export default function Post({
     if (!userId) return;
     setMenuModalVisible(false);
     setMenuModalShown(false);
-    if (isBlocked) {
-      Alert.alert('Unblock User', 'Are you sure you want to unblock this user?', [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Unblock',
-          onPress: async () => {
-            try {
-              await unblockUser(userId);
-              setIsBlocked(false);
-              Alert.alert('User Unblocked', 'You can now see this user\'s content again.');
-            } catch (error: any) {
-              Alert.alert('Error', error.message || 'Failed to unblock user.');
-            }
+    setTimeout(() => {
+      if (isBlocked) {
+        Alert.alert('Unblock User', 'Are you sure you want to unblock this user?', [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Unblock',
+            onPress: async () => {
+              try {
+                await unblockUser(userId);
+                setIsBlocked(false);
+                feedEvents.emitRefreshNeeded();
+                Alert.alert('User Unblocked', 'You can now see this user\'s content again.');
+              } catch (error: any) {
+                Alert.alert('Error', error.message || 'Failed to unblock user.');
+              }
+            },
           },
-        },
-      ]);
-    } else {
-      Alert.alert('Block User', 'Are you sure you want to block this user? You won\'t see their content and they won\'t see yours.', [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Block',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await blockUser(userId);
-              setIsBlocked(true);
-              Alert.alert('User Blocked', 'This user has been blocked.');
-            } catch (error: any) {
-              Alert.alert('Error', error.message || 'Failed to block user.');
-            }
+        ]);
+      } else {
+        Alert.alert('Block User', 'Are you sure you want to block this user? You won\'t see their content and they won\'t see yours.', [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Block',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                await blockUser(userId);
+                setIsBlocked(true);
+                feedEvents.emitRefreshNeeded();
+                Alert.alert('User Blocked', 'This user has been blocked.');
+              } catch (error: any) {
+                Alert.alert('Error', error.message || 'Failed to block user.');
+              }
+            },
           },
-        },
-      ]);
-    }
+        ]);
+      }
+    }, 300);
   };
 
   const handleToggleMute = () => {
     if (!userId) return;
     setMenuModalVisible(false);
     setMenuModalShown(false);
-    if (isMuted) {
-      Alert.alert('Unmute User', 'You will now see this user\'s posts in your feed again.', [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Unmute',
-          onPress: async () => {
-            try {
-              await unmuteUser(userId);
-              setIsMuted(false);
-              Alert.alert('User Unmuted', 'This user has been unmuted.');
-            } catch (error: any) {
-              Alert.alert('Error', error.message || 'Failed to unmute user.');
-            }
+    setTimeout(() => {
+      if (isMuted) {
+        Alert.alert('Unmute User', 'You will now see this user\'s posts in your feed again.', [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Unmute',
+            onPress: async () => {
+              try {
+                await unmuteUser(userId);
+                setIsMuted(false);
+                feedEvents.emitRefreshNeeded();
+                Alert.alert('User Unmuted', 'This user has been unmuted.');
+              } catch (error: any) {
+                Alert.alert('Error', error.message || 'Failed to unmute user.');
+              }
+            },
           },
-        },
-      ]);
-    } else {
-      Alert.alert('Mute User', 'You will no longer see this user\'s posts in your feed.', [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Mute',
-          onPress: async () => {
-            try {
-              await muteUser(userId);
-              setIsMuted(true);
-              Alert.alert('User Muted', 'This user has been muted.');
-            } catch (error: any) {
-              Alert.alert('Error', error.message || 'Failed to mute user.');
-            }
+        ]);
+      } else {
+        Alert.alert('Mute User', 'You will no longer see this user\'s posts in your feed.', [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Mute',
+            onPress: async () => {
+              try {
+                await muteUser(userId);
+                setIsMuted(true);
+                feedEvents.emitRefreshNeeded();
+                Alert.alert('User Muted', 'This user has been muted.');
+              } catch (error: any) {
+                Alert.alert('Error', error.message || 'Failed to mute user.');
+              }
+            },
           },
-        },
-      ]);
-    }
+        ]);
+      }
+    }, 300);
   };
 
   const handleOpenShare = () => {
