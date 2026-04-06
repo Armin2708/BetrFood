@@ -39,6 +39,8 @@ CREATE TABLE IF NOT EXISTS user_preferences (
 -- Add the column if the table already exists
 ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS expiring_items_threshold INTEGER DEFAULT 7;
 ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS expiration_notifications_enabled BOOLEAN DEFAULT false;
+
+
 -- ============================================================
 -- 3. Posts
 -- ============================================================
@@ -271,3 +273,29 @@ CREATE TABLE IF NOT EXISTS chat_messages (
 );
 CREATE INDEX IF NOT EXISTS idx_chat_messages_user_id ON chat_messages(user_id);
 CREATE INDEX IF NOT EXISTS idx_chat_messages_conversation_id ON chat_messages(conversation_id);
+
+-- ============================================================
+-- 15. Post Images (multi-image support)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS post_images (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  post_id UUID REFERENCES posts(id) ON DELETE CASCADE,
+  image_path TEXT NOT NULL,
+  order_index INTEGER DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_post_images_post_id ON post_images(post_id);
+
+-- ============================================================
+-- 16. Audit Logs (for admin role changes)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS audit_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  action TEXT NOT NULL,
+  performed_by TEXT NOT NULL,
+  target_user_id TEXT NOT NULL,
+  old_value TEXT,
+  new_value TEXT,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_performed_by ON audit_logs(performed_by);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_target_user ON audit_logs(target_user_id);

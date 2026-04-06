@@ -282,6 +282,7 @@ router.delete('/me', requireAuth, async (req, res) => {
 
         // Delete related data in dependency order
         await client.query('DELETE FROM user_preferences WHERE user_id = $1', [userId]);
+        await client.query('DELETE FROM pantry_items WHERE user_id = $1', [userId]);
         await client.query('DELETE FROM user_follows WHERE follower_id = $1 OR following_id = $1', [userId]);
         await client.query('DELETE FROM user_blocks WHERE blocker_id = $1 OR blocked_id = $1', [userId]);
         await client.query('DELETE FROM user_mutes WHERE muter_id = $1 OR muted_id = $1', [userId]);
@@ -332,6 +333,7 @@ router.delete('/me', requireAuth, async (req, res) => {
     } else {
       // Fallback: sequential deletes via Supabase client (no transaction)
       await supabase.from('user_preferences').delete().eq('user_id', req.userId);
+      await supabase.from('pantry_items').delete().eq('user_id', req.userId);
       await supabase.from('user_follows').delete().eq('follower_id', req.userId);
       await supabase.from('user_follows').delete().eq('following_id', req.userId);
       await supabase.from('user_blocks').delete().eq('blocker_id', req.userId);
@@ -423,7 +425,7 @@ router.get('/:userId', optionalAuth, async (req, res) => {
     // Check profile visibility preference
     const { data: prefs } = await supabase
       .from('user_preferences')
-      .select('profile_visibility')
+      .select('profile_visibility, dietary_info_visible')
       .eq('user_id', req.params.userId)
       .maybeSingle();
 
@@ -451,7 +453,25 @@ router.get('/:userId', optionalAuth, async (req, res) => {
       }
     }
 
-    return res.json(formatProfile(data));
+    // Enforce dietary info visibility — hide from non-followers if disabled
+    const profile = formatProfile(data);
+    if (prefs && prefs.dietary_info_visible === false) {
+      let isFollower = false;
+      if (req.userId) {
+        const { data: followRow } = await supabase
+          .from('user_follows')
+          .select('follower_id')
+          .eq('follower_id', req.userId)
+          .eq('following_id', req.params.userId)
+          .maybeSingle();
+        isFollower = !!followRow;
+      }
+      if (!isFollower) {
+        profile.dietaryPreferences = [];
+      }
+    }
+
+    return res.json(profile);
   } catch (error) {
     console.error('Error fetching profile:', error);
     return res.status(500).json({ error: 'Failed to fetch profile.' });

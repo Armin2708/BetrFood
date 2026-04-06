@@ -443,7 +443,7 @@ router.post('/', requireAuth, async (req, res) => {
       .select('id, role, content, created_at')
       .single();
 
-    res.json({ ...saved, suggestedPosts: suggestedPosts.length > 0 ? suggestedPosts : undefined });
+    res.json({ ...saved, conversationId: convId, suggestedPosts: suggestedPosts.length > 0 ? suggestedPosts : undefined });
   } catch (err) {
     console.error('[CHAT ERROR]', err.message, err.stack);
     res.status(500).json({ error: 'Failed to get AI response', details: err.message });

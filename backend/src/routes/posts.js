@@ -236,6 +236,13 @@ router.get('/following', requireAuth, async (req, res) => {
 router.get('/user/:userId', async (req, res) => {
   try {
     const limit = Math.min(Math.max(parseInt(req.query.limit) || 30, 1), 50);
+
+    // Check if the requesting user has blocked or been blocked by the target user
+    const excludedIds = req.userId ? await getExcludedUserIds(req.userId) : new Set();
+    if (excludedIds.has(req.params.userId)) {
+      return res.json({ posts: [] });
+    }
+
     const { data: posts, error } = await supabase
       .from('posts')
       .select('*')
