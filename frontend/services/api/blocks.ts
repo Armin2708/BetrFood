@@ -8,7 +8,7 @@ export async function checkBlockStatus(userId: string): Promise<{ isBlocked: boo
     const error = await response.json();
     throw new Error(error.error || 'Failed to check block status');
   }
-  const data = response.json();
+  const data = await response.json();
   console.log('[API] Block status for', userId, ':', data);
   return data;
 }

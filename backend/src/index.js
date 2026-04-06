@@ -64,6 +64,7 @@ app.get("/", (req, res) => {
 // Mount routes
 app.use("/api/posts", postsRouter);
 app.use("/api/tags", tagsRouter);
+app.use("/api/users", blocksRouter); // Must be BEFORE userRoutes to avoid /blocked, /muted matching as :id
 app.use("/api/users", userRoutes);
 app.use("/api", recipesRouter);
 app.use("/api/profiles", profilesRouter);
@@ -78,7 +79,6 @@ app.use("/api/collections", collectionsRouter);
 app.use("/api/posts", savesRouter);
 app.use('/api/pantry', pantryRouter);
 app.use("/api/preferences", preferencesRouter);
-app.use("/api/users", blocksRouter);
 app.use("/api/notifications", notificationsRouter);
 app.use('/api/chat', chatRouter);
 

@@ -73,22 +73,24 @@ router.put('/', requireAuth, async (req, res) => {
       if (!Array.isArray(allergies)) {
         return res.status(400).json({ error: 'allergies must be an array.' });
       }
-      // Accept both string arrays and object arrays for backward compatibility
-      const normalizedAllergies = allergies.map(allergy => {
-        if (typeof allergy === 'string') {
-          // Convert string to object format
-          return { name: allergy, severity: 'moderate' };
-        } else if (typeof allergy === 'object' && allergy.name) {
-          // Already in object format, validate severity
-          const validSeverities = ['mild', 'moderate', 'severe'];
-          if (allergy.severity && !validSeverities.includes(allergy.severity)) {
-            return res.status(400).json({ error: 'Allergy severity must be "mild", "moderate", or "severe".' });
+      const validSeverities = ['mild', 'moderate', 'severe'];
+      let normalizedAllergies;
+      try {
+        normalizedAllergies = allergies.map((allergy) => {
+          if (typeof allergy === 'string') {
+            return { name: allergy, severity: 'moderate' };
           }
-          return { name: allergy.name, severity: allergy.severity || 'moderate' };
-        } else {
-          return res.status(400).json({ error: 'Each allergy must be a string or an object with a "name" field.' });
-        }
-      });
+          if (typeof allergy !== 'object' || !allergy.name) {
+            throw new Error('Each allergy must be a string or an object with a "name" field.');
+          }
+          if (allergy.severity && !validSeverities.includes(allergy.severity)) {
+            throw new Error('Allergy severity must be "mild", "moderate", or "severe".');
+          }
+          return { ...allergy, severity: allergy.severity || 'moderate' };
+        });
+      } catch (err) {
+        return res.status(400).json({ error: err.message });
+      }
       updates.allergies = normalizedAllergies;
     }
 

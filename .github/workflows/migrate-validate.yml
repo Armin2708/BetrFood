@@ -1,0 +1,42 @@
+name: Validate Migrations (PR)
+
+on:
+  pull_request:
+    paths:
+      - 'supabase/migrations/**'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start local Supabase
+        run: supabase start -x realtime,storage,imgproxy,edge-runtime,logflare,vector,supavisor
+
+      - name: Apply all migrations to local DB
+        run: supabase db reset
+
+      - name: Check for migration conflicts
+        run: |
+          # Ensure migration filenames are unique and timestamps are sequential
+          MIGRATIONS=$(ls -1 supabase/migrations/*.sql 2>/dev/null | sort)
+          PREV=""
+          for f in $MIGRATIONS; do
+            BASE=$(basename "$f")
+            TIMESTAMP=${BASE%%_*}
+            if [ "$TIMESTAMP" = "$PREV" ]; then
+              echo "::error::Duplicate migration timestamp: $TIMESTAMP"
+              exit 1
+            fi
+            PREV="$TIMESTAMP"
+          done
+          echo "All migration timestamps are unique and sequential."
+
+      - name: Verify schema is valid
+        run: |
+          supabase db lint
