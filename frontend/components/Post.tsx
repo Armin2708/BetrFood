@@ -468,21 +468,21 @@ export default function Post({
 
   const handleToggleBlock = () => {
     if (!userId) return;
+    setMenuModalVisible(false);
+    setMenuModalShown(false);
     if (isBlocked) {
       Alert.alert('Unblock User', 'Are you sure you want to unblock this user?', [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Unblock',
-          onPress: () => {
-            handleCloseMenu();
-            unblockUser(userId)
-              .then(() => {
-                setIsBlocked(false);
-                Alert.alert('User Unblocked', 'You can now see this user\'s content again.');
-              })
-              .catch((error: any) => {
-                Alert.alert('Error', error.message || 'Failed to unblock user.');
-              });
+          onPress: async () => {
+            try {
+              await unblockUser(userId);
+              setIsBlocked(false);
+              Alert.alert('User Unblocked', 'You can now see this user\'s content again.');
+            } catch (error: any) {
+              Alert.alert('Error', error.message || 'Failed to unblock user.');
+            }
           },
         },
       ]);
@@ -492,16 +492,14 @@ export default function Post({
         {
           text: 'Block',
           style: 'destructive',
-          onPress: () => {
-            handleCloseMenu();
-            blockUser(userId)
-              .then(() => {
-                setIsBlocked(true);
-                Alert.alert('User Blocked', 'This user has been blocked.');
-              })
-              .catch((error: any) => {
-                Alert.alert('Error', error.message || 'Failed to block user.');
-              });
+          onPress: async () => {
+            try {
+              await blockUser(userId);
+              setIsBlocked(true);
+              Alert.alert('User Blocked', 'This user has been blocked.');
+            } catch (error: any) {
+              Alert.alert('Error', error.message || 'Failed to block user.');
+            }
           },
         },
       ]);
@@ -510,21 +508,21 @@ export default function Post({
 
   const handleToggleMute = () => {
     if (!userId) return;
+    setMenuModalVisible(false);
+    setMenuModalShown(false);
     if (isMuted) {
       Alert.alert('Unmute User', 'You will now see this user\'s posts in your feed again.', [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Unmute',
-          onPress: () => {
-            handleCloseMenu();
-            unmuteUser(userId)
-              .then(() => {
-                setIsMuted(false);
-                Alert.alert('User Unmuted', 'This user has been unmuted.');
-              })
-              .catch((error: any) => {
-                Alert.alert('Error', error.message || 'Failed to unmute user.');
-              });
+          onPress: async () => {
+            try {
+              await unmuteUser(userId);
+              setIsMuted(false);
+              Alert.alert('User Unmuted', 'This user has been unmuted.');
+            } catch (error: any) {
+              Alert.alert('Error', error.message || 'Failed to unmute user.');
+            }
           },
         },
       ]);
@@ -533,16 +531,14 @@ export default function Post({
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Mute',
-          onPress: () => {
-            handleCloseMenu();
-            muteUser(userId)
-              .then(() => {
-                setIsMuted(true);
-                Alert.alert('User Muted', 'This user has been muted.');
-              })
-              .catch((error: any) => {
-                Alert.alert('Error', error.message || 'Failed to mute user.');
-              });
+          onPress: async () => {
+            try {
+              await muteUser(userId);
+              setIsMuted(true);
+              Alert.alert('User Muted', 'This user has been muted.');
+            } catch (error: any) {
+              Alert.alert('Error', error.message || 'Failed to mute user.');
+            }
           },
         },
       ]);
