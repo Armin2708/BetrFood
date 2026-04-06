@@ -108,17 +108,20 @@ router.post('/:id/block', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'You cannot block yourself.' });
     }
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('user_blocks')
-      .insert({ blocker_id: req.userId, blocked_id: blockedId });
+      .insert({ blocker_id: req.userId, blocked_id: blockedId })
+      .select();
 
     if (error) {
+      console.error('[BLOCK] DB error:', error);
       if (error.code === '23505') {
         return res.json({ message: 'User already blocked.' });
       }
       throw error;
     }
 
+    console.log('[BLOCK] Saved:', data);
     res.status(201).json({ message: 'User blocked successfully.' });
   } catch (error) {
     console.error('Error blocking user:', error);

@@ -221,15 +221,15 @@ CREATE TABLE IF NOT EXISTS reports (
 -- 12. User Blocks & Mutes
 -- ============================================================
 CREATE TABLE IF NOT EXISTS user_blocks (
-  blocker_id TEXT NOT NULL,
-  blocked_id TEXT NOT NULL,
+  blocker_id TEXT NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
+  blocked_id TEXT NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
   created_at TIMESTAMPTZ DEFAULT now(),
   PRIMARY KEY (blocker_id, blocked_id)
 );
 
 CREATE TABLE IF NOT EXISTS user_mutes (
-  muter_id TEXT NOT NULL,
-  muted_id TEXT NOT NULL,
+  muter_id TEXT NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
+  muted_id TEXT NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
   created_at TIMESTAMPTZ DEFAULT now(),
   PRIMARY KEY (muter_id, muted_id)
 );
