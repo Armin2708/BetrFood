@@ -1,10 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const supabase = require('../db/supabase');
-const { requireAuth } = require('../middleware/auth');
+const { requireAuth, optionalAuth } = require('../middleware/auth');
+const { getExcludedUserIds } = require('../utils/enrichment');
 
 // GET /api/posts/:postId/comments - List comments for a post (paginated, with user profiles)
-router.get('/:postId/comments', async (req, res) => {
+router.get('/:postId/comments', optionalAuth, async (req, res) => {
   try {
     const { postId } = req.params;
     const limit = Math.min(Math.max(parseInt(req.query.limit) || 20, 1), 100);
@@ -19,8 +20,14 @@ router.get('/:postId/comments', async (req, res) => {
 
     if (error) throw error;
 
+    // Filter out comments from blocked/muted users
+    const excludedIds = req.userId ? await getExcludedUserIds(req.userId) : new Set();
+    const filteredComments = excludedIds.size > 0
+      ? (comments || []).filter(c => !excludedIds.has(c.user_id))
+      : (comments || []);
+
     // Enrich with user profile data
-    const enriched = await enrichCommentsWithProfiles(comments || []);
+    const enriched = await enrichCommentsWithProfiles(filteredComments);
     const mapped = enriched.map(mapComment);
 
     // Build threaded tree: nest replies under their parent
@@ -38,13 +45,20 @@ router.get('/:postId/comments', async (req, res) => {
       }
     }
 
-    // Get total count
-    const { count } = await supabase
-      .from('comments')
-      .select('*', { count: 'exact', head: true })
-      .eq('post_id', postId);
+    // Get total count (excluding blocked/muted users)
+    let total = mapped.length;
+    if (req.userId && excludedIds.size > 0) {
+      // For accurate count, we'd need a separate query, but for now use filtered count
+      total = mapped.length;
+    } else {
+      const { count } = await supabase
+        .from('comments')
+        .select('*', { count: 'exact', head: true })
+        .eq('post_id', postId);
+      total = count || 0;
+    }
 
-    res.json({ comments: roots, total: count || 0 });
+    res.json({ comments: roots, total });
   } catch (error) {
     console.error('Error fetching comments:', error);
     res.status(500).json({ error: 'Failed to fetch comments.' });
@@ -87,7 +101,7 @@ router.post('/:postId/comments', requireAuth, async (req, res) => {
     // Verify the post exists
     const { data: post, error: postError } = await supabase
       .from('posts')
-      .select('id')
+      .select('id, user_id')
       .eq('id', postId)
       .single();
 
@@ -95,11 +109,17 @@ router.post('/:postId/comments', requireAuth, async (req, res) => {
       return res.status(404).json({ error: 'Post not found.' });
     }
 
+    // Check if commenter is blocked by post author or vice versa
+    const excludedIds = await getExcludedUserIds(req.userId);
+    if (excludedIds.has(post.user_id)) {
+      return res.status(403).json({ error: 'You cannot interact with this user.' });
+    }
+
     // If parentId is provided, verify the parent comment exists and belongs to the same post
     if (parentId) {
       const { data: parentComment, error: parentError } = await supabase
         .from('comments')
-        .select('id, post_id')
+        .select('id, post_id, user_id')
         .eq('id', parentId)
         .single();
 
@@ -109,6 +129,11 @@ router.post('/:postId/comments', requireAuth, async (req, res) => {
 
       if (parentComment.post_id !== postId) {
         return res.status(400).json({ error: 'Parent comment does not belong to this post.' });
+      }
+
+      // Check if replying to a blocked user
+      if (excludedIds.has(parentComment.user_id)) {
+        return res.status(403).json({ error: 'You cannot interact with this user.' });
       }
     }
 

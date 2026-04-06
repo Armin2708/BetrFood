@@ -2,12 +2,27 @@ const express = require('express');
 const router = express.Router();
 const supabase = require('../db/supabase');
 const { requireAuth } = require('../middleware/auth');
+const { getExcludedUserIds } = require('../utils/enrichment');
 
 // POST /posts/:id/like
 router.post('/:id/like', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const userId = req.userId;
+
+    // Check if post author is blocked/muted
+    const { data: post } = await supabase
+      .from('posts')
+      .select('user_id')
+      .eq('id', id)
+      .single();
+
+    if (post) {
+      const excludedIds = await getExcludedUserIds(userId);
+      if (excludedIds.has(post.user_id)) {
+        return res.status(403).json({ error: 'You cannot interact with this user.' });
+      }
+    }
 
     const { error: insertError } = await supabase
       .from('likes')

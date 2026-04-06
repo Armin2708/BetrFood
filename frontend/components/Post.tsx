@@ -3,7 +3,7 @@ import SaveCollectionModal from "./SaveCollectionModal";
 import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
 import { Collection, useCollections } from "../context/CollectionsContext";
-import { Tag, Recipe, Comment, deletePost, fetchRecipe, likePost, unlikePost, reportContent, fetchComments, createComment, deleteComment, checkSaveStatus } from '../services/api';
+import { Tag, Recipe, Comment, deletePost, fetchRecipe, likePost, unlikePost, reportContent, fetchComments, createComment, deleteComment, checkSaveStatus, blockUser, unblockUser, muteUser, unmuteUser, checkBlockStatus, checkMuteStatus } from '../services/api';
 import TagDisplay from './TagDisplay';
 import RecipeDisplay from './RecipeDisplay';
 import { useVideoPlayer, VideoView } from 'expo-video';
@@ -108,6 +108,23 @@ export default function Post({
   const menuSlideAnim = useRef(new Animated.Value(Dimensions.get('window').height)).current;
   const commentInputRef = useRef<TextInput>(null);
   const { user } = useContext(AuthContext);
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
+
+  useEffect(() => {
+    if (!userId || !user || user.id === userId) return;
+    let cancelled = false;
+    Promise.all([
+      checkBlockStatus(userId).catch(() => ({ isBlocked: false })),
+      checkMuteStatus(userId).catch(() => ({ isMuted: false })),
+    ]).then(([blockRes, muteRes]) => {
+      if (!cancelled) {
+        setIsBlocked(blockRes.isBlocked);
+        setIsMuted(muteRes.isMuted);
+      }
+    });
+    return () => { cancelled = true; };
+  }, [userId, user]);
 
   const COMMENTS_LIMIT = 20;
 
@@ -447,6 +464,89 @@ export default function Post({
       setMenuModalShown(false);
       setMenuModalVisible(false);
     });
+  };
+
+  const handleToggleBlock = () => {
+    if (!userId) return;
+    if (isBlocked) {
+      Alert.alert('Unblock User', 'Are you sure you want to unblock this user?', [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Unblock',
+          onPress: () => {
+            handleCloseMenu();
+            unblockUser(userId)
+              .then(() => {
+                setIsBlocked(false);
+                Alert.alert('User Unblocked', 'You can now see this user\'s content again.');
+              })
+              .catch((error: any) => {
+                Alert.alert('Error', error.message || 'Failed to unblock user.');
+              });
+          },
+        },
+      ]);
+    } else {
+      Alert.alert('Block User', 'Are you sure you want to block this user? You won\'t see their content and they won\'t see yours.', [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Block',
+          style: 'destructive',
+          onPress: () => {
+            handleCloseMenu();
+            blockUser(userId)
+              .then(() => {
+                setIsBlocked(true);
+                Alert.alert('User Blocked', 'This user has been blocked.');
+              })
+              .catch((error: any) => {
+                Alert.alert('Error', error.message || 'Failed to block user.');
+              });
+          },
+        },
+      ]);
+    }
+  };
+
+  const handleToggleMute = () => {
+    if (!userId) return;
+    if (isMuted) {
+      Alert.alert('Unmute User', 'You will now see this user\'s posts in your feed again.', [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Unmute',
+          onPress: () => {
+            handleCloseMenu();
+            unmuteUser(userId)
+              .then(() => {
+                setIsMuted(false);
+                Alert.alert('User Unmuted', 'This user has been unmuted.');
+              })
+              .catch((error: any) => {
+                Alert.alert('Error', error.message || 'Failed to unmute user.');
+              });
+          },
+        },
+      ]);
+    } else {
+      Alert.alert('Mute User', 'You will no longer see this user\'s posts in your feed.', [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Mute',
+          onPress: () => {
+            handleCloseMenu();
+            muteUser(userId)
+              .then(() => {
+                setIsMuted(true);
+                Alert.alert('User Muted', 'This user has been muted.');
+              })
+              .catch((error: any) => {
+                Alert.alert('Error', error.message || 'Failed to mute user.');
+              });
+          },
+        },
+      ]);
+    }
   };
 
   const handleOpenShare = () => {
@@ -825,6 +925,36 @@ export default function Post({
                 </View>
                 <Text style={styles.shareOptionText}>Report</Text>
               </TouchableOpacity>
+
+              {!isOwner && userId && (
+                <TouchableOpacity
+                  style={styles.shareOption}
+                  onPress={handleToggleBlock}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.shareOptionIcon, { backgroundColor: isBlocked ? '#F0FDF4' : '#FEE2E2' }]}>
+                    <Ionicons name={isBlocked ? 'checkmark-circle-outline' : 'ban-outline'} size={22} color={isBlocked ? '#16A34A' : '#DC2626'} />
+                  </View>
+                  <Text style={[styles.shareOptionText, { color: isBlocked ? '#16A34A' : '#DC2626' }]}>
+                    {isBlocked ? 'Unblock' : 'Block'}
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              {!isOwner && userId && (
+                <TouchableOpacity
+                  style={styles.shareOption}
+                  onPress={handleToggleMute}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.shareOptionIcon, { backgroundColor: isMuted ? '#F0FDF4' : '#FEF3C7' }]}>
+                    <Ionicons name={isMuted ? 'checkmark-circle-outline' : 'volume-mute-outline'} size={22} color={isMuted ? '#16A34A' : '#D97706'} />
+                  </View>
+                  <Text style={[styles.shareOptionText, { color: isMuted ? '#16A34A' : '#D97706' }]}>
+                    {isMuted ? 'Unmute' : 'Mute'}
+                  </Text>
+                </TouchableOpacity>
+              )}
 
               <TouchableOpacity onPress={handleCloseMenu} style={styles.shareCancel}>
                 <Text style={styles.shareCancelText}>Cancel</Text>

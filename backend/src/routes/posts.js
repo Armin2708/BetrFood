@@ -265,7 +265,7 @@ router.get('/user/:userId', async (req, res) => {
 });
 
 // GET /api/posts/:id - single post
-router.get('/:id', async (req, res) => {
+router.get('/:id', optionalAuth, async (req, res) => {
   try {
     const { data: post, error } = await supabase
       .from('posts')
@@ -274,6 +274,15 @@ router.get('/:id', async (req, res) => {
       .single();
 
     if (error || !post) return res.status(404).json({ error: 'Post not found' });
+
+    // Check block status
+    if (req.userId) {
+      const excludedIds = await getExcludedUserIds(req.userId);
+      if (excludedIds.has(post.user_id)) {
+        return res.status(404).json({ error: 'Post not found' });
+      }
+    }
+
     const [enriched] = await enrichPostsWithProfiles([post]);
     const [withTags] = await enrichPostsWithTags([enriched]);
     const [withCount] = await enrichPostsWithCommentCounts([withTags]);
