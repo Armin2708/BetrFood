@@ -421,7 +421,7 @@ export default function Post({
   const handleExternalShare = async () => {
     try {
       await Share.share({
-        message: `Check out this post from ${username}: ${process.env.EXPO_PUBLIC_APP_URL || 'http://localhost:8081'}/post-detail?postId=${id}`,
+        message: `Check out this post from ${username} on BetrFood!`,
       });
     } catch {
       Alert.alert('Error', 'Could not share the post.');
@@ -429,9 +429,8 @@ export default function Post({
   };
 
   const handleCopyLink = async () => {
-    const link = `${process.env.EXPO_PUBLIC_APP_URL || 'http://localhost:8081'}/post-detail?postId=${id}`;
-    await Clipboard.setStringAsync(link);
-    Alert.alert('Link Copied', 'The post link has been copied to your clipboard.');
+    await Clipboard.setStringAsync(caption || 'Check out this post on BetrFood!');
+    Alert.alert('Copied', 'Post text has been copied to your clipboard.');
   };
 
   const REPORT_REASONS = ['Spam', 'Inappropriate', 'Harassment', 'Other'];
@@ -635,9 +634,9 @@ export default function Post({
         >
           <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
             <Ionicons
-              name={liked ? 'thumbs-up' : 'thumbs-up-outline'}
+              name={liked ? 'heart' : 'heart-outline'}
               size={22}
-              color={liked ? '#22C55E' : colors.textPrimary}
+              color={liked ? '#EF4444' : colors.textPrimary}
             />
           </Animated.View>
         </TouchableOpacity>

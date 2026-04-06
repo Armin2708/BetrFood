@@ -13,6 +13,8 @@ export type Collection = {
   id: string;
   name: string;
   postCount: number;
+  coverImage?: string | null;
+  coverMediaType?: string | null;
 };
 
 type CollectionsContextType = {
@@ -41,6 +43,8 @@ export const CollectionsProvider = ({ children }: any) => {
         id: c.id,
         name: c.name,
         postCount: c.postCount ?? c.post_count ?? 0,
+        coverImage: c.coverImage ?? c.cover_image ?? null,
+        coverMediaType: c.coverMediaType ?? c.cover_media_type ?? null,
       }));
       setCollections(mapped);
     } catch (error) {

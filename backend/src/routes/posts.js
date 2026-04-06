@@ -13,6 +13,7 @@ const {
   enrichPostsWithCommentCounts,
   enrichPostsWithLikes,
   enrichPostsWithImages,
+  enrichPostsWithRecipes,
   mapPost,
   getExcludedUserIds,
 } = require('../utils/enrichment');
@@ -183,13 +184,14 @@ router.get('/', optionalAuth, async (req, res) => {
       ? resultPosts[resultPosts.length - 1].id
       : null;
 
-    // Enrich with profile data, tags, comment counts, likes, and images
+    // Enrich with profile data, tags, comment counts, likes, images, and recipes
     const enriched = await enrichPostsWithProfiles(resultPosts);
     const withTags = await enrichPostsWithTags(enriched);
     const withCounts = await enrichPostsWithCommentCounts(withTags);
     const withLikes = await enrichPostsWithLikes(withCounts, req.userId);
     const withImages = await enrichPostsWithImages(withLikes);
-    const mapped = withImages.map(mapPost);
+    const withRecipes = await enrichPostsWithRecipes(withImages);
+    const mapped = withRecipes.map(mapPost);
 
     res.json({ posts: mapped, nextCursor, hasMore });
   } catch (error) {
@@ -258,12 +260,56 @@ router.get('/following', requireAuth, async (req, res) => {
     const withCounts = await enrichPostsWithCommentCounts(withTags);
     const withLikes = await enrichPostsWithLikes(withCounts, req.userId);
     const withImages = await enrichPostsWithImages(withLikes);
-    const mapped = withImages.map(mapPost);
+    const withRecipes = await enrichPostsWithRecipes(withImages);
+    const mapped = withRecipes.map(mapPost);
 
     res.json({ posts: mapped, nextCursor, hasMore });
   } catch (error) {
     console.error('Error fetching following feed:', error);
     res.status(500).json({ error: 'Failed to fetch following feed.' });
+  }
+});
+
+// GET /api/posts/liked — fetch posts liked by a user
+router.get('/liked', requireAuth, async (req, res) => {
+  try {
+    const userId = req.query.userId || req.userId;
+    const limit = Math.min(parseInt(req.query.limit) || 30, 100);
+
+    const { data: likeRows, error: likesError } = await supabase
+      .from('likes')
+      .select('post_id')
+      .eq('user_id', userId)
+      .limit(limit);
+
+    if (likesError) throw likesError;
+    if (!likeRows || likeRows.length === 0) return res.json({ posts: [] });
+
+    const postIds = likeRows.map(r => r.post_id);
+
+    const { data: posts, error: postsError } = await supabase
+      .from('posts')
+      .select('*')
+      .in('id', postIds);
+
+    if (postsError) throw postsError;
+
+    // Preserve like order
+    const postMap = new Map((posts || []).map(p => [p.id, p]));
+    let ordered = postIds.map(id => postMap.get(id)).filter(Boolean);
+
+    // Enrich
+    ordered = await enrichPostsWithProfiles(ordered);
+    ordered = await enrichPostsWithTags(ordered);
+    ordered = await enrichPostsWithCommentCounts(ordered);
+    ordered = await enrichPostsWithLikes(ordered, req.userId);
+    ordered = await enrichPostsWithImages(ordered);
+    ordered = await enrichPostsWithRecipes(ordered);
+
+    res.json({ posts: ordered.map(mapPost) });
+  } catch (error) {
+    console.error('Error fetching liked posts:', error);
+    res.status(500).json({ error: 'Failed to fetch liked posts.' });
   }
 });
 
@@ -290,7 +336,8 @@ router.get('/user/:userId', async (req, res) => {
     const enriched = await enrichPostsWithProfiles(posts || []);
     const withTags = await enrichPostsWithTags(enriched);
     const withCounts = await enrichPostsWithCommentCounts(withTags);
-    const mapped = withCounts.map(mapPost);
+    const withRecipes = await enrichPostsWithRecipes(withCounts);
+    const mapped = withRecipes.map(mapPost);
 
     res.json({ posts: mapped });
   } catch (error) {
@@ -322,7 +369,8 @@ router.get('/:id', optionalAuth, async (req, res) => {
     const [withTags] = await enrichPostsWithTags([enriched]);
     const [withCount] = await enrichPostsWithCommentCounts([withTags]);
     const [withImages] = await enrichPostsWithImages([withCount]);
-    res.json(mapPost(withImages));
+    const [withRecipe] = await enrichPostsWithRecipes([withImages]);
+    res.json(mapPost(withRecipe));
   } catch (error) {
     console.error('Error fetching post:', error);
     res.status(500).json({ error: 'Failed to fetch post.' });

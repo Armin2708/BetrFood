@@ -11,6 +11,7 @@ export interface Post {
   createdAt: string;
   updatedAt: string;
   editedAt?: string | null;
+  recipeId?: string | null;
   recipe?: Recipe | null;
   tags?: Tag[];
   displayName?: string | null;
@@ -172,6 +173,16 @@ export async function updatePost(
     throw new Error(error.error || 'Failed to update post');
   }
   return response.json();
+}
+
+export async function fetchLikedPosts(userId?: string, limit: number = 30): Promise<{ posts: Post[] }> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (userId) params.set('userId', userId);
+  const res = await fetch(`${API_BASE_URL}/api/posts/liked?${params}`, {
+    headers: await authHeaders(),
+  });
+  if (!res.ok) throw new Error('Failed to fetch liked posts');
+  return res.json();
 }
 
 export async function fetchFollowingFeed(cursor?: string | null, limit: number = 10): Promise<PaginatedResponse> {

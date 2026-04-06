@@ -140,6 +140,30 @@ async function enrichPostsWithImages(posts) {
   });
 }
 
+// Enrich posts with recipe IDs (batch query to check which posts have recipes)
+async function enrichPostsWithRecipes(posts) {
+  if (!posts || posts.length === 0) return posts;
+
+  const postIds = posts.map(p => p.id);
+
+  const { data: recipes, error } = await supabase
+    .from('recipes')
+    .select('id, post_id')
+    .in('post_id', postIds);
+
+  const recipeMap = {};
+  if (!error && recipes) {
+    for (const r of recipes) {
+      recipeMap[r.post_id] = r.id;
+    }
+  }
+
+  return posts.map(post => {
+    post._recipeId = recipeMap[post.id] || null;
+    return post;
+  });
+}
+
 // Map Supabase snake_case to camelCase for frontend
 function mapPost(post) {
   const profile = post._profile || {};
@@ -163,6 +187,7 @@ function mapPost(post) {
     likeCount: post._likeCount || 0,
     liked: post._liked || false,
     tags: (post._tags || []).map(t => ({ id: t.id, name: t.name, type: t.type })),
+    recipeId: post._recipeId || null,
   };
 }
 
@@ -189,6 +214,7 @@ module.exports = {
   enrichPostsWithCommentCounts,
   enrichPostsWithLikes,
   enrichPostsWithImages,
+  enrichPostsWithRecipes,
   mapPost,
   getExcludedUserIds,
 };

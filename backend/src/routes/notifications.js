@@ -59,14 +59,12 @@ router.post('/check-expiring', async (req, res) => {
 
     if (prefsError && prefsError.code !== 'PGRST116') throw prefsError;
 
-    const enabled = prefs?.expiration_notifications_enabled ?? false;
-    if (!enabled) {
-      return res.json({ checked: 0, created: 0 });
-    }
+    console.log('[EXPIRING-CHECK] userId:', req.userId, 'prefs:', JSON.stringify(prefs));
 
     const threshold = prefs?.expiring_items_threshold || 7;
     const { checked, created } = await checkExpiringItemsForUser(req.userId, threshold);
 
+    console.log('[EXPIRING-CHECK] result:', { checked, created });
     res.json({ checked, created });
   } catch (err) {
     console.error('Error checking expiring items:', err);
@@ -150,6 +148,26 @@ router.put('/read-all', async (req, res) => {
 });
 
 /**
+ * DELETE /api/notifications
+ * Delete all notifications for the authenticated user.
+ */
+router.delete('/', async (req, res) => {
+  try {
+    const { error } = await supabase
+      .from('notifications')
+      .delete()
+      .eq('user_id', req.userId);
+
+    if (error) throw error;
+
+    res.json({ message: 'All notifications cleared.' });
+  } catch (err) {
+    console.error('Error clearing notifications:', err);
+    res.status(500).json({ error: 'Failed to clear notifications.' });
+  }
+});
+
+/**
  * PUT /api/notifications/:id/read
  * Mark a single notification as read.
  */
@@ -202,15 +220,16 @@ async function checkExpiringItemsForUser(userId, thresholdDays) {
   const cutoff = new Date(now);
   cutoff.setDate(cutoff.getDate() + thresholdDays);
 
-  // Get pantry items expiring within the threshold window
+  // Get pantry items that are expired or expiring within the threshold window
   const { data: items, error: itemsError } = await supabase
     .from('pantry_items')
     .select('id, name, expiration_date')
     .eq('user_id', userId)
-    .gte('expiration_date', now.toISOString())
+    .not('expiration_date', 'is', null)
     .lte('expiration_date', cutoff.toISOString());
 
   if (itemsError) throw itemsError;
+  console.log('[EXPIRING-CHECK] query: lte', cutoff.toISOString(), '| found items:', items?.length, items?.map(i => ({ name: i.name, exp: i.expiration_date })));
   if (!items || items.length === 0) return { checked: 0, created: 0 };
 
   // Check which items already have a recent notification (last 24 hours)
@@ -237,7 +256,7 @@ async function checkExpiringItemsForUser(userId, thresholdDays) {
 
     const expDate = new Date(item.expiration_date);
     const diffMs = expDate.getTime() - now.getTime();
-    const daysUntilExpiry = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+    const daysUntilExpiry = Math.ceil(diffMs / (1000 * 60 * 60 * 24)) || 0;
 
     newNotifications.push({
       user_id: userId,

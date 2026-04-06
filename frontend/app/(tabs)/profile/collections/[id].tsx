@@ -178,7 +178,7 @@ export default function CollectionDetailScreen() {
             return (
               <Pressable
                 style={styles.gridItemContainer}
-                onPress={() => selectMode ? toggleSelectItem(item.id) : router.push(`/post-detail?postId=${item.id}`)}
+                onPress={() => selectMode ? toggleSelectItem(item.id) : null}
                 onLongPress={() => { if (!selectMode) { setSelectMode(true); setSelectedIds(new Set([item.id])); } }}
               >
                 {item.mediaType === 'video' ? (

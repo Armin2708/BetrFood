@@ -8,6 +8,7 @@ import {
   Image,
   StyleSheet,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -93,46 +94,36 @@ export default function SearchScreen() {
     router.push(`/feeds/user-profile?userId=${userId}` as any);
   };
 
-  const renderUser = ({ item }: { item: SearchUserResult }) => (
-    <UserRow item={item} onPress={handleUserPress} />
-  );
-
   return (
     <View style={styles.container}>
-      <Stack.Screen
-        options={{
-          headerShown: true,
-          title: '',
-          headerLeft: () => (
-            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-              <Ionicons name="arrow-back" size={24} color="#000" />
+      <Stack.Screen options={{ headerShown: false }} />
+
+      {/* Custom header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color="#000" />
+        </TouchableOpacity>
+        <View style={styles.searchBarContainer}>
+          <Ionicons name="search-outline" size={18} color="#999" />
+          <TextInput
+            ref={inputRef}
+            style={styles.searchInput}
+            placeholder="Search users..."
+            placeholderTextColor="#999"
+            value={query}
+            onChangeText={handleSearch}
+            autoFocus
+            returnKeyType="search"
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          {query.length > 0 && (
+            <TouchableOpacity onPress={() => handleSearch('')} style={styles.clearButton}>
+              <Ionicons name="close-circle" size={18} color="#999" />
             </TouchableOpacity>
-          ),
-          headerTitle: () => (
-            <View style={styles.searchBarContainer}>
-              <Ionicons name="search-outline" size={18} color="#999" style={styles.searchIcon} />
-              <TextInput
-                ref={inputRef}
-                style={styles.searchInput}
-                placeholder="Search users..."
-                placeholderTextColor="#999"
-                value={query}
-                onChangeText={handleSearch}
-                autoFocus
-                returnKeyType="search"
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-              {query.length > 0 && (
-                <TouchableOpacity onPress={() => handleSearch('')} style={styles.clearButton}>
-                  <Ionicons name="close-circle" size={18} color="#999" />
-                </TouchableOpacity>
-              )}
-            </View>
-          ),
-          headerRight: () => null,
-        }}
-      />
+          )}
+        </View>
+      </View>
 
       {loading && results.length === 0 ? (
         <View style={styles.centered}>
@@ -142,7 +133,7 @@ export default function SearchScreen() {
         <FlatList
           data={results}
           keyExtractor={(item) => item.id}
-          renderItem={renderUser}
+          renderItem={({ item }) => <UserRow item={item} onPress={handleUserPress} />}
           keyboardShouldPersistTaps="handled"
           ListEmptyComponent={
             searched && !loading ? (
@@ -170,27 +161,37 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
   },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingTop: Platform.OS === 'ios' ? 56 : 12,
+    paddingBottom: 12,
+    paddingHorizontal: 16,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#E5E5E5',
+  },
   backButton: {
-    padding: 4,
+    padding: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
   },
   searchBarContainer: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#F2F2F7',
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    height: 36,
-    marginHorizontal: 8,
-  },
-  searchIcon: {
-    marginRight: 6,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 40,
   },
   searchInput: {
     flex: 1,
     fontSize: 16,
     color: '#000',
     paddingVertical: 0,
+    marginLeft: 8,
   },
   clearButton: {
     padding: 4,

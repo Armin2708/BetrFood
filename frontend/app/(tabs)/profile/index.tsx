@@ -4,7 +4,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { useState, useCallback, useContext, useRef, useEffect } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { AuthContext } from '../../../context/AuthenticationContext';
-import { fetchMyProfile, fetchFollowStats, fetchUserPosts, getImageUrl, getAvatarUrl, UserProfile, Post as PostType } from '../../../services/api';
+import { fetchMyProfile, fetchFollowStats, fetchUserPosts, fetchLikedPosts, getImageUrl, getAvatarUrl, UserProfile, Post as PostType } from '../../../services/api';
+import { useCollections } from '../../../context/CollectionsContext';
 import VideoThumbnailView from '../../../components/VideoThumbnail';
 import { colors } from '../../../constants/theme';
 
@@ -12,13 +13,12 @@ const { width } = Dimensions.get('window');
 const GRID_GAP = 2;
 const ITEM_SIZE = (width - GRID_GAP * 2) / 3;
 
-type ProfileTab = 'posts' | 'collections' | 'liked' | 'recipes';
+type ProfileTab = 'posts' | 'collections' | 'liked';
 
 const TAB_ICONS: { key: ProfileTab; icon: keyof typeof Ionicons.glyphMap }[] = [
   { key: 'posts', icon: 'albums-outline' },
   { key: 'collections', icon: 'bookmark-outline' },
-  { key: 'liked', icon: 'thumbs-up-outline' },
-  { key: 'recipes', icon: 'receipt-outline' },
+  { key: 'liked', icon: 'heart-outline' },
 ];
 
 function formatCount(count: number): string {
@@ -34,8 +34,10 @@ export default function ProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [followStats, setFollowStats] = useState({ followerCount: 0, followingCount: 0 });
   const [userPosts, setUserPosts] = useState<PostType[]>([]);
+  const [likedPosts, setLikedPosts] = useState<PostType[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<ProfileTab>('posts');
+  const { collections, refreshCollections } = useCollections();
 
   const userRef = useRef(user);
   useEffect(() => { userRef.current = user; }, [user]);
@@ -53,9 +55,12 @@ export default function ProfileScreen() {
           .catch(() => {});
       }
 
-      // Load user's posts using dedicated endpoint
+      // Load user's posts and liked posts
       fetchUserPosts(data.id)
         .then(result => setUserPosts(result.posts))
+        .catch(() => {});
+      fetchLikedPosts(data.id)
+        .then(result => setLikedPosts(result.posts))
         .catch(() => {});
     } catch (error) {
       console.error('Failed to load profile:', error);
@@ -66,9 +71,9 @@ export default function ProfileScreen() {
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-    await loadProfile();
+    await Promise.all([loadProfile(), refreshCollections()]);
     setRefreshing(false);
-  }, [loadProfile]);
+  }, [loadProfile, refreshCollections]);
 
   useFocusEffect(
     useCallback(() => {
@@ -174,13 +179,7 @@ export default function ProfileScreen() {
           <Pressable
             key={tab.key}
             style={styles.tabItem}
-            onPress={() => {
-              if (tab.key === 'collections') {
-                router.push('/profile/collections');
-              } else {
-                setActiveTab(tab.key);
-              }
-            }}
+            onPress={() => setActiveTab(tab.key)}
             accessibilityRole="tab"
             accessibilityLabel={tab.key}
             accessibilityState={{ selected: activeTab === tab.key }}
@@ -207,38 +206,84 @@ export default function ProfileScreen() {
       <Stack.Screen options={{ headerShown: false }} />
 
       <View style={styles.container}>
-        <FlatList
-          data={activeTab === 'posts' ? userPosts : []}
-          keyExtractor={(item) => item.id}
-          numColumns={3}
-          ListHeaderComponent={renderProfileHeader}
-          renderItem={({ item }) => (
-            <Pressable onPress={() => router.push(`/post-detail?postId=${item.id}`)}>
-              {item.mediaType === 'video' ? (
-                <VideoThumbnailView
-                  videoUri={getImageUrl(item.imagePath)}
-                  style={styles.gridItem}
-                />
-              ) : (
-                <Image
-                  source={{ uri: getImageUrl(item.imagePath) }}
-                  style={styles.gridItem}
-                  accessibilityLabel={item.caption || 'Post image'}
-                />
-              )}
-            </Pressable>
-          )}
-          showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#22C55E" />}
-          ListEmptyComponent={
-            <View style={styles.emptyGrid}>
-              <Ionicons name="camera-outline" size={48} color="#CBD5E1" style={{ marginBottom: 12 }} />
-              <Text style={styles.emptyText}>
-                {activeTab === 'posts' ? 'No posts yet' : `No ${activeTab} content yet`}
-              </Text>
-            </View>
-          }
-        />
+        {activeTab === 'collections' ? (
+          <FlatList
+            data={collections}
+            keyExtractor={(item) => item.id}
+            numColumns={3}
+            ListHeaderComponent={renderProfileHeader}
+            renderItem={({ item }) => (
+              <Pressable
+                onPress={() => router.push(`/profile/collections/${item.id}?name=${encodeURIComponent(item.name)}`)}
+                style={styles.gridItemWrapper}
+              >
+                {item.coverImage ? (
+                  item.coverMediaType === 'video' ? (
+                    <VideoThumbnailView
+                      videoUri={getImageUrl(item.coverImage)}
+                      style={styles.gridItem}
+                    />
+                  ) : (
+                    <Image
+                      source={{ uri: getImageUrl(item.coverImage) }}
+                      style={styles.gridItem}
+                      accessibilityLabel={item.name}
+                    />
+                  )
+                ) : (
+                  <View style={[styles.gridItem, styles.collectionPlaceholder]}>
+                    <Ionicons name="bookmark-outline" size={32} color="#94A3B8" />
+                  </View>
+                )}
+                <View style={styles.collectionOverlay}>
+                  <Text style={styles.collectionOverlayName} numberOfLines={1}>{item.name}</Text>
+                  <Text style={styles.collectionOverlayCount}>{item.postCount}</Text>
+                </View>
+              </Pressable>
+            )}
+            showsVerticalScrollIndicator={false}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#22C55E" />}
+            ListEmptyComponent={
+              <View style={styles.emptyGrid}>
+                <Ionicons name="bookmark-outline" size={48} color="#CBD5E1" style={{ marginBottom: 12 }} />
+                <Text style={styles.emptyText}>No collections yet</Text>
+              </View>
+            }
+          />
+        ) : (
+          <FlatList
+            data={activeTab === 'posts' ? userPosts : likedPosts}
+            keyExtractor={(item) => item.id}
+            numColumns={3}
+            ListHeaderComponent={renderProfileHeader}
+            renderItem={({ item }) => (
+              <View>
+                {item.mediaType === 'video' ? (
+                  <VideoThumbnailView
+                    videoUri={getImageUrl(item.imagePath)}
+                    style={styles.gridItem}
+                  />
+                ) : (
+                  <Image
+                    source={{ uri: getImageUrl(item.imagePath) }}
+                    style={styles.gridItem}
+                    accessibilityLabel={item.caption || 'Post image'}
+                  />
+                )}
+              </View>
+            )}
+            showsVerticalScrollIndicator={false}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#22C55E" />}
+            ListEmptyComponent={
+              <View style={styles.emptyGrid}>
+                <Ionicons name={activeTab === 'posts' ? 'camera-outline' : 'heart-outline'} size={48} color="#CBD5E1" style={{ marginBottom: 12 }} />
+                <Text style={styles.emptyText}>
+                  {activeTab === 'posts' ? 'No posts yet' : 'No liked posts yet'}
+                </Text>
+              </View>
+            }
+          />
+        )}
       </View>
     </>
   );
@@ -403,12 +448,44 @@ const styles = StyleSheet.create({
   },
 
   /* Post grid */
+  gridItemWrapper: {
+    position: 'relative',
+    width: ITEM_SIZE,
+    height: ITEM_SIZE,
+  },
   gridItem: {
     width: ITEM_SIZE,
     height: ITEM_SIZE,
     backgroundColor: colors.borderLight,
     borderRadius: 8,
     overflow: 'hidden',
+  },
+
+  /* Collection grid */
+  collectionPlaceholder: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F1F5F9',
+  },
+  collectionOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    borderBottomLeftRadius: 8,
+    borderBottomRightRadius: 8,
+  },
+  collectionOverlayName: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  collectionOverlayCount: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 10,
   },
 
   /* Empty state */

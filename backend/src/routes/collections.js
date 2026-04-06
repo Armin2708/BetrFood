@@ -35,7 +35,7 @@ router.post('/', requireAuth, async (req, res) => {
   }
 });
 
-// GET /api/collections - List user's collections with post counts (auth required)
+// GET /api/collections - List user's collections with post counts and cover image (auth required)
 router.get('/', requireAuth, async (req, res) => {
   try {
     const { data, error } = await supabase
@@ -46,12 +46,55 @@ router.get('/', requireAuth, async (req, res) => {
 
     if (error) throw error;
 
+    // Fetch cover images: get the most recent post for each collection
+    const collectionIds = (data || []).map(c => c.id);
+    let coverMap = {};
+    if (collectionIds.length > 0) {
+      const { data: coverPosts } = await supabase
+        .from('collection_posts')
+        .select('collection_id, post_id, created_at')
+        .in('collection_id', collectionIds)
+        .order('created_at', { ascending: false });
+
+      if (coverPosts && coverPosts.length > 0) {
+        // Get first (most recent) post per collection
+        const firstPostPerCollection = {};
+        for (const cp of coverPosts) {
+          if (!firstPostPerCollection[cp.collection_id]) {
+            firstPostPerCollection[cp.collection_id] = cp.post_id;
+          }
+        }
+
+        const postIds = [...new Set(Object.values(firstPostPerCollection))];
+        if (postIds.length > 0) {
+          const { data: posts } = await supabase
+            .from('posts')
+            .select('id, image_path, media_type')
+            .in('id', postIds);
+
+          if (posts) {
+            const postMap = {};
+            for (const p of posts) {
+              postMap[p.id] = { imagePath: p.image_path, mediaType: p.media_type || 'image' };
+            }
+            for (const [collectionId, postId] of Object.entries(firstPostPerCollection)) {
+              if (postMap[postId]) {
+                coverMap[collectionId] = postMap[postId];
+              }
+            }
+          }
+        }
+      }
+    }
+
     res.json(
       (data || []).map(c => ({
         id: c.id,
         userId: c.user_id,
         name: c.name,
         postCount: c.collection_posts?.[0]?.count ?? 0,
+        coverImage: coverMap[c.id]?.imagePath || null,
+        coverMediaType: coverMap[c.id]?.mediaType || null,
         createdAt: c.created_at,
       }))
     );

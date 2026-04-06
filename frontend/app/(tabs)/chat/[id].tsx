@@ -156,7 +156,7 @@ export function SuggestedPostCard({ post }: { post: SuggestedPost }) {
   return (
     <TouchableOpacity
       style={styles.suggestedCard}
-      onPress={() => router.push(`/post-detail?postId=${post.id}`)}
+      onPress={() => {}}
       activeOpacity={0.8}
     >
       {imageUri ? (

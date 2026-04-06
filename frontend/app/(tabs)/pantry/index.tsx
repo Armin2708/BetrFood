@@ -14,6 +14,7 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -58,10 +59,8 @@ function PantryItemModal({
   const [quantity, setQuantity] = useState('');
   const [unit, setUnit] = useState('');
   const [category, setCategory] = useState(CATEGORIES[0]);
-  const [expirationDate, setExpirationDate] = useState('');
-  const [month, setMonth] = useState('');
-  const [day, setDay] = useState('');
-  const [year, setYear] = useState('');
+  const [expirationDate, setExpirationDate] = useState<Date | null>(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const reset = useCallback(() => {
@@ -69,10 +68,8 @@ function PantryItemModal({
     setQuantity('');
     setUnit('');
     setCategory(CATEGORIES[0]);
-    setExpirationDate('');
-    setYear('');
-    setMonth('');
-    setDay('');
+    setExpirationDate(null);
+    setShowDatePicker(false);
   }, []);
 
   useEffect(() => {
@@ -85,17 +82,10 @@ function PantryItemModal({
       setCategory(CATEGORIES.includes(item.category) ? item.category : CATEGORIES[0]);
 
       if (item.expirationDate) {
-        const timestamp = item.expirationDate.split(/[T ]/)[0]
-        const [y, m, d] = timestamp.split('-');
-        setYear(y || '');
-        setMonth(m || '');
-        setDay(d || '');
-        setExpirationDate(item.expirationDate);
+        const parsed = new Date(item.expirationDate.split(/[T ]/)[0] + 'T00:00:00');
+        setExpirationDate(isNaN(parsed.getTime()) ? null : parsed);
       } else {
-        setYear('');
-        setMonth('');
-        setDay('');
-        setExpirationDate('');
+        setExpirationDate(null);
       }
     } else {
       reset();
@@ -110,23 +100,11 @@ function PantryItemModal({
 
     let formattedDate: string | null = null;
 
-    if (month || day || year) {
-      if (!month || !day || !year) {
-        return Alert.alert('Invalid Date', 'Please fill out month, day, and year.');
-      }
-
-      const mm = month.padStart(2, '0');
-      const dd = day.padStart(2, '0');
-      const yyyy = year;
-
-      const constructed = `${yyyy}-${mm}-${dd}`;
-      const d = new Date(constructed);
-
-      if (isNaN(d.getTime())) {
-        return Alert.alert('Invalid Date', 'Please enter a valid date.');
-      }
-
-      formattedDate = constructed;
+    if (expirationDate) {
+      const yyyy = expirationDate.getFullYear();
+      const mm = String(expirationDate.getMonth() + 1).padStart(2, '0');
+      const dd = String(expirationDate.getDate()).padStart(2, '0');
+      formattedDate = `${yyyy}-${mm}-${dd}`;
     }
 
     const payload: PantryItemInput = {
@@ -209,35 +187,84 @@ function PantryItemModal({
             </View>
 
             <Text style={styles.fieldLabel}>Expiration Date (optional)</Text>
-            <View style={styles.row}>
-              <TextInput
-                style={[styles.input, styles.inputFlex]}
-                placeholder="MM"
-                value={month}
-                onChangeText={setMonth}
-                keyboardType="number-pad"
-                maxLength={2}
-                accessibilityLabel="Expiration month"
-              />
-              <TextInput
-                style={[styles.input, styles.inputFlex]}
-                placeholder="DD"
-                value={day}
-                onChangeText={setDay}
-                keyboardType="number-pad"
-                maxLength={2}
-                accessibilityLabel="Expiration day"
-              />
-              <TextInput
-                style={[styles.input, styles.inputFlex]}
-                placeholder="YYYY"
-                value={year}
-                onChangeText={setYear}
-                keyboardType="number-pad"
-                maxLength={4}
-                accessibilityLabel="Expiration year"
-              />
-            </View>
+            <TouchableOpacity
+              style={styles.dateButton}
+              onPress={() => {
+                if (!expirationDate) {
+                  // Default to tomorrow
+                  const tomorrow = new Date();
+                  tomorrow.setDate(tomorrow.getDate() + 1);
+                  setExpirationDate(tomorrow);
+                }
+                setShowDatePicker(true);
+              }}
+              accessibilityLabel="Select expiration date"
+              accessibilityRole="button"
+            >
+              <Ionicons name="calendar-outline" size={20} color={expirationDate ? colors.primary : '#999'} />
+              <Text style={[styles.dateButtonText, expirationDate && styles.dateButtonTextActive]}>
+                {expirationDate
+                  ? expirationDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                  : 'Select date'}
+              </Text>
+              {expirationDate && (
+                <TouchableOpacity
+                  onPress={() => { setExpirationDate(null); setShowDatePicker(false); }}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  accessibilityLabel="Clear expiration date"
+                >
+                  <Ionicons name="close-circle" size={18} color="#999" />
+                </TouchableOpacity>
+              )}
+            </TouchableOpacity>
+            {showDatePicker && (
+              Platform.OS === 'web' ? (
+                <input
+                  type="date"
+                  value={expirationDate ? `${expirationDate.getFullYear()}-${String(expirationDate.getMonth() + 1).padStart(2, '0')}-${String(expirationDate.getDate()).padStart(2, '0')}` : ''}
+                  onChange={(e: any) => {
+                    const val = e.target.value;
+                    if (val) {
+                      const d = new Date(val + 'T00:00:00');
+                      if (!isNaN(d.getTime())) setExpirationDate(d);
+                    } else {
+                      setExpirationDate(null);
+                    }
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: 12,
+                    fontSize: 16,
+                    borderRadius: 10,
+                    border: '1px solid #E5E5EA',
+                    backgroundColor: '#F9F9F9',
+                    marginTop: 8,
+                    fontFamily: 'inherit',
+                    color: '#333',
+                  }}
+                />
+              ) : (
+                <DateTimePicker
+                  value={expirationDate || new Date()}
+                  mode="date"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  minimumDate={new Date()}
+                  onChange={(_event: DateTimePickerEvent, selectedDate?: Date) => {
+                    if (Platform.OS === 'android') setShowDatePicker(false);
+                    if (selectedDate) setExpirationDate(selectedDate);
+                  }}
+                  style={{ marginTop: 4 }}
+                />
+              )
+            )}
+            {showDatePicker && Platform.OS === 'ios' && (
+              <TouchableOpacity
+                style={styles.datePickerDone}
+                onPress={() => setShowDatePicker(false)}
+              >
+                <Text style={styles.datePickerDoneText}>Done</Text>
+              </TouchableOpacity>
+            )}
 
             <TouchableOpacity
               style={[styles.addButton, saving && styles.addButtonDisabled]}
@@ -1036,6 +1063,37 @@ const styles = StyleSheet.create({
   chipSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
   chipText: { fontSize: 13, color: colors.textSecondary },
   chipTextSelected: { color: colors.white, fontWeight: '600' },
+  dateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F9F9F9',
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    gap: 10,
+  },
+  dateButtonText: {
+    flex: 1,
+    fontSize: 15,
+    color: '#999',
+  },
+  dateButtonTextActive: {
+    color: '#333',
+    fontWeight: '500',
+  },
+  datePickerDone: {
+    alignSelf: 'flex-end',
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+    marginTop: 4,
+  },
+  datePickerDoneText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.primary,
+  },
   addButton: { backgroundColor: colors.primary, padding: 12, borderRadius: 8, alignItems: 'center', marginTop: 4 },
   addButtonDisabled: { opacity: 0.6 },
   addButtonText: { color: colors.white, fontWeight: '600', fontSize: 16 },

@@ -16,6 +16,10 @@ import {
   markNotificationRead,
   markAllNotificationsRead,
   checkExpiringItems,
+  acceptFollowRequest,
+  denyFollowRequest,
+  fetchPendingFollowRequests,
+  clearAllNotifications,
   Notification,
 } from '../../../services/api';
 
@@ -46,7 +50,7 @@ function getNotificationIcon(type: string): { name: string; color: string } {
     case 'comment':
       return { name: 'chatbubble', color: '#2196F3' };
     case 'expiring_item':
-      return { name: 'warning', color: '#F59E0B' };
+      return { name: 'alert-circle', color: '#EF4444' };
     case 'follow_request':
       return { name: 'person-add-outline', color: '#F59E0B' };
     case 'follow_request_accepted':
@@ -74,6 +78,7 @@ function getNotificationMessage(notification: Notification): string {
     case 'expiring_item': {
       const itemName = data?.itemName || 'An item';
       const days = data?.daysUntilExpiry;
+      if (days < 0) return `${itemName} has expired!`;
       if (days === 0) return `${itemName} expires today!`;
       if (days === 1) return `${itemName} expires tomorrow`;
       return `${itemName} expires in ${days} days`;
@@ -100,9 +105,35 @@ export default function NotificationsScreen() {
   const loadNotifications = useCallback(async () => {
     try {
       // Trigger expiring item check before loading notifications
-      await checkExpiringItems().catch(() => {});
-      const result = await fetchNotifications(0, 50);
-      setNotifications(result.notifications);
+      try {
+        const expiringResult = await checkExpiringItems();
+        console.log('[EXPIRING] check result:', expiringResult);
+      } catch (e) {
+        console.error('[EXPIRING] check failed:', e);
+      }
+      const [result, pendingRequests] = await Promise.all([
+        fetchNotifications(0, 50),
+        fetchPendingFollowRequests().catch(() => [] as any[]),
+      ]);
+      // Build set of requester IDs that are still pending
+      const pendingIds = new Set(pendingRequests.map((r: any) => r.requesterId));
+      // Convert follow_request notifications that are no longer pending to new_follower
+      const processed = result.notifications.map((n: Notification) => {
+        if (n.type === 'follow_request' && !pendingIds.has(n.data?.requesterId)) {
+          return {
+            ...n,
+            type: 'new_follower',
+            read: true,
+            data: {
+              ...n.data,
+              followerId: n.data?.requesterId,
+              followerUsername: n.data?.requesterUsername,
+            },
+          };
+        }
+        return n;
+      });
+      setNotifications(processed);
     } catch (error) {
       console.error('Failed to load notifications:', error);
     } finally {
@@ -140,23 +171,21 @@ export default function NotificationsScreen() {
       switch (notification.type) {
         case 'new_follower':
           if (notification.data?.followerId) {
-            router.push(`/user/${notification.data.followerId}` as any);
+            router.push(`/feeds/user-profile?userId=${notification.data.followerId}` as any);
           }
           break;
         case 'like':
         case 'comment':
-          if (notification.data?.postId) {
-            router.push(`/post-detail?postId=${notification.data.postId}`);
-          }
+          // Posts are viewed in the feed, no detail page
           break;
         case 'follow_request':
           if (notification.data?.requesterId) {
-            router.push(`/user/${notification.data.requesterId}` as any);
+            router.push(`/feeds/user-profile?userId=${notification.data.requesterId}` as any);
           }
           break;
         case 'follow_request_accepted':
           if (notification.data?.acceptedBy) {
-            router.push(`/user/${notification.data.acceptedBy}` as any);
+            router.push(`/feeds/user-profile?userId=${notification.data.acceptedBy}` as any);
           }
           break;
         case 'expiring_item':
@@ -176,12 +205,66 @@ export default function NotificationsScreen() {
     }
   }, []);
 
+  const handleClearAll = useCallback(async () => {
+    try {
+      await clearAllNotifications();
+      setNotifications([]);
+    } catch (error) {
+      console.error('Failed to clear notifications:', error);
+    }
+  }, []);
+
   const hasUnread = notifications.some((n) => !n.read);
+
+  const convertToFollower = useCallback((notificationId: string) => {
+    setNotifications(prev => prev.map(n =>
+      n.id === notificationId
+        ? {
+            ...n,
+            type: 'new_follower',
+            read: true,
+            data: {
+              ...n.data,
+              followerId: n.data?.requesterId,
+              followerUsername: n.data?.requesterUsername,
+            },
+          }
+        : n
+    ));
+  }, []);
+
+  const handleAcceptFollow = useCallback(async (notification: Notification) => {
+    const requesterId = notification.data?.requesterId;
+    if (!requesterId) return;
+    try {
+      await acceptFollowRequest(requesterId);
+    } catch (error: any) {
+      // If 404, the request was already accepted — still convert the notification
+      if (!error.message?.includes('not found')) {
+        console.error('Failed to accept follow request:', error);
+        return;
+      }
+    }
+    try { await markNotificationRead(notification.id); } catch {}
+    convertToFollower(notification.id);
+  }, [convertToFollower]);
+
+  const handleDenyFollow = useCallback(async (notification: Notification) => {
+    const requesterId = notification.data?.requesterId;
+    if (!requesterId) return;
+    try {
+      await denyFollowRequest(requesterId);
+      setNotifications(prev => prev.filter(n => n.id !== notification.id));
+    } catch (error) {
+      console.error('Failed to deny follow request:', error);
+    }
+  }, []);
 
   const renderNotification = ({ item }: { item: Notification }) => {
     const icon = getNotificationIcon(item.type);
     const message = getNotificationMessage(item);
     const timeAgo = getRelativeTime(item.createdAt);
+    const isFollowRequest = item.type === 'follow_request';
 
     return (
       <Pressable
@@ -195,6 +278,22 @@ export default function NotificationsScreen() {
           <Text style={[styles.messageText, !item.read && styles.unreadText]}>
             {message}
           </Text>
+          {isFollowRequest && (
+            <View style={styles.followRequestActions}>
+              <Pressable
+                style={styles.acceptButton}
+                onPress={() => handleAcceptFollow(item)}
+              >
+                <Text style={styles.acceptButtonText}>Accept</Text>
+              </Pressable>
+              <Pressable
+                style={styles.denyButton}
+                onPress={() => handleDenyFollow(item)}
+              >
+                <Text style={styles.denyButtonText}>Deny</Text>
+              </Pressable>
+            </View>
+          )}
           <Text style={styles.timeText}>{timeAgo}</Text>
         </View>
         {!item.read && <View style={styles.unreadDot} />}
@@ -222,10 +321,17 @@ export default function NotificationsScreen() {
           headerShown: true,
           title: 'Notifications',
           headerRight: () =>
-            hasUnread ? (
-              <Pressable onPress={handleMarkAllRead} style={styles.markAllButton}>
-                <Text style={styles.markAllText}>Mark all read</Text>
-              </Pressable>
+            notifications.length > 0 ? (
+              <View style={styles.headerActions}>
+                {hasUnread && (
+                  <Pressable onPress={handleMarkAllRead} style={styles.markAllButton}>
+                    <Text style={styles.markAllText}>Mark all read</Text>
+                  </Pressable>
+                )}
+                <Pressable onPress={handleClearAll} style={styles.markAllButton}>
+                  <Ionicons name="trash-outline" size={18} color="#EF4444" />
+                </Pressable>
+              </View>
             ) : null,
         }}
       />
@@ -296,6 +402,33 @@ const styles = StyleSheet.create({
   unreadText: {
     fontWeight: '600',
   },
+  followRequestActions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 8,
+  },
+  acceptButton: {
+    backgroundColor: '#22C55E',
+    paddingVertical: 6,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+  },
+  acceptButtonText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  denyButton: {
+    backgroundColor: '#F2F2F7',
+    paddingVertical: 6,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+  },
+  denyButtonText: {
+    color: '#666666',
+    fontSize: 13,
+    fontWeight: '600',
+  },
   timeText: {
     fontSize: 13,
     color: '#999999',
@@ -327,6 +460,11 @@ const styles = StyleSheet.create({
   },
   emptyList: {
     flexGrow: 1,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   markAllButton: {
     marginRight: 8,

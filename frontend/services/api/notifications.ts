@@ -64,6 +64,18 @@ export async function checkExpiringItems(): Promise<{ checked: number; created: 
   return response.json();
 }
 
+export async function clearAllNotifications(): Promise<{ message: string }> {
+  const response = await fetch(`${API_BASE_URL}/api/notifications`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to clear notifications');
+  }
+  return response.json();
+}
+
 export async function fetchUnreadNotificationCount(): Promise<number> {
   const response = await fetch(`${API_BASE_URL}/api/notifications/unread-count`, {
     headers: await authHeaders(),

@@ -2,7 +2,7 @@
 // Existing imports like `import { fetchPosts } from '../services/api'` continue to work
 
 export { API_BASE_URL, setAuthToken, setTokenGetter, authHeaders, getImageUrl, getAvatarUrl } from './client';
-export { fetchPosts, fetchUserPosts, fetchPost, createPostApi, deletePost, updatePost, fetchFollowingFeed } from './posts';
+export { fetchPosts, fetchUserPosts, fetchPost, createPostApi, deletePost, updatePost, fetchFollowingFeed, fetchLikedPosts } from './posts';
 export type { Post, PaginatedResponse } from './posts';
 export { fetchRecipe, createRecipe, updateRecipe, deleteRecipe } from './recipes';
 export type { Recipe, RecipeInput, RecipeIngredient, RecipeStep } from './recipes';
@@ -19,7 +19,7 @@ export { savePost, unsavePost, checkSaveStatus, fetchCollections, createCollecti
 export { reportContent } from './reports';
 export { checkBlockStatus, checkMuteStatus, blockUser, unblockUser, muteUser, unmuteUser, fetchBlockedUsers, fetchMutedUsers } from './blocks';
 export { fetchPreferences, updatePreferences } from './preferences';
-export { fetchNotifications, markNotificationRead, markAllNotificationsRead, fetchUnreadNotificationCount, checkExpiringItems } from './notifications';
+export { fetchNotifications, markNotificationRead, markAllNotificationsRead, clearAllNotifications, fetchUnreadNotificationCount, checkExpiringItems } from './notifications';
 export type { Notification } from './notifications';
 export { fetchAdminUsers, updateUserRole, fetchAdminStats, updateUserVerification } from './admin';
 export type { AdminUser, AdminStats } from './admin';

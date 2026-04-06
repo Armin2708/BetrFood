@@ -1,4 +1,4 @@
-import { View, Text, Pressable, StyleSheet, Image, FlatList, Dimensions, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Image, FlatList, Dimensions, ActivityIndicator, Alert, Platform } from 'react-native';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from "@expo/vector-icons";
 import { useState, useCallback, useContext, useEffect } from 'react';
@@ -29,7 +29,14 @@ import {
 import { colors } from '../../../constants/theme';
 
 const { width } = Dimensions.get('window');
-const ITEM_SIZE = width / 3;
+const GRID_GAP = 2;
+const ITEM_SIZE = (width - GRID_GAP * 2) / 3;
+
+function formatCount(count: number): string {
+  if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(count % 1_000_000 === 0 ? 0 : 1)}M`;
+  if (count >= 1_000) return `${(count / 1_000).toFixed(count % 1_000 === 0 ? 0 : 1)}K`;
+  return String(count);
+}
 
 export default function UserProfileScreen() {
   const router = useRouter();
@@ -88,20 +95,38 @@ export default function UserProfileScreen() {
     }
   };
 
-  const handleToggleMute = async () => {
+  const handleToggleMute = () => {
     if (!userId) return;
-    try {
-      if (isMuted) {
-        await unmuteUser(userId);
-        setIsMuted(false);
-        Alert.alert('User Unmuted', 'You will now see this user\'s posts in your feed again.');
-      } else {
-        await muteUser(userId);
-        setIsMuted(true);
-        Alert.alert('User Muted', 'You will no longer see this user\'s posts in your feed.');
-      }
-    } catch (error: any) {
-      Alert.alert('Error', error.message || `Failed to ${isMuted ? 'unmute' : 'mute'} user.`);
+    if (isMuted) {
+      Alert.alert('Unmute User', 'You will see this user\'s posts again.', [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Unmute',
+          onPress: async () => {
+            try {
+              await unmuteUser(userId);
+              setIsMuted(false);
+            } catch (error: any) {
+              Alert.alert('Error', error.message || 'Failed to unmute user.');
+            }
+          },
+        },
+      ]);
+    } else {
+      Alert.alert('Mute User', 'You will no longer see this user\'s posts in your feed.', [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Mute',
+          onPress: async () => {
+            try {
+              await muteUser(userId);
+              setIsMuted(true);
+            } catch (error: any) {
+              Alert.alert('Error', error.message || 'Failed to mute user.');
+            }
+          },
+        },
+      ]);
     }
   };
 
@@ -116,37 +141,35 @@ export default function UserProfileScreen() {
   };
 
   const handleReportUser = () => {
-    if (!userId) return;
-    const reasons = ['Spam', 'Inappropriate', 'Harassment', 'Other'];
-    Alert.alert('Report User', 'Select a reason:', [
-      ...reasons.map((reason) => ({
-        text: reason,
-        onPress: () => {
-          if (reason === 'Other') {
-            Alert.prompt(
-              'Report User',
-              'Please describe the issue:',
-              [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                  text: 'Submit',
-                  onPress: (text?: string) => {
-                    const detail = text?.trim();
-                    submitUserReport(detail ? `Other: ${detail}` : 'Other');
-                  },
+    const reasons = ['Spam', 'Harassment', 'Inappropriate Content', 'Fake Account', 'Other'];
+    showActionSheetWithOptions(
+      { options: [...reasons, 'Cancel'], cancelButtonIndex: reasons.length, title: 'Report User' },
+      (index) => {
+        if (index === undefined || index === reasons.length) return;
+        const reason = reasons[index];
+        if (reason === 'Other') {
+          Alert.prompt(
+            'Report User',
+            'Please provide details:',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              {
+                text: 'Submit',
+                onPress: (text?: string) => {
+                  const detail = text?.trim();
+                  submitUserReport(detail ? `Other: ${detail}` : 'Other');
                 },
-              ],
-              'plain-text',
-              '',
-              'default'
-            );
-          } else {
-            submitUserReport(reason);
-          }
-        },
-      })),
-      { text: 'Cancel', style: 'cancel' as const },
-    ]);
+              },
+            ],
+            'plain-text',
+            '',
+            'default'
+          );
+        } else {
+          submitUserReport(reason);
+        }
+      },
+    );
   };
 
   const showUserMenu = () => {
@@ -181,7 +204,6 @@ export default function UserProfileScreen() {
       const profileIsPrivate = !!(data as any).isPrivate;
       setIsPrivate(profileIsPrivate);
 
-      // Load follow stats, follow status, block/mute status, follow request status, and posts in parallel
       const [stats, followStatus, blockStatus, muteStatus, reqStatus, postsResult] = await Promise.all([
         fetchFollowStats(userId).catch(() => ({ followerCount: 0, followingCount: 0 })),
         checkFollowStatus(userId).catch(() => ({ isFollowing: false })),
@@ -197,7 +219,6 @@ export default function UserProfileScreen() {
       setIsMuted(muteStatus.isMuted);
       setFollowRequestStatus(reqStatus.status);
 
-      // If private but the user is actually following, load posts
       if (profileIsPrivate && followStatus.isFollowing) {
         const postsData = await fetchUserPosts(userId).catch(() => ({ posts: [] as PostType[] }));
         setUserPosts(postsData.posts);
@@ -218,7 +239,6 @@ export default function UserProfileScreen() {
   const handleFollowToggle = async () => {
     if (!userId || followLoading) return;
 
-    // If there's a pending follow request, tapping should cancel it
     if (followRequestStatus === 'pending') {
       setFollowLoading(true);
       try {
@@ -232,16 +252,13 @@ export default function UserProfileScreen() {
       return;
     }
 
-    const wasFollowing = isFollowing;
-
-    if (!isPrivate || wasFollowing) {
-      // Public profile or already following — use instant follow/unfollow
+    if (!isPrivate || isFollowing) {
+      const wasFollowing = isFollowing;
       setIsFollowing(!wasFollowing);
       setFollowStats(prev => ({
         ...prev,
         followerCount: wasFollowing ? prev.followerCount - 1 : prev.followerCount + 1,
       }));
-
       setFollowLoading(true);
       try {
         if (wasFollowing) {
@@ -250,7 +267,6 @@ export default function UserProfileScreen() {
           await followUser(userId);
         }
       } catch (error) {
-        // Rollback on failure
         setIsFollowing(wasFollowing);
         setFollowStats(prev => ({
           ...prev,
@@ -261,7 +277,6 @@ export default function UserProfileScreen() {
         setFollowLoading(false);
       }
     } else {
-      // Private profile, not following — send follow request
       setFollowLoading(true);
       try {
         await followUser(userId);
@@ -278,7 +293,7 @@ export default function UserProfileScreen() {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
         <Stack.Screen options={{ title: '', headerShown: true, headerLeft: () => (
-          <Pressable onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/feeds')} style={{ paddingRight: 16 }}>
+          <Pressable onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/feeds')} style={styles.headerButton}>
             <Ionicons name="arrow-back" size={24} color="#000" />
           </Pressable>
         )}} />
@@ -287,6 +302,114 @@ export default function UserProfileScreen() {
     );
   }
 
+  const renderProfileHeader = () => (
+    <View style={styles.profileHeaderWrapper}>
+      {/* Avatar */}
+      <View style={styles.avatarContainer}>
+        <Image
+          source={{ uri: getAvatarUrl(profile?.avatarUrl, profile?.displayName || profile?.username) }}
+          style={styles.avatar}
+          accessibilityLabel={`${profile?.displayName || 'User'}'s profile photo`}
+        />
+      </View>
+
+      {/* Display name */}
+      {profile?.displayName ? (
+        <View style={styles.displayNameRow}>
+          <Text style={styles.displayName}>{profile.displayName}</Text>
+          {profile.verified && (
+            <Text style={styles.verifiedBadge}>{'\u2713'}</Text>
+          )}
+        </View>
+      ) : null}
+
+      {/* Username */}
+      <Text style={styles.username}>
+        {profile?.username ? `@${profile.username}` : '@unknown'}
+      </Text>
+
+      {/* Bio */}
+      {profile?.bio ? (
+        <Text style={styles.bio}>{profile.bio}</Text>
+      ) : null}
+
+      {/* Followers / Following / Posts stats */}
+      <View style={styles.followRow}>
+        <View style={styles.followItem}>
+          <Text style={styles.followCount}>{formatCount(followStats.followerCount)}</Text>
+          <Text style={styles.followLabel}>  Followers</Text>
+        </View>
+        <View style={styles.followSpacer} />
+        <View style={styles.followItem}>
+          <Text style={styles.followCount}>{formatCount(followStats.followingCount)}</Text>
+          <Text style={styles.followLabel}>  Following</Text>
+        </View>
+      </View>
+
+      {/* Blocked/Muted indicators */}
+      {isBlocked && (
+        <View style={styles.statusBanner}>
+          <Ionicons name="ban-outline" size={16} color="#DC2626" />
+          <Text style={styles.statusBannerText}>You have blocked this user</Text>
+        </View>
+      )}
+      {isMuted && !isBlocked && (
+        <View style={[styles.statusBanner, styles.statusBannerMuted]}>
+          <Ionicons name="volume-mute-outline" size={16} color="#D97706" />
+          <Text style={[styles.statusBannerText, styles.statusBannerTextMuted]}>You have muted this user</Text>
+        </View>
+      )}
+
+      {/* Follow/Unfollow/Request Button */}
+      <Pressable
+        style={[
+          styles.followButton,
+          (isFollowing || followRequestStatus === 'pending') && styles.followingButton,
+          followLoading && styles.followButtonDisabled,
+        ]}
+        onPress={handleFollowToggle}
+        disabled={followLoading}
+        accessibilityRole="button"
+        accessibilityLabel={
+          isFollowing ? 'Unfollow user' :
+          followRequestStatus === 'pending' ? 'Cancel follow request' :
+          isPrivate ? 'Request to follow' : 'Follow user'
+        }
+      >
+        {followLoading ? (
+          <ActivityIndicator size="small" color={(isFollowing || followRequestStatus === 'pending') ? colors.textPrimary : colors.white} />
+        ) : (
+          <Text style={[
+            styles.followButtonText,
+            (isFollowing || followRequestStatus === 'pending') && styles.followingButtonText,
+          ]}>
+            {isFollowing ? 'Following' :
+             followRequestStatus === 'pending' ? 'Requested' :
+             isPrivate ? 'Request Follow' : 'Follow'}
+          </Text>
+        )}
+      </Pressable>
+
+      {/* Private Profile Notice */}
+      {isPrivate && !isFollowing && (
+        <View style={styles.privateNotice}>
+          <Ionicons name="lock-closed" size={40} color={colors.textQuaternary} />
+          <Text style={styles.privateTitle}>This account is private</Text>
+          <Text style={styles.privateSubtitle}>Follow this account to see their posts</Text>
+        </View>
+      )}
+
+      {/* Tab divider */}
+      {(!isPrivate || isFollowing) && (
+        <View style={styles.tabDivider}>
+          <View style={styles.tabIconContainer}>
+            <Ionicons name="albums-outline" size={22} color="#000" />
+          </View>
+        </View>
+      )}
+    </View>
+  );
+
   return (
     <>
       <Stack.Screen
@@ -294,12 +417,12 @@ export default function UserProfileScreen() {
           headerShown: true,
           title: profile?.username ? `@${profile.username}` : 'Profile',
           headerLeft: () => (
-            <Pressable onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/feeds')} style={{ paddingRight: 16 }}>
+            <Pressable onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/feeds')} style={styles.headerButton}>
               <Ionicons name="arrow-back" size={24} color="#000" />
             </Pressable>
           ),
           headerRight: () => (
-            <Pressable onPress={showUserMenu} style={{ paddingLeft: 16 }}>
+            <Pressable onPress={showUserMenu} style={styles.headerButton}>
               <Ionicons name="ellipsis-horizontal" size={24} color="#000" />
             </Pressable>
           ),
@@ -307,94 +430,14 @@ export default function UserProfileScreen() {
       />
 
       <View style={styles.container}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Image source={{ uri: getAvatarUrl(profile?.avatarUrl, profile?.displayName || profile?.username) }} style={styles.avatar} />
-
-          <View style={styles.statsRow}>
-            <Stat label="Following" value={String(followStats.followingCount)} />
-            <Stat label="Followers" value={String(followStats.followerCount)} />
-            <Stat label="Posts" value={String(userPosts.length)} />
-          </View>
-        </View>
-
-        {/* Username + Bio */}
-        <View style={styles.userInfo}>
-          {profile?.displayName ? (
-            <View style={styles.displayNameRow}>
-              <Text style={styles.displayName}>{profile.displayName}</Text>
-              {profile.verified && <Text style={styles.verifiedBadge}>{'\u2713'}</Text>}
-            </View>
-          ) : null}
-          <Text style={styles.username}>
-            {profile?.username ? `@${profile.username}` : '@unknown'}
-          </Text>
-          {profile?.bio ? (
-            <Text style={styles.bio}>{profile.bio}</Text>
-          ) : null}
-        </View>
-
-        {/* Blocked/Muted indicators */}
-        {isBlocked && (
-          <View style={styles.statusBanner}>
-            <Ionicons name="ban-outline" size={16} color="#DC2626" />
-            <Text style={styles.statusBannerText}>You have blocked this user</Text>
-          </View>
-        )}
-        {isMuted && !isBlocked && (
-          <View style={[styles.statusBanner, styles.statusBannerMuted]}>
-            <Ionicons name="volume-mute-outline" size={16} color="#D97706" />
-            <Text style={[styles.statusBannerText, styles.statusBannerTextMuted]}>You have muted this user</Text>
-          </View>
-        )}
-
-        {/* Follow/Unfollow/Request Button */}
-        <Pressable
-          style={[
-            styles.followButton,
-            (isFollowing || followRequestStatus === 'pending') && styles.followingButton,
-            followLoading && styles.followButtonDisabled,
-          ]}
-          onPress={handleFollowToggle}
-          disabled={followLoading}
-          accessibilityRole="button"
-          accessibilityLabel={
-            isFollowing ? 'Unfollow user' :
-            followRequestStatus === 'pending' ? 'Cancel follow request' :
-            isPrivate ? 'Request to follow' : 'Follow user'
-          }
-        >
-          {followLoading ? (
-            <ActivityIndicator size="small" color={(isFollowing || followRequestStatus === 'pending') ? colors.textPrimary : colors.white} />
-          ) : (
-            <Text style={[
-              styles.followButtonText,
-              (isFollowing || followRequestStatus === 'pending') && styles.followingButtonText,
-            ]}>
-              {isFollowing ? 'Following' :
-               followRequestStatus === 'pending' ? 'Requested' :
-               isPrivate ? 'Request Follow' : 'Follow'}
-            </Text>
-          )}
-        </Pressable>
-
-        {/* Private Profile Notice */}
-        {isPrivate && !isFollowing && (
-          <View style={styles.privateNotice}>
-            <Ionicons name="lock-closed" size={40} color={colors.textQuaternary} />
-            <Text style={styles.privateTitle}>This account is private</Text>
-            <Text style={styles.privateSubtitle}>Follow this account to see their posts</Text>
-          </View>
-        )}
-
-        {/* Post Grid — hidden if private and not following */}
-        {(!isPrivate || isFollowing) && (
+        {(!isPrivate || isFollowing) ? (
           <FlatList
             data={userPosts}
             keyExtractor={(item) => item.id}
             numColumns={3}
+            ListHeaderComponent={renderProfileHeader}
             renderItem={({ item }) => (
-              <Pressable onPress={() => router.push(`/post-detail?postId=${item.id}`)}>
+              <View>
                 {item.mediaType === 'video' ? (
                   <VideoThumbnailView
                     videoUri={getImageUrl(item.imagePath)}
@@ -407,110 +450,161 @@ export default function UserProfileScreen() {
                     accessibilityLabel={item.caption || 'Post image'}
                   />
                 )}
-              </Pressable>
+              </View>
             )}
             showsVerticalScrollIndicator={false}
             ListEmptyComponent={
               <View style={styles.emptyGrid}>
+                <Ionicons name="camera-outline" size={48} color="#CBD5E1" style={{ marginBottom: 12 }} />
                 <Text style={styles.emptyText}>No posts yet</Text>
               </View>
             }
           />
+        ) : (
+          renderProfileHeader()
         )}
       </View>
     </>
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.statItem}>
-      <Text style={styles.statValue}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
+  headerButton: {
+    padding: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   container: {
     flex: 1,
     backgroundColor: colors.backgroundPrimary,
   },
-  header: {
-    flexDirection: 'row',
-    padding: 20,
+  profileHeaderWrapper: {
     alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+  },
+
+  /* Avatar */
+  avatarContainer: {
+    marginTop: 20,
+    marginBottom: 16,
+    borderRadius: 70,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   avatar: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
+    width: 140,
+    height: 140,
+    borderRadius: 70,
   },
-  avatarFallback: {
-    backgroundColor: colors.backgroundTertiary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  statsRow: {
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  statItem: {
-    alignItems: 'center',
-    minHeight: 44,
-    justifyContent: 'center',
-  },
-  statValue: {
-    color: colors.textPrimary,
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  statLabel: {
-    color: colors.textSecondary,
-    fontSize: 12,
-  },
-  userInfo: {
-    paddingHorizontal: 20,
-  },
+
+  /* Display name */
   displayNameRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 2,
   },
   displayName: {
+    fontSize: 25,
+    fontWeight: '600',
     color: colors.textPrimary,
-    fontWeight: 'bold',
-    fontSize: 16,
+    textAlign: 'center',
   },
   verifiedBadge: {
     color: colors.verified,
     fontSize: 16,
     fontWeight: 'bold',
-    marginLeft: 4,
+    marginLeft: 6,
   },
+
+  /* Username */
   username: {
+    fontSize: 12,
     color: colors.textSecondary,
-    fontSize: 14,
-    marginTop: 2,
+    textAlign: 'center',
+    marginBottom: 8,
   },
+
+  /* Bio */
   bio: {
+    fontSize: 14,
     color: colors.textSecondary,
-    marginTop: 4,
+    textAlign: 'center',
+    paddingHorizontal: 40,
+    marginBottom: 12,
     lineHeight: 20,
   },
-  followButton: {
-    margin: 20,
-    backgroundColor: colors.primary,
-    paddingVertical: 10,
-    borderRadius: 8,
+
+  /* Followers / Following row */
+  followRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    minHeight: 44,
     justifyContent: 'center',
+    marginBottom: 16,
+  },
+  followItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  followCount: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#000000',
+  },
+  followLabel: {
+    fontSize: 14,
+    color: '#64748B',
+  },
+  followSpacer: {
+    width: 24,
+  },
+
+  /* Status banners */
+  statusBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEE2E2',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginHorizontal: 20,
+    marginBottom: 12,
+    gap: 8,
+  },
+  statusBannerMuted: {
+    backgroundColor: '#FEF3C7',
+  },
+  statusBannerText: {
+    fontSize: 14,
+    color: '#DC2626',
+    fontWeight: '500',
+  },
+  statusBannerTextMuted: {
+    color: '#D97706',
+  },
+
+  /* Follow button */
+  followButton: {
+    borderWidth: 2,
+    borderColor: colors.primary,
+    backgroundColor: colors.primary,
+    borderRadius: 12,
+    height: 48,
+    paddingHorizontal: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+    marginHorizontal: 20,
+    alignSelf: 'stretch',
   },
   followingButton: {
     backgroundColor: colors.backgroundPrimary,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: '#E2E8F0',
   },
   followButtonDisabled: {
     opacity: 0.6,
@@ -521,60 +615,61 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   followingButtonText: {
-    color: colors.textPrimary,
+    color: '#64748B',
   },
-  statusBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#FEE2E2',
-    marginHorizontal: 16,
-    marginBottom: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 10,
-  },
-  statusBannerMuted: {
-    backgroundColor: '#FEF3C7',
-  },
-  statusBannerText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#DC2626',
-  },
-  statusBannerTextMuted: {
-    color: '#D97706',
-  },
-  gridItem: {
-    width: ITEM_SIZE,
-    height: ITEM_SIZE,
-    backgroundColor: colors.borderLight,
-    borderWidth: 0.5,
-    borderColor: colors.backgroundPrimary,
-  },
+
+  /* Private profile notice */
   privateNotice: {
     alignItems: 'center',
     paddingVertical: 40,
-    paddingHorizontal: 20,
+    paddingHorizontal: 40,
   },
   privateTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: colors.textPrimary,
-    marginTop: 12,
+    marginTop: 16,
   },
   privateSubtitle: {
     fontSize: 14,
     color: colors.textSecondary,
-    marginTop: 4,
+    marginTop: 8,
     textAlign: 'center',
   },
+
+  /* Tab divider */
+  tabDivider: {
+    width: '100%',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  tabIconContainer: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 20,
+    backgroundColor: '#F0FDF4',
+  },
+
+  /* Post grid */
+  gridItem: {
+    width: ITEM_SIZE,
+    height: ITEM_SIZE,
+    backgroundColor: colors.borderLight,
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+
+  /* Empty state */
   emptyGrid: {
     alignItems: 'center',
-    padding: 40,
+    paddingVertical: 60,
   },
   emptyText: {
-    fontSize: 16,
+    fontSize: 15,
     color: colors.textQuaternary,
   },
 });
