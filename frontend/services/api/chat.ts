@@ -113,3 +113,76 @@ export async function fetchPantrySuggestions(conversationId?: string): Promise<C
   await handleResponse(response);
   return response.json();
 }
+
+/**
+ * Streams an AI response token-by-token via SSE.
+ * Returns a cancel function — call it to abort mid-stream.
+ */
+export function streamChatMessage(
+  message: string,
+  onToken: (token: string) => void,
+  onDone: (savedMessage?: ChatMessage, conversationId?: string) => void,
+  onError: (err: string) => void,
+  conversationId?: string,
+  conversationTitle?: string,
+  postContext?: PostContext
+): () => void {
+  let xhr: XMLHttpRequest | null = null;
+  let cancelled = false;
+
+  authHeaders().then((headers) => {
+    if (cancelled) return;
+
+    xhr = new XMLHttpRequest();
+    xhr.open('POST', `${API_BASE_URL}/api/chat/stream`);
+
+    Object.entries({ 'Content-Type': 'application/json', ...headers }).forEach(([k, v]) => {
+      xhr!.setRequestHeader(k, v as string);
+    });
+
+    let processed = 0;
+    let doneFired = false;
+
+    xhr.onprogress = () => {
+      if (cancelled) return;
+      const raw = xhr!.responseText.slice(processed);
+      processed = xhr!.responseText.length;
+
+      const lines = raw.split('\n');
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const payload = line.slice(6).trim();
+        if (!payload) continue;
+        try {
+          const json = JSON.parse(payload);
+          if (json.token) onToken(json.token);
+          if (json.done && !doneFired) {
+            doneFired = true;
+            onDone(json.message, json.conversationId);
+          }
+          if (json.error) onError(json.error);
+        } catch {}
+      }
+    };
+
+    xhr.onload = () => {
+      if (!cancelled && !doneFired) onDone();
+    };
+
+    xhr.onerror = () => {
+      if (!cancelled) onError('Stream connection failed. Please try again.');
+    };
+
+    xhr.send(JSON.stringify({
+      message,
+      conversationId: conversationId || undefined,
+      conversationTitle: conversationTitle || undefined,
+      postContext: postContext || null,
+    }));
+  });
+
+  return () => {
+    cancelled = true;
+    xhr?.abort();
+  };
+}

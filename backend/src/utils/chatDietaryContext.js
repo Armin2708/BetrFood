@@ -31,10 +31,19 @@ function buildDietaryProfileSection({ dietaryPreferences = [], allergies = [] })
   const normalizedDietaryPreferences = normalizeStringList(dietaryPreferences);
   const normalizedAllergies = normalizeAllergies(allergies);
 
-  return `
+  let section = `
 The user's dietary preferences: ${normalizedDietaryPreferences.length > 0 ? normalizedDietaryPreferences.join(', ') : 'None specified'}.
 The user's allergies/intolerances: ${normalizedAllergies.length > 0 ? normalizedAllergies.join(', ') : 'None specified'}.
 ${DIETARY_SAFETY_INSTRUCTIONS}`;
+
+  if (normalizedAllergies.length > 0) {
+    section += `
+
+ALLERGEN WARNING FORMAT: If any recipe or food suggestion you make contains one of the user's allergens — including hidden sources (e.g. soy in sauces, peanuts in Thai dishes, dairy in bread, gluten in soy sauce) — you MUST include a warning on its own line in this exact format:
+⚠️ ALLERGEN ALERT: Contains [allergen] in [specific ingredient]. [Consider: allergen-free alternative].`;
+  }
+
+  return section;
 }
 
 module.exports = {

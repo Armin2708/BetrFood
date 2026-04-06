@@ -24,7 +24,7 @@ import { getImageUrl } from '../../../services/api';
 import {
   ChatMessage,
   PostContext,
-  sendChatMessage,
+  streamChatMessage,
   fetchChatHistory,
   fetchPantrySuggestions,
   renameConversation,
@@ -61,6 +61,70 @@ function stripMarkdown(text: string): string {
     .replace(/\n{3,}/g, '\n\n')
     .trim();
 }
+
+const ALLERGEN_ALERT_PREFIX = '⚠️ ALLERGEN ALERT:';
+
+function renderAssistantContent(content: string) {
+  const lines = content.split('\n');
+  const segments: { type: 'text' | 'allergen'; value: string }[] = [];
+  let textBuffer = '';
+
+  for (const line of lines) {
+    if (line.trimStart().startsWith(ALLERGEN_ALERT_PREFIX)) {
+      if (textBuffer.trim()) {
+        segments.push({ type: 'text', value: textBuffer });
+        textBuffer = '';
+      }
+      segments.push({ type: 'allergen', value: line.trim() });
+    } else {
+      textBuffer += line + '\n';
+    }
+  }
+  if (textBuffer.trim()) {
+    segments.push({ type: 'text', value: textBuffer });
+  }
+
+  if (segments.length === 0) {
+    return <Markdown style={markdownStyles}>{content}</Markdown>;
+  }
+
+  return (
+    <View style={{ gap: 4 }}>
+      {segments.map((seg, i) => {
+        if (seg.type === 'allergen') {
+          return (
+            <View key={i} style={allergenStyles.warning}>
+              <Ionicons name="warning" size={15} color="#D97706" />
+              <Text style={allergenStyles.text}>{seg.value}</Text>
+            </View>
+          );
+        }
+        return <Markdown key={i} style={markdownStyles}>{seg.value}</Markdown>;
+      })}
+    </View>
+  );
+}
+
+const allergenStyles = StyleSheet.create({
+  warning: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    backgroundColor: '#FEF3C7',
+    borderWidth: 1,
+    borderColor: '#F59E0B',
+    borderRadius: 8,
+    padding: 10,
+    marginVertical: 4,
+  },
+  text: {
+    flex: 1,
+    fontSize: 13,
+    color: '#92400E',
+    lineHeight: 18,
+    fontWeight: '500',
+  },
+});
 
 const QUICK_ACTIONS = [
   { id: 'pantry', label: 'What can I cook?', icon: 'basket-outline' as const, message: 'What can I cook with the items in my pantry?' },
@@ -138,6 +202,9 @@ export default function ConversationScreen() {
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  // Streaming state: null = idle, '' = waiting for first token, string = content so far
+  const [streamingContent, setStreamingContent] = useState<string | null>(null);
+  const cancelStreamRef = useRef<(() => void) | null>(null);
   const flatListRef = useRef<FlatList<ChatMessage>>(null);
 
   const toastOpacity = useRef(new Animated.Value(0)).current;
@@ -208,6 +275,9 @@ export default function ConversationScreen() {
   useFocusEffect(
     useCallback(() => {
       loadConversationHistory();
+      return () => {
+        cancelStreamRef.current?.();
+      };
     }, [loadConversationHistory])
   );
 
@@ -233,9 +303,9 @@ export default function ConversationScreen() {
     }, 100);
   };
 
-  const handleSend = async (overrideText?: string) => {
+  const handleSend = (overrideText?: string) => {
     const text = (overrideText ?? input).trim();
-    if (!text || sending) return;
+    if (!text || sending || loadingSuggestions) return;
 
     const tempUserMsg: ChatMessage = {
       id: Date.now(),
@@ -247,27 +317,48 @@ export default function ConversationScreen() {
     setMessages((prev) => [...prev, tempUserMsg]);
     if (!overrideText) setInput('');
     setSending(true);
+    setStreamingContent(''); // empty string = show typing indicator before first token
     scrollToBottom();
 
-    try {
-      const convId = activeConversationId === 'new' || !activeConversationId ? undefined : activeConversationId;
-      const title = !activeConversationId ? conversationTitle : undefined;
-      const result = await sendChatMessage(text, convId, title);
+    const convId = activeConversationId === 'new' || !activeConversationId ? undefined : activeConversationId;
+    const title = !activeConversationId ? conversationTitle : undefined;
 
-      if (result.conversationId && !activeConversationId) {
-        setActiveConversationId(result.conversationId);
-      }
-
-      const history = await fetchChatHistory(result.conversationId);
-      setMessages(history);
-    } catch (err: any) {
-      setMessages((prev) => prev.filter((m) => m.id !== tempUserMsg.id));
-      if (!overrideText) setInput(text);
-      Alert.alert('Chat Error', err?.message || 'Failed to get a response. Please try again.');
-    } finally {
-      setSending(false);
-      scrollToBottom();
-    }
+    cancelStreamRef.current = streamChatMessage(
+      text,
+      (token) => {
+        setStreamingContent((prev) => (prev ?? '') + token);
+        scrollToBottom();
+      },
+      (savedMessage, returnedConvId) => {
+        setStreamingContent(null);
+        cancelStreamRef.current = null;
+        setSending(false);
+        if (returnedConvId && !activeConversationId) {
+          setActiveConversationId(returnedConvId);
+        }
+        if (savedMessage) {
+          setMessages((prev) => [
+            ...prev.filter((m) => m.id !== tempUserMsg.id),
+            tempUserMsg,
+            savedMessage,
+          ]);
+        } else {
+          fetchChatHistory(returnedConvId || convId).then(setMessages).catch(() => {});
+        }
+        scrollToBottom();
+      },
+      (errMsg) => {
+        setStreamingContent(null);
+        cancelStreamRef.current = null;
+        setSending(false);
+        setMessages((prev) => prev.filter((m) => m.id !== tempUserMsg.id));
+        if (!overrideText) setInput(text);
+        Alert.alert('Chat Error', errMsg || 'Failed to get a response. Please try again.');
+      },
+      convId,
+      title,
+      postContext || undefined
+    );
   };
 
   const handlePantrySuggestions = async () => {
@@ -338,7 +429,7 @@ export default function ConversationScreen() {
                 {item.content}
               </Text>
             ) : (
-              <Markdown style={markdownStyles}>{item.content}</Markdown>
+              renderAssistantContent(item.content)
             )}
             <Text style={[styles.timestamp, isUser && styles.userTimestamp]}>
               {formatRelativeTime(item.created_at)}
@@ -388,7 +479,7 @@ export default function ConversationScreen() {
     );
   };
 
-  const isBusy = sending || loadingSuggestions;
+  const isBusy = sending || loadingSuggestions || streamingContent !== null;
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
@@ -440,7 +531,20 @@ export default function ConversationScreen() {
           />
         )}
 
-        {isBusy && (
+        {/* Streaming bubble — renders tokens as they arrive */}
+        {streamingContent !== null && streamingContent !== '' && (
+          <View style={[styles.messageBubbleRow, styles.assistantRow, { paddingHorizontal: 12, paddingBottom: 4 }]}>
+            <View style={styles.avatarCircleSmall}>
+              <Ionicons name="restaurant-outline" size={12} color={colors.primary} />
+            </View>
+            <View style={[styles.messageBubble, styles.assistantBubble, { maxWidth: '80%' }]}>
+              {renderAssistantContent(streamingContent)}
+            </View>
+          </View>
+        )}
+
+        {/* Typing indicator — shown while waiting for first token or pantry suggestions */}
+        {(streamingContent === '' || loadingSuggestions) && (
           <View style={styles.typingRow}>
             <View style={styles.avatarCircleSmall}>
               <Ionicons name="restaurant-outline" size={12} color={colors.primary} />

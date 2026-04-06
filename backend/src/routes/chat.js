@@ -341,12 +341,12 @@ router.post('/', requireAuth, async (req, res) => {
       .insert({ user_id: userId, conversation_id: convId, role: 'user', content: message.trim() });
 
     // Update conversation title if first message
-    const { data: msgCount } = await supabase
+    const { count: msgCount } = await supabase
       .from('chat_messages')
-      .select('id', { count: 'exact', head: true })
+      .select('*', { count: 'exact', head: true })
       .eq('conversation_id', convId);
 
-    if (msgCount && msgCount.length <= 1) {
+    if (!msgCount || msgCount <= 1) {
       await supabase
         .from('chat_conversations')
         .update({ title: await generateTitle(message.trim()), updated_at: new Date().toISOString() })
@@ -376,12 +376,12 @@ router.post('/', requireAuth, async (req, res) => {
     const isPantryQuery = hasPantryIntent(message.trim());
     const isPostSuggestionQuery = hasPostSuggestionIntent(message.trim());
     if (isPantryQuery && !postContext && !isPostSuggestionQuery) {
-      const { data: pantryCheck } = await supabase
+      const { count: pantryCount } = await supabase
         .from('pantry_items')
-        .select('id', { count: 'exact', head: true })
+        .select('*', { count: 'exact', head: true })
         .eq('user_id', userId);
 
-      if (!pantryCheck || pantryCheck.length === 0) {
+      if (!pantryCount || pantryCount === 0) {
         const emptyMsg = "Your pantry is currently empty! Head over to the **Pantry** tab to add ingredients, and then I can suggest recipes based on what you have.";
         const { data: saved } = await supabase
           .from('chat_messages')
@@ -524,6 +524,129 @@ router.get('/pantry-suggestions', requireAuth, async (req, res) => {
   } catch (err) {
     console.error('[PANTRY SUGGESTIONS ERROR]', err.message, err.stack);
     res.status(500).json({ error: 'Failed to get pantry suggestions', details: err.message });
+  }
+});
+
+// POST /api/chat/stream — streaming AI response via SSE
+router.post('/stream', requireAuth, async (req, res) => {
+  const userId = getUserId(req);
+  const { message, conversationId, conversationTitle, postContext } = req.body;
+
+  if (!message || typeof message !== 'string' || !message.trim()) {
+    return res.status(400).json({ error: 'message is required' });
+  }
+
+  if (!openai) {
+    return res.status(503).json({ error: 'AI service not configured (missing OPENROUTER_API_KEY)' });
+  }
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  let aborted = false;
+  req.on('close', () => { aborted = true; });
+
+  try {
+    // Get or create conversation
+    let convId = conversationId;
+    if (!convId) {
+      const { data: newConv, error: convErr } = await supabase
+        .from('chat_conversations')
+        .insert({ user_id: userId, title: conversationTitle || await generateTitle(message.trim()) })
+        .select('id')
+        .single();
+      if (convErr) throw convErr;
+      convId = newConv.id;
+    }
+
+    // Save user message
+    await supabase
+      .from('chat_messages')
+      .insert({ user_id: userId, conversation_id: convId, role: 'user', content: message.trim() });
+
+    await supabase
+      .from('chat_conversations')
+      .update({ updated_at: new Date().toISOString() })
+      .eq('id', convId);
+
+    // Fetch conversation history for context
+    const { data: history } = await supabase
+      .from('chat_messages')
+      .select('role, content')
+      .eq('conversation_id', convId)
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    const conversationMessages = (history || []).reverse().map((msg) => ({
+      role: msg.role,
+      content: msg.content,
+    }));
+
+    const isPantryQuery = hasPantryIntent(message.trim());
+    const isPostSuggestionQuery = hasPostSuggestionIntent(message.trim());
+    let systemPrompt = await buildSystemPrompt(userId, isPantryQuery, isPostSuggestionQuery);
+
+    if (postContext) {
+      let postSection = '\n\nThe user is asking about a specific post:';
+      if (postContext.username) postSection += `\nPosted by: ${postContext.username}`;
+      if (postContext.caption) postSection += `\nCaption: "${postContext.caption}"`;
+      if (postContext.tags?.length) postSection += `\nTags: ${postContext.tags.join(', ')}`;
+      if (postContext.recipe) {
+        const r = postContext.recipe;
+        postSection += '\nThis post includes a recipe:';
+        if (r.cookTime) postSection += `\n- Cook time: ${r.cookTime}`;
+        if (r.servings) postSection += `\n- Servings: ${r.servings}`;
+        if (r.difficulty) postSection += `\n- Difficulty: ${r.difficulty}`;
+        if (r.ingredients?.length) postSection += `\n- Ingredients: ${r.ingredients.join(', ')}`;
+        if (r.steps?.length) postSection += `\n- Steps: ${r.steps.map((s, i) => `${i + 1}. ${s}`).join(' ')}`;
+      }
+      postSection += '\n\nAnswer questions specifically about this post/recipe.';
+      systemPrompt += postSection;
+    }
+
+    const stream = await openai.chat.completions.create({
+      model: 'google/gemini-2.0-flash-001',
+      max_tokens: 1024,
+      stream: true,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        ...conversationMessages,
+      ],
+    });
+
+    let fullContent = '';
+
+    for await (const chunk of stream) {
+      if (aborted) break;
+      const token = chunk.choices[0]?.delta?.content || '';
+      if (token) {
+        fullContent += token;
+        if (!res.writableEnded) res.write(`data: ${JSON.stringify({ token })}\n\n`);
+      }
+    }
+
+    // Save the (possibly partial) assistant response
+    if (fullContent) {
+      const { data: saved } = await supabase
+        .from('chat_messages')
+        .insert({ user_id: userId, conversation_id: convId, role: 'assistant', content: fullContent })
+        .select('id, role, content, created_at')
+        .single();
+
+      if (!res.writableEnded) {
+        res.write(`data: ${JSON.stringify({ done: true, message: saved, conversationId: convId })}\n\n`);
+      }
+    }
+
+    if (!res.writableEnded) res.end();
+  } catch (err) {
+    console.error('[CHAT STREAM ERROR]', err.message, err.stack);
+    if (!res.writableEnded) {
+      res.write(`data: ${JSON.stringify({ error: err.message })}\n\n`);
+      res.end();
+    }
   }
 });
 
