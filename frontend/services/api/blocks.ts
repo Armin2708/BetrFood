@@ -8,7 +8,9 @@ export async function checkBlockStatus(userId: string): Promise<{ isBlocked: boo
     const error = await response.json();
     throw new Error(error.error || 'Failed to check block status');
   }
-  return response.json();
+  const data = response.json();
+  console.log('[API] Block status for', userId, ':', data);
+  return data;
 }
 
 export async function checkMuteStatus(userId: string): Promise<{ isMuted: boolean }> {
@@ -23,15 +25,18 @@ export async function checkMuteStatus(userId: string): Promise<{ isMuted: boolea
 }
 
 export async function blockUser(userId: string) {
+  console.log('[API] Blocking user:', userId);
   const response = await fetch(`${API_BASE_URL}/api/users/${userId}/block`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
   });
+  console.log('[API] Block response status:', response.status);
+  const data = await response.json();
+  console.log('[API] Block response data:', data);
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Failed to block user');
+    throw new Error(data.error || 'Failed to block user');
   }
-  return response.json();
+  return data;
 }
 
 export async function unblockUser(userId: string) {
