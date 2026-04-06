@@ -52,6 +52,18 @@ export async function markAllNotificationsRead(): Promise<{ message: string }> {
   return response.json();
 }
 
+export async function checkExpiringItems(): Promise<{ checked: number; created: number }> {
+  const response = await fetch(`${API_BASE_URL}/api/notifications/check-expiring`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to check expiring items');
+  }
+  return response.json();
+}
+
 export async function fetchUnreadNotificationCount(): Promise<number> {
   const response = await fetch(`${API_BASE_URL}/api/notifications/unread-count`, {
     headers: await authHeaders(),

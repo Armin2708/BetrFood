@@ -21,6 +21,8 @@ import {
   muteUser,
   unmuteUser,
   reportContent,
+  checkFollowRequestStatus,
+  cancelFollowRequest,
   UserProfile,
   Post as PostType,
 } from '../../../services/api';
@@ -42,6 +44,8 @@ export default function UserProfileScreen() {
   const [followLoading, setFollowLoading] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
+  const [isPrivate, setIsPrivate] = useState(false);
+  const [followRequestStatus, setFollowRequestStatus] = useState<'none' | 'pending' | 'accepted'>('none');
   const { showActionSheetWithOptions } = useActionSheet();
 
   const handleToggleBlock = () => {
@@ -174,20 +178,32 @@ export default function UserProfileScreen() {
       const data = await fetchUserProfile(userId);
       setProfile(data);
 
-      // Load follow stats, follow status, block/mute status, and posts in parallel
-      const [stats, followStatus, blockStatus, muteStatus, postsResult] = await Promise.all([
+      const profileIsPrivate = !!(data as any).isPrivate;
+      setIsPrivate(profileIsPrivate);
+
+      // Load follow stats, follow status, block/mute status, follow request status, and posts in parallel
+      const [stats, followStatus, blockStatus, muteStatus, reqStatus, postsResult] = await Promise.all([
         fetchFollowStats(userId).catch(() => ({ followerCount: 0, followingCount: 0 })),
         checkFollowStatus(userId).catch(() => ({ isFollowing: false })),
         checkBlockStatus(userId).catch(() => ({ isBlocked: false })),
         checkMuteStatus(userId).catch(() => ({ isMuted: false })),
-        fetchUserPosts(userId).catch(() => ({ posts: [] as PostType[] })),
+        checkFollowRequestStatus(userId).catch(() => ({ status: 'none' as const })),
+        profileIsPrivate ? Promise.resolve({ posts: [] as PostType[] }) : fetchUserPosts(userId).catch(() => ({ posts: [] as PostType[] })),
       ]);
 
       setFollowStats(stats);
       setIsFollowing(followStatus.isFollowing);
       setIsBlocked(blockStatus.isBlocked);
       setIsMuted(muteStatus.isMuted);
-      setUserPosts(postsResult.posts);
+      setFollowRequestStatus(reqStatus.status);
+
+      // If private but the user is actually following, load posts
+      if (profileIsPrivate && followStatus.isFollowing) {
+        const postsData = await fetchUserPosts(userId).catch(() => ({ posts: [] as PostType[] }));
+        setUserPosts(postsData.posts);
+      } else {
+        setUserPosts(postsResult.posts);
+      }
     } catch (error) {
       console.error('Failed to load user profile:', error);
     } finally {
@@ -202,31 +218,59 @@ export default function UserProfileScreen() {
   const handleFollowToggle = async () => {
     if (!userId || followLoading) return;
 
-    const wasFollowing = isFollowing;
-    // Optimistic update
-    setIsFollowing(!wasFollowing);
-    setFollowStats(prev => ({
-      ...prev,
-      followerCount: wasFollowing ? prev.followerCount - 1 : prev.followerCount + 1,
-    }));
-
-    setFollowLoading(true);
-    try {
-      if (wasFollowing) {
-        await unfollowUser(userId);
-      } else {
-        await followUser(userId);
+    // If there's a pending follow request, tapping should cancel it
+    if (followRequestStatus === 'pending') {
+      setFollowLoading(true);
+      try {
+        await cancelFollowRequest(userId);
+        setFollowRequestStatus('none');
+      } catch (error) {
+        console.error('Failed to cancel follow request:', error);
+      } finally {
+        setFollowLoading(false);
       }
-    } catch (error) {
-      // Rollback on failure
-      setIsFollowing(wasFollowing);
+      return;
+    }
+
+    const wasFollowing = isFollowing;
+
+    if (!isPrivate || wasFollowing) {
+      // Public profile or already following — use instant follow/unfollow
+      setIsFollowing(!wasFollowing);
       setFollowStats(prev => ({
         ...prev,
-        followerCount: wasFollowing ? prev.followerCount + 1 : prev.followerCount - 1,
+        followerCount: wasFollowing ? prev.followerCount - 1 : prev.followerCount + 1,
       }));
-      console.error('Failed to toggle follow:', error);
-    } finally {
-      setFollowLoading(false);
+
+      setFollowLoading(true);
+      try {
+        if (wasFollowing) {
+          await unfollowUser(userId);
+        } else {
+          await followUser(userId);
+        }
+      } catch (error) {
+        // Rollback on failure
+        setIsFollowing(wasFollowing);
+        setFollowStats(prev => ({
+          ...prev,
+          followerCount: wasFollowing ? prev.followerCount + 1 : prev.followerCount - 1,
+        }));
+        console.error('Failed to toggle follow:', error);
+      } finally {
+        setFollowLoading(false);
+      }
+    } else {
+      // Private profile, not following — send follow request
+      setFollowLoading(true);
+      try {
+        await followUser(userId);
+        setFollowRequestStatus('pending');
+      } catch (error) {
+        console.error('Failed to send follow request:', error);
+      } finally {
+        setFollowLoading(false);
+      }
     }
   };
 
@@ -304,51 +348,75 @@ export default function UserProfileScreen() {
           </View>
         )}
 
-        {/* Follow/Unfollow Button */}
+        {/* Follow/Unfollow/Request Button */}
         <Pressable
-          style={[styles.followButton, isFollowing && styles.followingButton, followLoading && styles.followButtonDisabled]}
+          style={[
+            styles.followButton,
+            (isFollowing || followRequestStatus === 'pending') && styles.followingButton,
+            followLoading && styles.followButtonDisabled,
+          ]}
           onPress={handleFollowToggle}
           disabled={followLoading}
           accessibilityRole="button"
-          accessibilityLabel={isFollowing ? 'Unfollow user' : 'Follow user'}
+          accessibilityLabel={
+            isFollowing ? 'Unfollow user' :
+            followRequestStatus === 'pending' ? 'Cancel follow request' :
+            isPrivate ? 'Request to follow' : 'Follow user'
+          }
         >
           {followLoading ? (
-            <ActivityIndicator size="small" color={isFollowing ? colors.textPrimary : colors.white} />
+            <ActivityIndicator size="small" color={(isFollowing || followRequestStatus === 'pending') ? colors.textPrimary : colors.white} />
           ) : (
-            <Text style={[styles.followButtonText, isFollowing && styles.followingButtonText]}>
-              {isFollowing ? 'Following' : 'Follow'}
+            <Text style={[
+              styles.followButtonText,
+              (isFollowing || followRequestStatus === 'pending') && styles.followingButtonText,
+            ]}>
+              {isFollowing ? 'Following' :
+               followRequestStatus === 'pending' ? 'Requested' :
+               isPrivate ? 'Request Follow' : 'Follow'}
             </Text>
           )}
         </Pressable>
 
-        {/* Post Grid */}
-        <FlatList
-          data={userPosts}
-          keyExtractor={(item) => item.id}
-          numColumns={3}
-          renderItem={({ item }) => (
-            <Pressable onPress={() => router.push(`/post-detail?postId=${item.id}`)}>
-              {item.mediaType === 'video' ? (
-                <VideoThumbnailView
-                  videoUri={getImageUrl(item.imagePath)}
-                  style={styles.gridItem}
-                />
-              ) : (
-                <Image
-                  source={{ uri: getImageUrl(item.imagePath) }}
-                  style={styles.gridItem}
-                  accessibilityLabel={item.caption || 'Post image'}
-                />
-              )}
-            </Pressable>
-          )}
-          showsVerticalScrollIndicator={false}
-          ListEmptyComponent={
-            <View style={styles.emptyGrid}>
-              <Text style={styles.emptyText}>No posts yet</Text>
-            </View>
-          }
-        />
+        {/* Private Profile Notice */}
+        {isPrivate && !isFollowing && (
+          <View style={styles.privateNotice}>
+            <Ionicons name="lock-closed" size={40} color={colors.textQuaternary} />
+            <Text style={styles.privateTitle}>This account is private</Text>
+            <Text style={styles.privateSubtitle}>Follow this account to see their posts</Text>
+          </View>
+        )}
+
+        {/* Post Grid — hidden if private and not following */}
+        {(!isPrivate || isFollowing) && (
+          <FlatList
+            data={userPosts}
+            keyExtractor={(item) => item.id}
+            numColumns={3}
+            renderItem={({ item }) => (
+              <Pressable onPress={() => router.push(`/post-detail?postId=${item.id}`)}>
+                {item.mediaType === 'video' ? (
+                  <VideoThumbnailView
+                    videoUri={getImageUrl(item.imagePath)}
+                    style={styles.gridItem}
+                  />
+                ) : (
+                  <Image
+                    source={{ uri: getImageUrl(item.imagePath) }}
+                    style={styles.gridItem}
+                    accessibilityLabel={item.caption || 'Post image'}
+                  />
+                )}
+              </Pressable>
+            )}
+            showsVerticalScrollIndicator={false}
+            ListEmptyComponent={
+              <View style={styles.emptyGrid}>
+                <Text style={styles.emptyText}>No posts yet</Text>
+              </View>
+            }
+          />
+        )}
       </View>
     </>
   );
@@ -483,6 +551,23 @@ const styles = StyleSheet.create({
     backgroundColor: colors.borderLight,
     borderWidth: 0.5,
     borderColor: colors.backgroundPrimary,
+  },
+  privateNotice: {
+    alignItems: 'center',
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+  },
+  privateTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    marginTop: 12,
+  },
+  privateSubtitle: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    marginTop: 4,
+    textAlign: 'center',
   },
   emptyGrid: {
     alignItems: 'center',

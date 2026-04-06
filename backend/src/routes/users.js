@@ -53,6 +53,7 @@ router.delete("/me", requireAuth, async (req, res) => {
     }
 
     // 2. Delete other user data
+    await supabase.from("follow_requests").delete().or(`requester_id.eq.${userId},requested_user_id.eq.${userId}`);
     await supabase.from("user_follows").delete().or(`follower_id.eq.${userId},following_id.eq.${userId}`);
     await supabase.from("user_blocks").delete().or(`blocker_id.eq.${userId},blocked_id.eq.${userId}`);
     await supabase.from("user_mutes").delete().or(`muter_id.eq.${userId},muted_id.eq.${userId}`);
@@ -77,6 +78,144 @@ router.delete("/me", requireAuth, async (req, res) => {
   }
 });
 
+// === Follow Requests endpoints (must be before /:id routes) ===
+
+// GET /api/users/follow-requests/pending — list incoming pending follow requests
+router.get("/follow-requests/pending", requireAuth, async (req, res) => {
+  try {
+    const { data: requests, error } = await supabase
+      .from("follow_requests")
+      .select("requester_id, status, created_at, updated_at")
+      .eq("requested_user_id", req.userId)
+      .eq("status", "pending")
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+
+    // Enrich with requester profile data
+    const requesterIds = (requests || []).map(r => r.requester_id);
+    let profiles = [];
+    if (requesterIds.length > 0) {
+      const { data: profileData } = await supabase
+        .from("user_profiles")
+        .select("id, username, display_name, avatar_url")
+        .in("id", requesterIds);
+      profiles = profileData || [];
+    }
+
+    const profileMap = {};
+    profiles.forEach(p => { profileMap[p.id] = p; });
+
+    const enriched = (requests || []).map(r => ({
+      requesterId: r.requester_id,
+      status: r.status,
+      createdAt: r.created_at,
+      username: profileMap[r.requester_id]?.username || null,
+      displayName: profileMap[r.requester_id]?.display_name || null,
+      avatarUrl: profileMap[r.requester_id]?.avatar_url || null,
+    }));
+
+    res.json(enriched);
+  } catch (error) {
+    console.error("Error fetching pending follow requests:", error);
+    res.status(500).json({ error: "Failed to fetch follow requests." });
+  }
+});
+
+// POST /api/users/follow-requests/:requesterId/accept
+router.post("/follow-requests/:requesterId/accept", requireAuth, async (req, res) => {
+  const requesterId = req.params.requesterId;
+  const currentUserId = req.userId;
+
+  try {
+    // Verify the request exists and is pending
+    const { data: request, error: fetchError } = await supabase
+      .from("follow_requests")
+      .select("*")
+      .eq("requester_id", requesterId)
+      .eq("requested_user_id", currentUserId)
+      .eq("status", "pending")
+      .maybeSingle();
+
+    if (fetchError) throw fetchError;
+    if (!request) {
+      return res.status(404).json({ error: "Follow request not found." });
+    }
+
+    // Create the follow relationship
+    const { error: followError } = await supabase
+      .from("user_follows")
+      .insert({ follower_id: requesterId, following_id: currentUserId });
+
+    if (followError && followError.code !== '23505') throw followError;
+
+    // Delete the request row
+    await supabase
+      .from("follow_requests")
+      .delete()
+      .eq("requester_id", requesterId)
+      .eq("requested_user_id", currentUserId);
+
+    // Create notification for the requester
+    try {
+      const { data: acceptorProfile } = await supabase
+        .from("user_profiles")
+        .select("username")
+        .eq("id", currentUserId)
+        .maybeSingle();
+
+      await supabase.from("notifications").insert({
+        user_id: requesterId,
+        type: "follow_request_accepted",
+        data: {
+          acceptedBy: currentUserId,
+          acceptedByUsername: acceptorProfile?.username || null,
+        },
+      });
+    } catch (notifError) {
+      console.error("Error creating follow request accepted notification:", notifError);
+    }
+
+    res.json({ message: "Follow request accepted." });
+  } catch (error) {
+    console.error("Error accepting follow request:", error);
+    res.status(500).json({ error: "Failed to accept follow request." });
+  }
+});
+
+// POST /api/users/follow-requests/:requesterId/deny
+router.post("/follow-requests/:requesterId/deny", requireAuth, async (req, res) => {
+  const requesterId = req.params.requesterId;
+  const currentUserId = req.userId;
+
+  try {
+    const { data: request, error: fetchError } = await supabase
+      .from("follow_requests")
+      .select("*")
+      .eq("requester_id", requesterId)
+      .eq("requested_user_id", currentUserId)
+      .eq("status", "pending")
+      .maybeSingle();
+
+    if (fetchError) throw fetchError;
+    if (!request) {
+      return res.status(404).json({ error: "Follow request not found." });
+    }
+
+    // Delete the request row
+    await supabase
+      .from("follow_requests")
+      .delete()
+      .eq("requester_id", requesterId)
+      .eq("requested_user_id", currentUserId);
+
+    res.json({ message: "Follow request denied." });
+  } catch (error) {
+    console.error("Error denying follow request:", error);
+    res.status(500).json({ error: "Failed to deny follow request." });
+  }
+});
+
 // POST /api/users/:id/follow (auth required)
 router.post("/:id/follow", requireAuth, async (req, res) => {
   const followingId = req.params.id;
@@ -87,6 +226,50 @@ router.post("/:id/follow", requireAuth, async (req, res) => {
   }
 
   try {
+    // Check target user's profile visibility
+    const { data: prefs } = await supabase
+      .from("user_preferences")
+      .select("profile_visibility")
+      .eq("user_id", followingId)
+      .maybeSingle();
+
+    if (prefs && prefs.profile_visibility === 'private') {
+      // Private profile — create a follow request instead of instant follow
+      const { error: reqError } = await supabase
+        .from("follow_requests")
+        .insert({ requester_id: followerId, requested_user_id: followingId, status: 'pending' });
+
+      if (reqError) {
+        if (reqError.code === '23505') {
+          return res.status(409).json({ error: "Follow request already sent." });
+        }
+        throw reqError;
+      }
+
+      // Create notification for the target user
+      try {
+        const { data: requesterProfile } = await supabase
+          .from("user_profiles")
+          .select("username")
+          .eq("id", followerId)
+          .maybeSingle();
+
+        await supabase.from("notifications").insert({
+          user_id: followingId,
+          type: "follow_request",
+          data: {
+            requesterId: followerId,
+            requesterUsername: requesterProfile?.username || null,
+          },
+        });
+      } catch (notifError) {
+        console.error("Error creating follow request notification:", notifError);
+      }
+
+      return res.json({ message: "Follow request sent.", status: "pending" });
+    }
+
+    // Public profile — instant follow
     const { data, error } = await supabase
       .from("user_follows")
       .insert({ follower_id: followerId, following_id: followingId })
@@ -130,6 +313,49 @@ router.post("/:id/follow", requireAuth, async (req, res) => {
   } catch (error) {
     console.error("Error following user:", error);
     res.status(500).json({ error: "Failed to follow user." });
+  }
+});
+
+// DELETE /api/users/:id/follow-request — cancel a sent follow request
+router.delete("/:id/follow-request", requireAuth, async (req, res) => {
+  const targetUserId = req.params.id;
+  const currentUserId = req.userId;
+
+  try {
+    const { error } = await supabase
+      .from("follow_requests")
+      .delete()
+      .eq("requester_id", currentUserId)
+      .eq("requested_user_id", targetUserId);
+
+    if (error) throw error;
+
+    res.json({ message: "Follow request cancelled." });
+  } catch (error) {
+    console.error("Error cancelling follow request:", error);
+    res.status(500).json({ error: "Failed to cancel follow request." });
+  }
+});
+
+// GET /api/users/:id/follow-request-status — check if current user has a pending request to this user
+router.get("/:id/follow-request-status", requireAuth, async (req, res) => {
+  const targetUserId = req.params.id;
+  const currentUserId = req.userId;
+
+  try {
+    const { data, error } = await supabase
+      .from("follow_requests")
+      .select("status")
+      .eq("requester_id", currentUserId)
+      .eq("requested_user_id", targetUserId)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    res.json({ status: data ? data.status : 'none' });
+  } catch (error) {
+    console.error("Error checking follow request status:", error);
+    res.status(500).json({ error: "Failed to check follow request status." });
   }
 });
 

@@ -51,6 +51,8 @@ export async function authHeaders(): Promise<Record<string, string>> {
   const token = await getFreshToken();
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
+  } else {
+    console.warn('[AUTH] No token available — request will be unauthenticated');
   }
   return headers;
 }

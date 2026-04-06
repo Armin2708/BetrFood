@@ -112,10 +112,6 @@ export default function TabsLayout() {
             shadowOpacity: 0,
             borderTopLeftRadius: 20,
             borderTopRightRadius: 20,
-            position: 'absolute',
-            left: 0,
-            right: 0,
-            bottom: 0,
           },
           tabBarLabelStyle: {
             fontSize: 10,
@@ -234,7 +230,7 @@ const styles = StyleSheet.create({
   },
   fab: {
     position: 'absolute',
-    bottom: Platform.OS === 'ios' ? 104 : 80,
+    bottom: Platform.OS === 'ios' ? 100 : 78,
     right: 20,
     width: 52,
     height: 52,

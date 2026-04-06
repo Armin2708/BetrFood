@@ -83,3 +83,72 @@ export async function fetchFollowing(userId: string): Promise<FollowingUser[]> {
   }
   return response.json();
 }
+
+// === Follow Request functions ===
+
+export async function cancelFollowRequest(userId: string): Promise<{ message: string }> {
+  const response = await fetch(`${API_BASE_URL}/api/users/${userId}/follow-request`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to cancel follow request');
+  }
+  return response.json();
+}
+
+export async function checkFollowRequestStatus(userId: string): Promise<{ status: 'none' | 'pending' | 'accepted' }> {
+  const response = await fetch(`${API_BASE_URL}/api/users/${userId}/follow-request-status`, {
+    headers: await authHeaders(),
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to check follow request status');
+  }
+  return response.json();
+}
+
+export type FollowRequest = {
+  requesterId: string;
+  status: string;
+  createdAt: string;
+  username: string | null;
+  displayName: string | null;
+  avatarUrl: string | null;
+};
+
+export async function fetchPendingFollowRequests(): Promise<FollowRequest[]> {
+  const response = await fetch(`${API_BASE_URL}/api/users/follow-requests/pending`, {
+    headers: await authHeaders(),
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to fetch pending follow requests');
+  }
+  return response.json();
+}
+
+export async function acceptFollowRequest(requesterId: string): Promise<{ message: string }> {
+  const response = await fetch(`${API_BASE_URL}/api/users/follow-requests/${requesterId}/accept`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to accept follow request');
+  }
+  return response.json();
+}
+
+export async function denyFollowRequest(requesterId: string): Promise<{ message: string }> {
+  const response = await fetch(`${API_BASE_URL}/api/users/follow-requests/${requesterId}/deny`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to deny follow request');
+  }
+  return response.json();
+}

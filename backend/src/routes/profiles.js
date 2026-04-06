@@ -402,6 +402,40 @@ router.delete('/me', requireAuth, async (req, res) => {
   }
 });
 
+// GET /api/profiles/search?q=term - Search user profiles by username or display name
+// NOTE: Must be defined BEFORE /:userId to avoid "search" matching as :userId
+router.get('/search', optionalAuth, async (req, res) => {
+  try {
+    const q = (req.query.q || '').trim();
+    if (!q || q.length < 1) {
+      return res.json({ users: [] });
+    }
+
+    const searchTerm = `%${q}%`;
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .select('id, username, display_name, avatar_url, bio, verified')
+      .or(`username.ilike.${searchTerm},display_name.ilike.${searchTerm}`)
+      .limit(20);
+
+    if (error) throw error;
+
+    const users = (data || []).map(u => ({
+      id: u.id,
+      username: u.username,
+      displayName: u.display_name,
+      avatarUrl: u.avatar_url,
+      bio: u.bio,
+      verified: u.verified,
+    }));
+
+    res.json({ users });
+  } catch (error) {
+    console.error('Error searching profiles:', error);
+    res.status(500).json({ error: 'Failed to search profiles.' });
+  }
+});
+
 // GET /api/profiles/:userId - Get profile by userId (respects privacy settings)
 router.get('/:userId', optionalAuth, async (req, res) => {
   try {

@@ -138,9 +138,44 @@ router.get('/', optionalAuth, async (req, res) => {
 
     // Filter out posts from blocked and muted users
     const excludedIds = req.userId ? await getExcludedUserIds(req.userId) : new Set();
-    const filteredPosts = excludedIds.size > 0
+    let filteredPosts = excludedIds.size > 0
       ? posts.filter(p => !excludedIds.has(p.user_id))
       : posts;
+
+    // Filter out posts from private profiles that the current user does not follow
+    if (filteredPosts.length > 0) {
+      // Get all unique user IDs from posts
+      const postUserIds = [...new Set(filteredPosts.map(p => p.user_id))];
+
+      // Find which of these users have private profiles
+      const { data: privatePrefs } = await supabase
+        .from('user_preferences')
+        .select('user_id')
+        .in('user_id', postUserIds)
+        .eq('profile_visibility', 'private');
+
+      const privateUserIds = new Set((privatePrefs || []).map(p => p.user_id));
+
+      if (privateUserIds.size > 0) {
+        // Get the list of users the current user follows (if authenticated)
+        let followingIds = new Set();
+        if (req.userId) {
+          const { data: follows } = await supabase
+            .from('user_follows')
+            .select('following_id')
+            .eq('follower_id', req.userId)
+            .in('following_id', [...privateUserIds]);
+          followingIds = new Set((follows || []).map(f => f.following_id));
+        }
+
+        // Exclude posts from private users not followed by the current user (also allow own posts)
+        filteredPosts = filteredPosts.filter(p => {
+          if (!privateUserIds.has(p.user_id)) return true;
+          if (p.user_id === req.userId) return true;
+          return followingIds.has(p.user_id);
+        });
+      }
+    }
 
     const hasMore = filteredPosts.length > limit;
     const resultPosts = hasMore ? filteredPosts.slice(0, limit) : filteredPosts;

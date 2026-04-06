@@ -203,7 +203,7 @@ export default function HomeScreen() {
   };
 
   const handleSearchPress = () => {
-    console.log('Search pressed');
+    router.push('/feeds/search');
   };
 
   // ── Pantry filter ───────────────────────────────────────────────────────────

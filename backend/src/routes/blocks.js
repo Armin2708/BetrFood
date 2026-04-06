@@ -101,6 +101,9 @@ router.get('/muted', requireAuth, async (req, res) => {
 
 // POST /api/users/:id/block - Block user (auth required)
 router.post('/:id/block', requireAuth, async (req, res) => {
+  console.log('\n========== [BLOCK] POST REQUEST ==========');
+  console.log('[BLOCK] Request received - blocker:', req.userId, 'blocked:', req.params.id);
+  console.log('[BLOCK] Headers:', JSON.stringify(req.headers, null, 2));
   try {
     const blockedId = req.params.id;
 
@@ -108,23 +111,32 @@ router.post('/:id/block', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'You cannot block yourself.' });
     }
 
+    console.log('[BLOCK] Inserting into user_blocks:', { blocker_id: req.userId, blocked_id: blockedId });
     const { data, error } = await supabase
       .from('user_blocks')
       .insert({ blocker_id: req.userId, blocked_id: blockedId })
       .select();
 
+    console.log('[BLOCK] Insert result - data:', JSON.stringify(data), 'error:', JSON.stringify(error));
+
     if (error) {
-      console.error('[BLOCK] DB error:', error);
+      console.error('[BLOCK] DB error code:', error.code, 'message:', error.message, 'details:', error.details);
       if (error.code === '23505') {
+        console.log('[BLOCK] Already blocked - returning 200');
         return res.json({ message: 'User already blocked.' });
       }
       throw error;
     }
 
-    console.log('[BLOCK] Saved:', data);
+    if (!data || data.length === 0) {
+      console.error('[BLOCK] Insert returned no data and no error - possible RLS or silent failure');
+      return res.status(500).json({ error: 'Block was not saved. Please try again.' });
+    }
+
+    console.log('[BLOCK] Saved successfully:', JSON.stringify(data));
     res.status(201).json({ message: 'User blocked successfully.' });
   } catch (error) {
-    console.error('Error blocking user:', error);
+    console.error('[BLOCK] Catch error:', error.message, error.stack);
     res.status(500).json({ error: 'Failed to block user.' });
   }
 });

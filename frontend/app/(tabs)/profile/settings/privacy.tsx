@@ -12,18 +12,14 @@ export default function PrivacySettings() {
     preferences,
     loading,
     updatePreferences,
-    setProfileVisibility,
-    setDietaryInfoVisible,
   } = usePreferences();
 
   const toggleVisibility = async (value: boolean) => {
     const newVisibility = value ? "public" : "private";
-    setProfileVisibility(newVisibility);
     await updatePreferences({ profileVisibility: newVisibility });
   };
 
   const toggleDietaryInfo = async (value: boolean) => {
-    setDietaryInfoVisible(value);
     await updatePreferences({ dietaryInfoVisible: value });
   };
 

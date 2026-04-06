@@ -111,6 +111,14 @@ export default function Post({
   const { user } = useContext(AuthContext);
   const [isBlocked, setIsBlocked] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
+  const [confirmModal, setConfirmModal] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    confirmText: string;
+    confirmColor?: string;
+    onConfirm: () => void;
+  }>({ visible: false, title: '', message: '', confirmText: '', onConfirm: () => {} });
 
   useEffect(() => {
     if (!userId || !user || user.id === userId) return;
@@ -467,91 +475,81 @@ export default function Post({
     });
   };
 
+  const showConfirm = (title: string, message: string, confirmText: string, onConfirm: () => void, confirmColor?: string) => {
+    if (Platform.OS === 'web') {
+      setConfirmModal({ visible: true, title, message, confirmText, confirmColor, onConfirm });
+    } else {
+      Alert.alert(title, message, [
+        { text: 'Cancel', style: 'cancel' },
+        { text: confirmText, style: confirmColor === '#DC2626' ? 'destructive' : 'default', onPress: onConfirm },
+      ]);
+    }
+  };
+
   const handleToggleBlock = () => {
     if (!userId) return;
-    setMenuModalVisible(false);
+    const blocked = isBlocked;
+    const uid = userId;
     setMenuModalShown(false);
+    setMenuModalVisible(false);
     setTimeout(() => {
-      if (isBlocked) {
-        Alert.alert('Unblock User', 'Are you sure you want to unblock this user?', [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Unblock',
-            onPress: async () => {
-              try {
-                await unblockUser(userId);
-                setIsBlocked(false);
-                feedEvents.emitRefreshNeeded();
-                Alert.alert('User Unblocked', 'You can now see this user\'s content again.');
-              } catch (error: any) {
-                Alert.alert('Error', error.message || 'Failed to unblock user.');
-              }
-            },
-          },
-        ]);
+      if (blocked) {
+        showConfirm('Unblock User', 'Are you sure you want to unblock this user?', 'Unblock', async () => {
+          setConfirmModal(prev => ({ ...prev, visible: false }));
+          try {
+            await unblockUser(uid);
+            setIsBlocked(false);
+            feedEvents.emitRefreshNeeded();
+          } catch (error: any) {
+            showConfirm('Error', error.message || 'Failed to unblock user.', 'OK', () => setConfirmModal(prev => ({ ...prev, visible: false })));
+          }
+        }, '#16A34A');
       } else {
-        Alert.alert('Block User', 'Are you sure you want to block this user? You won\'t see their content and they won\'t see yours.', [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Block',
-            style: 'destructive',
-            onPress: async () => {
-              try {
-                await blockUser(userId);
-                setIsBlocked(true);
-                feedEvents.emitRefreshNeeded();
-                Alert.alert('User Blocked', 'This user has been blocked.');
-              } catch (error: any) {
-                Alert.alert('Error', error.message || 'Failed to block user.');
-              }
-            },
-          },
-        ]);
+        showConfirm('Block User', 'Are you sure you want to block this user? You won\'t see their content and they won\'t see yours.', 'Block', async () => {
+          setConfirmModal(prev => ({ ...prev, visible: false }));
+          try {
+            await blockUser(uid);
+            setIsBlocked(true);
+            feedEvents.emitRefreshNeeded();
+          } catch (error: any) {
+            showConfirm('Error', error.message || 'Failed to block user.', 'OK', () => setConfirmModal(prev => ({ ...prev, visible: false })));
+          }
+        }, '#DC2626');
       }
-    }, 300);
+    }, 400);
   };
 
   const handleToggleMute = () => {
     if (!userId) return;
-    setMenuModalVisible(false);
+    const muted = isMuted;
+    const uid = userId;
     setMenuModalShown(false);
+    setMenuModalVisible(false);
     setTimeout(() => {
-      if (isMuted) {
-        Alert.alert('Unmute User', 'You will now see this user\'s posts in your feed again.', [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Unmute',
-            onPress: async () => {
-              try {
-                await unmuteUser(userId);
-                setIsMuted(false);
-                feedEvents.emitRefreshNeeded();
-                Alert.alert('User Unmuted', 'This user has been unmuted.');
-              } catch (error: any) {
-                Alert.alert('Error', error.message || 'Failed to unmute user.');
-              }
-            },
-          },
-        ]);
+      if (muted) {
+        showConfirm('Unmute User', 'You will see this user\'s posts in your feed again.', 'Unmute', async () => {
+          setConfirmModal(prev => ({ ...prev, visible: false }));
+          try {
+            await unmuteUser(uid);
+            setIsMuted(false);
+            feedEvents.emitRefreshNeeded();
+          } catch (error: any) {
+            showConfirm('Error', error.message || 'Failed to unmute user.', 'OK', () => setConfirmModal(prev => ({ ...prev, visible: false })));
+          }
+        }, '#16A34A');
       } else {
-        Alert.alert('Mute User', 'You will no longer see this user\'s posts in your feed.', [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Mute',
-            onPress: async () => {
-              try {
-                await muteUser(userId);
-                setIsMuted(true);
-                feedEvents.emitRefreshNeeded();
-                Alert.alert('User Muted', 'This user has been muted.');
-              } catch (error: any) {
-                Alert.alert('Error', error.message || 'Failed to mute user.');
-              }
-            },
-          },
-        ]);
+        showConfirm('Mute User', 'You will no longer see this user\'s posts in your feed.', 'Mute', async () => {
+          setConfirmModal(prev => ({ ...prev, visible: false }));
+          try {
+            await muteUser(uid);
+            setIsMuted(true);
+            feedEvents.emitRefreshNeeded();
+          } catch (error: any) {
+            showConfirm('Error', error.message || 'Failed to mute user.', 'OK', () => setConfirmModal(prev => ({ ...prev, visible: false })));
+          }
+        }, '#D97706');
       }
-    }, 300);
+    }, 400);
   };
 
   const handleOpenShare = () => {
@@ -934,7 +932,10 @@ export default function Post({
               {!isOwner && userId && (
                 <TouchableOpacity
                   style={styles.shareOption}
-                  onPress={handleToggleBlock}
+                  onPress={() => {
+                    console.log('[BLOCK-UI] Block button PRESSED, userId:', userId, 'isOwner:', isOwner);
+                    handleToggleBlock();
+                  }}
                   activeOpacity={0.7}
                 >
                   <View style={[styles.shareOptionIcon, { backgroundColor: isBlocked ? '#F0FDF4' : '#FEE2E2' }]}>
@@ -949,7 +950,10 @@ export default function Post({
               {!isOwner && userId && (
                 <TouchableOpacity
                   style={styles.shareOption}
-                  onPress={handleToggleMute}
+                  onPress={() => {
+                    console.log('[MUTE-UI] Mute button PRESSED, userId:', userId, 'isOwner:', isOwner);
+                    handleToggleMute();
+                  }}
                   activeOpacity={0.7}
                 >
                   <View style={[styles.shareOptionIcon, { backgroundColor: isMuted ? '#F0FDF4' : '#FEF3C7' }]}>
@@ -1049,6 +1053,35 @@ export default function Post({
                 disabled={!reportReason}
               >
                 <Text style={styles.modalDeleteText}>Submit</Text>
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* Confirm modal (block/mute/unblock/unmute) */}
+      <Modal
+        visible={confirmModal.visible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setConfirmModal(prev => ({ ...prev, visible: false }))}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setConfirmModal(prev => ({ ...prev, visible: false }))}>
+          <Pressable style={styles.modalBox} onPress={e => e.stopPropagation()}>
+            <Text style={styles.modalTitle}>{confirmModal.title}</Text>
+            <Text style={styles.modalMessage}>{confirmModal.message}</Text>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.modalCancelButton}
+                onPress={() => setConfirmModal(prev => ({ ...prev, visible: false }))}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalDeleteButton, confirmModal.confirmColor ? { backgroundColor: confirmModal.confirmColor } : undefined]}
+                onPress={confirmModal.onConfirm}
+              >
+                <Text style={styles.modalDeleteText}>{confirmModal.confirmText}</Text>
               </TouchableOpacity>
             </View>
           </Pressable>

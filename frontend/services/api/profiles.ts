@@ -113,6 +113,27 @@ export async function fetchUserProfile(userId: string): Promise<UserProfile> {
   return response.json();
 }
 
+export interface SearchUserResult {
+  id: string;
+  username: string | null;
+  displayName: string | null;
+  avatarUrl: string | null;
+  bio: string | null;
+  verified: boolean;
+}
+
+export async function searchUsers(query: string): Promise<SearchUserResult[]> {
+  const response = await fetch(`${API_BASE_URL}/api/profiles/search?q=${encodeURIComponent(query)}`, {
+    headers: await authHeaders(),
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to search users');
+  }
+  const data = await response.json();
+  return data.users;
+}
+
 export async function deleteAccount() {
   const response = await fetch(`${API_BASE_URL}/api/users/me`, {
     method: 'DELETE',

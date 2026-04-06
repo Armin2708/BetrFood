@@ -15,6 +15,7 @@ import {
   fetchNotifications,
   markNotificationRead,
   markAllNotificationsRead,
+  checkExpiringItems,
   Notification,
 } from '../../../services/api';
 
@@ -44,6 +45,12 @@ function getNotificationIcon(type: string): { name: string; color: string } {
       return { name: 'heart', color: '#E91E63' };
     case 'comment':
       return { name: 'chatbubble', color: '#2196F3' };
+    case 'expiring_item':
+      return { name: 'warning', color: '#F59E0B' };
+    case 'follow_request':
+      return { name: 'person-add-outline', color: '#F59E0B' };
+    case 'follow_request_accepted':
+      return { name: 'checkmark-circle', color: '#22C55E' };
     default:
       return { name: 'notifications', color: '#757575' };
   }
@@ -64,6 +71,21 @@ function getNotificationMessage(notification: Notification): string {
       const username = data?.username || 'Someone';
       return `${username} commented on your post`;
     }
+    case 'expiring_item': {
+      const itemName = data?.itemName || 'An item';
+      const days = data?.daysUntilExpiry;
+      if (days === 0) return `${itemName} expires today!`;
+      if (days === 1) return `${itemName} expires tomorrow`;
+      return `${itemName} expires in ${days} days`;
+    }
+    case 'follow_request': {
+      const reqUsername = data?.requesterUsername || 'Someone';
+      return `${reqUsername} wants to follow you`;
+    }
+    case 'follow_request_accepted': {
+      const acceptedUsername = data?.acceptedByUsername || 'Someone';
+      return `${acceptedUsername} accepted your follow request`;
+    }
     default:
       return 'You have a new notification';
   }
@@ -77,6 +99,8 @@ export default function NotificationsScreen() {
 
   const loadNotifications = useCallback(async () => {
     try {
+      // Trigger expiring item check before loading notifications
+      await checkExpiringItems().catch(() => {});
       const result = await fetchNotifications(0, 50);
       setNotifications(result.notifications);
     } catch (error) {
@@ -124,6 +148,19 @@ export default function NotificationsScreen() {
           if (notification.data?.postId) {
             router.push(`/post-detail?postId=${notification.data.postId}`);
           }
+          break;
+        case 'follow_request':
+          if (notification.data?.requesterId) {
+            router.push(`/user/${notification.data.requesterId}` as any);
+          }
+          break;
+        case 'follow_request_accepted':
+          if (notification.data?.acceptedBy) {
+            router.push(`/user/${notification.data.acceptedBy}` as any);
+          }
+          break;
+        case 'expiring_item':
+          router.push('/(tabs)/pantry' as any);
           break;
       }
     },

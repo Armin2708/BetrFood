@@ -38,6 +38,10 @@ app.use(express.json({ limit: '10mb' }));
 // Request logging middleware
 app.use((req, res, next) => {
   const start = Date.now();
+  // Log block/mute requests immediately when they arrive
+  if (req.originalUrl.includes('/block') || req.originalUrl.includes('/mute')) {
+    console.log(`\n>>> [INCOMING] ${req.method} ${req.originalUrl} at ${new Date().toISOString()}`);
+  }
 
   const originalSend = res.send.bind(res);
   res.send = function (body) {
