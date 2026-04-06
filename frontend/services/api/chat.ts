@@ -143,12 +143,8 @@ export function streamChatMessage(
     let processed = 0;
     let doneFired = false;
 
-    xhr.onprogress = () => {
-      if (cancelled) return;
-      const raw = xhr!.responseText.slice(processed);
-      processed = xhr!.responseText.length;
-
-      const lines = raw.split('\n');
+    const parseChunk = (chunk: string) => {
+      const lines = chunk.split('\n');
       for (const line of lines) {
         if (!line.startsWith('data: ')) continue;
         const payload = line.slice(6).trim();
@@ -160,13 +156,38 @@ export function streamChatMessage(
             doneFired = true;
             onDone(json.message, json.conversationId);
           }
-          if (json.error) onError(json.error);
+          if (json.error && !doneFired) {
+            doneFired = true;
+            onError(json.error);
+          }
         } catch {}
       }
     };
 
+    xhr.onprogress = () => {
+      if (cancelled) return;
+      const raw = xhr!.responseText.slice(processed);
+      processed = xhr!.responseText.length;
+      parseChunk(raw);
+    };
+
     xhr.onload = () => {
-      if (!cancelled && !doneFired) onDone();
+      if (cancelled || doneFired) return;
+      doneFired = true;
+      // Handle non-SSE error responses (e.g. 401, 500)
+      if (xhr!.status >= 400) {
+        try {
+          const body = JSON.parse(xhr!.responseText);
+          onError(body.details || body.error || `HTTP ${xhr!.status}`);
+        } catch {
+          onError(`HTTP ${xhr!.status}`);
+        }
+        return;
+      }
+      // Parse any remaining chunk not caught by onprogress
+      const remaining = xhr!.responseText.slice(processed);
+      if (remaining) parseChunk(remaining);
+      if (!doneFired) onDone();
     };
 
     xhr.onerror = () => {
