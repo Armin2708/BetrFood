@@ -4,7 +4,7 @@ import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
 import { Collection, useCollections } from "../context/CollectionsContext";
 import { Tag, Recipe, Comment, deletePost, fetchRecipe, likePost, unlikePost, reportContent, fetchComments, createComment, deleteComment, checkSaveStatus, blockUser, unblockUser, muteUser, unmuteUser, checkBlockStatus, checkMuteStatus } from '../services/api';
-import { feedEvents } from '../utils/feedEvents';
+import { feedEvents, collectionEvents } from '../utils/feedEvents';
 import TagDisplay from './TagDisplay';
 import RecipeDisplay from './RecipeDisplay';
 import { useVideoPlayer, VideoView } from 'expo-video';
@@ -317,6 +317,20 @@ export default function Post({
       .then(({ isSaved }) => { if (!cancelled) setSaved(isSaved); })
       .catch(() => {});
     return () => { cancelled = true; };
+  }, [id]);
+
+  // Listen for collection changes that affect this post's save status
+  useEffect(() => {
+    if (!id) return;
+    const unsubscribe = collectionEvents.onPostSaveStatusChange((postId) => {
+      if (postId === id) {
+        // Refresh save status when a post is removed from a collection
+        checkSaveStatus(id)
+          .then(({ isSaved }) => setSaved(isSaved))
+          .catch(() => {});
+      }
+    });
+    return unsubscribe;
   }, [id]);
 
   const scaleAnim = React.useRef(new Animated.Value(1)).current;
@@ -671,6 +685,30 @@ export default function Post({
           accessibilityLabel="Share post"
         >
           <Ionicons name="share-social-outline" size={22} color={colors.textPrimary} />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => {
+            if (!id) return;
+            router.push({
+              pathname: '/(tabs)/chat/[id]',
+              params: {
+                id: 'new',
+                title: `Chat about ${username}'s post`,
+                postContext: encodeURIComponent(JSON.stringify({
+                  postId: id,
+                  caption: caption,
+                  username: username,
+                  tags: tags?.map(t => t.name) || [],
+                })),
+              },
+            });
+          }}
+          style={styles.actionButton}
+          accessibilityRole="button"
+          accessibilityLabel="Ask AI about this post"
+        >
+          <Ionicons name="sparkles-outline" size={22} color={colors.textPrimary} />
         </TouchableOpacity>
       </View>
 

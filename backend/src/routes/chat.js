@@ -20,7 +20,7 @@ const openai = process.env.OPENROUTER_API_KEY
 const CHAT_MODEL = process.env.OPENROUTER_MODEL || 'google/gemini-2.0-flash-001';
 
 const BASE_SYSTEM_PROMPT =
-  "You are BetrFood's AI cooking assistant. You help users with food-related questions including recipes, cooking techniques, ingredient substitutions, meal planning, nutrition information, and food storage tips. Be friendly, concise, and helpful. If asked about non-food topics, gently redirect to food-related assistance.";
+  "You are BetrFood's AI cooking assistant. You have access to the BetrFood community — a social platform where users share food posts and recipes. When relevant posts or recipes from the community are provided to you, use them to answer the user's questions directly. You can reference community recipes, ingredients, and techniques from those posts. You also help with general food-related questions including recipes, cooking techniques, ingredient substitutions, meal planning, nutrition information, and food storage tips. Be friendly, concise, and helpful. If asked about non-food topics, gently redirect to food-related assistance.";
 
 const RECIPE_FORMAT_INSTRUCTIONS = `
 When suggesting recipes, always format each recipe as follows:
@@ -46,6 +46,12 @@ const POST_SUGGESTION_KEYWORDS = [
   'show me recipes', 'find recipes', 'look up', 'browse',
 ];
 
+const BROWSE_FEED_KEYWORDS = [
+  'community', 'following', 'feed', 'from people i follow', 'from the community',
+  'what are people posting', 'what is everyone making', 'popular posts',
+  'recent posts', 'latest posts', 'trending',
+];
+
 function hasPantryIntent(message) {
   const lower = message.toLowerCase();
   return PANTRY_INTENT_KEYWORDS.some((kw) => lower.includes(kw));
@@ -54,6 +60,16 @@ function hasPantryIntent(message) {
 function hasPostSuggestionIntent(message) {
   const lower = message.toLowerCase();
   return POST_SUGGESTION_KEYWORDS.some((kw) => lower.includes(kw));
+}
+
+function hasBrowseFeedIntent(message) {
+  const lower = message.toLowerCase();
+  return BROWSE_FEED_KEYWORDS.some((kw) => lower.includes(kw));
+}
+
+function wantsFollowingFeed(message) {
+  const lower = message.toLowerCase();
+  return lower.includes('following') || lower.includes('people i follow') || lower.includes('from people');
 }
 
 // Extract search keywords from a message for post search
@@ -90,7 +106,7 @@ async function searchPosts(keywords, limit = 3) {
       .or(keywords.map(k => `name.ilike.%${k}%`).join(','));
 
     const taggedPostIds = new Set();
-    (taggedPosts || []).forEach(tag => {
+    (taggedTags || []).forEach(tag => {
       (tag.post_tags || []).forEach(pt => taggedPostIds.add(pt.post_id));
     });
 
@@ -105,7 +121,7 @@ async function searchPosts(keywords, limit = 3) {
     }
 
     const seen = new Set();
-    const merged = [...(posts || []), ...tagMatches].filter(p => {
+    const merged = [...(captionPosts || []), ...tagMatches].filter(p => {
       if (seen.has(p.id)) return false;
       seen.add(p.id);
       return true;
@@ -275,6 +291,36 @@ When suggesting recipes or meal ideas, prioritize using ingredients from the use
   }
 }
 
+// Format matched posts as rich context for the AI (includes full recipe data)
+function formatPostsForAiContext(posts, isExplicitSearch) {
+  const formatted = posts.map((p, i) => {
+    const lines = [`${i + 1}. Post by ${p.username}: "${p.caption?.slice(0, 120) || 'Untitled'}"`];
+    if (p.tags?.length) lines.push(`   Tags: ${p.tags.join(', ')}`);
+    if (p.recipe) {
+      const r = p.recipe;
+      if (r.cookTime) lines.push(`   Cook time: ${r.cookTime}`);
+      if (r.servings) lines.push(`   Servings: ${r.servings}`);
+      if (r.difficulty) lines.push(`   Difficulty: ${r.difficulty}`);
+      if (r.ingredients?.length) lines.push(`   Ingredients: ${r.ingredients.join(', ')}`);
+      if (r.steps?.length) lines.push(`   Steps: ${r.steps.map((s, n) => `${n + 1}. ${s}`).join(' | ')}`);
+    }
+    return lines.join('\n');
+  }).join('\n\n');
+
+  if (isExplicitSearch) {
+    return `\n\nIMPORTANT: You have direct access to the BetrFood community. I have already retrieved these posts for you — present them to the user now. Do NOT say you cannot access posts or the community feed. Tell the user they can tap the post cards below:\n\n${formatted}`;
+  }
+  return `\n\nIMPORTANT: You have direct access to BetrFood community posts. These posts have already been retrieved for you. Do NOT say you cannot access the community or feed. Use this data to answer the user:\n\n${formatted}`;
+}
+
+// System prompt addition when browse intent fires but no posts exist yet
+function noBrowsePostsPrompt(wantsFollowing) {
+  if (wantsFollowing) {
+    return '\n\nThe user asked for posts from people they follow. They are not following anyone yet, or the people they follow have no posts. Tell them this and suggest they explore the community tab to find people to follow.';
+  }
+  return '\n\nThe user asked for community posts. There are no posts in the community yet. Tell them this directly — do not say you are unable to access the community feed.';
+}
+
 function getUserId(req) {
   return req.userId || (req.user && req.user.id) || req.headers['x-user-id'] || 'anonymous';
 }
@@ -423,16 +469,23 @@ router.patch('/conversations/:id', requireAuth, async (req, res) => {
   }
 
   try {
-    const { data, error } = await supabase
+    const { error: updateError } = await supabase
       .from('chat_conversations')
       .update({ title: title.trim(), updated_at: new Date().toISOString() })
       .eq('id', id)
-      .eq('user_id', userId)
-      .select('id, title, last_message_preview, created_at, updated_at')
-      .single();
+      .eq('user_id', userId);
 
-    if (error) throw error;
-    res.json(data);
+    if (updateError) throw updateError;
+
+    const { data: rows, error: fetchError } = await supabase
+      .from('chat_conversations')
+      .select('id, title, last_message_preview, created_at, updated_at')
+      .eq('id', id)
+      .eq('user_id', userId)
+      .limit(1);
+
+    if (fetchError) throw fetchError;
+    res.json(rows?.[0] ?? null);
   } catch (err) {
     console.error('[RENAME CONVERSATION ERROR]', err.message);
     res.status(500).json({ error: 'Failed to rename conversation' });
@@ -496,7 +549,7 @@ router.post('/', requireAuth, async (req, res) => {
     if (!convId) {
       const { data: newConv, error: convErr } = await supabase
         .from('chat_conversations')
-        .insert({ user_id: userId, title: conversationTitle || await generateTitle(textMessage || 'Image question') })
+        .insert({ user_id: userId, title: conversationTitle || truncateTitle(textMessage || 'Image question') })
         .select('id')
         .single();
       if (convErr) throw convErr;
@@ -538,6 +591,7 @@ router.post('/', requireAuth, async (req, res) => {
     // But skip this if the user is asking for post suggestions
     const isPantryQuery = hasPantryIntent(textMessage);
     const isPostSuggestionQuery = hasPostSuggestionIntent(textMessage);
+    const isBrowseQuery = hasBrowseFeedIntent(textMessage);
     if (isPantryQuery && !postContext && !isPostSuggestionQuery) {
       const { count: pantryCount } = await supabase
         .from('pantry_items')
@@ -732,7 +786,7 @@ router.post('/stream', requireAuth, async (req, res) => {
     if (!convId) {
       const { data: newConv, error: convErr } = await supabase
         .from('chat_conversations')
-        .insert({ user_id: userId, title: conversationTitle || await generateTitle(textMessage || 'Image question') })
+        .insert({ user_id: userId, title: conversationTitle || truncateTitle(textMessage || 'Image question') })
         .select('id')
         .single();
       if (convErr) throw convErr;

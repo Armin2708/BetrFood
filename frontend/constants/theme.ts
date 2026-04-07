@@ -73,5 +73,34 @@ export const spacing = {
   xxl: 24,
 } as const;
 
+export const radius = {
+  xs: 8,
+  sm: 12,
+  md: 16,
+  lg: 20,
+  xl: 24,
+  full: 999,
+} as const;
+
+export const shadows = {
+  sm: '0 1px 3px rgba(0,0,0,0.08)',
+  md: '0 2px 8px rgba(0,0,0,0.06)',
+  lg: '0 4px 12px rgba(0,0,0,0.15)',
+} as const;
+
+export const overlays = {
+  light: 'rgba(0,0,0,0.35)',
+  medium: 'rgba(0,0,0,0.5)',
+} as const;
+
+export const typography = {
+  title: { fontSize: 20, fontWeight: '700' as const },
+  subtitle: { fontSize: 17, fontWeight: '700' as const },
+  body: { fontSize: 15, fontWeight: '400' as const },
+  caption: { fontSize: 13, fontWeight: '400' as const },
+  small: { fontSize: 12, fontWeight: '400' as const },
+  label: { fontSize: 14, fontWeight: '600' as const },
+} as const;
+
 export const hitSlop = { top: 12, bottom: 12, left: 12, right: 12 };
 export const minTouchSize = 44; // Apple HIG minimum

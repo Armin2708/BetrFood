@@ -23,6 +23,7 @@ import {
   renameConversation,
 } from '../../../services/api/chat';
 import { PromptModal } from '../../../components/PromptModal';
+import EmptyState from '../../../components/EmptyState';
 
 function formatRelativeTime(dateString: string) {
   const now = Date.now();
@@ -149,8 +150,7 @@ export default function ChatHistoryScreen() {
           <Ionicons name="chevron-back" size={20} color={colors.textPrimary} />
         </TouchableOpacity>
         <View style={styles.headerCopy}>
-          <Text style={styles.title}>Recent chats</Text>
-          <Text style={styles.subtitle}>Jump back into earlier cooking conversations.</Text>
+          <Text style={styles.title}>History</Text>
         </View>
         <TouchableOpacity onPress={() => router.replace('/chat')} style={styles.iconButton}>
           <Ionicons name="create-outline" size={18} color={colors.textPrimary} />
@@ -162,18 +162,13 @@ export default function ChatHistoryScreen() {
           <ActivityIndicator size="large" color={colors.primaryDark} />
         </View>
       ) : conversations.length === 0 ? (
-        <View style={styles.emptyState}>
-          <View style={styles.emptyIcon}>
-            <Ionicons name="chatbubbles-outline" size={24} color={colors.primaryDark} />
-          </View>
-          <Text style={styles.emptyTitle}>No saved chats yet</Text>
-          <Text style={styles.emptySubtitle}>
-            Start a conversation from the Chat tab and it will appear here.
-          </Text>
-          <TouchableOpacity style={styles.primaryButton} onPress={() => router.replace('/chat')}>
-            <Text style={styles.primaryButtonText}>Start chatting</Text>
-          </TouchableOpacity>
-        </View>
+        <EmptyState
+          icon="chatbubbles-outline"
+          title="No saved chats yet"
+          subtitle="Start a conversation from the Chat tab and it will appear here."
+          actionLabel="Start chatting"
+          onAction={() => router.replace('/chat')}
+        />
       ) : (
         <FlatList
           data={conversations}
@@ -254,7 +249,7 @@ export default function ChatHistoryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FBF8',
+    backgroundColor: colors.white,
   },
   centered: {
     flex: 1,
@@ -370,44 +365,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#DC2626',
-  },
-  emptyState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 28,
-  },
-  emptyIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#E7F6EA',
-    marginBottom: 16,
-  },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: colors.textPrimary,
-  },
-  emptySubtitle: {
-    marginTop: 8,
-    textAlign: 'center',
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.textSecondary,
-  },
-  primaryButton: {
-    marginTop: 20,
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-    borderRadius: 999,
-    backgroundColor: colors.primaryDark,
-  },
-  primaryButtonText: {
-    color: colors.white,
-    fontSize: 14,
-    fontWeight: '700',
   },
 });

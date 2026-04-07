@@ -8,6 +8,7 @@ import {
   fetchCollectionPosts as apiFetchCollectionPosts,
 } from "../services/api";
 import { AuthContext } from "./AuthenticationContext";
+import { collectionEvents } from "../utils/feedEvents";
 
 export type Collection = {
   id: string;
@@ -94,6 +95,8 @@ export const CollectionsProvider = ({ children }: any) => {
         c.id === collectionId ? { ...c, postCount: Math.max(0, c.postCount - 1) } : c
       )
     );
+    // Notify all listeners that this post's save status may have changed
+    collectionEvents.emitPostSaveStatusChange(postId);
   };
 
   const fetchPostsForCollection = async (collectionId: string): Promise<any[]> => {

@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
+  Dimensions,
   FlatList,
   Image,
   KeyboardAvoidingView,
@@ -26,20 +27,25 @@ import { getImageUrl } from '../../services/api';
 import {
   ChatAttachment,
   ChatMessage,
+  Conversation,
   PostContext,
   SuggestedPost,
+  clearAllConversations,
+  deleteConversation,
   fetchChatHistory,
+  fetchConversations,
   fetchPantrySuggestions,
   renameConversation,
   streamChatMessage,
 } from '../../services/api/chat';
 import { PromptModal } from '../PromptModal';
+import EmptyState from '../EmptyState';
+import ConfirmDialog from '../ConfirmDialog';
 
 type AssistantChatScreenProps = {
   initialConversationId?: string;
   initialTitle?: string;
   postContext?: PostContext | null;
-  showBackButton?: boolean;
 };
 
 const QUICK_ACTIONS = [
@@ -66,6 +72,7 @@ const QUICK_ACTIONS = [
 const ALLERGEN_ALERT_PREFIX = '⚠️ ALLERGEN ALERT:';
 const MIN_INPUT_HEIGHT = 48;
 const MAX_INPUT_HEIGHT = 132;
+const DRAWER_WIDTH = Math.min(Dimensions.get('window').width * 0.8, 320);
 
 async function assetToAttachment(asset: ImagePicker.ImagePickerAsset): Promise<ChatAttachment> {
   if (!asset.base64) {
@@ -206,7 +213,6 @@ export default function AssistantChatScreen({
   initialConversationId,
   initialTitle = 'AI Chat',
   postContext = null,
-  showBackButton = false,
 }: AssistantChatScreenProps) {
   const { showActionSheetWithOptions } = useActionSheet();
   const flatListRef = useRef<FlatList<ChatMessage>>(null);
@@ -226,6 +232,12 @@ export default function AssistantChatScreen({
   const [pendingAttachment, setPendingAttachment] = useState<ChatAttachment | null>(null);
   const [promptVisible, setPromptVisible] = useState(false);
   const [promptValue, setPromptValue] = useState('');
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerConversations, setDrawerConversations] = useState<Conversation[]>([]);
+  const [drawerLoading, setDrawerLoading] = useState(false);
+  const drawerAnim = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
+  const [deleteTarget, setDeleteTarget] = useState<Conversation | null>(null);
+  const [clearAllVisible, setClearAllVisible] = useState(false);
 
   const isBusy = sending || loadingSuggestions || streamingContent !== null;
 
@@ -304,6 +316,8 @@ export default function AssistantChatScreen({
 
   const handleRename = useCallback(async (title: string) => {
     if (!activeConversationId) {
+      // No conversation yet — just update the local title, it'll be used when the first message is sent
+      setConversationTitle(title);
       return;
     }
 
@@ -328,15 +342,6 @@ export default function AssistantChatScreen({
     setActiveConversationId(null);
     setConversationTitle('AI Chat');
   }, []);
-
-  const handleNewChat = useCallback(() => {
-    if (showBackButton) {
-      router.replace('/chat');
-      return;
-    }
-
-    resetForNewChat();
-  }, [resetForNewChat, showBackButton]);
 
   const markMessageSent = useCallback((messageId: number) => {
     setMessages((current) =>
@@ -531,9 +536,81 @@ export default function AssistantChatScreen({
     }
   }, [activeConversationId, isBusy, scrollToBottom]);
 
-  const openHistory = useCallback(() => {
-    router.push('/chat/history');
+  const openDrawer = useCallback(async () => {
+    setDrawerOpen(true);
+    Animated.timing(drawerAnim, { toValue: 0, duration: 250, useNativeDriver: true }).start();
+    setDrawerLoading(true);
+    try {
+      const data = await fetchConversations();
+      setDrawerConversations(data);
+    } catch {
+      setDrawerConversations([]);
+    } finally {
+      setDrawerLoading(false);
+    }
+  }, [drawerAnim]);
+
+  const closeDrawer = useCallback(() => {
+    Animated.timing(drawerAnim, { toValue: -DRAWER_WIDTH, duration: 200, useNativeDriver: true }).start(() => {
+      setDrawerOpen(false);
+    });
+  }, [drawerAnim]);
+
+  const handleDrawerSelect = useCallback((conversation: Conversation) => {
+    closeDrawer();
+    setActiveConversationId(conversation.id);
+    setConversationTitle(conversation.title);
+    setMessages([]);
+    setStreamingContent(null);
+    setLoading(true);
+    fetchChatHistory(conversation.id)
+      .then((history) => setMessages(history.map((m) => ({ ...m, status: 'sent' as const }))))
+      .catch(() => setMessages([]))
+      .finally(() => setLoading(false));
+  }, [closeDrawer]);
+
+  const [drawerRenameTarget, setDrawerRenameTarget] = useState<Conversation | null>(null);
+
+  const handleDrawerRename = useCallback((conversation: Conversation) => {
+    setDrawerRenameTarget(conversation);
+    setPromptValue(conversation.title);
+    setPromptVisible(true);
   }, []);
+
+  const handleDrawerDelete = useCallback((conversation: Conversation) => {
+    setDeleteTarget(conversation);
+  }, []);
+
+  const confirmDelete = useCallback(async () => {
+    if (!deleteTarget) return;
+    const id = deleteTarget.id;
+    setDeleteTarget(null);
+    try {
+      await deleteConversation(id);
+      setDrawerConversations((c) => c.filter((item) => item.id !== id));
+    } catch {
+      Alert.alert('Delete failed', 'Unable to delete this chat right now.');
+    }
+  }, [deleteTarget]);
+
+  const handleDrawerClearAll = useCallback(() => {
+    setClearAllVisible(true);
+  }, []);
+
+  const confirmClearAll = useCallback(async () => {
+    setClearAllVisible(false);
+    try {
+      await clearAllConversations();
+      setDrawerConversations([]);
+    } catch {
+      Alert.alert('Failed', 'Unable to clear chats right now.');
+    }
+  }, []);
+
+  const handleDrawerNewChat = useCallback(() => {
+    closeDrawer();
+    resetForNewChat();
+  }, [closeDrawer, resetForNewChat]);
 
   const renderMessage = useCallback(({ item }: { item: ChatMessage }) => {
     const isUser = item.role === 'user';
@@ -631,35 +708,10 @@ export default function AssistantChatScreen({
     <SafeAreaView style={styles.safeArea} edges={[]}>
       <View style={styles.shell}>
         <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            {showBackButton ? (
-              <TouchableOpacity onPress={() => router.back()} style={styles.iconButton}>
-                <Ionicons name="chevron-back" size={20} color={colors.textPrimary} />
-              </TouchableOpacity>
-            ) : null}
-            <View>
-              <Text style={styles.headerTitle}>{conversationTitle}</Text>
-            </View>
-          </View>
-          <View style={styles.headerActions}>
-            <TouchableOpacity onPress={openHistory} style={styles.iconButton}>
-              <Ionicons name="time-outline" size={18} color={colors.textPrimary} />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={handleNewChat} style={styles.iconButton}>
-              <Ionicons name="create-outline" size={18} color={colors.textPrimary} />
-            </TouchableOpacity>
-            {activeConversationId ? (
-              <TouchableOpacity
-                onPress={() => {
-                  setPromptValue(conversationTitle);
-                  setPromptVisible(true);
-                }}
-                style={styles.iconButton}
-              >
-                <Ionicons name="pencil-outline" size={18} color={colors.textPrimary} />
-              </TouchableOpacity>
-            ) : null}
-          </View>
+          <TouchableOpacity onPress={openDrawer} style={styles.iconButton}>
+            <Ionicons name="menu" size={22} color={colors.textPrimary} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle} numberOfLines={1}>{conversationTitle}</Text>
         </View>
 
         <KeyboardAvoidingView
@@ -771,18 +823,127 @@ export default function AssistantChatScreen({
         onCancel={() => {
           setPromptVisible(false);
           setPromptValue('');
+          setDrawerRenameTarget(null);
         }}
-        onSubmit={() => {
+        onSubmit={async () => {
           const nextTitle = promptValue.trim();
           setPromptVisible(false);
           setPromptValue('');
-          if (nextTitle) {
+          if (!nextTitle) {
+            setDrawerRenameTarget(null);
+            return;
+          }
+          if (drawerRenameTarget) {
+            try {
+              const updated = await renameConversation(drawerRenameTarget.id, nextTitle);
+              setDrawerConversations((c) =>
+                c.map((item) =>
+                  item.id === drawerRenameTarget.id ? { ...item, title: updated.title } : item
+                )
+              );
+              if (activeConversationId === drawerRenameTarget.id) {
+                setConversationTitle(updated.title);
+              }
+            } catch {
+              Alert.alert('Rename failed', 'Unable to rename this chat right now.');
+            }
+            setDrawerRenameTarget(null);
+          } else {
             handleRename(nextTitle);
           }
         }}
       />
+
+      <ConfirmDialog
+        visible={!!deleteTarget}
+        title="Delete chat"
+        message={`Delete "${deleteTarget?.title}"?`}
+        confirmLabel="Delete"
+        destructive
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
+
+      <ConfirmDialog
+        visible={clearAllVisible}
+        title="Clear all chats"
+        message="This will permanently delete all your chat sessions."
+        confirmLabel="Clear All"
+        destructive
+        onConfirm={confirmClearAll}
+        onCancel={() => setClearAllVisible(false)}
+      />
+
+      {drawerOpen ? (
+        <View style={StyleSheet.absoluteFill}>
+          <Pressable style={styles.drawerOverlay} onPress={closeDrawer} />
+          <Animated.View style={[styles.drawer, { transform: [{ translateX: drawerAnim }] }]}>
+            <View style={styles.drawerHeader}>
+              <Text style={styles.drawerTitle}>Recent chats</Text>
+              <TouchableOpacity onPress={handleDrawerNewChat} style={styles.drawerIconBtn}>
+                <Ionicons name="create-outline" size={18} color={colors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+            {drawerLoading ? (
+              <View style={styles.drawerCentered}>
+                <ActivityIndicator size="small" color={colors.primaryDark} />
+              </View>
+            ) : drawerConversations.length === 0 ? (
+              <EmptyState
+                icon="chatbubbles-outline"
+                title="No saved chats yet"
+                subtitle="Start a conversation and it will appear here."
+              />
+            ) : (
+              <FlatList
+                data={drawerConversations}
+                keyExtractor={(item) => item.id}
+                contentContainerStyle={styles.drawerList}
+                renderItem={({ item }) => (
+                  <Pressable style={styles.drawerCard} onPress={() => handleDrawerSelect(item)}>
+                    <View style={styles.drawerCardIcon}>
+                      <Ionicons name="sparkles" size={14} color={colors.white} />
+                    </View>
+                    <View style={styles.drawerCardBody}>
+                      <Text style={styles.drawerCardTitle} numberOfLines={1}>{item.title}</Text>
+                      {item.last_message_preview ? (
+                        <Text style={styles.drawerCardPreview} numberOfLines={1}>{item.last_message_preview}</Text>
+                      ) : null}
+                      <Text style={styles.drawerCardMeta}>{formatDrawerTime(item.updated_at)}</Text>
+                    </View>
+                    <TouchableOpacity onPress={() => handleDrawerRename(item)} style={styles.drawerActionBtn}>
+                      <Ionicons name="pencil-outline" size={14} color={colors.textSecondary} />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => handleDrawerDelete(item)} style={styles.drawerActionBtn}>
+                      <Ionicons name="trash-outline" size={14} color={colors.textSecondary} />
+                    </TouchableOpacity>
+                  </Pressable>
+                )}
+                ListFooterComponent={
+                  <TouchableOpacity style={styles.drawerClearAll} onPress={handleDrawerClearAll}>
+                    <Ionicons name="trash-outline" size={14} color="#DC2626" />
+                    <Text style={styles.drawerClearAllText}>Clear all chats</Text>
+                  </TouchableOpacity>
+                }
+              />
+            )}
+          </Animated.View>
+        </View>
+      ) : null}
     </SafeAreaView>
   );
+}
+
+function formatDrawerTime(dateString: string) {
+  const now = Date.now();
+  const date = new Date(dateString).getTime();
+  const diffMinutes = Math.floor((now - date) / (1000 * 60));
+  if (diffMinutes < 1) return 'just now';
+  if (diffMinutes < 60) return `${diffMinutes}m ago`;
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+  const diffDays = Math.floor(diffHours / 24);
+  return `${diffDays}d ago`;
 }
 
 // Matches emoji characters — Emoji_Presentation covers symbols like ✅🛒
@@ -886,7 +1047,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 10,
     paddingHorizontal: 16,
     paddingTop: 4,
     paddingBottom: 8,
@@ -894,22 +1055,11 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: '#E5E7EB',
   },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    flex: 1,
-  },
   headerTitle: {
+    flex: 1,
     fontSize: 18,
     fontWeight: '700',
     color: colors.textPrimary,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginLeft: 12,
   },
   iconButton: {
     width: 36,
@@ -1322,5 +1472,110 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: 13,
     fontWeight: '600',
+  },
+  drawerOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+  },
+  drawer: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    width: DRAWER_WIDTH,
+    backgroundColor: '#F8FBF8',
+    borderRightWidth: 1,
+    borderRightColor: '#D6E8DB',
+  },
+  drawerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#D6E8DB',
+  },
+  drawerTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  drawerIconBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#EEF5EF',
+    borderWidth: 1,
+    borderColor: '#D9E9DD',
+  },
+  drawerCentered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  drawerList: {
+    padding: 10,
+    gap: 8,
+  },
+  drawerCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: colors.white,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#D9E9DD',
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  drawerCardIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primaryDark,
+  },
+  drawerCardBody: {
+    flex: 1,
+    gap: 2,
+  },
+  drawerCardTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  drawerCardPreview: {
+    fontSize: 12,
+    color: colors.textSecondary,
+  },
+  drawerCardMeta: {
+    fontSize: 11,
+    color: colors.textSecondary,
+  },
+  drawerActionBtn: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#EEF5EF',
+  },
+  drawerClearAll: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: 6,
+    paddingVertical: 10,
+  },
+  drawerClearAllText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#DC2626',
   },
 });

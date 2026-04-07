@@ -8,12 +8,11 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, router } from 'expo-router';
 import { feedEvents } from '../../../utils/feedEvents';
 import Post from '../../../components/Post';
 import PostSkeleton from '../../../components/PostSkeleton';
-import TagFilterBar from '../../../components/TagFilterBar';
+import FeedHeader from '../../../components/FeedHeader';
 import { AuthContext } from '../../../context/AuthenticationContext';
 import { usePantry } from '../../../context/PantryContext';
 import { matchRecipeToPantry } from '../../../utils/pantryMatcher';
@@ -213,20 +212,17 @@ export default function HomeScreen() {
     ? posts.filter((p) => p._isMatch === true)
     : posts;
 
-  // ── Tabs ────────────────────────────────────────────────────────────────────
-
-  const TABS: { key: FeedTab; label: string }[] = [
-    { key: 'following', label: 'Following' },
-    { key: 'community', label: 'Community' },
-    { key: 'explore', label: 'Explore' },
-  ];
-
   if (loading) {
     return (
       <View style={styles.container}>
-        <TagFilterBar
+        <FeedHeader
+          feedType={feedType}
+          onFeedTypeChange={handleFeedTypeChange}
           selectedTagIds={selectedTagIds}
-          onFilterChange={handleTagFilterChange}
+          onTagFilterChange={handleTagFilterChange}
+          pantryFilterActive={pantryFilterActive}
+          onPantryFilterChange={setPantryFilterActive}
+          onSearchPress={handleSearchPress}
         />
         <PostSkeleton />
         <PostSkeleton />
@@ -268,47 +264,15 @@ export default function HomeScreen() {
           />
         }
         ListHeaderComponent={
-          <View style={styles.headerContainer}>
-            {/* Feed type tabs + search */}
-            <View style={styles.feedToggle}>
-              <View style={styles.feedToggleTabs}>
-                {TABS.map((tab) => (
-                  <TouchableOpacity
-                    key={tab.key}
-                    style={styles.feedToggleTab}
-                    onPress={() => handleFeedTypeChange(tab.key)}
-                    accessibilityRole="tab"
-                    accessibilityState={{ selected: feedType === tab.key }}
-                  >
-                    <Text
-                      style={[
-                        styles.feedToggleText,
-                        feedType === tab.key && styles.feedToggleTextActive,
-                      ]}
-                    >
-                      {tab.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-              <TouchableOpacity
-                style={styles.searchButton}
-                onPress={handleSearchPress}
-                accessibilityRole="button"
-                accessibilityLabel="Search"
-              >
-                <Ionicons name="search-outline" size={19} color="#000" />
-              </TouchableOpacity>
-            </View>
-
-            {/* Tag filter bar */}
-            <TagFilterBar
-              selectedTagIds={selectedTagIds}
-              onFilterChange={handleTagFilterChange}
-              pantryFilterActive={pantryFilterActive}
-              onPantryFilterChange={setPantryFilterActive}
-            />
-          </View>
+          <FeedHeader
+            feedType={feedType}
+            onFeedTypeChange={handleFeedTypeChange}
+            selectedTagIds={selectedTagIds}
+            onTagFilterChange={handleTagFilterChange}
+            pantryFilterActive={pantryFilterActive}
+            onPantryFilterChange={setPantryFilterActive}
+            onSearchPress={handleSearchPress}
+          />
         }
         onEndReached={handleEndReached}
         onEndReachedThreshold={0.5}
@@ -375,42 +339,6 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFFFFF' },
-  headerContainer: {
-    width: '100%',
-    backgroundColor: '#fff',
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
-    overflow: 'hidden',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-    elevation: 3,
-    zIndex: 10,
-  },
-  feedToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    paddingHorizontal: 16,
-  },
-  feedToggleTabs: {
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 24,
-  },
-  feedToggleTab: {
-    paddingVertical: 12,
-  },
-  feedToggleText: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#000',
-  },
-  feedToggleTextActive: {
-    color: '#22C55E',
-  },
-  searchButton: {
-    padding: 8,
-  },
   center: {
     flex: 1,
     justifyContent: 'center',

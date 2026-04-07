@@ -19,12 +19,13 @@ export default function ConversationScreen() {
     }
   }
 
+  const conversationId = params.id && params.id !== 'new' ? params.id : undefined;
+
   return (
     <AssistantChatScreen
-      initialConversationId={params.id}
+      initialConversationId={conversationId}
       initialTitle={params.title || 'AI Chat'}
       postContext={postContext}
-      showBackButton
     />
   );
 }
