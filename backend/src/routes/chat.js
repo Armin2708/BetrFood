@@ -20,7 +20,7 @@ const openai = process.env.OPENROUTER_API_KEY
 const CHAT_MODEL = process.env.OPENROUTER_MODEL || 'google/gemini-2.0-flash-001';
 
 const BASE_SYSTEM_PROMPT =
-  "You are BetrFood's AI cooking assistant. You help users with food-related questions including recipes, cooking techniques, ingredient substitutions, meal planning, nutrition information, and food storage tips. Be friendly, concise, and helpful. If asked about non-food topics, gently redirect to food-related assistance.";
+  "You are BetrFood's AI cooking assistant. You have access to the BetrFood community — a social platform where users share food posts and recipes. When relevant posts or recipes from the community are provided to you, use them to answer the user's questions directly. You can reference community recipes, ingredients, and techniques from those posts. You also help with general food-related questions including recipes, cooking techniques, ingredient substitutions, meal planning, nutrition information, and food storage tips. Be friendly, concise, and helpful. If asked about non-food topics, gently redirect to food-related assistance.";
 
 const RECIPE_FORMAT_INSTRUCTIONS = `
 When suggesting recipes, always format each recipe as follows:
@@ -46,6 +46,12 @@ const POST_SUGGESTION_KEYWORDS = [
   'show me recipes', 'find recipes', 'look up', 'browse',
 ];
 
+const BROWSE_FEED_KEYWORDS = [
+  'community', 'following', 'feed', 'from people i follow', 'from the community',
+  'what are people posting', 'what is everyone making', 'popular posts',
+  'recent posts', 'latest posts', 'trending',
+];
+
 function hasPantryIntent(message) {
   const lower = message.toLowerCase();
   return PANTRY_INTENT_KEYWORDS.some((kw) => lower.includes(kw));
@@ -54,6 +60,16 @@ function hasPantryIntent(message) {
 function hasPostSuggestionIntent(message) {
   const lower = message.toLowerCase();
   return POST_SUGGESTION_KEYWORDS.some((kw) => lower.includes(kw));
+}
+
+function hasBrowseFeedIntent(message) {
+  const lower = message.toLowerCase();
+  return BROWSE_FEED_KEYWORDS.some((kw) => lower.includes(kw));
+}
+
+function wantsFollowingFeed(message) {
+  const lower = message.toLowerCase();
+  return lower.includes('following') || lower.includes('people i follow') || lower.includes('from people');
 }
 
 // Extract search keywords from a message for post search
@@ -69,61 +85,144 @@ function extractSearchKeywords(message) {
     .slice(0, 5);
 }
 
-// Search posts by keyword matching caption and tags
-async function searchPosts(keywords, limit = 3) {
-  if (!keywords.length) return [];
+// Fetch recent posts from users the current user follows
+async function fetchFollowingPosts(userId, limit = 5) {
   try {
-    // Search by caption keywords
-    const searchTerm = keywords.join(' | ');
+    const { data: follows } = await supabase
+      .from('user_follows')
+      .select('following_id')
+      .eq('follower_id', userId);
+
+    if (!follows || follows.length === 0) return [];
+    const followedIds = follows.map(f => f.following_id);
+
     const { data: posts } = await supabase
       .from('posts')
-      .select(`
-        id, caption, image_path, user_id, media_type,
-        user_profiles!inner(username, display_name, avatar_url)
-      `)
-      .ilike('caption', `%${keywords[0]}%`)
-      .limit(limit * 2);
+      .select(`id, caption, image_path, user_id, media_type,
+        user_profiles!inner(username, display_name, avatar_url)`)
+      .in('user_id', followedIds)
+      .order('created_at', { ascending: false })
+      .limit(limit);
 
-    // Also search by tags
-    const { data: taggedPosts } = await supabase
-      .from('tags')
-      .select('id, name, post_tags(post_id)')
-      .or(keywords.map(k => `name.ilike.%${k}%`).join(','));
+    return posts || [];
+  } catch (err) {
+    console.error('[FETCH FOLLOWING POSTS ERROR]', err.message);
+    return [];
+  }
+}
 
-    const taggedPostIds = new Set();
-    (taggedPosts || []).forEach(tag => {
-      (tag.post_tags || []).forEach(pt => taggedPostIds.add(pt.post_id));
-    });
+// Fetch recent posts from the whole community
+async function fetchRecentCommunityPosts(limit = 5) {
+  try {
+    const { data: posts } = await supabase
+      .from('posts')
+      .select(`id, caption, image_path, user_id, media_type,
+        user_profiles!inner(username, display_name, avatar_url)`)
+      .order('created_at', { ascending: false })
+      .limit(limit);
 
-    // Fetch tag-matched posts if any
-    let tagMatches = [];
-    if (taggedPostIds.size > 0) {
-      const { data } = await supabase
-        .from('posts')
-        .select(`
-          id, caption, image_path, user_id, media_type,
-          user_profiles!inner(username, display_name, avatar_url)
-        `)
-        .in('id', [...taggedPostIds])
-        .limit(limit);
-      tagMatches = data || [];
-    }
+    return posts || [];
+  } catch (err) {
+    console.error('[FETCH COMMUNITY POSTS ERROR]', err.message);
+    return [];
+  }
+}
 
-    // Merge and deduplicate
-    const seen = new Set();
-    const merged = [...(posts || []), ...tagMatches].filter(p => {
-      if (seen.has(p.id)) return false;
-      seen.add(p.id);
-      return true;
-    }).slice(0, limit);
+// Enrich a raw posts array with recipes, ingredients, steps, and tags
+async function enrichPostsForAi(rawPosts) {
+  if (!rawPosts.length) return [];
+  const postIds = rawPosts.map(p => p.id);
 
-    return merged.map(p => ({
+  const [
+    { data: recipes },
+    { data: ingredients },
+    { data: steps },
+    { data: postTags },
+  ] = await Promise.all([
+    supabase.from('recipes').select('id, post_id, cook_time, servings, difficulty').in('post_id', postIds),
+    supabase.from('recipe_ingredients').select('recipe_id, name, quantity, unit').order('order_index', { ascending: true }),
+    supabase.from('recipe_steps').select('recipe_id, step_number, instruction').order('step_number', { ascending: true }),
+    supabase.from('post_tags').select('post_id, tags(name)').in('post_id', postIds),
+  ]);
+
+  const recipeByPostId = {};
+  (recipes || []).forEach(r => { recipeByPostId[r.post_id] = r; });
+
+  const ingredientsByRecipeId = {};
+  (ingredients || []).forEach(ing => {
+    if (!ingredientsByRecipeId[ing.recipe_id]) ingredientsByRecipeId[ing.recipe_id] = [];
+    ingredientsByRecipeId[ing.recipe_id].push(ing);
+  });
+
+  const stepsByRecipeId = {};
+  (steps || []).forEach(s => {
+    if (!stepsByRecipeId[s.recipe_id]) stepsByRecipeId[s.recipe_id] = [];
+    stepsByRecipeId[s.recipe_id].push(s);
+  });
+
+  const tagsByPostId = {};
+  (postTags || []).forEach(pt => {
+    if (!tagsByPostId[pt.post_id]) tagsByPostId[pt.post_id] = [];
+    if (pt.tags?.name) tagsByPostId[pt.post_id].push(pt.tags.name);
+  });
+
+  return rawPosts.map(p => {
+    const recipe = recipeByPostId[p.id] || null;
+    const recipeIngredients = recipe ? (ingredientsByRecipeId[recipe.id] || []) : [];
+    const recipeSteps = recipe ? (stepsByRecipeId[recipe.id] || []) : [];
+    return {
       id: p.id,
       caption: p.caption || '',
       imagePath: p.image_path || null,
       username: p.user_profiles?.display_name || p.user_profiles?.username || 'Unknown',
       mediaType: p.media_type || 'image',
-    }));
+      tags: tagsByPostId[p.id] || [],
+      recipe: recipe ? {
+        cookTime: recipe.cook_time,
+        servings: recipe.servings,
+        difficulty: recipe.difficulty,
+        ingredients: recipeIngredients.map(i => `${i.quantity || ''} ${i.unit || ''} ${i.name}`.trim()),
+        steps: recipeSteps.map(s => s.instruction),
+      } : null,
+    };
+  });
+}
+
+// Search posts by keyword matching caption and tags, then enrich with full recipe data
+async function searchPosts(keywords, limit = 3) {
+  if (!keywords.length) return [];
+  try {
+    const postSelect = `id, caption, image_path, user_id, media_type,
+      user_profiles!inner(username, display_name, avatar_url)`;
+
+    const [{ data: captionPosts }, { data: taggedTags }] = await Promise.all([
+      supabase.from('posts').select(postSelect)
+        .or(keywords.map(k => `caption.ilike.%${k}%`).join(','))
+        .limit(limit * 2),
+      supabase.from('tags').select('id, name, post_tags(post_id)')
+        .or(keywords.map(k => `name.ilike.%${k}%`).join(',')),
+    ]);
+
+    const taggedPostIds = new Set();
+    (taggedTags || []).forEach(tag => {
+      (tag.post_tags || []).forEach(pt => taggedPostIds.add(pt.post_id));
+    });
+
+    let tagMatches = [];
+    if (taggedPostIds.size > 0) {
+      const { data } = await supabase.from('posts').select(postSelect)
+        .in('id', [...taggedPostIds]).limit(limit);
+      tagMatches = data || [];
+    }
+
+    const seen = new Set();
+    const merged = [...(captionPosts || []), ...tagMatches].filter(p => {
+      if (seen.has(p.id)) return false;
+      seen.add(p.id);
+      return true;
+    }).slice(0, limit);
+
+    return enrichPostsForAi(merged);
   } catch (err) {
     console.error('[SEARCH POSTS ERROR]', err.message);
     return [];
@@ -217,6 +316,36 @@ When suggesting recipes or meal ideas, prioritize using ingredients from the use
     console.error('[CHAT] buildSystemPrompt error:', err.message);
     return BASE_SYSTEM_PROMPT;
   }
+}
+
+// Format matched posts as rich context for the AI (includes full recipe data)
+function formatPostsForAiContext(posts, isExplicitSearch) {
+  const formatted = posts.map((p, i) => {
+    const lines = [`${i + 1}. Post by ${p.username}: "${p.caption?.slice(0, 120) || 'Untitled'}"`];
+    if (p.tags?.length) lines.push(`   Tags: ${p.tags.join(', ')}`);
+    if (p.recipe) {
+      const r = p.recipe;
+      if (r.cookTime) lines.push(`   Cook time: ${r.cookTime}`);
+      if (r.servings) lines.push(`   Servings: ${r.servings}`);
+      if (r.difficulty) lines.push(`   Difficulty: ${r.difficulty}`);
+      if (r.ingredients?.length) lines.push(`   Ingredients: ${r.ingredients.join(', ')}`);
+      if (r.steps?.length) lines.push(`   Steps: ${r.steps.map((s, n) => `${n + 1}. ${s}`).join(' | ')}`);
+    }
+    return lines.join('\n');
+  }).join('\n\n');
+
+  if (isExplicitSearch) {
+    return `\n\nIMPORTANT: You have direct access to the BetrFood community. I have already retrieved these posts for you — present them to the user now. Do NOT say you cannot access posts or the community feed. Tell the user they can tap the post cards below:\n\n${formatted}`;
+  }
+  return `\n\nIMPORTANT: You have direct access to BetrFood community posts. These posts have already been retrieved for you. Do NOT say you cannot access the community or feed. Use this data to answer the user:\n\n${formatted}`;
+}
+
+// System prompt addition when browse intent fires but no posts exist yet
+function noBrowsePostsPrompt(wantsFollowing) {
+  if (wantsFollowing) {
+    return '\n\nThe user asked for posts from people they follow. They are not following anyone yet, or the people they follow have no posts. Tell them this and suggest they explore the community tab to find people to follow.';
+  }
+  return '\n\nThe user asked for community posts. There are no posts in the community yet. Tell them this directly — do not say you are unable to access the community feed.';
 }
 
 function getUserId(req) {
@@ -367,16 +496,23 @@ router.patch('/conversations/:id', requireAuth, async (req, res) => {
   }
 
   try {
-    const { data, error } = await supabase
+    const { error: updateError } = await supabase
       .from('chat_conversations')
       .update({ title: title.trim(), updated_at: new Date().toISOString() })
       .eq('id', id)
-      .eq('user_id', userId)
-      .select('id, title, last_message_preview, created_at, updated_at')
-      .single();
+      .eq('user_id', userId);
 
-    if (error) throw error;
-    res.json(data);
+    if (updateError) throw updateError;
+
+    const { data: rows, error: fetchError } = await supabase
+      .from('chat_conversations')
+      .select('id, title, last_message_preview, created_at, updated_at')
+      .eq('id', id)
+      .eq('user_id', userId)
+      .limit(1);
+
+    if (fetchError) throw fetchError;
+    res.json(rows?.[0] ?? null);
   } catch (err) {
     console.error('[RENAME CONVERSATION ERROR]', err.message);
     res.status(500).json({ error: 'Failed to rename conversation' });
@@ -482,6 +618,7 @@ router.post('/', requireAuth, async (req, res) => {
     // But skip this if the user is asking for post suggestions
     const isPantryQuery = hasPantryIntent(textMessage);
     const isPostSuggestionQuery = hasPostSuggestionIntent(textMessage);
+    const isBrowseQuery = hasBrowseFeedIntent(textMessage);
     if (isPantryQuery && !postContext && !isPostSuggestionQuery) {
       const { count: pantryCount } = await supabase
         .from('pantry_items')
@@ -520,16 +657,22 @@ router.post('/', requireAuth, async (req, res) => {
       systemPrompt += postSection;
     }
 
-    // Check if user wants post suggestions from BetrFood
+    // Fetch relevant posts — browse feed, or keyword search
     let suggestedPosts = [];
-    if (isPostSuggestionQuery && !postContext) {
-      const keywords = extractSearchKeywords(textMessage);
-      suggestedPosts = await searchPosts(keywords, 3);
+    if (!postContext && textMessage) {
+      if (isBrowseQuery) {
+        const rawPosts = wantsFollowingFeed(textMessage)
+          ? await fetchFollowingPosts(userId, 5)
+          : await fetchRecentCommunityPosts(5);
+        suggestedPosts = await enrichPostsForAi(rawPosts);
+      } else {
+        const keywords = extractSearchKeywords(textMessage);
+        suggestedPosts = await searchPosts(keywords, 3);
+      }
       if (suggestedPosts.length > 0) {
-        const postList = suggestedPosts.map((p, i) =>
-          `${i + 1}. "${p.caption?.slice(0, 80) || 'Untitled'}" by ${p.username}`
-        ).join('\n');
-        systemPrompt += `\n\nI found these relevant BetrFood posts that match the user's query:\n${postList}\n\nMention these posts in your response and explain briefly why each is relevant. Tell the user they can tap on a post card below to view it.`;
+        systemPrompt += formatPostsForAiContext(suggestedPosts, isPostSuggestionQuery || isBrowseQuery);
+      } else if (isBrowseQuery) {
+        systemPrompt += noBrowsePostsPrompt(wantsFollowingFeed(textMessage));
       }
     }
 
@@ -716,6 +859,7 @@ router.post('/stream', requireAuth, async (req, res) => {
 
     const isPantryQuery = hasPantryIntent(textMessage);
     const isPostSuggestionQuery = hasPostSuggestionIntent(textMessage);
+    const isBrowseQuery = hasBrowseFeedIntent(textMessage);
     let systemPrompt = await buildSystemPrompt(userId, isPantryQuery, isPostSuggestionQuery);
 
     if (postContext) {
@@ -736,16 +880,22 @@ router.post('/stream', requireAuth, async (req, res) => {
       systemPrompt += postSection;
     }
 
-    // Search for relevant BetrFood posts if user is asking for post suggestions
+    // Fetch relevant posts — browse feed, or keyword search
     let suggestedPosts = [];
-    if (isPostSuggestionQuery && !postContext) {
-      const keywords = extractSearchKeywords(textMessage);
-      suggestedPosts = await searchPosts(keywords, 3);
+    if (!postContext && textMessage) {
+      if (isBrowseQuery) {
+        const rawPosts = wantsFollowingFeed(textMessage)
+          ? await fetchFollowingPosts(userId, 5)
+          : await fetchRecentCommunityPosts(5);
+        suggestedPosts = await enrichPostsForAi(rawPosts);
+      } else {
+        const keywords = extractSearchKeywords(textMessage);
+        suggestedPosts = await searchPosts(keywords, 3);
+      }
       if (suggestedPosts.length > 0) {
-        const postList = suggestedPosts.map((p, i) =>
-          `${i + 1}. "${p.caption?.slice(0, 80) || 'Untitled'}" by ${p.username}`
-        ).join('\n');
-        systemPrompt += `\n\nI found these relevant BetrFood posts that match the user's query:\n${postList}\n\nMention these posts in your response and explain briefly why each is relevant. Tell the user they can tap on a post card below to view it.`;
+        systemPrompt += formatPostsForAiContext(suggestedPosts, isPostSuggestionQuery || isBrowseQuery);
+      } else if (isBrowseQuery) {
+        systemPrompt += noBrowsePostsPrompt(wantsFollowingFeed(textMessage));
       }
     }
 

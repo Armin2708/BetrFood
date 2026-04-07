@@ -304,6 +304,8 @@ export default function AssistantChatScreen({
 
   const handleRename = useCallback(async (title: string) => {
     if (!activeConversationId) {
+      // No conversation yet — just update the local title, it'll be used when the first message is sent
+      setConversationTitle(title);
       return;
     }
 
@@ -648,17 +650,15 @@ export default function AssistantChatScreen({
             <TouchableOpacity onPress={handleNewChat} style={styles.iconButton}>
               <Ionicons name="create-outline" size={18} color={colors.textPrimary} />
             </TouchableOpacity>
-            {activeConversationId ? (
-              <TouchableOpacity
-                onPress={() => {
-                  setPromptValue(conversationTitle);
-                  setPromptVisible(true);
-                }}
-                style={styles.iconButton}
-              >
-                <Ionicons name="pencil-outline" size={18} color={colors.textPrimary} />
-              </TouchableOpacity>
-            ) : null}
+            <TouchableOpacity
+              onPress={() => {
+                setPromptValue(conversationTitle);
+                setPromptVisible(true);
+              }}
+              style={styles.iconButton}
+            >
+              <Ionicons name="pencil-outline" size={18} color={colors.textPrimary} />
+            </TouchableOpacity>
           </View>
         </View>
 
