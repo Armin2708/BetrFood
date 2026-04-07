@@ -180,7 +180,7 @@ export default function ChatHistoryScreen() {
           contentContainerStyle={styles.listContent}
           renderItem={({ item }) => (
             <Swipeable
-              ref={(ref) => swipeableRefs.current.set(item.id, ref)}
+              ref={(ref) => { swipeableRefs.current.set(item.id, ref); }}
               renderRightActions={() => (
                 <TouchableOpacity
                   style={styles.swipeDeleteAction}
