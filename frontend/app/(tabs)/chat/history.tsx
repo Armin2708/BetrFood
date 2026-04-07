@@ -254,7 +254,7 @@ export default function ChatHistoryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FBF8',
+    backgroundColor: colors.white,
   },
   centered: {
     flex: 1,
