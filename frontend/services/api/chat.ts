@@ -29,6 +29,7 @@ export interface ChatAttachment {
 export interface Conversation {
   id: string;
   title: string;
+  last_message_preview?: string;
   created_at: string;
   updated_at: string;
 }

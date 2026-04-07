@@ -170,6 +170,11 @@ export default function ChatHistoryScreen() {
                 <Text style={styles.cardTitle} numberOfLines={1}>
                   {item.title}
                 </Text>
+                {item.last_message_preview ? (
+                  <Text style={styles.cardPreview} numberOfLines={1}>
+                    {item.last_message_preview}
+                  </Text>
+                ) : null}
                 <Text style={styles.cardMeta}>{formatRelativeTime(item.updated_at)}</Text>
               </View>
               <TouchableOpacity onPress={() => openRenamePrompt(item)} style={styles.inlineButton}>
@@ -273,6 +278,11 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     color: colors.textPrimary,
+  },
+  cardPreview: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    lineHeight: 18,
   },
   cardMeta: {
     fontSize: 12,

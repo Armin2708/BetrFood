@@ -258,9 +258,12 @@ CREATE TABLE IF NOT EXISTS chat_conversations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id TEXT NOT NULL,
   title TEXT DEFAULT 'New Chat',
+  last_message_preview TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+-- Add the column if the table already exists
+ALTER TABLE chat_conversations ADD COLUMN IF NOT EXISTS last_message_preview TEXT;
 CREATE INDEX IF NOT EXISTS idx_chat_conversations_user_id ON chat_conversations(user_id);
 
 CREATE TABLE IF NOT EXISTS chat_messages (

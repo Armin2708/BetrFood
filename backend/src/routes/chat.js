@@ -223,10 +223,32 @@ function getUserId(req) {
   return req.userId || (req.user && req.user.id) || req.headers['x-user-id'] || 'anonymous';
 }
 
-// Generate a short title from the first user message
-async function generateTitle(message) {
-  const truncated = message.trim().substring(0, 60);
-  return truncated.length < message.trim().length ? truncated + '...' : truncated;
+// Truncate a message to use as a fallback title
+function truncateTitle(message) {
+  const trimmed = message.trim().substring(0, 60);
+  return trimmed.length < message.trim().length ? trimmed + '...' : trimmed;
+}
+
+// Generate a short 3-5 word AI title, fire-and-forget safe (returns null on failure)
+async function generateAiTitle(message) {
+  if (!openai) return null;
+  try {
+    const response = await openai.chat.completions.create({
+      model: CHAT_MODEL,
+      max_tokens: 15,
+      messages: [
+        {
+          role: 'system',
+          content: 'Generate a short 3-5 word title summarizing this message. Return ONLY the title — no quotes, no punctuation, no extra text.',
+        },
+        { role: 'user', content: message.trim().substring(0, 200) },
+      ],
+    });
+    const title = response.choices[0].message.content?.trim();
+    return title && title.length > 0 && title.length <= 80 ? title : null;
+  } catch {
+    return null;
+  }
 }
 
 function sanitizeAttachments(attachments) {
@@ -260,18 +282,32 @@ function buildUserMessageContent(message, attachments = []) {
 
 async function syncConversationMetadata(conversationId, message, existingMessageCount = 0) {
   const nextUpdatedAt = new Date().toISOString();
+  const preview = message.trim().substring(0, 120);
 
   if (!existingMessageCount || existingMessageCount <= 1) {
+    // Set a fast truncated title immediately so the conversation is never untitled
     await supabase
       .from('chat_conversations')
-      .update({ title: await generateTitle(message.trim()), updated_at: nextUpdatedAt })
+      .update({ title: truncateTitle(message), last_message_preview: preview, updated_at: nextUpdatedAt })
       .eq('id', conversationId);
+
+    // Upgrade to an AI-generated title asynchronously — doesn't block the response
+    generateAiTitle(message).then((aiTitle) => {
+      if (aiTitle) {
+        supabase
+          .from('chat_conversations')
+          .update({ title: aiTitle })
+          .eq('id', conversationId)
+          .then(() => {})
+          .catch(() => {});
+      }
+    }).catch(() => {});
     return;
   }
 
   await supabase
     .from('chat_conversations')
-    .update({ updated_at: nextUpdatedAt })
+    .update({ last_message_preview: preview, updated_at: nextUpdatedAt })
     .eq('id', conversationId);
 }
 
@@ -290,7 +326,7 @@ router.get('/conversations', requireAuth, async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('chat_conversations')
-      .select('id, title, created_at, updated_at')
+      .select('id, title, last_message_preview, created_at, updated_at')
       .eq('user_id', userId)
       .order('updated_at', { ascending: false });
 
@@ -336,7 +372,7 @@ router.patch('/conversations/:id', requireAuth, async (req, res) => {
       .update({ title: title.trim(), updated_at: new Date().toISOString() })
       .eq('id', id)
       .eq('user_id', userId)
-      .select('id, title, created_at, updated_at')
+      .select('id, title, last_message_preview, created_at, updated_at')
       .single();
 
     if (error) throw error;
