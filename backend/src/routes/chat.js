@@ -440,7 +440,7 @@ router.post('/', requireAuth, async (req, res) => {
     if (!convId) {
       const { data: newConv, error: convErr } = await supabase
         .from('chat_conversations')
-        .insert({ user_id: userId, title: conversationTitle || await generateTitle(textMessage || 'Image question') })
+        .insert({ user_id: userId, title: conversationTitle || truncateTitle(textMessage || 'Image question') })
         .select('id')
         .single();
       if (convErr) throw convErr;
@@ -677,7 +677,7 @@ router.post('/stream', requireAuth, async (req, res) => {
     if (!convId) {
       const { data: newConv, error: convErr } = await supabase
         .from('chat_conversations')
-        .insert({ user_id: userId, title: conversationTitle || await generateTitle(textMessage || 'Image question') })
+        .insert({ user_id: userId, title: conversationTitle || truncateTitle(textMessage || 'Image question') })
         .select('id')
         .single();
       if (convErr) throw convErr;
