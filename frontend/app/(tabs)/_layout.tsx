@@ -17,7 +17,6 @@ const shouldHideTabs = (segments: string[]): boolean => {
     /(^|\/)editProfile$/,
     /(^|\/)FollowersScreen$/,
     /(^|\/)FollowingScreen$/,
-    /(^|\/)chat\/\[id\]$/
   ];
 
   return hiddenRoutePatterns.some(pattern => pattern.test(path));

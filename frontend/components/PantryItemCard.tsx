@@ -1,9 +1,10 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Modal, Pressable } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { usePreferences } from '../context/PreferencesContext';
 import { PantryItem } from '../services/api';
 import { colors } from '../constants/theme';
+import ConfirmDialog from './ConfirmDialog';
 
 interface PantryItemCardProps {
   item: PantryItem;
@@ -96,29 +97,15 @@ export default function PantryItemCard({ item, onDelete, onEdit }: PantryItemCar
         </TouchableOpacity>
       </View>
 
-      <Modal
+      <ConfirmDialog
         visible={confirmVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setConfirmVisible(false)}
-      >
-        <Pressable style={styles.modalOverlay} onPress={() => setConfirmVisible(false)}>
-          <Pressable style={styles.modalBox} onPress={e => e.stopPropagation()}>
-            <Text style={styles.modalTitle}>Remove Item</Text>
-            <Text style={styles.modalMessage}>
-              Remove "{item.name}" from your pantry?
-            </Text>
-            <View style={styles.modalButtons}>
-              <Pressable style={styles.modalCancelButton} onPress={() => setConfirmVisible(false)}>
-                <Text style={styles.modalCancelText}>Cancel</Text>
-              </Pressable>
-              <Pressable style={styles.modalDeleteButton} onPress={handleConfirmDelete}>
-                <Text style={styles.modalDeleteText}>Remove</Text>
-              </Pressable>
-            </View>
-          </Pressable>
-        </Pressable>
-      </Modal>
+        title="Remove Item"
+        message={`Remove "${item.name}" from your pantry?`}
+        confirmLabel="Remove"
+        destructive
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setConfirmVisible(false)}
+      />
     </>
   );
 }
@@ -142,13 +129,4 @@ const styles = StyleSheet.create({
   expiration: { fontSize: 12 },
   editButton: { paddingLeft: 12 },
   deleteButton: { paddingLeft: 12 },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
-  modalBox: { backgroundColor: '#fff', borderRadius: 14, padding: 24, width: 300 },
-  modalTitle: { fontSize: 18, fontWeight: '700', color: '#000', marginBottom: 8 },
-  modalMessage: { fontSize: 14, color: '#666', lineHeight: 20, marginBottom: 20 },
-  modalButtons: { flexDirection: 'row', gap: 12 },
-  modalCancelButton: { flex: 1, paddingVertical: 12, borderRadius: 8, borderWidth: 1, borderColor: '#ddd', alignItems: 'center' },
-  modalCancelText: { fontSize: 15, fontWeight: '600', color: '#666' },
-  modalDeleteButton: { flex: 1, paddingVertical: 12, borderRadius: 8, backgroundColor: '#e74c3c', alignItems: 'center' },
-  modalDeleteText: { fontSize: 15, fontWeight: '600', color: '#fff' },
 });

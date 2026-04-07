@@ -686,6 +686,30 @@ export default function Post({
         >
           <Ionicons name="share-social-outline" size={22} color={colors.textPrimary} />
         </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => {
+            if (!id) return;
+            router.push({
+              pathname: '/(tabs)/chat/[id]',
+              params: {
+                id: 'new',
+                title: `Chat about ${username}'s post`,
+                postContext: encodeURIComponent(JSON.stringify({
+                  postId: id,
+                  caption: caption,
+                  username: username,
+                  tags: tags?.map(t => t.name) || [],
+                })),
+              },
+            });
+          }}
+          style={styles.actionButton}
+          accessibilityRole="button"
+          accessibilityLabel="Ask AI about this post"
+        >
+          <Ionicons name="sparkles-outline" size={22} color={colors.textPrimary} />
+        </TouchableOpacity>
       </View>
 
       <Text

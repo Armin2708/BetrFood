@@ -1,41 +1,44 @@
-import React, { useRef } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import React from 'react';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { colors, radius } from '../constants/theme';
 import BaseModal from './BaseModal';
 
-interface PromptModalProps {
+type ConfirmDialogProps = {
   visible: boolean;
   title: string;
-  value: string;
-  onChangeText: (text: string) => void;
-  onSubmit: () => void;
+  message: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  destructive?: boolean;
+  onConfirm: () => void;
   onCancel: () => void;
-}
+};
 
-export function PromptModal({ visible, title, value, onChangeText, onSubmit, onCancel }: PromptModalProps) {
-  const inputRef = useRef<TextInput>(null);
-
+export default function ConfirmDialog({
+  visible,
+  title,
+  message,
+  confirmLabel = 'Confirm',
+  cancelLabel = 'Cancel',
+  destructive = false,
+  onConfirm,
+  onCancel,
+}: ConfirmDialogProps) {
   return (
     <BaseModal visible={visible} onClose={onCancel}>
       <Text style={styles.title}>{title}</Text>
-      <TextInput
-        ref={inputRef}
-        style={styles.input}
-        value={value}
-        onChangeText={onChangeText}
-        placeholder="Enter a name..."
-        placeholderTextColor={colors.placeholder}
-        maxLength={100}
-        returnKeyType="done"
-        onSubmitEditing={onSubmit}
-        autoFocus
-      />
+      <Text style={styles.message}>{message}</Text>
       <View style={styles.buttons}>
         <TouchableOpacity style={styles.cancelBtn} onPress={onCancel}>
-          <Text style={styles.cancelText}>Cancel</Text>
+          <Text style={styles.cancelText}>{cancelLabel}</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.confirmBtn} onPress={onSubmit}>
-          <Text style={styles.confirmText}>OK</Text>
+        <TouchableOpacity
+          style={[styles.confirmBtn, destructive && styles.confirmBtnDestructive]}
+          onPress={onConfirm}
+        >
+          <Text style={[styles.confirmText, destructive && styles.confirmTextDestructive]}>
+            {confirmLabel}
+          </Text>
         </TouchableOpacity>
       </View>
     </BaseModal>
@@ -47,17 +50,13 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: colors.textPrimary,
-    marginBottom: 16,
+    marginBottom: 8,
   },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.xs,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+  message: {
     fontSize: 15,
-    color: colors.textPrimary,
-    marginBottom: 16,
+    lineHeight: 22,
+    color: colors.textSecondary,
+    marginBottom: 20,
   },
   buttons: {
     flexDirection: 'row',
@@ -83,9 +82,15 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     alignItems: 'center',
   },
+  confirmBtnDestructive: {
+    backgroundColor: colors.delete,
+  },
   confirmText: {
     fontSize: 15,
     fontWeight: '600',
+    color: colors.white,
+  },
+  confirmTextDestructive: {
     color: colors.white,
   },
 });
