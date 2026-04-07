@@ -439,7 +439,13 @@ router.post('/', requireAuth, async (req, res) => {
 
     const { data: saved } = await supabase
       .from('chat_messages')
-      .insert({ user_id: userId, conversation_id: convId, role: 'assistant', content: assistantContent })
+      .insert({
+        user_id: userId,
+        conversation_id: convId,
+        role: 'assistant',
+        content: assistantContent,
+        suggested_posts: suggestedPosts.length > 0 ? suggestedPosts : [],
+      })
       .select('id, role, content, created_at')
       .single();
 
@@ -606,6 +612,19 @@ router.post('/stream', requireAuth, async (req, res) => {
       systemPrompt += postSection;
     }
 
+    // Search for relevant BetrFood posts if user is asking for post suggestions
+    let suggestedPosts = [];
+    if (isPostSuggestionQuery && !postContext) {
+      const keywords = extractSearchKeywords(message.trim());
+      suggestedPosts = await searchPosts(keywords, 3);
+      if (suggestedPosts.length > 0) {
+        const postList = suggestedPosts.map((p, i) =>
+          `${i + 1}. "${p.caption?.slice(0, 80) || 'Untitled'}" by ${p.username}`
+        ).join('\n');
+        systemPrompt += `\n\nI found these relevant BetrFood posts that match the user's query:\n${postList}\n\nMention these posts in your response and explain briefly why each is relevant. Tell the user they can tap on a post card below to view it.`;
+      }
+    }
+
     const stream = await openai.chat.completions.create({
       model: 'google/gemini-2.0-flash-001',
       max_tokens: 1024,
@@ -627,16 +646,26 @@ router.post('/stream', requireAuth, async (req, res) => {
       }
     }
 
-    // Save the (possibly partial) assistant response
+    // Save the (possibly partial) assistant response, storing suggested posts for history
     if (fullContent) {
       const { data: saved } = await supabase
         .from('chat_messages')
-        .insert({ user_id: userId, conversation_id: convId, role: 'assistant', content: fullContent })
-        .select('id, role, content, created_at')
+        .insert({
+          user_id: userId,
+          conversation_id: convId,
+          role: 'assistant',
+          content: fullContent,
+          suggested_posts: suggestedPosts.length > 0 ? suggestedPosts : [],
+        })
+        .select('id, role, content, created_at, suggested_posts')
         .single();
 
+      const savedMessage = saved
+        ? { ...saved, suggestedPosts: saved.suggested_posts?.length ? saved.suggested_posts : undefined }
+        : null;
+
       if (!res.writableEnded) {
-        res.write(`data: ${JSON.stringify({ done: true, message: saved, conversationId: convId })}\n\n`);
+        res.write(`data: ${JSON.stringify({ done: true, message: savedMessage, conversationId: convId })}\n\n`);
       }
     }
 
@@ -658,7 +687,7 @@ router.get('/history', requireAuth, async (req, res) => {
   try {
     let query = supabase
       .from('chat_messages')
-      .select('id, role, content, created_at, conversation_id')
+      .select('id, role, content, created_at, conversation_id, suggested_posts')
       .eq('user_id', userId)
       .order('created_at', { ascending: true });
 
@@ -671,7 +700,13 @@ router.get('/history', requireAuth, async (req, res) => {
     const { data: messages, error } = await query;
     if (error) throw error;
 
-    res.json({ messages: messages || [] });
+    const formattedMessages = (messages || []).map((m) => ({
+      ...m,
+      suggestedPosts: m.suggested_posts?.length ? m.suggested_posts : undefined,
+      suggested_posts: undefined,
+    }));
+
+    res.json({ messages: formattedMessages });
   } catch (err) {
     console.error('[CHAT HISTORY ERROR]', err.message, err.stack);
     res.status(500).json({ error: 'Failed to fetch chat history', details: err.message });
