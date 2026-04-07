@@ -85,6 +85,14 @@ export async function deleteConversation(id: string): Promise<void> {
   await handleResponse(response);
 }
 
+export async function clearAllConversations(): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/api/chat/conversations`, {
+    method: 'DELETE',
+    headers: await authHeaders(),
+  });
+  await handleResponse(response);
+}
+
 export async function renameConversation(id: string, title: string): Promise<Conversation> {
   const response = await fetch(`${API_BASE_URL}/api/chat/conversations/${id}`, {
     method: 'PATCH',

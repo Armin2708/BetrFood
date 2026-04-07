@@ -3,6 +3,7 @@ import { tokenCache } from "@clerk/clerk-expo/token-cache";
 import { Stack } from "expo-router";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { Platform } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import Providers from "../context/Providers";
 
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!;
@@ -25,16 +26,18 @@ if (Platform.OS === 'web' && typeof document !== 'undefined') {
 
 export default function RootLayout() {
   return (
-    <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
-      <ClerkLoaded>
-        <SafeAreaProvider>
-          <SafeAreaView style={{ flex: 1, overflow: 'hidden' }} edges={["top"]}>
-            <Providers>
-              <Stack screenOptions={{ headerShown: false }} />
-            </Providers>
-          </SafeAreaView>
-        </SafeAreaProvider>
-      </ClerkLoaded>
-    </ClerkProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
+        <ClerkLoaded>
+          <SafeAreaProvider>
+            <SafeAreaView style={{ flex: 1, overflow: 'hidden' }} edges={["top"]}>
+              <Providers>
+                <Stack screenOptions={{ headerShown: false }} />
+              </Providers>
+            </SafeAreaView>
+          </SafeAreaProvider>
+        </ClerkLoaded>
+      </ClerkProvider>
+    </GestureHandlerRootView>
   );
 }

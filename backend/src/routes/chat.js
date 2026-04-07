@@ -383,7 +383,24 @@ router.patch('/conversations/:id', requireAuth, async (req, res) => {
   }
 });
 
-// DELETE /api/chat/conversations/:id — delete a conversation
+// DELETE /api/chat/conversations — delete ALL conversations for a user
+router.delete('/conversations', requireAuth, async (req, res) => {
+  const userId = getUserId(req);
+  try {
+    const { error } = await supabase
+      .from('chat_conversations')
+      .delete()
+      .eq('user_id', userId);
+
+    if (error) throw error;
+    res.json({ message: 'All conversations deleted' });
+  } catch (err) {
+    console.error('[CLEAR ALL CONVERSATIONS ERROR]', err.message);
+    res.status(500).json({ error: 'Failed to clear all conversations' });
+  }
+});
+
+// DELETE /api/chat/conversations/:id — delete a single conversation
 router.delete('/conversations/:id', requireAuth, async (req, res) => {
   const userId = getUserId(req);
   const { id } = req.params;
