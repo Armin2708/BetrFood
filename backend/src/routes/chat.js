@@ -85,123 +85,25 @@ function extractSearchKeywords(message) {
     .slice(0, 5);
 }
 
-// Fetch recent posts from users the current user follows
-async function fetchFollowingPosts(userId, limit = 5) {
-  try {
-    const { data: follows } = await supabase
-      .from('user_follows')
-      .select('following_id')
-      .eq('follower_id', userId);
-
-    if (!follows || follows.length === 0) return [];
-    const followedIds = follows.map(f => f.following_id);
-
-    const { data: posts } = await supabase
-      .from('posts')
-      .select(`id, caption, image_path, user_id, media_type,
-        user_profiles!inner(username, display_name, avatar_url)`)
-      .in('user_id', followedIds)
-      .order('created_at', { ascending: false })
-      .limit(limit);
-
-    return posts || [];
-  } catch (err) {
-    console.error('[FETCH FOLLOWING POSTS ERROR]', err.message);
-    return [];
-  }
-}
-
-// Fetch recent posts from the whole community
-async function fetchRecentCommunityPosts(limit = 5) {
-  try {
-    const { data: posts } = await supabase
-      .from('posts')
-      .select(`id, caption, image_path, user_id, media_type,
-        user_profiles!inner(username, display_name, avatar_url)`)
-      .order('created_at', { ascending: false })
-      .limit(limit);
-
-    return posts || [];
-  } catch (err) {
-    console.error('[FETCH COMMUNITY POSTS ERROR]', err.message);
-    return [];
-  }
-}
-
-// Enrich a raw posts array with recipes, ingredients, steps, and tags
-async function enrichPostsForAi(rawPosts) {
-  if (!rawPosts.length) return [];
-  const postIds = rawPosts.map(p => p.id);
-
-  const [
-    { data: recipes },
-    { data: ingredients },
-    { data: steps },
-    { data: postTags },
-  ] = await Promise.all([
-    supabase.from('recipes').select('id, post_id, cook_time, servings, difficulty').in('post_id', postIds),
-    supabase.from('recipe_ingredients').select('recipe_id, name, quantity, unit').order('order_index', { ascending: true }),
-    supabase.from('recipe_steps').select('recipe_id, step_number, instruction').order('step_number', { ascending: true }),
-    supabase.from('post_tags').select('post_id, tags(name)').in('post_id', postIds),
-  ]);
-
-  const recipeByPostId = {};
-  (recipes || []).forEach(r => { recipeByPostId[r.post_id] = r; });
-
-  const ingredientsByRecipeId = {};
-  (ingredients || []).forEach(ing => {
-    if (!ingredientsByRecipeId[ing.recipe_id]) ingredientsByRecipeId[ing.recipe_id] = [];
-    ingredientsByRecipeId[ing.recipe_id].push(ing);
-  });
-
-  const stepsByRecipeId = {};
-  (steps || []).forEach(s => {
-    if (!stepsByRecipeId[s.recipe_id]) stepsByRecipeId[s.recipe_id] = [];
-    stepsByRecipeId[s.recipe_id].push(s);
-  });
-
-  const tagsByPostId = {};
-  (postTags || []).forEach(pt => {
-    if (!tagsByPostId[pt.post_id]) tagsByPostId[pt.post_id] = [];
-    if (pt.tags?.name) tagsByPostId[pt.post_id].push(pt.tags.name);
-  });
-
-  return rawPosts.map(p => {
-    const recipe = recipeByPostId[p.id] || null;
-    const recipeIngredients = recipe ? (ingredientsByRecipeId[recipe.id] || []) : [];
-    const recipeSteps = recipe ? (stepsByRecipeId[recipe.id] || []) : [];
-    return {
-      id: p.id,
-      caption: p.caption || '',
-      imagePath: p.image_path || null,
-      username: p.user_profiles?.display_name || p.user_profiles?.username || 'Unknown',
-      mediaType: p.media_type || 'image',
-      tags: tagsByPostId[p.id] || [],
-      recipe: recipe ? {
-        cookTime: recipe.cook_time,
-        servings: recipe.servings,
-        difficulty: recipe.difficulty,
-        ingredients: recipeIngredients.map(i => `${i.quantity || ''} ${i.unit || ''} ${i.name}`.trim()),
-        steps: recipeSteps.map(s => s.instruction),
-      } : null,
-    };
-  });
-}
-
-// Search posts by keyword matching caption and tags, then enrich with full recipe data
+// Search posts by keyword matching caption and tags
 async function searchPosts(keywords, limit = 3) {
   if (!keywords.length) return [];
+  console.log('[SEARCH POSTS] keywords:', keywords);
   try {
-    const postSelect = `id, caption, image_path, user_id, media_type,
-      user_profiles!inner(username, display_name, avatar_url)`;
+    const { data: posts, error: postsError } = await supabase
+      .from('posts')
+      .select('id, caption, image_path, user_id, media_type')
+      .ilike('caption', `%${keywords[0]}%`)
+      .limit(limit * 2);
 
-    const [{ data: captionPosts }, { data: taggedTags }] = await Promise.all([
-      supabase.from('posts').select(postSelect)
-        .or(keywords.map(k => `caption.ilike.%${k}%`).join(','))
-        .limit(limit * 2),
-      supabase.from('tags').select('id, name, post_tags(post_id)')
-        .or(keywords.map(k => `name.ilike.%${k}%`).join(',')),
-    ]);
+    if (postsError) console.error('[SEARCH POSTS] caption query error:', postsError.message);
+    console.log('[SEARCH POSTS] caption matches:', posts?.length ?? 0);
+
+    // Also search by tags
+    const { data: taggedPosts } = await supabase
+      .from('tags')
+      .select('id, name, post_tags(post_id)')
+      .or(keywords.map(k => `name.ilike.%${k}%`).join(','));
 
     const taggedPostIds = new Set();
     (taggedTags || []).forEach(tag => {
@@ -210,8 +112,11 @@ async function searchPosts(keywords, limit = 3) {
 
     let tagMatches = [];
     if (taggedPostIds.size > 0) {
-      const { data } = await supabase.from('posts').select(postSelect)
-        .in('id', [...taggedPostIds]).limit(limit);
+      const { data } = await supabase
+        .from('posts')
+        .select('id, caption, image_path, user_id, media_type')
+        .in('id', [...taggedPostIds])
+        .limit(limit);
       tagMatches = data || [];
     }
 
@@ -222,11 +127,75 @@ async function searchPosts(keywords, limit = 3) {
       return true;
     }).slice(0, limit);
 
-    return enrichPostsForAi(merged);
+    console.log('[SEARCH POSTS] total merged:', merged.length);
+
+    // Fetch usernames
+    const userIds = [...new Set(merged.map(p => p.user_id))];
+    const { data: profiles } = await supabase
+      .from('user_profiles')
+      .select('id, display_name, username')
+      .in('id', userIds);
+
+    const profileMap = {};
+    (profiles || []).forEach(p => { profileMap[p.id] = p; });
+
+    // Fetch recipe data for each post
+    const postIds = merged.map(p => p.id);
+    const { data: recipes } = await supabase
+      .from('recipes')
+      .select('id, post_id, cook_time, servings, difficulty')
+      .in('post_id', postIds);
+
+    const recipeMap = {};
+    (recipes || []).forEach(r => { recipeMap[r.post_id] = r; });
+
+    // Fetch ingredients for found recipes
+    const recipeIds = (recipes || []).map(r => r.id);
+    let ingredientMap = {};
+    if (recipeIds.length > 0) {
+      const { data: ingredients } = await supabase
+        .from('recipe_ingredients')
+        .select('recipe_id, name, quantity, unit')
+        .in('recipe_id', recipeIds)
+        .order('order_index', { ascending: true });
+
+      (ingredients || []).forEach(ing => {
+        if (!ingredientMap[ing.recipe_id]) ingredientMap[ing.recipe_id] = [];
+        ingredientMap[ing.recipe_id].push(ing);
+      });
+    }
+
+    return merged.map(p => {
+      const recipe = recipeMap[p.id];
+      const ingredients = recipe ? (ingredientMap[recipe.id] || []) : [];
+      return {
+        id: p.id,
+        caption: p.caption || '',
+        imagePath: p.image_path || null,
+        username: profileMap[p.user_id]?.display_name || profileMap[p.user_id]?.username || 'Unknown',
+        mediaType: p.media_type || 'image',
+        cookTime: recipe?.cook_time || null,
+        servings: recipe?.servings || null,
+        ingredients: ingredients.map(i => ({
+          name: i.name,
+          quantity: i.quantity,
+          unit: i.unit,
+        })),
+      };
+    });
   } catch (err) {
     console.error('[SEARCH POSTS ERROR]', err.message);
     return [];
   }
+}
+
+function formatPostForPrompt(p) {
+  let text = `Post: "${p.caption || 'Untitled'}" by ${p.username}`;
+  if (p.cookTime) text += `\nCook time: ${p.cookTime}`;
+  if (p.ingredients?.length) {
+    text += `\nIngredients: ${p.ingredients.map(i => `${[i.quantity, i.unit, i.name].filter(Boolean).join(' ')}`).join(', ')}`;
+  }
+  return text;
 }
 
 async function fetchUserDietaryContext(userId) {
@@ -258,13 +227,17 @@ async function fetchUserDietaryContext(userId) {
   }
 }
 
-async function buildSystemPrompt(userId, isPantryQuery = false, isPostSuggestionQuery = false) {
+async function buildSystemPrompt(userId, isPantryQuery = false, isPostSuggestionQuery = false, hasPostResults = false) {
   // For post suggestion queries, skip pantry context entirely
   if (isPostSuggestionQuery) {
     const { dietaryPreferences, allergies } = await fetchUserDietaryContext(userId);
     const dietarySection = buildDietaryProfileSection({ dietaryPreferences, allergies });
 
-    return `${BASE_SYSTEM_PROMPT}\n\nThe user is asking to find posts on BetrFood. You will be provided with a list of matching posts. Describe each one briefly and explain why it's relevant to the user's query. Encourage them to tap the post cards below to view the full recipes.${dietarySection}`;
+    if (hasPostResults) {
+      return `${BASE_SYSTEM_PROMPT}\n\nThe user is asking to find posts on BetrFood. You will be provided with a list of matching posts. Describe each one briefly and explain why it's relevant to the user's query. Encourage them to tap the post cards below to view the full recipes.${dietarySection}`;
+    } else {
+      return `${BASE_SYSTEM_PROMPT}\n\nThe user is asking to find posts on BetrFood but no matching posts were found in the database. Let the user know you couldn't find any matching posts, and offer general recipe suggestions or advice instead. Do NOT make up or fabricate post titles.${dietarySection}`;
+    }
   }
   try {
     const { dietaryPreferences, allergies } = await fetchUserDietaryContext(userId);
@@ -636,7 +609,14 @@ router.post('/', requireAuth, async (req, res) => {
       }
     }
 
-    let systemPrompt = await buildSystemPrompt(userId, isPantryQuery, isPostSuggestionQuery);
+    // Check if user wants post suggestions — search BEFORE building system prompt
+    let suggestedPosts = [];
+    if (isPostSuggestionQuery && !postContext) {
+      const keywords = extractSearchKeywords(textMessage);
+      suggestedPosts = await searchPosts(keywords, 3);
+    }
+
+    let systemPrompt = await buildSystemPrompt(userId, isPantryQuery, isPostSuggestionQuery, suggestedPosts.length > 0);
 
     // Inject post context if provided
     if (postContext) {
@@ -657,23 +637,9 @@ router.post('/', requireAuth, async (req, res) => {
       systemPrompt += postSection;
     }
 
-    // Fetch relevant posts — browse feed, or keyword search
-    let suggestedPosts = [];
-    if (!postContext && textMessage) {
-      if (isBrowseQuery) {
-        const rawPosts = wantsFollowingFeed(textMessage)
-          ? await fetchFollowingPosts(userId, 5)
-          : await fetchRecentCommunityPosts(5);
-        suggestedPosts = await enrichPostsForAi(rawPosts);
-      } else {
-        const keywords = extractSearchKeywords(textMessage);
-        suggestedPosts = await searchPosts(keywords, 3);
-      }
-      if (suggestedPosts.length > 0) {
-        systemPrompt += formatPostsForAiContext(suggestedPosts, isPostSuggestionQuery || isBrowseQuery);
-      } else if (isBrowseQuery) {
-        systemPrompt += noBrowsePostsPrompt(wantsFollowingFeed(textMessage));
-      }
+    if (suggestedPosts.length > 0) {
+      const postList = suggestedPosts.map(p => formatPostForPrompt(p)).join('\n\n');
+      systemPrompt += `\n\nHere are the BetrFood posts found matching the user's query:\n\n${postList}\n\nFor each post respond EXACTLY in this format:\nHere's a post I found:\n"[full caption]"\nCook time: [cook time, omit line if unknown]\nThe recipe requires: [ingredient1 quantity unit, ingredient2 quantity unit, ...]\n\nAfter listing all posts, tell the user to tap the post card below to view the full recipe.`;
     }
 
     const aiMessages = [...conversationMessages];
@@ -859,8 +825,15 @@ router.post('/stream', requireAuth, async (req, res) => {
 
     const isPantryQuery = hasPantryIntent(textMessage);
     const isPostSuggestionQuery = hasPostSuggestionIntent(textMessage);
-    const isBrowseQuery = hasBrowseFeedIntent(textMessage);
-    let systemPrompt = await buildSystemPrompt(userId, isPantryQuery, isPostSuggestionQuery);
+
+    // Search for posts BEFORE building system prompt so we know if results exist
+    let suggestedPosts = [];
+    if (isPostSuggestionQuery && !postContext) {
+      const keywords = extractSearchKeywords(textMessage);
+      suggestedPosts = await searchPosts(keywords, 3);
+    }
+
+    let systemPrompt = await buildSystemPrompt(userId, isPantryQuery, isPostSuggestionQuery, suggestedPosts.length > 0);
 
     if (postContext) {
       let postSection = '\n\nThe user is asking about a specific post:';
@@ -880,23 +853,9 @@ router.post('/stream', requireAuth, async (req, res) => {
       systemPrompt += postSection;
     }
 
-    // Fetch relevant posts — browse feed, or keyword search
-    let suggestedPosts = [];
-    if (!postContext && textMessage) {
-      if (isBrowseQuery) {
-        const rawPosts = wantsFollowingFeed(textMessage)
-          ? await fetchFollowingPosts(userId, 5)
-          : await fetchRecentCommunityPosts(5);
-        suggestedPosts = await enrichPostsForAi(rawPosts);
-      } else {
-        const keywords = extractSearchKeywords(textMessage);
-        suggestedPosts = await searchPosts(keywords, 3);
-      }
-      if (suggestedPosts.length > 0) {
-        systemPrompt += formatPostsForAiContext(suggestedPosts, isPostSuggestionQuery || isBrowseQuery);
-      } else if (isBrowseQuery) {
-        systemPrompt += noBrowsePostsPrompt(wantsFollowingFeed(textMessage));
-      }
+    if (suggestedPosts.length > 0) {
+      const postList = suggestedPosts.map(p => formatPostForPrompt(p)).join('\n\n');
+      systemPrompt += `\n\nHere are the BetrFood posts found matching the user's query:\n\n${postList}\n\nFor each post respond EXACTLY in this format:\nHere's a post I found:\n"[full caption]"\nCook time: [cook time, omit line if unknown]\nThe recipe requires: [ingredient1 quantity unit, ingredient2 quantity unit, ...]\n\nAfter listing all posts, tell the user to tap the post card below to view the full recipe.`;
     }
 
     const aiMessages = [...conversationMessages];
