@@ -227,6 +227,15 @@ async function generateTitle(message) {
   return truncated.length < message.trim().length ? truncated + '...' : truncated;
 }
 
+// Map a raw chat_message DB row to the API response shape (snake_case → camelCase)
+function formatChatMessage(m) {
+  const { suggested_posts, ...rest } = m;
+  return {
+    ...rest,
+    suggestedPosts: suggested_posts?.length ? suggested_posts : undefined,
+  };
+}
+
 // GET /api/chat/conversations — list all conversations
 router.get('/conversations', requireAuth, async (req, res) => {
   const userId = getUserId(req);
@@ -660,9 +669,7 @@ router.post('/stream', requireAuth, async (req, res) => {
         .select('id, role, content, created_at, suggested_posts')
         .single();
 
-      const savedMessage = saved
-        ? { ...saved, suggestedPosts: saved.suggested_posts?.length ? saved.suggested_posts : undefined }
-        : null;
+      const savedMessage = saved ? formatChatMessage(saved) : null;
 
       if (!res.writableEnded) {
         res.write(`data: ${JSON.stringify({ done: true, message: savedMessage, conversationId: convId })}\n\n`);
@@ -700,13 +707,7 @@ router.get('/history', requireAuth, async (req, res) => {
     const { data: messages, error } = await query;
     if (error) throw error;
 
-    const formattedMessages = (messages || []).map((m) => ({
-      ...m,
-      suggestedPosts: m.suggested_posts?.length ? m.suggested_posts : undefined,
-      suggested_posts: undefined,
-    }));
-
-    res.json({ messages: formattedMessages });
+    res.json({ messages: (messages || []).map(formatChatMessage) });
   } catch (err) {
     console.error('[CHAT HISTORY ERROR]', err.message, err.stack);
     res.status(500).json({ error: 'Failed to fetch chat history', details: err.message });

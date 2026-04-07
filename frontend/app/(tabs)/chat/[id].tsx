@@ -407,7 +407,7 @@ export default function ConversationScreen() {
     const isUser = item.role === 'user';
     const hasSuggestedPosts = !isUser && item.suggestedPosts && item.suggestedPosts.length > 0;
     return (
-      <View style={isUser ? styles.userMessageWrapper : styles.assistantMessageWrapper}>
+      <View>
         <View
           style={[
             styles.messageBubbleRow,
@@ -849,8 +849,6 @@ const styles = StyleSheet.create({
     color: colors.primary,
     marginBottom: 2,
   },
-  userMessageWrapper: {},
-  assistantMessageWrapper: {},
   suggestedCard: {
     flexDirection: 'row', 
     alignItems: 'center', 

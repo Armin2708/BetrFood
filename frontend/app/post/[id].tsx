@@ -11,7 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, router } from 'expo-router';
 import { colors } from '../../constants/theme';
-import { fetchPost, getImageUrl, getAvatarUrl } from '../../services/api';
+import { fetchPost, getImageUrl, getAvatarUrl, Post as PostType } from '../../services/api';
 import { AuthContext } from '../../context/AuthenticationContext';
 import Post from '../../components/Post';
 
@@ -19,7 +19,7 @@ export default function PostDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useContext(AuthContext);
 
-  const [post, setPost] = useState<any>(null);
+  const [post, setPost] = useState<PostType | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
