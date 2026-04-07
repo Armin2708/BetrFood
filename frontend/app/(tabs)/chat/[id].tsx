@@ -156,8 +156,10 @@ export function SuggestedPostCard({ post }: { post: SuggestedPost }) {
   return (
     <TouchableOpacity
       style={styles.suggestedCard}
-      onPress={() => {}}
+      onPress={() => router.push(`/post/${post.id}`)}
       activeOpacity={0.8}
+      accessibilityRole="button"
+      accessibilityLabel={`View recipe: ${post.caption || 'Untitled post'}`}
     >
       {imageUri ? (
         <Image source={{ uri: imageUri }} style={styles.suggestedCardImage} resizeMode="cover" />
@@ -403,51 +405,62 @@ export default function ConversationScreen() {
 
   const renderMessage = ({ item }: { item: ChatMessage }) => {
     const isUser = item.role === 'user';
+    const hasSuggestedPosts = !isUser && (item.suggestedPosts?.length ?? 0) > 0;
     return (
-      <View
-        style={[
-          styles.messageBubbleRow,
-          isUser ? styles.userRow : styles.assistantRow,
-        ]}
-      >
-        {!isUser && (
-          <View style={styles.avatarCircle}>
-            <Ionicons name="restaurant-outline" size={16} color={colors.primary} />
+      <View>
+        <View
+          style={[
+            styles.messageBubbleRow,
+            isUser ? styles.userRow : styles.assistantRow,
+          ]}
+        >
+          {!isUser && (
+            <View style={styles.avatarCircle}>
+              <Ionicons name="restaurant-outline" size={16} color={colors.primary} />
+            </View>
+          )}
+          <View style={isUser ? undefined : styles.assistantBubbleColumn}>
+            <View
+              style={[
+                styles.messageBubble,
+                isUser ? styles.userBubble : styles.assistantBubble,
+              ]}
+              accessibilityRole="text"
+              accessibilityLabel={`${isUser ? 'You' : 'Assistant'}: ${item.content}`}
+            >
+              {isUser ? (
+                <Text style={[styles.messageText, styles.userMessageText]}>
+                  {item.content}
+                </Text>
+              ) : (
+                renderAssistantContent(item.content)
+              )}
+              <Text style={[styles.timestamp, isUser && styles.userTimestamp]}>
+                {formatRelativeTime(item.created_at)}
+              </Text>
+            </View>
+            {!isUser && (
+              <TouchableOpacity
+                style={styles.copyButton}
+                onPress={() => handleCopy(item.content)}
+                accessibilityRole="button"
+                accessibilityLabel="Copy response to clipboard"
+                hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+              >
+                <Ionicons name="copy-outline" size={14} color={colors.textTertiary} />
+                <Text style={styles.copyButtonText}>Copy</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+        {hasSuggestedPosts && (
+          <View style={styles.suggestedPostsContainer}>
+            <Text style={styles.suggestedPostsLabel}>Suggested Recipes</Text>
+            {item.suggestedPosts!.map((post) => (
+              <SuggestedPostCard key={post.id} post={post} />
+            ))}
           </View>
         )}
-        <View style={isUser ? undefined : styles.assistantBubbleColumn}>
-          <View
-            style={[
-              styles.messageBubble,
-              isUser ? styles.userBubble : styles.assistantBubble,
-            ]}
-            accessibilityRole="text"
-            accessibilityLabel={`${isUser ? 'You' : 'Assistant'}: ${item.content}`}
-          >
-            {isUser ? (
-              <Text style={[styles.messageText, styles.userMessageText]}>
-                {item.content}
-              </Text>
-            ) : (
-              renderAssistantContent(item.content)
-            )}
-            <Text style={[styles.timestamp, isUser && styles.userTimestamp]}>
-              {formatRelativeTime(item.created_at)}
-            </Text>
-          </View>
-          {!isUser && (
-            <TouchableOpacity
-              style={styles.copyButton}
-              onPress={() => handleCopy(item.content)}
-              accessibilityRole="button"
-              accessibilityLabel="Copy response to clipboard"
-              hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
-            >
-              <Ionicons name="copy-outline" size={14} color={colors.textTertiary} />
-              <Text style={styles.copyButtonText}>Copy</Text>
-            </TouchableOpacity>
-          )}
-        </View>
       </View>
     );
   };
@@ -830,6 +843,12 @@ const styles = StyleSheet.create({
 
   // Suggested posts
   suggestedPostsContainer: { marginLeft: 38, marginTop: 6, gap: 8 },
+  suggestedPostsLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.primary,
+    marginBottom: 2,
+  },
   suggestedCard: {
     flexDirection: 'row', 
     alignItems: 'center', 
