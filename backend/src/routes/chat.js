@@ -453,7 +453,7 @@ router.post('/', requireAuth, async (req, res) => {
         conversation_id: convId,
         role: 'assistant',
         content: assistantContent,
-        suggested_posts: suggestedPosts.length > 0 ? suggestedPosts : [],
+        suggested_posts: suggestedPosts,
       })
       .select('id, role, content, created_at')
       .single();
@@ -664,7 +664,7 @@ router.post('/stream', requireAuth, async (req, res) => {
           conversation_id: convId,
           role: 'assistant',
           content: fullContent,
-          suggested_posts: suggestedPosts.length > 0 ? suggestedPosts : [],
+          suggested_posts: suggestedPosts,
         })
         .select('id, role, content, created_at, suggested_posts')
         .single();

@@ -405,7 +405,7 @@ export default function ConversationScreen() {
 
   const renderMessage = ({ item }: { item: ChatMessage }) => {
     const isUser = item.role === 'user';
-    const hasSuggestedPosts = !isUser && item.suggestedPosts && item.suggestedPosts.length > 0;
+    const hasSuggestedPosts = !isUser && (item.suggestedPosts?.length ?? 0) > 0;
     return (
       <View>
         <View
