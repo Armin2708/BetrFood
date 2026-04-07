@@ -149,8 +149,7 @@ export default function ChatHistoryScreen() {
           <Ionicons name="chevron-back" size={20} color={colors.textPrimary} />
         </TouchableOpacity>
         <View style={styles.headerCopy}>
-          <Text style={styles.title}>Recent chats</Text>
-          <Text style={styles.subtitle}>Jump back into earlier cooking conversations.</Text>
+          <Text style={styles.title}>History</Text>
         </View>
         <TouchableOpacity onPress={() => router.replace('/chat')} style={styles.iconButton}>
           <Ionicons name="create-outline" size={18} color={colors.textPrimary} />
@@ -254,7 +253,7 @@ export default function ChatHistoryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FBF8',
+    backgroundColor: colors.white,
   },
   centered: {
     flex: 1,
