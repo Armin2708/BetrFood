@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -10,12 +10,14 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Swipeable from 'react-native-gesture-handler/Swipeable';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { router } from 'expo-router';
 import { colors } from '../../../constants/theme';
 import {
   Conversation,
+  clearAllConversations,
   deleteConversation,
   fetchConversations,
   renameConversation,
@@ -43,6 +45,7 @@ export default function ChatHistoryScreen() {
   const [promptVisible, setPromptVisible] = useState(false);
   const [promptValue, setPromptValue] = useState('');
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
+  const swipeableRefs = useRef<Map<string, Swipeable | null>>(new Map());
 
   const loadConversations = useCallback(async () => {
     setLoading(true);
@@ -97,6 +100,7 @@ export default function ChatHistoryScreen() {
   }, [promptValue, selectedConversation]);
 
   const handleDelete = useCallback((conversation: Conversation) => {
+    swipeableRefs.current.get(conversation.id)?.close();
     Alert.alert('Delete chat', `Delete "${conversation.title}"?`, [
       { text: 'Cancel', style: 'cancel' },
       {
@@ -116,8 +120,30 @@ export default function ChatHistoryScreen() {
     ]);
   }, []);
 
+  const handleClearAll = useCallback(() => {
+    Alert.alert(
+      'Clear all chats',
+      'This will permanently delete all your chat sessions. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Clear All',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await clearAllConversations();
+              setConversations([]);
+            } catch {
+              Alert.alert('Failed', 'Unable to clear chats right now.');
+            }
+          },
+        },
+      ]
+    );
+  }, []);
+
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={[]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.iconButton}>
           <Ionicons name="chevron-back" size={20} color={colors.textPrimary} />
@@ -154,37 +180,58 @@ export default function ChatHistoryScreen() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
           renderItem={({ item }) => (
-            <Pressable
-              style={styles.card}
-              onPress={() =>
-                router.push({
-                  pathname: '/chat/[id]',
-                  params: { id: item.id, title: item.title },
-                })
-              }
+            <Swipeable
+              ref={(ref) => swipeableRefs.current.set(item.id, ref)}
+              renderRightActions={() => (
+                <TouchableOpacity
+                  style={styles.swipeDeleteAction}
+                  onPress={() => handleDelete(item)}
+                >
+                  <Ionicons name="trash-outline" size={20} color={colors.white} />
+                  <Text style={styles.swipeDeleteText}>Delete</Text>
+                </TouchableOpacity>
+              )}
+              rightThreshold={60}
+              overshootRight={false}
             >
-              <View style={styles.cardIcon}>
-                <Ionicons name="sparkles" size={16} color={colors.white} />
-              </View>
-              <View style={styles.cardBody}>
-                <Text style={styles.cardTitle} numberOfLines={1}>
-                  {item.title}
-                </Text>
-                {item.last_message_preview ? (
-                  <Text style={styles.cardPreview} numberOfLines={1}>
-                    {item.last_message_preview}
+              <Pressable
+                style={styles.card}
+                onPress={() =>
+                  router.push({
+                    pathname: '/chat/[id]',
+                    params: { id: item.id, title: item.title },
+                  })
+                }
+              >
+                <View style={styles.cardIcon}>
+                  <Ionicons name="sparkles" size={16} color={colors.white} />
+                </View>
+                <View style={styles.cardBody}>
+                  <Text style={styles.cardTitle} numberOfLines={1}>
+                    {item.title}
                   </Text>
-                ) : null}
-                <Text style={styles.cardMeta}>{formatRelativeTime(item.updated_at)}</Text>
-              </View>
-              <TouchableOpacity onPress={() => openRenamePrompt(item)} style={styles.inlineButton}>
-                <Ionicons name="pencil-outline" size={16} color={colors.textSecondary} />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => handleDelete(item)} style={styles.inlineButton}>
-                <Ionicons name="trash-outline" size={16} color={colors.textSecondary} />
-              </TouchableOpacity>
-            </Pressable>
+                  {item.last_message_preview ? (
+                    <Text style={styles.cardPreview} numberOfLines={1}>
+                      {item.last_message_preview}
+                    </Text>
+                  ) : null}
+                  <Text style={styles.cardMeta}>{formatRelativeTime(item.updated_at)}</Text>
+                </View>
+                <TouchableOpacity onPress={() => openRenamePrompt(item)} style={styles.inlineButton}>
+                  <Ionicons name="pencil-outline" size={16} color={colors.textSecondary} />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => handleDelete(item)} style={styles.inlineButton}>
+                  <Ionicons name="trash-outline" size={16} color={colors.textSecondary} />
+                </TouchableOpacity>
+              </Pressable>
+            </Swipeable>
           )}
+          ListFooterComponent={
+            <TouchableOpacity style={styles.clearAllButton} onPress={handleClearAll}>
+              <Ionicons name="trash-outline" size={16} color="#DC2626" />
+              <Text style={styles.clearAllText}>Clear all chats</Text>
+            </TouchableOpacity>
+          }
         />
       )}
 
@@ -295,6 +342,34 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#EEF5EF',
+  },
+  swipeDeleteAction: {
+    backgroundColor: '#DC2626',
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 80,
+    borderRadius: 18,
+    marginLeft: 8,
+    gap: 4,
+  },
+  swipeDeleteText: {
+    color: colors.white,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  clearAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 8,
+    marginBottom: 16,
+    paddingVertical: 12,
+  },
+  clearAllText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#DC2626',
   },
   emptyState: {
     flex: 1,
