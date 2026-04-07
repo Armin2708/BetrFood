@@ -17,6 +17,8 @@ const openai = process.env.OPENROUTER_API_KEY
     })
   : null;
 
+const CHAT_MODEL = process.env.OPENROUTER_MODEL || 'google/gemini-2.0-flash-001';
+
 const BASE_SYSTEM_PROMPT =
   "You are BetrFood's AI cooking assistant. You help users with food-related questions including recipes, cooking techniques, ingredient substitutions, meal planning, nutrition information, and food storage tips. Be friendly, concise, and helpful. If asked about non-food topics, gently redirect to food-related assistance.";
 
@@ -25,8 +27,8 @@ When suggesting recipes, always format each recipe as follows:
 
 **[Recipe Name]**
 [1-2 sentence description]
-✅ Pantry items used: [comma-separated list]
-🛒 Extra items needed: [comma-separated list, or "None" if pantry covers it]
+- **Pantry items used:** [comma-separated list]
+- **Extra items needed:** [comma-separated list, or "None" if pantry covers it]
 
 Suggest 2-3 recipes per response unless the user asks for more or fewer. After listing recipes, offer to give detailed instructions for any of them.`;
 
@@ -227,6 +229,52 @@ async function generateTitle(message) {
   return truncated.length < message.trim().length ? truncated + '...' : truncated;
 }
 
+function sanitizeAttachments(attachments) {
+  if (!Array.isArray(attachments)) return [];
+
+  return attachments
+    .filter((attachment) => attachment && attachment.type === 'image' && typeof attachment.dataUrl === 'string')
+    .slice(0, 1)
+    .map((attachment) => ({
+      type: 'image',
+      dataUrl: attachment.dataUrl,
+      mimeType: attachment.mimeType || 'image/jpeg',
+    }));
+}
+
+function buildUserMessageContent(message, attachments = []) {
+  if (!attachments.length) {
+    return message.trim();
+  }
+
+  const text = message.trim() || 'Please help with this food image.';
+
+  return [
+    { type: 'text', text },
+    ...attachments.map((attachment) => ({
+      type: 'image_url',
+      image_url: { url: attachment.dataUrl },
+    })),
+  ];
+}
+
+async function syncConversationMetadata(conversationId, message, existingMessageCount = 0) {
+  const nextUpdatedAt = new Date().toISOString();
+
+  if (!existingMessageCount || existingMessageCount <= 1) {
+    await supabase
+      .from('chat_conversations')
+      .update({ title: await generateTitle(message.trim()), updated_at: nextUpdatedAt })
+      .eq('id', conversationId);
+    return;
+  }
+
+  await supabase
+    .from('chat_conversations')
+    .update({ updated_at: nextUpdatedAt })
+    .eq('id', conversationId);
+}
+
 // Map a raw chat_message DB row to the API response shape (snake_case → camelCase)
 function formatChatMessage(m) {
   const { suggested_posts, ...rest } = m;
@@ -321,10 +369,12 @@ router.delete('/conversations/:id', requireAuth, async (req, res) => {
 // POST /api/chat — send a message, get AI response
 router.post('/', requireAuth, async (req, res) => {
   const userId = getUserId(req);
-  const { message, postContext, conversationId, conversationTitle } = req.body;
+  const { message, postContext, conversationId, conversationTitle, attachments } = req.body;
+  const normalizedAttachments = sanitizeAttachments(attachments);
+  const textMessage = typeof message === 'string' ? message.trim() : '';
 
-  if (!message || typeof message !== 'string' || !message.trim()) {
-    return res.status(400).json({ error: 'message is required' });
+  if (!textMessage && normalizedAttachments.length === 0) {
+    return res.status(400).json({ error: 'message or attachment is required' });
   }
 
   if (!openai) {
@@ -337,7 +387,7 @@ router.post('/', requireAuth, async (req, res) => {
     if (!convId) {
       const { data: newConv, error: convErr } = await supabase
         .from('chat_conversations')
-        .insert({ user_id: userId, title: conversationTitle || await generateTitle(message.trim()) })
+        .insert({ user_id: userId, title: conversationTitle || await generateTitle(textMessage || 'Image question') })
         .select('id')
         .single();
       if (convErr) throw convErr;
@@ -347,7 +397,12 @@ router.post('/', requireAuth, async (req, res) => {
     // Save user message
     await supabase
       .from('chat_messages')
-      .insert({ user_id: userId, conversation_id: convId, role: 'user', content: message.trim() });
+      .insert({
+        user_id: userId,
+        conversation_id: convId,
+        role: 'user',
+        content: textMessage || '[Image attached]',
+      });
 
     // Update conversation title if first message
     const { count: msgCount } = await supabase
@@ -355,17 +410,7 @@ router.post('/', requireAuth, async (req, res) => {
       .select('*', { count: 'exact', head: true })
       .eq('conversation_id', convId);
 
-    if (!msgCount || msgCount <= 1) {
-      await supabase
-        .from('chat_conversations')
-        .update({ title: await generateTitle(message.trim()), updated_at: new Date().toISOString() })
-        .eq('id', convId);
-    } else {
-      await supabase
-        .from('chat_conversations')
-        .update({ updated_at: new Date().toISOString() })
-        .eq('id', convId);
-    }
+    await syncConversationMetadata(convId, textMessage || 'Image question', msgCount);
 
     // Fetch conversation history for context
     const { data: history } = await supabase
@@ -382,8 +427,8 @@ router.post('/', requireAuth, async (req, res) => {
 
     // Check if pantry query with empty pantry — respond directly without AI
     // But skip this if the user is asking for post suggestions
-    const isPantryQuery = hasPantryIntent(message.trim());
-    const isPostSuggestionQuery = hasPostSuggestionIntent(message.trim());
+    const isPantryQuery = hasPantryIntent(textMessage);
+    const isPostSuggestionQuery = hasPostSuggestionIntent(textMessage);
     if (isPantryQuery && !postContext && !isPostSuggestionQuery) {
       const { count: pantryCount } = await supabase
         .from('pantry_items')
@@ -425,7 +470,7 @@ router.post('/', requireAuth, async (req, res) => {
     // Check if user wants post suggestions from BetrFood
     let suggestedPosts = [];
     if (isPostSuggestionQuery && !postContext) {
-      const keywords = extractSearchKeywords(message.trim());
+      const keywords = extractSearchKeywords(textMessage);
       suggestedPosts = await searchPosts(keywords, 3);
       if (suggestedPosts.length > 0) {
         const postList = suggestedPosts.map((p, i) =>
@@ -435,12 +480,20 @@ router.post('/', requireAuth, async (req, res) => {
       }
     }
 
+    const aiMessages = [...conversationMessages];
+    if (normalizedAttachments.length && aiMessages.length > 0) {
+      aiMessages[aiMessages.length - 1] = {
+        role: 'user',
+        content: buildUserMessageContent(textMessage, normalizedAttachments),
+      };
+    }
+
     const response = await openai.chat.completions.create({
-      model: 'google/gemini-2.0-flash-001',
+      model: CHAT_MODEL,
       max_tokens: 1024,
       messages: [
         { role: 'system', content: systemPrompt },
-        ...conversationMessages,
+        ...aiMessages,
       ],
     });
 
@@ -507,7 +560,7 @@ router.get('/pantry-suggestions', requireAuth, async (req, res) => {
     const systemPrompt = await buildSystemPrompt(userId, true);
 
     const response = await openai.chat.completions.create({
-      model: 'google/gemini-2.0-flash-001',
+      model: CHAT_MODEL,
       max_tokens: 1024,
       messages: [
         { role: 'system', content: systemPrompt },
@@ -545,10 +598,12 @@ router.get('/pantry-suggestions', requireAuth, async (req, res) => {
 // POST /api/chat/stream — streaming AI response via SSE
 router.post('/stream', requireAuth, async (req, res) => {
   const userId = getUserId(req);
-  const { message, conversationId, conversationTitle, postContext } = req.body;
+  const { message, conversationId, conversationTitle, postContext, attachments } = req.body;
+  const normalizedAttachments = sanitizeAttachments(attachments);
+  const textMessage = typeof message === 'string' ? message.trim() : '';
 
-  if (!message || typeof message !== 'string' || !message.trim()) {
-    return res.status(400).json({ error: 'message is required' });
+  if (!textMessage && normalizedAttachments.length === 0) {
+    return res.status(400).json({ error: 'message or attachment is required' });
   }
 
   if (!openai) {
@@ -569,7 +624,7 @@ router.post('/stream', requireAuth, async (req, res) => {
     if (!convId) {
       const { data: newConv, error: convErr } = await supabase
         .from('chat_conversations')
-        .insert({ user_id: userId, title: conversationTitle || await generateTitle(message.trim()) })
+        .insert({ user_id: userId, title: conversationTitle || await generateTitle(textMessage || 'Image question') })
         .select('id')
         .single();
       if (convErr) throw convErr;
@@ -579,12 +634,19 @@ router.post('/stream', requireAuth, async (req, res) => {
     // Save user message
     await supabase
       .from('chat_messages')
-      .insert({ user_id: userId, conversation_id: convId, role: 'user', content: message.trim() });
+      .insert({
+        user_id: userId,
+        conversation_id: convId,
+        role: 'user',
+        content: textMessage || '[Image attached]',
+      });
 
-    await supabase
-      .from('chat_conversations')
-      .update({ updated_at: new Date().toISOString() })
-      .eq('id', convId);
+    const { count: msgCount } = await supabase
+      .from('chat_messages')
+      .select('*', { count: 'exact', head: true })
+      .eq('conversation_id', convId);
+
+    await syncConversationMetadata(convId, textMessage || 'Image question', msgCount);
 
     // Fetch conversation history for context
     const { data: history } = await supabase
@@ -599,8 +661,8 @@ router.post('/stream', requireAuth, async (req, res) => {
       content: msg.content,
     }));
 
-    const isPantryQuery = hasPantryIntent(message.trim());
-    const isPostSuggestionQuery = hasPostSuggestionIntent(message.trim());
+    const isPantryQuery = hasPantryIntent(textMessage);
+    const isPostSuggestionQuery = hasPostSuggestionIntent(textMessage);
     let systemPrompt = await buildSystemPrompt(userId, isPantryQuery, isPostSuggestionQuery);
 
     if (postContext) {
@@ -624,7 +686,7 @@ router.post('/stream', requireAuth, async (req, res) => {
     // Search for relevant BetrFood posts if user is asking for post suggestions
     let suggestedPosts = [];
     if (isPostSuggestionQuery && !postContext) {
-      const keywords = extractSearchKeywords(message.trim());
+      const keywords = extractSearchKeywords(textMessage);
       suggestedPosts = await searchPosts(keywords, 3);
       if (suggestedPosts.length > 0) {
         const postList = suggestedPosts.map((p, i) =>
@@ -634,13 +696,21 @@ router.post('/stream', requireAuth, async (req, res) => {
       }
     }
 
+    const aiMessages = [...conversationMessages];
+    if (normalizedAttachments.length && aiMessages.length > 0) {
+      aiMessages[aiMessages.length - 1] = {
+        role: 'user',
+        content: buildUserMessageContent(textMessage, normalizedAttachments),
+      };
+    }
+
     const stream = await openai.chat.completions.create({
-      model: 'google/gemini-2.0-flash-001',
+      model: CHAT_MODEL,
       max_tokens: 1024,
       stream: true,
       messages: [
         { role: 'system', content: systemPrompt },
-        ...conversationMessages,
+        ...aiMessages,
       ],
     });
 

@@ -13,8 +13,17 @@ export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   created_at: string;
+  status?: 'sending' | 'sent' | 'error';
   suggestedPosts?: SuggestedPost[];
   conversation_id?: string;
+  attachments?: ChatAttachment[];
+}
+
+export interface ChatAttachment {
+  type: 'image';
+  uri: string;
+  mimeType?: string;
+  dataUrl?: string;
 }
 
 export interface Conversation {
@@ -85,11 +94,23 @@ export async function renameConversation(id: string, title: string): Promise<Con
   return response.json();
 }
 
-export async function sendChatMessage(message: string, conversationId?: string, conversationTitle?: string, postContext?: PostContext): Promise<ChatMessage & { conversationId: string }> {
+export async function sendChatMessage(
+  message: string,
+  conversationId?: string,
+  conversationTitle?: string,
+  postContext?: PostContext,
+  attachments?: ChatAttachment[]
+): Promise<ChatMessage & { conversationId: string }> {
   const response = await fetch(`${API_BASE_URL}/api/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
-    body: JSON.stringify({ message, conversationId, conversationTitle, postContext: postContext || null }),
+    body: JSON.stringify({
+      message,
+      conversationId,
+      conversationTitle,
+      postContext: postContext || null,
+      attachments: attachments || [],
+    }),
   });
   await handleResponse(response);
   return response.json();
@@ -125,7 +146,8 @@ export function streamChatMessage(
   onError: (err: string) => void,
   conversationId?: string,
   conversationTitle?: string,
-  postContext?: PostContext
+  postContext?: PostContext,
+  attachments?: ChatAttachment[]
 ): () => void {
   let xhr: XMLHttpRequest | null = null;
   let cancelled = false;
@@ -199,6 +221,7 @@ export function streamChatMessage(
       conversationId: conversationId || undefined,
       conversationTitle: conversationTitle || undefined,
       postContext: postContext || null,
+      attachments: attachments || [],
     }));
   });
 
