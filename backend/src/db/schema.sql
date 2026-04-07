@@ -272,8 +272,13 @@ CREATE TABLE IF NOT EXISTS chat_messages (
   conversation_id UUID REFERENCES chat_conversations(id) ON DELETE CASCADE,
   role TEXT NOT NULL CHECK (role IN ('user', 'assistant')),
   content TEXT NOT NULL,
+  suggested_posts JSONB DEFAULT '[]',
+  attachments JSONB DEFAULT '[]',
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+-- Add columns if the table already exists
+ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS suggested_posts JSONB DEFAULT '[]';
+ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS attachments JSONB DEFAULT '[]';
 CREATE INDEX IF NOT EXISTS idx_chat_messages_user_id ON chat_messages(user_id);
 CREATE INDEX IF NOT EXISTS idx_chat_messages_conversation_id ON chat_messages(conversation_id);
 

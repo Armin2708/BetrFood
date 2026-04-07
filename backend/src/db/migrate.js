@@ -52,6 +52,11 @@ async function migrate() {
       );
       CREATE INDEX IF NOT EXISTS idx_user_follows_follower ON user_follows(follower_id);
       CREATE INDEX IF NOT EXISTS idx_user_follows_following ON user_follows(following_id);
+
+      -- Chat columns added for AI chat feature
+      ALTER TABLE chat_conversations ADD COLUMN IF NOT EXISTS last_message_preview TEXT;
+      ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS suggested_posts JSONB DEFAULT '[]';
+      ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS attachments JSONB DEFAULT '[]';
     `
   });
 
