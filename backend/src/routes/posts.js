@@ -17,6 +17,13 @@ const {
   mapPost,
   getExcludedUserIds,
 } = require('../utils/enrichment');
+const {
+  calculatePostRelevanceScore,
+  getUserPreferenceVector,
+} = require('../utils/recommendationEngine');
+const {
+  getNegativeFeedbackPostIds,
+} = require('../db/interactions');
 
 // Compress video to 720p MP4
 function compressVideo(inputPath, outputPath) {
@@ -193,7 +200,47 @@ router.get('/', optionalAuth, async (req, res) => {
     const withRecipes = await enrichPostsWithRecipes(withImages);
     const mapped = withRecipes.map(mapPost);
 
-    res.json({ posts: mapped, nextCursor, hasMore });
+    // Apply recommendation scoring for authenticated users
+    let finalPosts = mapped;
+    if (req.userId && mapped.length > 0) {
+      try {
+        // Get user's preference vector
+        const userPrefVector = await getUserPreferenceVector(req.userId);
+
+        // Get posts user marked as "not interested"
+        const notInterestedPostIds = await getNegativeFeedbackPostIds(req.userId);
+        const notInterestedSet = new Set(notInterestedPostIds);
+
+        // Score each post
+        finalPosts = mapped.map(post => ({
+          ...post,
+          recommendationScore: calculatePostRelevanceScore(
+            {
+              ...post,
+              hasNegativeFeedback: notInterestedSet.has(post.id),
+            },
+            userPrefVector
+          ),
+        }));
+
+        // Sort by recommendation score (descending), then by recency as tiebreaker
+        finalPosts.sort((a, b) => {
+          if (Math.abs(a.recommendationScore - b.recommendationScore) > 0.01) {
+            return b.recommendationScore - a.recommendationScore;
+          }
+          // Same score - use recency as tiebreaker
+          return new Date(b.createdAt) - new Date(a.createdAt);
+        });
+
+        // Remove recommendation score from response (internal use only)
+        finalPosts = finalPosts.map(({ recommendationScore, ...post }) => post);
+      } catch (err) {
+        console.warn('Recommendation scoring failed, falling back to chronological:', err.message);
+        // On error, fall back to chronological
+      }
+    }
+
+    res.json({ posts: finalPosts, nextCursor, hasMore });
   } catch (error) {
     console.error('Error fetching posts:', error);
     res.status(500).json({ error: 'Failed to fetch posts.' });

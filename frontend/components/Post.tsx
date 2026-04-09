@@ -3,8 +3,9 @@ import SaveCollectionModal from "./SaveCollectionModal";
 import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
 import { Collection, useCollections } from "../context/CollectionsContext";
-import { Tag, Recipe, Comment, deletePost, fetchRecipe, likePost, unlikePost, reportContent, fetchComments, createComment, deleteComment, checkSaveStatus, blockUser, unblockUser, muteUser, unmuteUser, checkBlockStatus, checkMuteStatus } from '../services/api';
+import { Tag, Recipe, Comment, deletePost, fetchRecipe, likePost, unlikePost, reportContent, fetchComments, createComment, deleteComment, checkSaveStatus, blockUser, unblockUser, muteUser, unmuteUser, checkBlockStatus, checkMuteStatus, markPostNotInterested } from '../services/api';
 import { feedEvents, collectionEvents } from '../utils/feedEvents';
+import { usePostViewTracking } from '../hooks/usePostViewTracking';
 import TagDisplay from './TagDisplay';
 import RecipeDisplay from './RecipeDisplay';
 import { useVideoPlayer, VideoView } from 'expo-video';
@@ -111,6 +112,7 @@ export default function Post({
   const { user } = useContext(AuthContext);
   const [isBlocked, setIsBlocked] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
+  const [isNotInterested, setIsNotInterested] = useState(false);
   const [confirmModal, setConfirmModal] = useState<{
     visible: boolean;
     title: string;
@@ -144,6 +146,9 @@ export default function Post({
       fetchRecipe(id).then(r => { if (r) setRecipe(r); }).catch(() => {});
     }
   }, [id, hasRecipe]);
+
+  // Track post view duration for recommendation engine
+  usePostViewTracking(id);
 
   const loadComments = async (offset: number) => {
     if (!id) return;
@@ -565,6 +570,35 @@ export default function Post({
     }, 400);
   };
 
+  const handleMarkNotInterested = () => {
+    if (!id) return;
+    setMenuModalShown(false);
+    setMenuModalVisible(false);
+    setTimeout(() => {
+      showConfirm(
+        'Not Interested',
+        'We will show you fewer posts like this.',
+        'Continue',
+        async () => {
+          setConfirmModal(prev => ({ ...prev, visible: false }));
+          try {
+            await markPostNotInterested(id);
+            setIsNotInterested(true);
+            feedEvents.emitRefreshNeeded();
+          } catch (error: any) {
+            showConfirm(
+              'Error',
+              error.message || 'Failed to mark post as not interested.',
+              'OK',
+              () => setConfirmModal(prev => ({ ...prev, visible: false }))
+            );
+          }
+        },
+        '#F97316' // Orange color
+      );
+    }, 400);
+  };
+
   const handleOpenShare = () => {
     setShareModalShown(true);
     setShareModalVisible(true);
@@ -965,6 +999,19 @@ export default function Post({
                 </View>
                 <Text style={styles.shareOptionText}>Report</Text>
               </TouchableOpacity>
+
+              {!isOwner && (
+                <TouchableOpacity
+                  style={styles.shareOption}
+                  onPress={() => { handleCloseMenu(); handleMarkNotInterested(); }}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.shareOptionIcon, { backgroundColor: '#FFEDD5' }]}>
+                    <Ionicons name="eye-off-outline" size={22} color="#F97316" />
+                  </View>
+                  <Text style={[styles.shareOptionText, { color: '#F97316' }]}>Not Interested</Text>
+                </TouchableOpacity>
+              )}
 
               {!isOwner && userId && (
                 <TouchableOpacity

@@ -21,6 +21,8 @@ const preferencesRouter = require("./routes/preferences");
 const blocksRouter = require("./routes/blocks");
 const notificationsRouter = require("./routes/notifications");
 const chatRouter = require('./routes/chat');
+const interactionsRouter = require('./routes/interactions');
+const { initializeScheduler } = require('./jobs/scheduler');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -85,6 +87,7 @@ app.use('/api/pantry', pantryRouter);
 app.use("/api/preferences", preferencesRouter);
 app.use("/api/notifications", notificationsRouter);
 app.use('/api/chat', chatRouter);
+app.use('/api/interactions', interactionsRouter);
 
 // Global error handler — catches multer errors and other unhandled middleware errors
 app.use((err, req, res, next) => {
@@ -97,6 +100,9 @@ app.use((err, req, res, next) => {
   }
   res.status(500).json({ error: err.message || 'Internal server error.' });
 });
+
+// Initialize job scheduler (preferences vector updates, etc)
+initializeScheduler();
 
 app.listen(PORT, () => {
   console.log(`BetrFood backend listening on port ${PORT}`);
