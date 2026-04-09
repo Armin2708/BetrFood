@@ -9,17 +9,23 @@ import {
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { AuthContext } from '../../../../context/AuthenticationContext';
 import { fetchFollowing, followUser, unfollowUser, type FollowingUser } from '../../../../services/api/follows';
 
 type UserRowProps = {
   user: FollowingUser;
   onToggleFollow: (id: string) => void;
+  onProfilePress: (userId: string) => void;
 };
 
-const UserRow: React.FC<UserRowProps> = ({ user, onToggleFollow }) => {
+const UserRow: React.FC<UserRowProps> = ({ user, onToggleFollow, onProfilePress }) => {
   return (
-    <View style={styles.row}>
+    <TouchableOpacity 
+      style={styles.row}
+      onPress={() => onProfilePress(user.id)}
+      activeOpacity={0.7}
+    >
       <Image source={{ uri: user.avatar }} style={styles.avatar} />
 
       <View style={styles.info}>
@@ -43,11 +49,12 @@ const UserRow: React.FC<UserRowProps> = ({ user, onToggleFollow }) => {
           {user.isFollowing ? 'Following' : 'Follow'}
         </Text>
       </TouchableOpacity>
-    </View>
+    </TouchableOpacity>
   );
 };
 
 export default function FollowingScreen() {
+  const router = useRouter();
   const { user } = useContext(AuthContext);
   const [users, setUsers] = useState<FollowingUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -102,6 +109,10 @@ export default function FollowingScreen() {
     }
   };
 
+  const handleProfilePress = (userId: string) => {
+    router.push(`/feeds/user-profile?userId=${userId}` as any);
+  };
+
   const onRefresh = async () => {
     setRefreshing(true);
     await loadFollowing();
@@ -125,7 +136,11 @@ export default function FollowingScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
         renderItem={({ item }) => (
-          <UserRow user={item} onToggleFollow={toggleFollow} />
+          <UserRow 
+            user={item} 
+            onToggleFollow={toggleFollow}
+            onProfilePress={handleProfilePress}
+          />
         )}
         ListEmptyComponent={
           <View style={styles.centered}>

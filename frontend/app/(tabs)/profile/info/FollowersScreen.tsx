@@ -9,20 +9,27 @@ import {
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { AuthContext } from '../../../../context/AuthenticationContext';
 import { fetchFollowers, followUser, unfollowUser, type FollowerUser } from '../../../../services/api/follows';
 
 type FollowerRowProps = {
   follower: FollowerUser;
   onToggleFollowBack: (id: string) => void;
+  onProfilePress: (userId: string) => void;
 };
 
 const FollowerRow: React.FC<FollowerRowProps> = ({
   follower,
   onToggleFollowBack,
+  onProfilePress,
 }) => {
   return (
-    <View style={styles.row}>
+    <TouchableOpacity 
+      style={styles.row}
+      onPress={() => onProfilePress(follower.id)}
+      activeOpacity={0.7}
+    >
       <Image source={{ uri: follower.avatar }} style={styles.avatar} />
 
       <View style={styles.info}>
@@ -46,11 +53,12 @@ const FollowerRow: React.FC<FollowerRowProps> = ({
           {follower.isFollowingBack ? 'Following' : 'Follow Back'}
         </Text>
       </TouchableOpacity>
-    </View>
+    </TouchableOpacity>
   );
 };
 
 export default function FollowersScreen() {
+  const router = useRouter();
   const { user } = useContext(AuthContext);
   const [followers, setFollowers] = useState<FollowerUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -105,6 +113,10 @@ export default function FollowersScreen() {
     }
   };
 
+  const handleProfilePress = (userId: string) => {
+    router.push(`/feeds/user-profile?userId=${userId}` as any);
+  };
+
   const onRefresh = async () => {
     setRefreshing(true);
     await loadFollowers();
@@ -131,6 +143,7 @@ export default function FollowersScreen() {
           <FollowerRow
             follower={item}
             onToggleFollowBack={toggleFollowBack}
+            onProfilePress={handleProfilePress}
           />
         )}
         ListEmptyComponent={
