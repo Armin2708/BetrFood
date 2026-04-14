@@ -39,6 +39,12 @@ export interface SearchPostsResponse {
   limit: number;
 }
 
+export interface SearchFilters {
+  tagIds?: number[];
+  difficulty?: 'easy' | 'medium' | 'hard' | null;
+  cookTime?: number | null; // max minutes
+}
+
 export async function fetchPosts(cursor?: string | null, limit: number = 10): Promise<PaginatedResponse> {
   const params = new URLSearchParams({ limit: String(limit) });
   if (cursor) params.set('cursor', cursor);
@@ -126,7 +132,6 @@ export async function createPostApi(
   }
 
   formData.append('caption', caption);
-
   if (recipe) {
     formData.append('recipe', JSON.stringify(recipe));
   }
@@ -209,13 +214,25 @@ export async function fetchFollowingFeed(cursor?: string | null, limit: number =
 export async function searchPosts(
   query: string,
   limit: number = 20,
-  offset: number = 0
+  offset: number = 0,
+  filters: SearchFilters = {}
 ): Promise<SearchPostsResponse> {
   const params = new URLSearchParams({
     q: query,
     limit: String(limit),
     offset: String(offset),
   });
+
+  if (filters.tagIds && filters.tagIds.length > 0) {
+    params.set('tagIds', filters.tagIds.join(','));
+  }
+  if (filters.difficulty) {
+    params.set('difficulty', filters.difficulty);
+  }
+  if (filters.cookTime != null) {
+    params.set('cookTime', String(filters.cookTime));
+  }
+
   const response = await fetch(`${API_BASE_URL}/api/posts/search?${params}`, {
     headers: await authHeaders(),
   });
