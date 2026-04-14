@@ -30,14 +30,14 @@ function compressVideo(inputPath, outputPath) {
   return new Promise((resolve, reject) => {
     ffmpeg(inputPath)
       .outputOptions([
-        '-vf', 'scale=-2:720',        // 720p height, auto width (divisible by 2)
-        '-c:v', 'libx264',            // H.264 codec
-        '-preset', 'fast',            // Encoding speed
-        '-crf', '28',                 // Quality (lower = better, 28 = good compression)
-        '-c:a', 'aac',               // AAC audio
-        '-b:a', '128k',              // Audio bitrate
-        '-movflags', '+faststart',   // Enable streaming
-        '-y',                         // Overwrite output
+        '-vf', 'scale=-2:720',
+        '-c:v', 'libx264',
+        '-preset', 'fast',
+        '-crf', '28',
+        '-c:a', 'aac',
+        '-b:a', '128k',
+        '-movflags', '+faststart',
+        '-y',
       ])
       .output(outputPath)
       .on('end', () => resolve())
@@ -69,7 +69,6 @@ async function deleteFromSupabaseStorage(urlOrPath) {
     if (urlOrPath.includes('/post-media/')) {
       filename = urlOrPath.split('/post-media/').pop();
     } else if (urlOrPath.startsWith('/uploads/')) {
-      // Legacy local path — nothing to delete from storage
       return;
     }
     await supabase.storage.from('post-media').remove([filename]);
@@ -100,14 +99,12 @@ const allowedVideos = /mp4|mov|quicktime|webm/;
 
 const upload = multer({
   storage,
-  limits: { fileSize: 100 * 1024 * 1024 }, // 100MB for video support
+  limits: { fileSize: 100 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase().replace('.', '');
     const mimeSub = file.mimetype.split('/')[1];
-
     const isImage = allowedImages.test(mimeSub) && (ext ? allowedImages.test(ext) : true);
     const isVideo = file.mimetype.startsWith('video/') && (ext ? allowedVideos.test(ext) : true);
-
     if (isImage || isVideo) {
       cb(null, true);
     } else {
@@ -144,13 +141,11 @@ router.get('/', optionalAuth, async (req, res) => {
     const { data: posts, error } = await query;
     if (error) throw error;
 
-    // Filter out posts from blocked and muted users
     const excludedIds = req.userId ? await getExcludedUserIds(req.userId) : new Set();
     let filteredPosts = excludedIds.size > 0
       ? posts.filter(p => !excludedIds.has(p.user_id))
       : posts;
 
-    // Filter out posts from private profiles that the current user does not follow
     if (filteredPosts.length > 0) {
       const postUserIds = [...new Set(filteredPosts.map(p => p.user_id))];
 
@@ -187,7 +182,6 @@ router.get('/', optionalAuth, async (req, res) => {
       ? resultPosts[resultPosts.length - 1].id
       : null;
 
-    // Enrich with profile data, tags, comment counts, likes, images, and recipes
     const enriched = await enrichPostsWithProfiles(resultPosts);
     const withTags = await enrichPostsWithTags(enriched);
     const withCounts = await enrichPostsWithCommentCounts(withTags);
@@ -196,22 +190,17 @@ router.get('/', optionalAuth, async (req, res) => {
     const withRecipes = await enrichPostsWithRecipes(withImages);
     const mapped = withRecipes.map(mapPost);
 
-    // Apply recommendation scoring for authenticated users
     let finalPosts = mapped;
     if (req.userId && mapped.length > 0) {
       try {
         const userPrefVector = await getUserPreferenceVector(req.userId);
-
         const notInterestedPostIds = await getNegativeFeedbackPostIds(req.userId);
         const notInterestedSet = new Set(notInterestedPostIds);
 
         finalPosts = mapped.map(post => ({
           ...post,
           recommendationScore: calculatePostRelevanceScore(
-            {
-              ...post,
-              hasNegativeFeedback: notInterestedSet.has(post.id),
-            },
+            { ...post, hasNegativeFeedback: notInterestedSet.has(post.id) },
             userPrefVector
           ),
         }));
@@ -236,7 +225,14 @@ router.get('/', optionalAuth, async (req, res) => {
   }
 });
 
-// GET /api/posts/search?q=chicken+pasta&limit=20&offset=0
+// GET /api/posts/search
+// Query params:
+//   q          - required, search keywords
+//   limit      - default 20, max 50
+//   offset     - default 0
+//   tagIds     - comma-separated tag IDs (e.g. "1,3,5")
+//   difficulty - "easy" | "medium" | "hard"
+//   cookTime   - max cook time in minutes (e.g. "30")
 router.get('/search', optionalAuth, async (req, res) => {
   try {
     const q = (req.query.q || '').trim();
@@ -247,19 +243,93 @@ router.get('/search', optionalAuth, async (req, res) => {
     const limit = Math.min(Math.max(parseInt(req.query.limit) || 20, 1), 50);
     const offset = Math.max(parseInt(req.query.offset) || 0, 0);
 
-    const { data: posts, error } = await supabase.rpc('search_posts', {
+    // Parse filter params
+    const tagIds = req.query.tagIds
+      ? req.query.tagIds.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id))
+      : [];
+    const difficulty = req.query.difficulty || null;
+    const cookTime = req.query.cookTime ? parseInt(req.query.cookTime) : null;
+
+    // Validate difficulty value
+    const validDifficulties = ['easy', 'medium', 'hard'];
+    if (difficulty && !validDifficulties.includes(difficulty)) {
+      return res.status(400).json({ error: 'difficulty must be easy, medium, or hard.' });
+    }
+
+    // Run full-text search via RPC — fetch a larger batch so post-filter has enough to work with
+    const { data: searchResults, error: searchError } = await supabase.rpc('search_posts', {
       search_query: q,
-      result_limit: limit,
+      result_limit: 200,
       result_offset: offset,
     });
 
-    if (error) throw error;
+    if (searchError) throw searchError;
+
+    let posts = searchResults || [];
+
+    // Apply tag filter — keep only posts that have ALL selected tags
+    if (tagIds.length > 0) {
+      const postIds = posts.map(p => p.id);
+      if (postIds.length > 0) {
+        const { data: postTagRows, error: ptError } = await supabase
+          .from('post_tags')
+          .select('post_id, tag_id')
+          .in('post_id', postIds)
+          .in('tag_id', tagIds);
+
+        if (ptError) throw ptError;
+
+        // Group matched tag counts per post
+        const matchCounts = {};
+        for (const row of (postTagRows || [])) {
+          if (!matchCounts[row.post_id]) matchCounts[row.post_id] = new Set();
+          matchCounts[row.post_id].add(row.tag_id);
+        }
+
+        // Keep only posts that have ALL requested tags
+        const validPostIds = new Set(
+          Object.entries(matchCounts)
+            .filter(([, tags]) => tags.size === tagIds.length)
+            .map(([postId]) => postId)
+        );
+
+        posts = posts.filter(p => validPostIds.has(p.id));
+      } else {
+        posts = [];
+      }
+    }
+
+    // Apply difficulty and cookTime filters via recipes table
+    if (difficulty || cookTime !== null) {
+      const postIds = posts.map(p => p.id);
+      if (postIds.length > 0) {
+        let recipeQuery = supabase
+          .from('recipes')
+          .select('post_id, difficulty, cook_time')
+          .in('post_id', postIds);
+
+        if (difficulty) recipeQuery = recipeQuery.eq('difficulty', difficulty);
+        if (cookTime !== null) recipeQuery = recipeQuery.lte('cook_time', cookTime);
+
+        const { data: matchingRecipes, error: recipeError } = await recipeQuery;
+        if (recipeError) throw recipeError;
+
+        const validPostIds = new Set((matchingRecipes || []).map(r => r.post_id));
+        posts = posts.filter(p => validPostIds.has(p.id));
+      } else {
+        posts = [];
+      }
+    }
+
+    // Apply pagination after filtering
+    const totalFiltered = posts.length;
+    const paginated = posts.slice(0, limit);
 
     // Filter out posts from blocked/muted users
     const excludedIds = req.userId ? await getExcludedUserIds(req.userId) : new Set();
     let filteredPosts = excludedIds.size > 0
-      ? posts.filter(p => !excludedIds.has(p.user_id))
-      : posts;
+      ? paginated.filter(p => !excludedIds.has(p.user_id))
+      : paginated;
 
     // Filter out private-profile posts the user can't see
     if (filteredPosts.length > 0) {
@@ -290,7 +360,7 @@ router.get('/search', optionalAuth, async (req, res) => {
       }
     }
 
-    // Enrich posts the same way as the main feed
+    // Enrich posts
     const enriched = await enrichPostsWithProfiles(filteredPosts);
     const withTags = await enrichPostsWithTags(enriched);
     const withCounts = await enrichPostsWithCommentCounts(withTags);
@@ -302,7 +372,7 @@ router.get('/search', optionalAuth, async (req, res) => {
     res.json({
       posts: mapped,
       total: mapped.length,
-      hasMore: mapped.length === limit,
+      hasMore: totalFiltered > limit,
       offset,
       limit,
     });
@@ -523,7 +593,6 @@ router.post('/', requireAuth, upload.array('images', 10), async (req, res) => {
           mediaPaths.push(publicUrl);
         } catch (err) {
           console.error('Video processing/upload failed:', err.message);
-          // Fallback: try uploading original
           try {
             const publicUrl = await uploadToSupabaseStorage(file.path, file.filename, file.mimetype);
             fs.unlinkSync(file.path);
