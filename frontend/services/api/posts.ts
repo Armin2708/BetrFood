@@ -31,6 +31,14 @@ export interface PaginatedResponse {
   hasMore: boolean;
 }
 
+export interface SearchPostsResponse {
+  posts: Post[];
+  total: number;
+  hasMore: boolean;
+  offset: number;
+  limit: number;
+}
+
 export async function fetchPosts(cursor?: string | null, limit: number = 10): Promise<PaginatedResponse> {
   const params = new URLSearchParams({ limit: String(limit) });
   if (cursor) params.set('cursor', cursor);
@@ -194,6 +202,26 @@ export async function fetchFollowingFeed(cursor?: string | null, limit: number =
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.error || 'Failed to fetch following feed');
+  }
+  return response.json();
+}
+
+export async function searchPosts(
+  query: string,
+  limit: number = 20,
+  offset: number = 0
+): Promise<SearchPostsResponse> {
+  const params = new URLSearchParams({
+    q: query,
+    limit: String(limit),
+    offset: String(offset),
+  });
+  const response = await fetch(`${API_BASE_URL}/api/posts/search?${params}`, {
+    headers: await authHeaders(),
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to search posts');
   }
   return response.json();
 }

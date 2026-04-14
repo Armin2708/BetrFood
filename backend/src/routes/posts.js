@@ -45,6 +45,7 @@ function compressVideo(inputPath, outputPath) {
       .run();
   });
 }
+
 // Upload a local file to Supabase Storage and return its public URL
 async function uploadToSupabaseStorage(localPath, filename, mimeType) {
   const fileBuffer = fs.readFileSync(localPath);
@@ -64,7 +65,6 @@ async function uploadToSupabaseStorage(localPath, filename, mimeType) {
 // Delete a file from Supabase Storage by its public URL or path
 async function deleteFromSupabaseStorage(urlOrPath) {
   try {
-    // Extract filename from full URL or path
     let filename = urlOrPath;
     if (urlOrPath.includes('/post-media/')) {
       filename = urlOrPath.split('/post-media/').pop();
@@ -77,6 +77,7 @@ async function deleteFromSupabaseStorage(urlOrPath) {
     console.error('Failed to delete from Supabase Storage:', err.message);
   }
 }
+
 const { requireRole, requireMinRole } = require('../middleware/rbac');
 
 const router = express.Router();
@@ -128,7 +129,6 @@ router.get('/', optionalAuth, async (req, res) => {
       .limit(limit + 1);
 
     if (cursor) {
-      // Get the cursor post's created_at
       const { data: cursorPost } = await supabase
         .from('posts')
         .select('created_at')
@@ -152,10 +152,8 @@ router.get('/', optionalAuth, async (req, res) => {
 
     // Filter out posts from private profiles that the current user does not follow
     if (filteredPosts.length > 0) {
-      // Get all unique user IDs from posts
       const postUserIds = [...new Set(filteredPosts.map(p => p.user_id))];
 
-      // Find which of these users have private profiles
       const { data: privatePrefs } = await supabase
         .from('user_preferences')
         .select('user_id')
@@ -165,7 +163,6 @@ router.get('/', optionalAuth, async (req, res) => {
       const privateUserIds = new Set((privatePrefs || []).map(p => p.user_id));
 
       if (privateUserIds.size > 0) {
-        // Get the list of users the current user follows (if authenticated)
         let followingIds = new Set();
         if (req.userId) {
           const { data: follows } = await supabase
@@ -176,7 +173,6 @@ router.get('/', optionalAuth, async (req, res) => {
           followingIds = new Set((follows || []).map(f => f.following_id));
         }
 
-        // Exclude posts from private users not followed by the current user (also allow own posts)
         filteredPosts = filteredPosts.filter(p => {
           if (!privateUserIds.has(p.user_id)) return true;
           if (p.user_id === req.userId) return true;
@@ -204,14 +200,11 @@ router.get('/', optionalAuth, async (req, res) => {
     let finalPosts = mapped;
     if (req.userId && mapped.length > 0) {
       try {
-        // Get user's preference vector
         const userPrefVector = await getUserPreferenceVector(req.userId);
 
-        // Get posts user marked as "not interested"
         const notInterestedPostIds = await getNegativeFeedbackPostIds(req.userId);
         const notInterestedSet = new Set(notInterestedPostIds);
 
-        // Score each post
         finalPosts = mapped.map(post => ({
           ...post,
           recommendationScore: calculatePostRelevanceScore(
@@ -223,20 +216,16 @@ router.get('/', optionalAuth, async (req, res) => {
           ),
         }));
 
-        // Sort by recommendation score (descending), then by recency as tiebreaker
         finalPosts.sort((a, b) => {
           if (Math.abs(a.recommendationScore - b.recommendationScore) > 0.01) {
             return b.recommendationScore - a.recommendationScore;
           }
-          // Same score - use recency as tiebreaker
           return new Date(b.createdAt) - new Date(a.createdAt);
         });
 
-        // Remove recommendation score from response (internal use only)
         finalPosts = finalPosts.map(({ recommendationScore, ...post }) => post);
       } catch (err) {
         console.warn('Recommendation scoring failed, falling back to chronological:', err.message);
-        // On error, fall back to chronological
       }
     }
 
@@ -247,13 +236,88 @@ router.get('/', optionalAuth, async (req, res) => {
   }
 });
 
+// GET /api/posts/search?q=chicken+pasta&limit=20&offset=0
+router.get('/search', optionalAuth, async (req, res) => {
+  try {
+    const q = (req.query.q || '').trim();
+    if (!q) {
+      return res.status(400).json({ error: 'Query parameter "q" is required.' });
+    }
+
+    const limit = Math.min(Math.max(parseInt(req.query.limit) || 20, 1), 50);
+    const offset = Math.max(parseInt(req.query.offset) || 0, 0);
+
+    const { data: posts, error } = await supabase.rpc('search_posts', {
+      search_query: q,
+      result_limit: limit,
+      result_offset: offset,
+    });
+
+    if (error) throw error;
+
+    // Filter out posts from blocked/muted users
+    const excludedIds = req.userId ? await getExcludedUserIds(req.userId) : new Set();
+    let filteredPosts = excludedIds.size > 0
+      ? posts.filter(p => !excludedIds.has(p.user_id))
+      : posts;
+
+    // Filter out private-profile posts the user can't see
+    if (filteredPosts.length > 0) {
+      const postUserIds = [...new Set(filteredPosts.map(p => p.user_id))];
+      const { data: privatePrefs } = await supabase
+        .from('user_preferences')
+        .select('user_id')
+        .in('user_id', postUserIds)
+        .eq('profile_visibility', 'private');
+
+      const privateUserIds = new Set((privatePrefs || []).map(p => p.user_id));
+
+      if (privateUserIds.size > 0) {
+        let followingIds = new Set();
+        if (req.userId) {
+          const { data: follows } = await supabase
+            .from('user_follows')
+            .select('following_id')
+            .eq('follower_id', req.userId)
+            .in('following_id', [...privateUserIds]);
+          followingIds = new Set((follows || []).map(f => f.following_id));
+        }
+        filteredPosts = filteredPosts.filter(p => {
+          if (!privateUserIds.has(p.user_id)) return true;
+          if (p.user_id === req.userId) return true;
+          return followingIds.has(p.user_id);
+        });
+      }
+    }
+
+    // Enrich posts the same way as the main feed
+    const enriched = await enrichPostsWithProfiles(filteredPosts);
+    const withTags = await enrichPostsWithTags(enriched);
+    const withCounts = await enrichPostsWithCommentCounts(withTags);
+    const withLikes = await enrichPostsWithLikes(withCounts, req.userId);
+    const withImages = await enrichPostsWithImages(withLikes);
+    const withRecipes = await enrichPostsWithRecipes(withImages);
+    const mapped = withRecipes.map(mapPost);
+
+    res.json({
+      posts: mapped,
+      total: mapped.length,
+      hasMore: mapped.length === limit,
+      offset,
+      limit,
+    });
+  } catch (error) {
+    console.error('Error searching posts:', error);
+    res.status(500).json({ error: 'Failed to search posts.' });
+  }
+});
+
 // GET /api/posts/following - Feed of posts from followed users (auth required)
 router.get('/following', requireAuth, async (req, res) => {
   try {
     const limit = Math.min(Math.max(parseInt(req.query.limit) || 10, 1), 50);
     const cursor = req.query.cursor || null;
 
-    // Get list of users the current user follows
     const { data: follows, error: followError } = await supabase
       .from('user_follows')
       .select('following_id')
@@ -290,7 +354,6 @@ router.get('/following', requireAuth, async (req, res) => {
     const { data: posts, error } = await query;
     if (error) throw error;
 
-    // Filter out posts from blocked and muted users
     const excludedIds = await getExcludedUserIds(req.userId);
     const filteredPosts = excludedIds.size > 0
       ? posts.filter(p => !excludedIds.has(p.user_id))
@@ -341,11 +404,9 @@ router.get('/liked', requireAuth, async (req, res) => {
 
     if (postsError) throw postsError;
 
-    // Preserve like order
     const postMap = new Map((posts || []).map(p => [p.id, p]));
     let ordered = postIds.map(id => postMap.get(id)).filter(Boolean);
 
-    // Enrich
     ordered = await enrichPostsWithProfiles(ordered);
     ordered = await enrichPostsWithTags(ordered);
     ordered = await enrichPostsWithCommentCounts(ordered);
@@ -365,7 +426,6 @@ router.get('/user/:userId', async (req, res) => {
   try {
     const limit = Math.min(Math.max(parseInt(req.query.limit) || 30, 1), 50);
 
-    // Check if the requesting user has blocked or been blocked by the target user
     const excludedIds = req.userId ? await getExcludedUserIds(req.userId) : new Set();
     if (excludedIds.has(req.params.userId)) {
       return res.json({ posts: [] });
@@ -404,7 +464,6 @@ router.get('/:id', optionalAuth, async (req, res) => {
 
     if (error || !post) return res.status(404).json({ error: 'Post not found' });
 
-    // Check block status
     if (req.userId) {
       const excludedIds = await getExcludedUserIds(req.userId);
       if (excludedIds.has(post.user_id)) {
@@ -427,13 +486,11 @@ router.get('/:id', optionalAuth, async (req, res) => {
 // POST /api/posts - create post with image upload (auth required)
 router.post('/', requireAuth, upload.array('images', 10), async (req, res) => {
   try {
-    // Support both multi-image (images) and legacy single-image (image) uploads
     const files = req.files && req.files.length > 0 ? req.files : (req.file ? [req.file] : []);
     if (files.length === 0) {
       return res.status(400).json({ error: 'At least one image or video is required' });
     }
 
-    // Validate video constraints
     const videoFiles = files.filter(f => f.mimetype.startsWith('video/'));
     if (videoFiles.length > 1) {
       files.forEach(f => { try { fs.unlinkSync(f.path); } catch {} });
@@ -450,7 +507,6 @@ router.post('/', requireAuth, upload.array('images', 10), async (req, res) => {
       }
     }
 
-    // Process uploaded files — compress images to 720p, videos to 720p, then upload to Supabase Storage
     const mediaPaths = [];
     let detectedMediaType = 'image';
 
@@ -528,7 +584,6 @@ router.post('/', requireAuth, upload.array('images', 10), async (req, res) => {
 
     if (error) throw error;
 
-    // Insert all media into post_images table
     if (mediaPaths.length > 0) {
       const imageRows = mediaPaths.map((imgPath, idx) => ({
         post_id: post.id,
@@ -538,7 +593,6 @@ router.post('/', requireAuth, upload.array('images', 10), async (req, res) => {
       await supabase.from('post_images').insert(imageRows);
     }
 
-    // Handle optional recipe data
     let recipeData = null;
     if (req.body.recipe) {
       try {
@@ -584,7 +638,6 @@ router.post('/', requireAuth, upload.array('images', 10), async (req, res) => {
         recipeData = { id: newRecipe.id, postId: post.id };
       } catch (recipeErr) {
         console.error('Error creating recipe with post:', recipeErr);
-        // Post was created successfully, just log recipe error
       }
     }
 
@@ -654,7 +707,6 @@ router.delete('/:id', requireAuth, requireMinRole('user'), async (req, res) => {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
-    // Clean up all media files from Supabase Storage (and legacy local files)
     const { data: postImages } = await supabase
       .from('post_images')
       .select('image_path')
@@ -670,10 +722,8 @@ router.delete('/:id', requireAuth, requireMinRole('user'), async (req, res) => {
 
     for (const mediaPath of mediaPaths) {
       if (mediaPath.startsWith('http')) {
-        // Supabase Storage URL
         await deleteFromSupabaseStorage(mediaPath);
       } else {
-        // Legacy local file
         const fullPath = path.join(__dirname, '..', '..', mediaPath);
         if (fs.existsSync(fullPath)) {
           try { fs.unlinkSync(fullPath); } catch {}
