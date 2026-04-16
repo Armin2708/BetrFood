@@ -2,8 +2,28 @@
 // Existing imports like `import { fetchPosts } from '../services/api'` continue to work
 
 export { API_BASE_URL, setAuthToken, setTokenGetter, authHeaders, getImageUrl, getAvatarUrl } from './client';
-export { fetchPosts, fetchUserPosts, fetchPost, createPostApi, deletePost, updatePost, fetchFollowingFeed, fetchLikedPosts, searchPosts } from './posts';
-export type { Post, PaginatedResponse, SearchPostsResponse, SearchFilters } from './posts';
+export {
+  fetchPosts,
+  fetchUserPosts,
+  fetchPost,
+  createPostApi,
+  deletePost,
+  updatePost,
+  fetchFollowingFeed,
+  fetchLikedPosts,
+  searchPosts,
+  fetchAutocompleteSuggestions,
+  recordSearchQuery,
+} from './posts';
+export type {
+  Post,
+  PaginatedResponse,
+  SearchPostsResponse,
+  SearchFilters,
+  AutocompleteSuggestion,
+  AutocompleteResponse,
+  SuggestionType,
+} from './posts';
 export { fetchRecipe, createRecipe, updateRecipe, deleteRecipe } from './recipes';
 export type { Recipe, RecipeInput, RecipeIngredient, RecipeStep } from './recipes';
 export { fetchTags, addTagsToPost, removeTagFromPost, fetchPostTags, fetchPostsByTags } from './tags';

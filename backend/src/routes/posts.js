@@ -225,6 +225,121 @@ router.get('/', optionalAuth, async (req, res) => {
   }
 });
 
+// GET /api/posts/autocomplete?q=chi
+// Returns up to 8 suggestions across three buckets:
+//   trending  - popular past searches matching the prefix
+//   tags      - tag names matching the prefix
+//   captions  - post captions starting with or containing the query
+// Also records the query in search_queries for trending tracking.
+router.get('/autocomplete', optionalAuth, async (req, res) => {
+  try {
+    const q = (req.query.q || '').trim().toLowerCase();
+    if (q.length < 2) {
+      return res.json({ suggestions: [] });
+    }
+
+    // Run all three lookups in parallel for speed
+    const [trendingResult, tagsResult, captionsResult] = await Promise.allSettled([
+      // Trending: past searches starting with q, ranked by hit_count then recency
+      supabase
+        .from('search_queries')
+        .select('query_text, hit_count')
+        .ilike('query_text', `${q}%`)
+        .order('hit_count', { ascending: false })
+        .order('last_searched_at', { ascending: false })
+        .limit(4),
+
+      // Tags: tag names that start with the query (case-insensitive)
+      supabase
+        .from('tags')
+        .select('id, name, type')
+        .ilike('name', `${q}%`)
+        .order('name')
+        .limit(4),
+
+      // Captions: post captions containing the query, ordered by recency
+      supabase
+        .from('posts')
+        .select('id, caption')
+        .ilike('caption', `%${q}%`)
+        .not('caption', 'eq', '')
+        .order('created_at', { ascending: false })
+        .limit(5),
+    ]);
+
+    const trending = trendingResult.status === 'fulfilled'
+      ? (trendingResult.value.data || [])
+      : [];
+
+    const tags = tagsResult.status === 'fulfilled'
+      ? (tagsResult.value.data || [])
+      : [];
+
+    const captions = captionsResult.status === 'fulfilled'
+      ? (captionsResult.value.data || [])
+      : [];
+
+    // Build deduplicated suggestion list
+    // Priority: trending > tags > captions
+    const seen = new Set();
+    const suggestions = [];
+
+    for (const t of trending) {
+      const text = t.query_text.toLowerCase();
+      if (!seen.has(text)) {
+        seen.add(text);
+        suggestions.push({ type: 'trending', text: t.query_text });
+      }
+    }
+
+    for (const tag of tags) {
+      const text = tag.name.toLowerCase();
+      if (!seen.has(text)) {
+        seen.add(text);
+        suggestions.push({ type: 'tag', text: tag.name, tagType: tag.type });
+      }
+    }
+
+    for (const post of captions) {
+      if (!post.caption) continue;
+      // Truncate long captions to first 60 chars for display
+      const display = post.caption.length > 60
+        ? post.caption.slice(0, 60).trim() + '…'
+        : post.caption;
+      const text = display.toLowerCase();
+      if (!seen.has(text) && suggestions.length < 8) {
+        seen.add(text);
+        suggestions.push({ type: 'caption', text: display });
+      }
+    }
+
+    res.json({ suggestions: suggestions.slice(0, 8) });
+  } catch (error) {
+    console.error('Error fetching autocomplete suggestions:', error);
+    // Autocomplete errors should never break the search flow — return empty
+    res.json({ suggestions: [] });
+  }
+});
+
+// POST /api/posts/autocomplete/record
+// Records a completed search query to the trending index.
+// Called by the frontend when the user actually executes a search.
+router.post('/autocomplete/record', optionalAuth, async (req, res) => {
+  try {
+    const q = (req.body.query || '').trim().toLowerCase();
+    if (q.length < 2) return res.json({ ok: true });
+
+    // Upsert: increment hit_count and update last_searched_at if exists
+    await supabase.rpc('record_search_query', { p_query: q });
+
+    res.json({ ok: true });
+  } catch (error) {
+    // Non-critical — don't surface this error to the client
+    console.error('Error recording search query:', error);
+    res.json({ ok: true });
+  }
+});
+
 // GET /api/posts/search
 // Query params:
 //   q          - required, search keywords
@@ -243,20 +358,17 @@ router.get('/search', optionalAuth, async (req, res) => {
     const limit = Math.min(Math.max(parseInt(req.query.limit) || 20, 1), 50);
     const offset = Math.max(parseInt(req.query.offset) || 0, 0);
 
-    // Parse filter params
     const tagIds = req.query.tagIds
       ? req.query.tagIds.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id))
       : [];
     const difficulty = req.query.difficulty || null;
     const cookTime = req.query.cookTime ? parseInt(req.query.cookTime) : null;
 
-    // Validate difficulty value
     const validDifficulties = ['easy', 'medium', 'hard'];
     if (difficulty && !validDifficulties.includes(difficulty)) {
       return res.status(400).json({ error: 'difficulty must be easy, medium, or hard.' });
     }
 
-    // Run full-text search via RPC — fetch a larger batch so post-filter has enough to work with
     const { data: searchResults, error: searchError } = await supabase.rpc('search_posts', {
       search_query: q,
       result_limit: 200,
@@ -267,7 +379,6 @@ router.get('/search', optionalAuth, async (req, res) => {
 
     let posts = searchResults || [];
 
-    // Apply tag filter — keep only posts that have ALL selected tags
     if (tagIds.length > 0) {
       const postIds = posts.map(p => p.id);
       if (postIds.length > 0) {
@@ -279,14 +390,12 @@ router.get('/search', optionalAuth, async (req, res) => {
 
         if (ptError) throw ptError;
 
-        // Group matched tag counts per post
         const matchCounts = {};
         for (const row of (postTagRows || [])) {
           if (!matchCounts[row.post_id]) matchCounts[row.post_id] = new Set();
           matchCounts[row.post_id].add(row.tag_id);
         }
 
-        // Keep only posts that have ALL requested tags
         const validPostIds = new Set(
           Object.entries(matchCounts)
             .filter(([, tags]) => tags.size === tagIds.length)
@@ -299,7 +408,6 @@ router.get('/search', optionalAuth, async (req, res) => {
       }
     }
 
-    // Apply difficulty and cookTime filters via recipes table
     if (difficulty || cookTime !== null) {
       const postIds = posts.map(p => p.id);
       if (postIds.length > 0) {
@@ -321,17 +429,14 @@ router.get('/search', optionalAuth, async (req, res) => {
       }
     }
 
-    // Apply pagination after filtering
     const totalFiltered = posts.length;
     const paginated = posts.slice(0, limit);
 
-    // Filter out posts from blocked/muted users
     const excludedIds = req.userId ? await getExcludedUserIds(req.userId) : new Set();
     let filteredPosts = excludedIds.size > 0
       ? paginated.filter(p => !excludedIds.has(p.user_id))
       : paginated;
 
-    // Filter out private-profile posts the user can't see
     if (filteredPosts.length > 0) {
       const postUserIds = [...new Set(filteredPosts.map(p => p.user_id))];
       const { data: privatePrefs } = await supabase
@@ -360,7 +465,6 @@ router.get('/search', optionalAuth, async (req, res) => {
       }
     }
 
-    // Enrich posts
     const enriched = await enrichPostsWithProfiles(filteredPosts);
     const withTags = await enrichPostsWithTags(enriched);
     const withCounts = await enrichPostsWithCommentCounts(withTags);
