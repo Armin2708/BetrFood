@@ -19,10 +19,13 @@ import {
   searchUsers,
   searchPosts,
   fetchTags,
+  fetchAutocompleteSuggestions,
+  recordSearchQuery,
   getAvatarUrl,
   getImageUrl,
   SearchUserResult,
   SearchFilters,
+  AutocompleteSuggestion,
   Post as PostType,
   Tag,
 } from '../../../services/api';
@@ -52,7 +55,13 @@ const TAG_TYPE_COLORS: Record<string, string> = {
   dietary: '#3B82F6',
 };
 
-// ── User row ─────────────────────────────────────────────────────────────────
+const SUGGESTION_ICONS: Record<string, string> = {
+  trending: 'trending-up-outline',
+  tag: 'pricetag-outline',
+  caption: 'document-text-outline',
+};
+
+// ── User row ──────────────────────────────────────────────────────────────────
 
 function UserRow({ item, onPress }: { item: SearchUserResult; onPress: (id: string) => void }) {
   const avatarUri = getAvatarUrl(item.avatarUrl, item.displayName || item.username || item.id);
@@ -99,6 +108,11 @@ export default function SearchScreen() {
   const [query, setQuery] = useState('');
   const [activeTab, setActiveTab] = useState<SearchTab>('posts');
 
+  // Autocomplete state
+  const [suggestions, setSuggestions] = useState<AutocompleteSuggestion[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const autocompleteDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Filter state
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [tags, setTags] = useState<Tag[]>([]);
@@ -119,12 +133,11 @@ export default function SearchScreen() {
   const [usersLoading, setUsersLoading] = useState(false);
 
   const [searched, setSearched] = useState(false);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<TextInput>(null);
 
   const POSTS_PAGE = 20;
 
-  // Derived: active filter count for badge
   const activeFilterCount =
     selectedTagIds.length +
     (selectedDifficulty ? 1 : 0) +
@@ -139,7 +152,7 @@ export default function SearchScreen() {
   // ── Tags loading ──────────────────────────────────────────────────────────
 
   const loadTags = useCallback(async () => {
-    if (tags.length > 0) return; // already loaded
+    if (tags.length > 0) return;
     setTagsLoading(true);
     try {
       const data = await fetchTags();
@@ -155,6 +168,40 @@ export default function SearchScreen() {
     loadTags();
     setFilterModalVisible(true);
   };
+
+  // ── Autocomplete ──────────────────────────────────────────────────────────
+
+  const fetchSuggestions = useCallback(async (text: string) => {
+    if (text.trim().length < 2) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+    try {
+      const result = await fetchAutocompleteSuggestions(text.trim());
+      setSuggestions(result.suggestions);
+      setShowSuggestions(result.suggestions.length > 0);
+    } catch {
+      setSuggestions([]);
+      setShowSuggestions(false);
+    }
+  }, []);
+
+  const handleSuggestionTap = useCallback((suggestion: AutocompleteSuggestion) => {
+    const text = suggestion.text;
+    setQuery(text);
+    setShowSuggestions(false);
+    setSuggestions([]);
+
+    // Record this as a completed search for trending
+    recordSearchQuery(text);
+
+    // Execute the search immediately
+    setSearched(true);
+    setPostsOffset(0);
+    runPostSearch(text, currentFilters);
+    runUserSearch(text);
+  }, [currentFilters]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Search handlers ───────────────────────────────────────────────────────
 
@@ -195,16 +242,18 @@ export default function SearchScreen() {
   }, []);
 
   const triggerSearch = useCallback((text: string, filters: SearchFilters) => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
     if (text.trim().length === 0) {
       setPostResults([]);
       setUserResults([]);
       setSearched(false);
       return;
     }
-    debounceRef.current = setTimeout(() => {
+    searchDebounceRef.current = setTimeout(() => {
       setSearched(true);
       setPostsOffset(0);
+      // Record completed search for trending
+      recordSearchQuery(text.trim());
       runPostSearch(text, filters);
       runUserSearch(text);
     }, 350);
@@ -212,8 +261,21 @@ export default function SearchScreen() {
 
   const handleSearch = useCallback((text: string) => {
     setQuery(text);
+
+    // Autocomplete: debounced at 200ms (faster than search)
+    if (autocompleteDebounceRef.current) clearTimeout(autocompleteDebounceRef.current);
+    if (text.trim().length < 2) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+    } else {
+      autocompleteDebounceRef.current = setTimeout(() => {
+        fetchSuggestions(text);
+      }, 200);
+    }
+
+    // Full search: debounced at 350ms
     triggerSearch(text, currentFilters);
-  }, [triggerSearch, currentFilters]);
+  }, [triggerSearch, currentFilters, fetchSuggestions]);
 
   const handleFiltersApplied = useCallback((
     tagIds: number[],
@@ -224,6 +286,7 @@ export default function SearchScreen() {
     setSelectedDifficulty(difficulty);
     setSelectedCookTime(cookTime);
     setFilterModalVisible(false);
+    setShowSuggestions(false);
 
     const filters: SearchFilters = {
       tagIds: tagIds.length > 0 ? tagIds : undefined,
@@ -376,9 +439,58 @@ export default function SearchScreen() {
     );
   };
 
+  // ── Autocomplete dropdown ─────────────────────────────────────────────────
+
+  const renderAutocomplete = () => {
+    if (!showSuggestions || suggestions.length === 0) return null;
+
+    return (
+      <View style={styles.autocompleteDropdown}>
+        {suggestions.map((suggestion, index) => {
+          const iconName = SUGGESTION_ICONS[suggestion.type] as any || 'search-outline';
+          const iconColor = suggestion.type === 'tag' && suggestion.tagType
+            ? TAG_TYPE_COLORS[suggestion.tagType] || '#999'
+            : suggestion.type === 'trending'
+            ? '#F59E0B'
+            : '#94A3B8';
+
+          return (
+            <TouchableOpacity
+              key={`${suggestion.type}-${index}`}
+              style={[
+                styles.suggestionRow,
+                index < suggestions.length - 1 && styles.suggestionRowBorder,
+              ]}
+              onPress={() => handleSuggestionTap(suggestion)}
+              activeOpacity={0.7}
+            >
+              <Ionicons name={iconName} size={16} color={iconColor} style={styles.suggestionIcon} />
+              <Text style={styles.suggestionText} numberOfLines={1}>
+                {suggestion.text}
+              </Text>
+              {suggestion.type === 'tag' && suggestion.tagType && (
+                <View style={[
+                  styles.suggestionBadge,
+                  { backgroundColor: TAG_TYPE_COLORS[suggestion.tagType] || '#999' },
+                ]}>
+                  <Text style={styles.suggestionBadgeText}>{suggestion.tagType}</Text>
+                </View>
+              )}
+              <Ionicons
+                name="arrow-up-back-outline"
+                size={14}
+                color="#CBD5E1"
+                style={{ marginLeft: 'auto' }}
+              />
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    );
+  };
+
   // ── Filter modal ──────────────────────────────────────────────────────────
 
-  // Local modal state — only committed when Done is pressed
   const [modalTagIds, setModalTagIds] = useState<number[]>([]);
   const [modalDifficulty, setModalDifficulty] = useState<Difficulty | null>(null);
   const [modalCookTime, setModalCookTime] = useState<number | null>(null);
@@ -387,6 +499,7 @@ export default function SearchScreen() {
     setModalTagIds(selectedTagIds);
     setModalDifficulty(selectedDifficulty);
     setModalCookTime(selectedCookTime);
+    setShowSuggestions(false);
     openFilterModal();
   };
 
@@ -405,7 +518,6 @@ export default function SearchScreen() {
     >
       <Pressable style={styles.modalOverlay} onPress={() => setFilterModalVisible(false)}>
         <Pressable style={styles.modalContent} onPress={e => e.stopPropagation()}>
-          {/* Modal header */}
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Filters</Text>
             <View style={styles.modalHeaderRight}>
@@ -424,8 +536,6 @@ export default function SearchScreen() {
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false}>
-
-            {/* Difficulty */}
             <View style={styles.filterSection}>
               <Text style={styles.filterSectionLabel}>DIFFICULTY</Text>
               <View style={styles.chipRow}>
@@ -449,7 +559,6 @@ export default function SearchScreen() {
               </View>
             </View>
 
-            {/* Cook time */}
             <View style={styles.filterSection}>
               <Text style={styles.filterSectionLabel}>MAX COOK TIME</Text>
               <View style={styles.chipRow}>
@@ -473,7 +582,6 @@ export default function SearchScreen() {
               </View>
             </View>
 
-            {/* Tags by type */}
             {tagsLoading ? (
               <ActivityIndicator size="small" color="#22C55E" style={{ marginVertical: 16 }} />
             ) : (
@@ -507,7 +615,6 @@ export default function SearchScreen() {
             )}
           </ScrollView>
 
-          {/* Done button */}
           <TouchableOpacity
             style={styles.doneButton}
             onPress={() => handleFiltersApplied(modalTagIds, modalDifficulty, modalCookTime)}
@@ -549,15 +656,29 @@ export default function SearchScreen() {
             returnKeyType="search"
             autoCapitalize="none"
             autoCorrect={false}
+            onFocus={() => {
+              if (query.trim().length >= 2 && suggestions.length > 0) {
+                setShowSuggestions(true);
+              }
+            }}
           />
           {query.length > 0 && (
-            <TouchableOpacity onPress={() => handleSearch('')} style={styles.clearButton}>
+            <TouchableOpacity
+              onPress={() => {
+                setQuery('');
+                setPostResults([]);
+                setUserResults([]);
+                setSuggestions([]);
+                setShowSuggestions(false);
+                setSearched(false);
+              }}
+              style={styles.clearButton}
+            >
               <Ionicons name="close-circle" size={18} color="#999" />
             </TouchableOpacity>
           )}
         </View>
 
-        {/* Filter button — only on Posts tab */}
         {activeTab === 'posts' && (
           <TouchableOpacity style={styles.filterButton} onPress={handleOpenModal}>
             <Ionicons name="options-outline" size={22} color={activeFilterCount > 0 ? '#22C55E' : '#000'} />
@@ -570,17 +691,20 @@ export default function SearchScreen() {
         )}
       </View>
 
+      {/* Autocomplete dropdown — rendered outside tabs so it overlays content */}
+      {renderAutocomplete()}
+
       {/* Tabs */}
       <View style={styles.tabBar}>
         <TouchableOpacity
           style={[styles.tab, activeTab === 'posts' && styles.tabActive]}
-          onPress={() => setActiveTab('posts')}
+          onPress={() => { setActiveTab('posts'); setShowSuggestions(false); }}
         >
           <Text style={[styles.tabText, activeTab === 'posts' && styles.tabTextActive]}>Posts</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tab, activeTab === 'users' && styles.tabActive]}
-          onPress={() => setActiveTab('users')}
+          onPress={() => { setActiveTab('users'); setShowSuggestions(false); }}
         >
           <Text style={[styles.tabText, activeTab === 'users' && styles.tabTextActive]}>People</Text>
         </TouchableOpacity>
@@ -601,6 +725,7 @@ export default function SearchScreen() {
           keyboardShouldPersistTaps="handled"
           onEndReached={handleLoadMorePosts}
           onEndReachedThreshold={0.5}
+          onScrollBeginDrag={() => setShowSuggestions(false)}
           renderItem={({ item }) => (
             <Post
               id={item.id}
@@ -637,6 +762,7 @@ export default function SearchScreen() {
           data={userResults}
           keyExtractor={(item) => item.id}
           keyboardShouldPersistTaps="handled"
+          onScrollBeginDrag={() => setShowSuggestions(false)}
           renderItem={({ item }) => <UserRow item={item} onPress={handleUserPress} />}
           ListEmptyComponent={renderUsersEmpty()}
         />
@@ -660,6 +786,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: '#E5E5E5',
+    zIndex: 10,
   },
   backButton: {
     padding: 8,
@@ -704,6 +831,50 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
     color: '#fff',
+  },
+
+  // Autocomplete dropdown
+  autocompleteDropdown: {
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5E5',
+    zIndex: 9,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  suggestionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  suggestionRowBorder: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#F1F5F9',
+  },
+  suggestionIcon: {
+    marginRight: 12,
+    width: 16,
+  },
+  suggestionText: {
+    flex: 1,
+    fontSize: 15,
+    color: '#0F172A',
+  },
+  suggestionBadge: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 8,
+    marginLeft: 8,
+  },
+  suggestionBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#fff',
+    textTransform: 'capitalize',
   },
 
   // Tabs

@@ -42,7 +42,19 @@ export interface SearchPostsResponse {
 export interface SearchFilters {
   tagIds?: number[];
   difficulty?: 'easy' | 'medium' | 'hard' | null;
-  cookTime?: number | null; // max minutes
+  cookTime?: number | null;
+}
+
+export type SuggestionType = 'trending' | 'tag' | 'caption';
+
+export interface AutocompleteSuggestion {
+  type: SuggestionType;
+  text: string;
+  tagType?: string; // only present when type === 'tag'
+}
+
+export interface AutocompleteResponse {
+  suggestions: AutocompleteSuggestion[];
 }
 
 export async function fetchPosts(cursor?: string | null, limit: number = 10): Promise<PaginatedResponse> {
@@ -222,7 +234,6 @@ export async function searchPosts(
     limit: String(limit),
     offset: String(offset),
   });
-
   if (filters.tagIds && filters.tagIds.length > 0) {
     params.set('tagIds', filters.tagIds.join(','));
   }
@@ -232,7 +243,6 @@ export async function searchPosts(
   if (filters.cookTime != null) {
     params.set('cookTime', String(filters.cookTime));
   }
-
   const response = await fetch(`${API_BASE_URL}/api/posts/search?${params}`, {
     headers: await authHeaders(),
   });
@@ -241,4 +251,29 @@ export async function searchPosts(
     throw new Error(error.error || 'Failed to search posts');
   }
   return response.json();
+}
+
+export async function fetchAutocompleteSuggestions(
+  query: string
+): Promise<AutocompleteResponse> {
+  const params = new URLSearchParams({ q: query });
+  const response = await fetch(`${API_BASE_URL}/api/posts/autocomplete?${params}`, {
+    headers: await authHeaders(),
+  });
+  if (!response.ok) {
+    return { suggestions: [] };
+  }
+  return response.json();
+}
+
+export async function recordSearchQuery(query: string): Promise<void> {
+  try {
+    await fetch(`${API_BASE_URL}/api/posts/autocomplete/record`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+      body: JSON.stringify({ query }),
+    });
+  } catch {
+    // Non-critical — silently ignore
+  }
 }
