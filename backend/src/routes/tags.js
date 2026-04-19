@@ -21,6 +21,38 @@ router.get('/', async (req, res) => {
   }
 });
 
+// GET /api/tags/trending
+router.get('/trending', async (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit) || 20, 50);
+
+    const { data, error } = await supabase
+      .from('post_tags')
+      .select('tag_id, tags(id, name, type)');
+
+    if (error) throw error;
+
+    const counts = {};
+    for (const row of data || []) {
+      if (!row.tags) continue;
+      const id = row.tags.id;
+      if (!counts[id]) {
+        counts[id] = { ...row.tags, postCount: 0 };
+      }
+      counts[id].postCount++;
+    }
+
+    const trending = Object.values(counts)
+      .sort((a, b) => b.postCount - a.postCount)
+      .slice(0, limit);
+
+    res.json(trending);
+  } catch (error) {
+    console.error('Error fetching trending hashtags:', error);
+    res.status(500).json({ error: 'Failed to fetch trending hashtags.' });
+  }
+});
+
 // GET /api/tags/posts/by-tags?tags=1,2,3
 router.get('/posts/by-tags', async (req, res) => {
   try {
