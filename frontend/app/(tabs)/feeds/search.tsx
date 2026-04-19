@@ -664,7 +664,7 @@ export default function SearchScreen() {
                   <Text style={styles.suggestionBadgeText}>{suggestion.tagType}</Text>
                 </View>
               )}
-              <Ionicons name="arrow-up-back-outline" size={14} color="#CBD5E1" style={{ marginLeft: 'auto' }} />
+              <Ionicons name="arrow-back-outline" size={14} color="#CBD5E1" style={{ marginLeft: 'auto' }} />
             </TouchableOpacity>
           );
         })}
