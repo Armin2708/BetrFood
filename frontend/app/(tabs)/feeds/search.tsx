@@ -31,6 +31,8 @@ import {
   AutocompleteSuggestion,
   Post as PostType,
   Tag,
+  TrendingTag,
+  fetchTrendingHashtags,
 } from '../../../services/api';
 import { AuthContext } from '../../../context/AuthenticationContext';
 import Post from '../../../components/Post';
@@ -176,6 +178,10 @@ export default function SearchScreen() {
   const [usersLoading, setUsersLoading] = useState(false);
 
   const [searched, setSearched] = useState(false);
+
+  // Trending hashtags
+  const [trendingTags, setTrendingTags] = useState<TrendingTag[]>([]);
+  const [trendingLoading, setTrendingLoading] = useState(false);
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<TextInput>(null);
 
@@ -198,6 +204,14 @@ export default function SearchScreen() {
 
   useEffect(() => {
     loadRecentSearches().then(setRecentSearches);
+  }, []);
+
+  useEffect(() => {
+    setTrendingLoading(true);
+    fetchTrendingHashtags(15)
+      .then(setTrendingTags)
+      .catch(() => {})
+      .finally(() => setTrendingLoading(false));
   }, []);
 
   // ── Focus/blur handling ───────────────────────────────────────────────────
@@ -428,6 +442,56 @@ export default function SearchScreen() {
     acc[tag.type].push(tag);
     return acc;
   }, {});
+
+  // ── Trending hashtags ─────────────────────────────────────────────────────
+
+  const handleTrendingTagPress = (tag: TrendingTag) => {
+    setQuery(tag.name);
+    setShowSuggestions(false);
+    setSuggestions([]);
+    setInputFocused(false);
+    recordSearchQuery(tag.name);
+    saveRecentSearch(tag.name, recentSearches).then(setRecentSearches);
+    setSearched(true);
+    setPostsOffset(0);
+    runPostSearch(tag.name, currentFilters);
+    runUserSearch(tag.name);
+  };
+
+  const renderTrendingHashtags = () => {
+    if (searched || trendingTags.length === 0) return null;
+
+    return (
+      <View style={styles.trendingSection}>
+        <View style={styles.trendingSectionHeader}>
+          <Ionicons name="trending-up" size={18} color="#F59E0B" />
+          <Text style={styles.trendingSectionTitle}>Trending Hashtags</Text>
+        </View>
+        {trendingLoading ? (
+          <ActivityIndicator size="small" color="#22C55E" style={{ marginVertical: 16 }} />
+        ) : (
+          <View style={styles.trendingChipRow}>
+            {trendingTags.map(tag => {
+              const color = TAG_TYPE_COLORS[tag.type] || '#999';
+              return (
+                <TouchableOpacity
+                  key={tag.id}
+                  style={[styles.trendingChip, { borderColor: color }]}
+                  onPress={() => handleTrendingTagPress(tag)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.trendingChipName, { color }]}>#{tag.name}</Text>
+                  <Text style={styles.trendingChipCount}>
+                    {tag.postCount} {tag.postCount === 1 ? 'post' : 'posts'}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
+      </View>
+    );
+  };
 
   // ── Empty states ──────────────────────────────────────────────────────────
 
@@ -810,6 +874,9 @@ export default function SearchScreen() {
       {/* Active filter chips */}
       {renderActiveFilters()}
 
+      {/* Trending hashtags — shown before search */}
+      {renderTrendingHashtags()}
+
       {/* Results */}
       {isLoading && (activeTab === 'posts' ? postResults.length === 0 : userResults.length === 0) ? (
         <View style={styles.centered}>
@@ -983,6 +1050,45 @@ const styles = StyleSheet.create({
   clearAllChip: { paddingHorizontal: 10, paddingVertical: 5 },
   clearAllText: { fontSize: 13, color: '#e74c3c', fontWeight: '600' },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  // Trending hashtags
+  trendingSection: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
+  trendingSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  trendingSectionTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginLeft: 6,
+  },
+  trendingChipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  trendingChip: {
+    borderWidth: 1,
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: '#FAFAFA',
+  },
+  trendingChipName: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  trendingChipCount: {
+    fontSize: 11,
+    color: '#94A3B8',
+    marginTop: 2,
+  },
+
   emptyContainer: { alignItems: 'center', justifyContent: 'center', paddingTop: 80 },
   emptyTitle: { fontSize: 18, fontWeight: '600', color: '#333', marginTop: 16 },
   emptySubtitle: { fontSize: 14, color: '#999', marginTop: 8 },
