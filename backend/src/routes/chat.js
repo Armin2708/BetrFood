@@ -192,6 +192,7 @@ async function searchPosts(keywords, limit = 3) {
     // Fetch ingredients for found recipes
     const recipeIds = (recipes || []).map(r => r.id);
     let ingredientMap = {};
+    let stepsMap = {};
     if (recipeIds.length > 0) {
       const { data: ingredients } = await supabase
         .from('recipe_ingredients')
@@ -203,11 +204,24 @@ async function searchPosts(keywords, limit = 3) {
         if (!ingredientMap[ing.recipe_id]) ingredientMap[ing.recipe_id] = [];
         ingredientMap[ing.recipe_id].push(ing);
       });
+      
+      // Fetch recipe steps
+      const { data: steps } = await supabase
+        .from('recipe_steps')
+        .select('recipe_id, step_number, instruction')
+        .in('recipe_id', recipeIds)
+        .order('step_number', { ascending: true });
+
+      (steps || []).forEach(step => {
+        if (!stepsMap[step.recipe_id]) stepsMap[step.recipe_id] = [];
+        stepsMap[step.recipe_id].push(step);
+      });
     }
 
     return merged.map(p => {
       const recipe = recipeMap[p.id];
       const ingredients = recipe ? (ingredientMap[recipe.id] || []) : [];
+      const steps = recipe ? (stepsMap[recipe.id] || []) : [];
       return {
         id: p.id,
         caption: p.caption || '',
@@ -220,6 +234,10 @@ async function searchPosts(keywords, limit = 3) {
           name: i.name,
           quantity: i.quantity,
           unit: i.unit,
+        })),
+        steps: steps.map(s => ({
+          stepNumber: s.step_number,
+          instruction: s.instruction,
         })),
       };
     });
@@ -234,6 +252,14 @@ function formatPostForPrompt(p) {
   if (p.cookTime) text += `\nCook time: ${p.cookTime}`;
   if (p.ingredients?.length) {
     text += `\nIngredients: ${p.ingredients.map(i => `${[i.quantity, i.unit, i.name].filter(Boolean).join(' ')}`).join(', ')}`;
+  }
+  if (p.steps?.length) {
+    text += `\nThis recipe has ${p.steps.length} cooking step(s):`;
+    p.steps.forEach((step) => {
+      text += `\n  • Step ${step.stepNumber}: ${step.instruction}`;
+    });
+  } else {
+    text += `\nThis recipe has no specific cooking instructions provided.`;
   }
   return text;
 }
@@ -653,8 +679,8 @@ router.post('/', requireAuth, async (req, res) => {
     }
 
     if (suggestedPosts.length > 0) {
-      const postList = suggestedPosts.map(p => formatPostForPrompt(p)).join('\n\n');
-      systemPrompt += `\n\nHere are the BetrFood posts found matching the user's query:\n\n${postList}\n\nFor each post respond EXACTLY in this format:\nHere's a post I found:\n"[full caption]"\nCook time: [cook time, omit line if unknown]\nThe recipe requires: [ingredient1 quantity unit, ingredient2 quantity unit, ...]\n\nAfter listing all posts, tell the user to tap the post card below to view the full recipe.`;
+      const postList = suggestedPosts.map(p => formatPostForPrompt(p)).join('\n\n---\n\n');
+      systemPrompt += `\n\n## BetrFood Recipes Found\n\nHere are the recipes found matching the user's query:\n\n${postList}\n\n## Instructions for AI\n\nWhen the user asks about these recipes, reference the information above including the cooking steps. If they ask to see the full recipe, mention they can tap the post card to view details. When listing the recipes, include their ingredients and cooking steps in your response.`;
     }
 
     const aiMessages = [...conversationMessages];
@@ -863,8 +889,8 @@ router.post('/stream', requireAuth, async (req, res) => {
     }
 
     if (suggestedPosts.length > 0) {
-      const postList = suggestedPosts.map(p => formatPostForPrompt(p)).join('\n\n');
-      systemPrompt += `\n\nHere are the BetrFood posts found matching the user's query:\n\n${postList}\n\nFor each post respond EXACTLY in this format:\nHere's a post I found:\n"[full caption]"\nCook time: [cook time, omit line if unknown]\nThe recipe requires: [ingredient1 quantity unit, ingredient2 quantity unit, ...]\n\nAfter listing all posts, tell the user to tap the post card below to view the full recipe.`;
+      const postList = suggestedPosts.map(p => formatPostForPrompt(p)).join('\n\n---\n\n');
+      systemPrompt += `\n\n## BetrFood Recipes Found\n\nHere are the recipes found matching the user's query:\n\n${postList}\n\n## Instructions for AI\n\nWhen the user asks about these recipes, reference the information above including the cooking steps. If they ask to see the full recipe, mention they can tap the post card to view details. When listing the recipes, include their ingredients and cooking steps in your response.`;
     }
 
     const aiMessages = [...conversationMessages];
