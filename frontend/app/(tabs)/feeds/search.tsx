@@ -12,6 +12,7 @@ import {
   ScrollView,
   Modal,
   Pressable,
+  Alert,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -294,9 +295,22 @@ export default function SearchScreen() {
     setRecentSearches(updated);
   }, [recentSearches]);
 
-  const handleClearAllRecent = useCallback(async () => {
-    await clearAllRecentSearches();
-    setRecentSearches([]);
+  const handleClearAllRecent = useCallback(() => {
+    Alert.alert(
+      'Clear search history',
+      'Are you sure you want to clear all recent searches?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Clear',
+          style: 'destructive',
+          onPress: async () => {
+            await clearAllRecentSearches();
+            setRecentSearches([]);
+          },
+        },
+      ]
+    );
   }, []);
 
   // ── Search handlers ───────────────────────────────────────────────────────
