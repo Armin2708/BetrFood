@@ -7,6 +7,10 @@ export interface Tag {
   type: 'cuisine' | 'meal' | 'dietary';
 }
 
+export interface TrendingTag extends Tag {
+  postCount: number;
+}
+
 export async function fetchTags(type?: string): Promise<Tag[]> {
   const params = type ? `?type=${type}` : '';
   const response = await fetch(`${API_BASE_URL}/api/tags${params}`, {
@@ -51,6 +55,17 @@ export async function fetchPostTags(postId: string): Promise<Tag[]> {
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.error || 'Failed to fetch post tags');
+  }
+  return response.json();
+}
+
+export async function fetchTrendingHashtags(limit = 20): Promise<TrendingTag[]> {
+  const response = await fetch(`${API_BASE_URL}/api/tags/trending?limit=${limit}`, {
+    headers: await authHeaders(),
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to fetch trending hashtags');
   }
   return response.json();
 }
