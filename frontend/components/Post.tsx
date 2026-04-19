@@ -724,6 +724,19 @@ export default function Post({
         <TouchableOpacity
           onPress={() => {
             if (!id) return;
+            
+            // Transform recipe data to match PostContext format
+            const recipeData = recipe ? {
+              cookTime: recipe.cookTime ? `${recipe.cookTime} minutes` : undefined,
+              servings: recipe.servings || undefined,
+              difficulty: recipe.difficulty || undefined,
+              ingredients: recipe.ingredients?.map((ing: any) => {
+                const parts = [ing.quantity, ing.unit, ing.name].filter(Boolean);
+                return parts.join(' ');
+              }) || [],
+              steps: recipe.steps?.map((step: any) => step.instruction) || [],
+            } : null;
+            
             router.push({
               pathname: '/(tabs)/chat/[id]',
               params: {
@@ -734,6 +747,7 @@ export default function Post({
                   caption: caption,
                   username: username,
                   tags: tags?.map(t => t.name) || [],
+                  recipe: recipeData,
                 })),
               },
             });

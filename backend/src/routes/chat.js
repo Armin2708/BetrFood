@@ -182,6 +182,25 @@ function formatPostForPrompt(p) {
   return text;
 }
 
+/**
+ * Formats a PostContext recipe into system prompt injection text
+ * @param {Object} recipe - Recipe object from PostContext
+ * @returns {string} Formatted recipe section for system prompt
+ */
+function formatRecipeForSystemPrompt(recipe) {
+  if (!recipe) return '';
+  
+  const r = recipe;
+  let section = '\nThis post includes a recipe:';
+  if (r.cookTime) section += `\n- Cook time: ${r.cookTime}`;
+  if (r.servings) section += `\n- Servings: ${r.servings}`;
+  if (r.difficulty) section += `\n- Difficulty: ${r.difficulty}`;
+  if (r.ingredients?.length) section += `\n- Ingredients: ${r.ingredients.join(', ')}`;
+  if (r.steps?.length) section += `\n- Steps: ${r.steps.map((s, i) => `${i + 1}. ${s}`).join(' ')}`;
+  
+  return section;
+}
+
 async function fetchUserDietaryContext(userId) {
   try {
     const { data, error } = await supabase
@@ -571,13 +590,7 @@ router.post('/', requireAuth, async (req, res) => {
       if (postContext.caption) postSection += `\nCaption: "${postContext.caption}"`;
       if (postContext.tags?.length) postSection += `\nTags: ${postContext.tags.join(', ')}`;
       if (postContext.recipe) {
-        const r = postContext.recipe;
-        postSection += '\nThis post includes a recipe:';
-        if (r.cookTime) postSection += `\n- Cook time: ${r.cookTime}`;
-        if (r.servings) postSection += `\n- Servings: ${r.servings}`;
-        if (r.difficulty) postSection += `\n- Difficulty: ${r.difficulty}`;
-        if (r.ingredients?.length) postSection += `\n- Ingredients: ${r.ingredients.join(', ')}`;
-        if (r.steps?.length) postSection += `\n- Steps: ${r.steps.map((s, i) => `${i + 1}. ${s}`).join(' ')}`;
+        postSection += formatRecipeForSystemPrompt(postContext.recipe);
       }
       postSection += '\n\nAnswer questions specifically about this post/recipe. If asked about substitutions, variations, or techniques related to it, give detailed helpful answers.';
       systemPrompt += postSection;
@@ -787,13 +800,7 @@ router.post('/stream', requireAuth, async (req, res) => {
       if (postContext.caption) postSection += `\nCaption: "${postContext.caption}"`;
       if (postContext.tags?.length) postSection += `\nTags: ${postContext.tags.join(', ')}`;
       if (postContext.recipe) {
-        const r = postContext.recipe;
-        postSection += '\nThis post includes a recipe:';
-        if (r.cookTime) postSection += `\n- Cook time: ${r.cookTime}`;
-        if (r.servings) postSection += `\n- Servings: ${r.servings}`;
-        if (r.difficulty) postSection += `\n- Difficulty: ${r.difficulty}`;
-        if (r.ingredients?.length) postSection += `\n- Ingredients: ${r.ingredients.join(', ')}`;
-        if (r.steps?.length) postSection += `\n- Steps: ${r.steps.map((s, i) => `${i + 1}. ${s}`).join(' ')}`;
+        postSection += formatRecipeForSystemPrompt(postContext.recipe);
       }
       postSection += '\n\nAnswer questions specifically about this post/recipe.';
       systemPrompt += postSection;

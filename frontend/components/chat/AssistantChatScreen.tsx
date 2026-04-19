@@ -198,6 +198,22 @@ function PostContextCard({ context }: { context: PostContext }) {
           {context.caption}
         </Text>
       ) : null}
+      {context.recipe ? (
+        <View style={styles.postContextRecipe}>
+          {context.recipe.cookTime ? (
+            <Text style={styles.postContextRecipeMeta}>⏱️ {context.recipe.cookTime}</Text>
+          ) : null}
+          {context.recipe.servings ? (
+            <Text style={styles.postContextRecipeMeta}>🍽️ {context.recipe.servings} servings</Text>
+          ) : null}
+          {context.recipe.difficulty ? (
+            <Text style={styles.postContextRecipeMeta}>📊 {context.recipe.difficulty}</Text>
+          ) : null}
+          {context.recipe.ingredients?.length ? (
+            <Text style={styles.postContextRecipeMeta}>📦 {context.recipe.ingredients.length} ingredients</Text>
+          ) : null}
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -1262,6 +1278,21 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
     color: colors.textPrimary,
+  },
+  postContextRecipe: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 6,
+  },
+  postContextRecipeMeta: {
+    fontSize: 12,
+    color: colors.primaryDark,
+    fontWeight: '500',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    backgroundColor: colors.white,
+    borderRadius: 10,
   },
   suggestedPostsWrap: {
     marginLeft: 40,
