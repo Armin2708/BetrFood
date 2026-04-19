@@ -185,6 +185,10 @@ export function streamChatMessage(
           if (json.token) onToken(json.token);
           if (json.done && !doneFired) {
             doneFired = true;
+            // Attach suggestedPosts to message if they exist
+            if (json.message && json.suggestedPosts && json.suggestedPosts.length > 0) {
+              json.message.suggestedPosts = json.suggestedPosts;
+            }
             onDone(json.message, json.conversationId);
           }
           if (json.error && !doneFired) {

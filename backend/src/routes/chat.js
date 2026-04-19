@@ -61,7 +61,9 @@ function extractSearchKeywords(message) {
   // Strip common filler words and extract meaningful terms
   const stopWords = new Set(['show', 'me', 'find', 'a', 'the', 'some', 'any', 'posts', 'about',
     'recipes', 'for', 'with', 'on', 'betrfood', 'suggest', 'get', 'look', 'up', 'search',
-    'please', 'can', 'you', 'i', 'want', 'need', 'like', 'give', 'have']);
+    'please', 'can', 'you', 'i', 'want', 'need', 'like', 'give', 'have', 'that', 'require',
+    'requires', 'made', 'from', 'containing', 'has', 'use', 'uses', 'contain', 'contains',
+    'or', 'and', 'which', 'what', 'will', 'would', 'do', 'does', 'is', 'are', 'be']);
   return message.toLowerCase()
     .replace(/[^a-z0-9 ]/g, '')
     .split(' ')
@@ -72,16 +74,70 @@ function extractSearchKeywords(message) {
 // Search posts by keyword matching caption and tags
 async function searchPosts(keywords, limit = 3) {
   if (!keywords.length) return [];
-  console.log('[SEARCH POSTS] keywords:', keywords);
   try {
-    const { data: posts, error: postsError } = await supabase
-      .from('posts')
-      .select('id, caption, image_path, user_id, media_type')
-      .ilike('caption', `%${keywords[0]}%`)
-      .limit(limit * 2);
+    const allMatches = new Set();
+    
+    // Try each keyword
+    for (const keyword of keywords) {
+      const normalized = keyword.toLowerCase();
 
-    if (postsError) console.error('[SEARCH POSTS] caption query error:', postsError.message);
-    console.log('[SEARCH POSTS] caption matches:', posts?.length ?? 0);
+      // Try multiple search variations to handle plurals
+      const searchVariations = [
+        `%${normalized}%`,
+        `%${normalized.slice(0, -1)}%`, // Remove 's' for plural handling
+      ];
+
+      let found = false;
+
+      for (const pattern of searchVariations) {
+        const { data: captionResults } = await supabase
+          .from('posts')
+          .select('id, caption, image_path, user_id, media_type')
+          .ilike('caption', pattern)
+          .limit(limit * 2);
+        if (captionResults?.length) {
+          captionResults.forEach(p => allMatches.add(JSON.stringify(p)));
+          found = true;
+          break;
+        }
+      }
+
+      // Search ingredients
+      if (!found) {
+        for (const pattern of searchVariations) {
+          const { data: ingredients } = await supabase
+            .from('recipe_ingredients')
+            .select('recipe_id, id')
+            .ilike('name', pattern)
+            .limit(limit * 5);
+          
+          if (ingredients?.length) {
+            const recipeIds = ingredients.map(i => i.recipe_id);
+            
+            // Get posts that have these recipes
+            const { data: recipePosts } = await supabase
+              .from('recipes')
+              .select('post_id')
+              .in('id', recipeIds);
+            
+            const postIds = recipePosts?.map(r => r.post_id) || [];
+            if (postIds.length > 0) {
+              const { data: ingredientPostData } = await supabase
+                .from('posts')
+                .select('id, caption, image_path, user_id, media_type')
+                .in('id', postIds)
+                .limit(limit * 2);
+              ingredientPostData?.forEach(p => allMatches.add(JSON.stringify(p)));
+              found = true;
+            }
+            break;
+          }
+        }
+      }
+    }
+    
+    // Deduplicate and convert back from JSON strings
+    const posts = Array.from(allMatches).map(p => JSON.parse(p)).slice(0, limit);
 
     // Also search by tags
     const { data: taggedPosts } = await supabase
@@ -857,7 +913,7 @@ router.post('/stream', requireAuth, async (req, res) => {
       const savedMessage = saved ? formatChatMessage(saved) : null;
 
       if (!res.writableEnded) {
-        res.write(`data: ${JSON.stringify({ done: true, message: savedMessage, conversationId: convId })}\n\n`);
+        res.write(`data: ${JSON.stringify({ done: true, message: savedMessage, conversationId: convId, suggestedPosts: suggestedPosts.length > 0 ? suggestedPosts : undefined })}\n\n`);
       }
     }
 

@@ -11,6 +11,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  ScrollView,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -595,7 +596,14 @@ export default function AssistantChatScreen({
         {hasSuggestedPosts ? (
           <View style={styles.suggestedPostsWrap}>
             <Text style={styles.suggestedPostsLabel}>Suggested recipes</Text>
-            {item.suggestedPosts?.map((post) => <SuggestedPostCard key={post.id} post={post} />)}
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false}
+                style={styles.suggestedPostsScroll}
+                contentContainerStyle={styles.suggestedPostsContent}
+              >
+                {item.suggestedPosts?.map((post) => <SuggestedPostCard key={post.id} post={post} />)}
+              </ScrollView>
           </View>
         ) : null}
       </View>
@@ -1303,6 +1311,13 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.primaryDark,
   },
+  suggestedPostsScroll: {
+    marginHorizontal: -14,
+  },
+  suggestedPostsContent: {
+    paddingHorizontal: 14,
+    gap: 10,
+  },
   suggestedCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1312,6 +1327,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E5E7EB',
     padding: 10,
+    minWidth: 200,
   },
   suggestedCardImage: {
     width: 52,
