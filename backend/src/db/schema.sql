@@ -358,6 +358,8 @@ CREATE TABLE IF NOT EXISTS user_preference_vectors (
   avg_engagement_score NUMERIC(3,2) DEFAULT 0.5,
   recent_interaction_count INTEGER DEFAULT 0,
   total_interaction_count INTEGER DEFAULT 0,
+  cold_start_weight NUMERIC(3,2) DEFAULT 1.0,
+  behavioral_weight NUMERIC(3,2) DEFAULT 0.0,
   preferred_cook_time_range JSONB DEFAULT '{"min": 5, "max": 60}'::jsonb,
   difficulty_preference TEXT DEFAULT 'beginner' CHECK (difficulty_preference IN ('beginner', 'intermediate', 'advanced')),
   updated_at TIMESTAMPTZ DEFAULT now(),
@@ -365,6 +367,8 @@ CREATE TABLE IF NOT EXISTS user_preference_vectors (
   vector_version INTEGER DEFAULT 1
 );
 CREATE INDEX IF NOT EXISTS idx_user_preference_vectors_updated ON user_preference_vectors(updated_at DESC);
+ALTER TABLE user_preference_vectors ADD COLUMN IF NOT EXISTS cold_start_weight NUMERIC(3,2) DEFAULT 1.0;
+ALTER TABLE user_preference_vectors ADD COLUMN IF NOT EXISTS behavioral_weight NUMERIC(3,2) DEFAULT 0.0;
 
 -- Add engagement tracking fields to user_profiles
 ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS last_feed_view_at TIMESTAMPTZ;

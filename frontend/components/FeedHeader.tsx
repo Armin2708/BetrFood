@@ -63,12 +63,14 @@ export default function FeedHeader({
           <Ionicons name="search-outline" size={19} color="#000" />
         </TouchableOpacity>
       </View>
-      <TagFilterBar
-        selectedTagIds={selectedTagIds}
-        onFilterChange={onTagFilterChange}
-        pantryFilterActive={pantryFilterActive}
-        onPantryFilterChange={onPantryFilterChange}
-      />
+      {feedType !== 'explore' ? (
+        <TagFilterBar
+          selectedTagIds={selectedTagIds}
+          onFilterChange={onTagFilterChange}
+          pantryFilterActive={pantryFilterActive}
+          onPantryFilterChange={onPantryFilterChange}
+        />
+      ) : null}
     </View>
   );
 }

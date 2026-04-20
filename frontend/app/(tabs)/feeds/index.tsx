@@ -13,6 +13,7 @@ import { feedEvents } from '../../../utils/feedEvents';
 import Post from '../../../components/Post';
 import PostSkeleton from '../../../components/PostSkeleton';
 import FeedHeader from '../../../components/FeedHeader';
+import ExploreSections from '../../../components/ExploreSections';
 import { AuthContext } from '../../../context/AuthenticationContext';
 import { usePantry } from '../../../context/PantryContext';
 import { matchRecipeToPantry } from '../../../utils/pantryMatcher';
@@ -193,6 +194,10 @@ export default function HomeScreen() {
     if (type === feedType) return;
     setFeedType(type);
     setSelectedTagIds([]);
+    if (type === 'explore') {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     loadPosts([], type).then(() => setLoading(false));
   };
@@ -211,6 +216,23 @@ export default function HomeScreen() {
   const displayedPosts = pantryFilterActive
     ? posts.filter((p) => p._isMatch === true)
     : posts;
+
+  if (feedType === 'explore') {
+    return (
+      <View style={styles.container}>
+        <FeedHeader
+          feedType={feedType}
+          onFeedTypeChange={handleFeedTypeChange}
+          selectedTagIds={selectedTagIds}
+          onTagFilterChange={handleTagFilterChange}
+          pantryFilterActive={pantryFilterActive}
+          onPantryFilterChange={setPantryFilterActive}
+          onSearchPress={handleSearchPress}
+        />
+        <ExploreSections />
+      </View>
+    );
+  }
 
   if (loading) {
     return (
