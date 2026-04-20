@@ -446,16 +446,7 @@ export default function SearchScreen() {
   // ── Trending hashtags ─────────────────────────────────────────────────────
 
   const handleTrendingTagPress = (tag: TrendingTag) => {
-    setQuery(tag.name);
-    setShowSuggestions(false);
-    setSuggestions([]);
-    setInputFocused(false);
-    recordSearchQuery(tag.name);
-    saveRecentSearch(tag.name, recentSearches).then(setRecentSearches);
-    setSearched(true);
-    setPostsOffset(0);
-    runPostSearch(tag.name, currentFilters);
-    runUserSearch(tag.name);
+    router.push(`/feeds/hashtag?tagId=${tag.id}&tagName=${encodeURIComponent(tag.name)}` as any);
   };
 
   const renderTrendingHashtags = () => {

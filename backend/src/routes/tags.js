@@ -1,6 +1,16 @@
 const express = require('express');
 const supabase = require('../db/supabase');
 const { requireAuth } = require('../middleware/auth');
+const {
+  enrichPostsWithProfiles,
+  enrichPostsWithTags,
+  enrichPostsWithCommentCounts,
+  enrichPostsWithLikes,
+  enrichPostsWithImages,
+  enrichPostsWithRecipes,
+  mapPost,
+  getExcludedUserIds,
+} = require('../utils/enrichment');
 
 const router = express.Router();
 
@@ -50,6 +60,95 @@ router.get('/trending', async (req, res) => {
   } catch (error) {
     console.error('Error fetching trending hashtags:', error);
     res.status(500).json({ error: 'Failed to fetch trending hashtags.' });
+  }
+});
+
+// GET /api/tags/:id/posts?sort=recent|popular&limit=&offset=
+router.get('/:id/posts', async (req, res) => {
+  try {
+    const tagId = parseInt(req.params.id);
+    if (isNaN(tagId)) {
+      return res.status(400).json({ error: 'Invalid tag id.' });
+    }
+
+    const sort = req.query.sort === 'popular' ? 'popular' : 'recent';
+    const limit = Math.min(parseInt(req.query.limit) || 20, 50);
+    const offset = Math.max(parseInt(req.query.offset) || 0, 0);
+
+    const { data: tag, error: tagError } = await supabase
+      .from('tags')
+      .select('id, name, type')
+      .eq('id', tagId)
+      .single();
+
+    if (tagError || !tag) {
+      return res.status(404).json({ error: 'Tag not found.' });
+    }
+
+    const { count: totalCount, error: countError } = await supabase
+      .from('post_tags')
+      .select('post_id', { count: 'exact', head: true })
+      .eq('tag_id', tagId);
+
+    if (countError) throw countError;
+
+    const { data: postTagRows, error: ptError } = await supabase
+      .from('post_tags')
+      .select('post_id')
+      .eq('tag_id', tagId);
+
+    if (ptError) throw ptError;
+
+    const postIds = (postTagRows || []).map(r => r.post_id);
+    if (postIds.length === 0) {
+      return res.json({ tag, totalCount: 0, posts: [], hasMore: false });
+    }
+
+    const excluded = await getExcludedUserIds(req.userId);
+    const visiblePostIds = postIds;
+
+    let postsQuery = supabase
+      .from('posts')
+      .select('*')
+      .in('id', visiblePostIds);
+
+    if (sort === 'recent') {
+      postsQuery = postsQuery.order('created_at', { ascending: false });
+    }
+
+    const { data: allPosts, error: postsError } = await postsQuery;
+    if (postsError) throw postsError;
+
+    const filteredPosts = (allPosts || []).filter(p => !excluded.has(p.user_id));
+
+    let enriched = await enrichPostsWithImages(filteredPosts);
+    enriched = await enrichPostsWithProfiles(enriched);
+    enriched = await enrichPostsWithTags(enriched);
+    enriched = await enrichPostsWithCommentCounts(enriched);
+    enriched = await enrichPostsWithLikes(enriched, req.userId);
+    enriched = await enrichPostsWithRecipes(enriched);
+
+    if (sort === 'popular') {
+      enriched.sort((a, b) => {
+        const aScore = (a._likeCount || 0) + (a._commentCount || 0);
+        const bScore = (b._likeCount || 0) + (b._commentCount || 0);
+        if (bScore !== aScore) return bScore - aScore;
+        return new Date(b.created_at) - new Date(a.created_at);
+      });
+    }
+
+    const paginated = enriched.slice(offset, offset + limit);
+    const posts = paginated.map(mapPost);
+
+    res.json({
+      tag,
+      totalCount: totalCount || filteredPosts.length,
+      posts,
+      hasMore: offset + paginated.length < enriched.length,
+    });
+  } catch (error) {
+    console.error('Error fetching hashtag posts:', error);
+    res.status(500).json({ error: 'Failed to fetch hashtag posts.' });
   }
 });
 

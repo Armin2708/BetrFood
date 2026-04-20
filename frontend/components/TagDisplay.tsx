@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Tag } from '../services/api';
 import { TAG_TYPE_COLORS } from '../constants/theme';
 
@@ -8,6 +9,7 @@ interface TagDisplayProps {
 }
 
 export default function TagDisplay({ tags }: TagDisplayProps) {
+  const router = useRouter();
   if (!tags || tags.length === 0) return null;
 
   return (
@@ -15,9 +17,14 @@ export default function TagDisplay({ tags }: TagDisplayProps) {
       {tags.map(tag => {
         const color = TAG_TYPE_COLORS[tag.type] || '#999';
         return (
-          <View key={tag.id} style={[styles.tag, { borderColor: color }]}>
+          <TouchableOpacity
+            key={tag.id}
+            style={[styles.tag, { borderColor: color }]}
+            onPress={() => router.push(`/feeds/hashtag?tagId=${tag.id}&tagName=${encodeURIComponent(tag.name)}` as any)}
+            activeOpacity={0.7}
+          >
             <Text style={[styles.tagText, { color }]}>{tag.name}</Text>
-          </View>
+          </TouchableOpacity>
         );
       })}
     </View>

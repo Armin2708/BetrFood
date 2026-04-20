@@ -70,6 +70,30 @@ export async function fetchTrendingHashtags(limit = 20): Promise<TrendingTag[]> 
   return response.json();
 }
 
+export interface HashtagPostsResponse {
+  tag: Tag;
+  totalCount: number;
+  posts: Post[];
+  hasMore: boolean;
+}
+
+export async function fetchPostsByHashtag(
+  tagId: number,
+  sort: 'recent' | 'popular' = 'recent',
+  limit = 20,
+  offset = 0
+): Promise<HashtagPostsResponse> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/tags/${tagId}/posts?sort=${sort}&limit=${limit}&offset=${offset}`,
+    { headers: await authHeaders() }
+  );
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to fetch hashtag posts');
+  }
+  return response.json();
+}
+
 export async function fetchPostsByTags(tagIds: number[]): Promise<Post[]> {
   const response = await fetch(`${API_BASE_URL}/api/tags/posts/by-tags?tags=${tagIds.join(',')}`, {
     headers: await authHeaders(),
