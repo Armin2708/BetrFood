@@ -188,24 +188,24 @@ async function getUserEngagementMetrics(userId) {
     .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
 
   // Total interactions (lifetime)
-  const { data: totalLikes } = await supabase
+  const { count: totalLikes = 0 } = await supabase
     .from('likes')
     .select('id', { count: 'exact', head: true })
     .eq('user_id', userId);
 
-  const { data: totalComments } = await supabase
+  const { count: totalComments = 0 } = await supabase
     .from('comments')
     .select('id', { count: 'exact', head: true })
     .eq('user_id', userId);
 
-  const { data: totalSaves } = await supabase
+  const { count: totalSaves = 0 } = await supabase
     .from('collection_posts')
     .select('id', { count: 'exact', head: true })
     .eq('collections.user_id', userId);
 
-  const totalInteractionCount = (totalLikes?.length || 0)
-    + (totalComments?.length || 0)
-    + (totalSaves?.length || 0);
+  const totalInteractionCount = (totalLikes || 0)
+    + (totalComments || 0)
+    + (totalSaves || 0);
 
   const avgViewDuration = recentImpressions && recentImpressions.length > 0
     ? recentImpressions.reduce((sum, imp) => sum + (imp.duration_seconds || 0), 0) / recentImpressions.length

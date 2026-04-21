@@ -447,7 +447,8 @@ router.get('/', optionalAuth, async (req, res) => {
     let finalPosts = mapped;
     if (req.userId && mapped.length > 0) {
       try {
-        const userPrefVector = await getUserPreferenceVector(req.userId);
+        const explicitPreferences = await getExplicitRecommendationPreferences(req.userId);
+        const userPrefVector = await getUserPreferenceVector(req.userId, explicitPreferences);
         const notInterestedPostIds = await getNegativeFeedbackPostIds(req.userId);
         const notInterestedSet = new Set(notInterestedPostIds);
 
