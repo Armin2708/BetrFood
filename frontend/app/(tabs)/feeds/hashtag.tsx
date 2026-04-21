@@ -20,7 +20,7 @@ import {
 import { AuthContext } from '../../../context/AuthenticationContext';
 import Post from '../../../components/Post';
 
-type SortOption = 'recent' | 'popular';
+type SortOption = 'popular' | 'newest' | 'saved';
 
 const TAG_TYPE_COLORS: Record<string, string> = {
   cuisine: '#22C55E',
@@ -38,7 +38,7 @@ export default function HashtagScreen() {
   const [tag, setTag] = useState<Tag | null>(null);
   const [posts, setPosts] = useState<PostType[]>([]);
   const [totalCount, setTotalCount] = useState(0);
-  const [sort, setSort] = useState<SortOption>('recent');
+  const [sort, setSort] = useState<SortOption>('popular');
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
@@ -110,6 +110,11 @@ export default function HashtagScreen() {
           <Text style={styles.headerSubtitle}>
             {totalCount} {totalCount === 1 ? 'post' : 'posts'}
           </Text>
+          {tag?.description ? (
+            <Text style={styles.headerDescription} numberOfLines={1}>
+              {tag.description}
+            </Text>
+          ) : null}
         </View>
         <View style={styles.headerRightSpacer} />
       </View>
@@ -117,16 +122,22 @@ export default function HashtagScreen() {
       {/* Sort tabs */}
       <View style={styles.sortBar}>
         <TouchableOpacity
-          style={[styles.sortTab, sort === 'recent' && styles.sortTabActive]}
-          onPress={() => handleSortChange('recent')}
-        >
-          <Text style={[styles.sortText, sort === 'recent' && styles.sortTextActive]}>Recent</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
           style={[styles.sortTab, sort === 'popular' && styles.sortTabActive]}
           onPress={() => handleSortChange('popular')}
         >
           <Text style={[styles.sortText, sort === 'popular' && styles.sortTextActive]}>Popular</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.sortTab, sort === 'newest' && styles.sortTabActive]}
+          onPress={() => handleSortChange('newest')}
+        >
+          <Text style={[styles.sortText, sort === 'newest' && styles.sortTextActive]}>Newest</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.sortTab, sort === 'saved' && styles.sortTabActive]}
+          onPress={() => handleSortChange('saved')}
+        >
+          <Text style={[styles.sortText, sort === 'saved' && styles.sortTextActive]}>Most Saved</Text>
         </TouchableOpacity>
       </View>
 
@@ -211,6 +222,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#94A3B8',
     marginTop: 2,
+  },
+  headerDescription: {
+    fontSize: 12,
+    color: '#64748B',
+    marginTop: 2,
+    maxWidth: 240,
   },
   headerRightSpacer: {
     width: 40,
