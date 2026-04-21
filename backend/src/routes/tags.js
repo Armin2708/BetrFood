@@ -1,6 +1,6 @@
 const express = require('express');
 const supabase = require('../db/supabase');
-const { requireAuth } = require('../middleware/auth');
+const { requireAuth, optionalAuth } = require('../middleware/auth');
 const {
   enrichPostsWithProfiles,
   enrichPostsWithTags,
@@ -13,6 +13,32 @@ const {
 } = require('../utils/enrichment');
 
 const router = express.Router();
+
+function getCategoryDescription(tag) {
+  if (tag.type === 'cuisine') return `Explore ${tag.name} recipes and food ideas.`;
+  if (tag.type === 'meal') return `Find ${tag.name.toLowerCase()} inspiration.`;
+  if (tag.type === 'dietary') return `Browse posts that fit ${tag.name.toLowerCase()} preferences.`;
+  return `Browse posts tagged ${tag.name}.`;
+}
+
+async function getSaveCountMap(postIds) {
+  if (!postIds || postIds.length === 0) return {};
+
+  const { data, error } = await supabase
+    .from('collection_posts')
+    .select('post_id')
+    .in('post_id', postIds);
+
+  if (error) {
+    console.warn('Failed to fetch save counts:', error.message);
+    return {};
+  }
+
+  return (data || []).reduce((counts, row) => {
+    counts[row.post_id] = (counts[row.post_id] || 0) + 1;
+    return counts;
+  }, {});
+}
 
 // GET /api/tags
 router.get('/', async (req, res) => {
@@ -63,15 +89,17 @@ router.get('/trending', async (req, res) => {
   }
 });
 
-// GET /api/tags/:id/posts?sort=recent|popular&limit=&offset=
-router.get('/:id/posts', async (req, res) => {
+// GET /api/tags/:id/posts?sort=popular|newest|saved&limit=&offset=
+router.get('/:id/posts', optionalAuth, async (req, res) => {
   try {
     const tagId = parseInt(req.params.id);
     if (isNaN(tagId)) {
       return res.status(400).json({ error: 'Invalid tag id.' });
     }
 
-    const sort = req.query.sort === 'popular' ? 'popular' : 'recent';
+    const requestedSort = req.query.sort === 'recent' ? 'newest' : req.query.sort;
+    const validSorts = new Set(['popular', 'newest', 'saved']);
+    const sort = validSorts.has(requestedSort) ? requestedSort : 'popular';
     const limit = Math.min(parseInt(req.query.limit) || 20, 50);
     const offset = Math.max(parseInt(req.query.offset) || 0, 0);
 
@@ -101,7 +129,12 @@ router.get('/:id/posts', async (req, res) => {
 
     const postIds = (postTagRows || []).map(r => r.post_id);
     if (postIds.length === 0) {
-      return res.json({ tag, totalCount: 0, posts: [], hasMore: false });
+      return res.json({
+        tag: { ...tag, description: getCategoryDescription(tag) },
+        totalCount: 0,
+        posts: [],
+        hasMore: false,
+      });
     }
 
     const excluded = await getExcludedUserIds(req.userId);
@@ -112,7 +145,7 @@ router.get('/:id/posts', async (req, res) => {
       .select('*')
       .in('id', visiblePostIds);
 
-    if (sort === 'recent') {
+    if (sort === 'newest') {
       postsQuery = postsQuery.order('created_at', { ascending: false });
     }
 
@@ -128,11 +161,20 @@ router.get('/:id/posts', async (req, res) => {
     enriched = await enrichPostsWithLikes(enriched, req.userId);
     enriched = await enrichPostsWithRecipes(enriched);
 
+    const saveCountMap = await getSaveCountMap(enriched.map(post => post.id));
+
     if (sort === 'popular') {
       enriched.sort((a, b) => {
-        const aScore = (a._likeCount || 0) + (a._commentCount || 0);
-        const bScore = (b._likeCount || 0) + (b._commentCount || 0);
+        const aScore = (a._likeCount || 0) + (a._commentCount || 0) + (saveCountMap[a.id] || 0);
+        const bScore = (b._likeCount || 0) + (b._commentCount || 0) + (saveCountMap[b.id] || 0);
         if (bScore !== aScore) return bScore - aScore;
+        return new Date(b.created_at) - new Date(a.created_at);
+      });
+    } else if (sort === 'saved') {
+      enriched.sort((a, b) => {
+        const aSaves = saveCountMap[a.id] || 0;
+        const bSaves = saveCountMap[b.id] || 0;
+        if (bSaves !== aSaves) return bSaves - aSaves;
         return new Date(b.created_at) - new Date(a.created_at);
       });
     }
@@ -141,8 +183,8 @@ router.get('/:id/posts', async (req, res) => {
     const posts = paginated.map(mapPost);
 
     res.json({
-      tag,
-      totalCount: totalCount || filteredPosts.length,
+      tag: { ...tag, description: getCategoryDescription(tag) },
+      totalCount: filteredPosts.length,
       posts,
       hasMore: offset + paginated.length < enriched.length,
     });
