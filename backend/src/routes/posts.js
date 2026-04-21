@@ -113,6 +113,260 @@ const upload = multer({
   },
 });
 
+async function getExplicitRecommendationPreferences(userId) {
+  const [preferencesResult, profileResult] = await Promise.all([
+    supabase
+      .from('user_preferences')
+      .select('dietary_preferences, cuisines, cooking_skill, max_cook_time')
+      .eq('user_id', userId)
+      .maybeSingle(),
+    supabase
+      .from('user_profiles')
+      .select('dietary_preferences')
+      .eq('id', userId)
+      .maybeSingle(),
+  ]);
+
+  if (preferencesResult.error) {
+    console.warn('Failed to fetch explicit user preferences:', preferencesResult.error.message);
+  }
+  if (profileResult.error) {
+    console.warn('Failed to fetch profile dietary preferences:', profileResult.error.message);
+  }
+
+  return {
+    ...(preferencesResult.data || {}),
+    profile_dietary_preferences: profileResult.data?.dietary_preferences || [],
+  };
+}
+
+const EXPLORE_SECTION_DEFINITIONS = {
+  trending: {
+    id: 'trending',
+    title: 'Trending Now',
+    description: 'Fresh posts getting the most conversation right now.',
+    type: 'posts',
+  },
+  popular_week: {
+    id: 'popular_week',
+    title: 'Popular This Week',
+    description: 'The food everyone has been liking, saving, and talking about.',
+    type: 'posts',
+  },
+  based_on_preferences: {
+    id: 'based_on_preferences',
+    title: 'Based on Preferences',
+    description: 'Picked from your dietary and cuisine preferences.',
+    type: 'posts',
+  },
+  following: {
+    id: 'following',
+    title: 'New from Creators You Follow',
+    description: 'Latest posts from people you follow.',
+    type: 'posts',
+  },
+  categories: {
+    id: 'categories',
+    title: 'Categories',
+    description: 'Browse cuisines, meal types, and dietary tags.',
+    type: 'categories',
+  },
+};
+
+function getCategoryDescription(tag) {
+  if (tag.type === 'cuisine') return `Explore ${tag.name} recipes and food ideas.`;
+  if (tag.type === 'meal') return `Find ${tag.name.toLowerCase()} inspiration.`;
+  if (tag.type === 'dietary') return `Browse posts that fit ${tag.name.toLowerCase()} preferences.`;
+  return `Browse posts tagged ${tag.name}.`;
+}
+
+async function filterVisiblePosts(posts, currentUserId) {
+  if (!posts || posts.length === 0) return [];
+
+  const excludedIds = currentUserId ? await getExcludedUserIds(currentUserId) : new Set();
+  let filteredPosts = excludedIds.size > 0
+    ? posts.filter(p => !excludedIds.has(p.user_id))
+    : posts;
+
+  if (filteredPosts.length === 0) return [];
+
+  const postUserIds = [...new Set(filteredPosts.map(p => p.user_id))];
+  const { data: privatePrefs } = await supabase
+    .from('user_preferences')
+    .select('user_id')
+    .in('user_id', postUserIds)
+    .eq('profile_visibility', 'private');
+
+  const privateUserIds = new Set((privatePrefs || []).map(p => p.user_id));
+  if (privateUserIds.size === 0) return filteredPosts;
+
+  let followingIds = new Set();
+  if (currentUserId) {
+    const { data: follows } = await supabase
+      .from('user_follows')
+      .select('following_id')
+      .eq('follower_id', currentUserId)
+      .in('following_id', [...privateUserIds]);
+    followingIds = new Set((follows || []).map(f => f.following_id));
+  }
+
+  return filteredPosts.filter(p => {
+    if (!privateUserIds.has(p.user_id)) return true;
+    if (p.user_id === currentUserId) return true;
+    return followingIds.has(p.user_id);
+  });
+}
+
+async function getSaveCountMap(postIds) {
+  if (!postIds || postIds.length === 0) return {};
+
+  const { data, error } = await supabase
+    .from('collection_posts')
+    .select('post_id')
+    .in('post_id', postIds);
+
+  if (error) {
+    console.warn('Failed to fetch save counts:', error.message);
+    return {};
+  }
+
+  return (data || []).reduce((counts, row) => {
+    counts[row.post_id] = (counts[row.post_id] || 0) + 1;
+    return counts;
+  }, {});
+}
+
+async function enrichAndMapPosts(posts, currentUserId) {
+  let enriched = await enrichPostsWithProfiles(posts);
+  enriched = await enrichPostsWithTags(enriched);
+  enriched = await enrichPostsWithCommentCounts(enriched);
+  enriched = await enrichPostsWithLikes(enriched, currentUserId);
+  enriched = await enrichPostsWithImages(enriched);
+  enriched = await enrichPostsWithRecipes(enriched);
+  return enriched;
+}
+
+function sortPostsByEngagement(posts, saveCountMap = {}) {
+  return [...posts].sort((a, b) => {
+    const aScore = (a._likeCount || 0) + (a._commentCount || 0) + (saveCountMap[a.id] || 0);
+    const bScore = (b._likeCount || 0) + (b._commentCount || 0) + (saveCountMap[b.id] || 0);
+    if (bScore !== aScore) return bScore - aScore;
+    return new Date(b.created_at) - new Date(a.created_at);
+  });
+}
+
+async function fetchExplorePostSection(sectionId, currentUserId, limit, offset) {
+  const candidateLimit = Math.max(limit + offset + 25, 75);
+  let query = supabase
+    .from('posts')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(candidateLimit);
+
+  if (sectionId === 'popular_week') {
+    const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    query = query.gte('created_at', oneWeekAgo);
+  }
+
+  if (sectionId === 'following') {
+    if (!currentUserId) return { posts: [], hasMore: false };
+    const { data: follows, error: followError } = await supabase
+      .from('user_follows')
+      .select('following_id')
+      .eq('follower_id', currentUserId);
+
+    if (followError) throw followError;
+    const followingIds = (follows || []).map(f => f.following_id);
+    if (followingIds.length === 0) return { posts: [], hasMore: false };
+    query = query.in('user_id', followingIds);
+  }
+
+  const { data: rawPosts, error } = await query;
+  if (error) throw error;
+
+  const visiblePosts = await filterVisiblePosts(rawPosts || [], currentUserId);
+  let enriched = await enrichAndMapPosts(visiblePosts, currentUserId);
+  const saveCountMap = await getSaveCountMap(enriched.map(post => post.id));
+
+  if (sectionId === 'based_on_preferences' && currentUserId) {
+    try {
+      const explicitPreferences = await getExplicitRecommendationPreferences(currentUserId);
+      const userPrefVector = await getUserPreferenceVector(currentUserId, explicitPreferences);
+      const notInterestedPostIds = await getNegativeFeedbackPostIds(currentUserId);
+      const notInterestedSet = new Set(notInterestedPostIds);
+
+      enriched = enriched
+        .map(post => ({
+          ...post,
+          _recommendationScore: calculatePostRelevanceScore(
+            { ...mapPost(post), hasNegativeFeedback: notInterestedSet.has(post.id) },
+            userPrefVector
+          ),
+        }))
+        .sort((a, b) => {
+          if (Math.abs((b._recommendationScore || 0) - (a._recommendationScore || 0)) > 0.01) {
+            return (b._recommendationScore || 0) - (a._recommendationScore || 0);
+          }
+          return new Date(b.created_at) - new Date(a.created_at);
+        });
+    } catch (err) {
+      console.warn('Explore preference scoring failed:', err.message);
+      enriched = sortPostsByEngagement(enriched, saveCountMap);
+    }
+  } else if (sectionId === 'trending' || sectionId === 'popular_week') {
+    enriched = sortPostsByEngagement(enriched, saveCountMap);
+  }
+
+  const paginated = enriched.slice(offset, offset + limit);
+  return {
+    posts: paginated.map(mapPost),
+    hasMore: offset + paginated.length < enriched.length,
+  };
+}
+
+async function fetchExploreCategories(limit, offset) {
+  const { data, error } = await supabase
+    .from('post_tags')
+    .select('tag_id, tags(id, name, type)');
+
+  if (error) throw error;
+
+  const counts = {};
+  for (const row of data || []) {
+    if (!row.tags) continue;
+    const id = row.tags.id;
+    if (!counts[id]) {
+      counts[id] = { ...row.tags, postCount: 0, description: getCategoryDescription(row.tags) };
+    }
+    counts[id].postCount++;
+  }
+
+  const categories = Object.values(counts)
+    .sort((a, b) => {
+      if (b.postCount !== a.postCount) return b.postCount - a.postCount;
+      return a.name.localeCompare(b.name);
+    });
+
+  const paginated = categories.slice(offset, offset + limit);
+  return {
+    categories: paginated,
+    hasMore: offset + paginated.length < categories.length,
+  };
+}
+
+async function buildExploreSection(sectionId, currentUserId, limit = 10, offset = 0) {
+  const definition = EXPLORE_SECTION_DEFINITIONS[sectionId];
+  if (!definition) return null;
+
+  if (definition.type === 'categories') {
+    const { categories, hasMore } = await fetchExploreCategories(limit, offset);
+    return { ...definition, categories, hasMore };
+  }
+
+  const { posts, hasMore } = await fetchExplorePostSection(sectionId, currentUserId, limit, offset);
+  return { ...definition, posts, hasMore };
+}
+
 // GET /api/posts - cursor-based paginated feed
 router.get('/', optionalAuth, async (req, res) => {
   try {
@@ -222,6 +476,41 @@ router.get('/', optionalAuth, async (req, res) => {
   } catch (error) {
     console.error('Error fetching posts:', error);
     res.status(500).json({ error: 'Failed to fetch posts.' });
+  }
+});
+
+// GET /api/posts/explore - Curated Explore sections for discovery.
+router.get('/explore', optionalAuth, async (req, res) => {
+  try {
+    const limit = Math.min(Math.max(parseInt(req.query.limit) || 10, 5), 20);
+    const sectionIds = ['trending', 'popular_week', 'based_on_preferences', 'following', 'categories'];
+    const sections = await Promise.all(
+      sectionIds.map(sectionId => buildExploreSection(sectionId, req.userId, limit, 0))
+    );
+
+    res.json({ sections: sections.filter(Boolean) });
+  } catch (error) {
+    console.error('Error fetching explore sections:', error);
+    res.status(500).json({ error: 'Failed to fetch explore sections.' });
+  }
+});
+
+// GET /api/posts/explore/:sectionId - Paginated data for "See All" screens.
+router.get('/explore/:sectionId', optionalAuth, async (req, res) => {
+  try {
+    const { sectionId } = req.params;
+    if (!EXPLORE_SECTION_DEFINITIONS[sectionId]) {
+      return res.status(404).json({ error: 'Explore section not found.' });
+    }
+
+    const limit = Math.min(Math.max(parseInt(req.query.limit) || 20, 1), 50);
+    const offset = Math.max(parseInt(req.query.offset) || 0, 0);
+    const section = await buildExploreSection(sectionId, req.userId, limit, offset);
+
+    res.json({ section, offset, limit });
+  } catch (error) {
+    console.error('Error fetching explore section:', error);
+    res.status(500).json({ error: 'Failed to fetch explore section.' });
   }
 });
 

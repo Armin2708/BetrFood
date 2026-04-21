@@ -39,6 +39,38 @@ export interface SearchPostsResponse {
   limit: number;
 }
 
+export type ExploreSectionId =
+  | 'trending'
+  | 'popular_week'
+  | 'based_on_preferences'
+  | 'following'
+  | 'categories';
+
+export interface ExploreCategory extends Tag {
+  postCount: number;
+  description?: string;
+}
+
+export interface ExploreSection {
+  id: ExploreSectionId;
+  title: string;
+  description: string;
+  type: 'posts' | 'categories';
+  posts?: Post[];
+  categories?: ExploreCategory[];
+  hasMore: boolean;
+}
+
+export interface ExploreSectionsResponse {
+  sections: ExploreSection[];
+}
+
+export interface ExploreSectionResponse {
+  section: ExploreSection;
+  offset: number;
+  limit: number;
+}
+
 export interface SearchFilters {
   tagIds?: number[];
   difficulty?: 'easy' | 'medium' | 'hard' | null;
@@ -66,6 +98,34 @@ export async function fetchPosts(cursor?: string | null, limit: number = 10): Pr
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.error || 'Failed to fetch posts');
+  }
+  return response.json();
+}
+
+export async function fetchExploreSections(limit: number = 10): Promise<ExploreSectionsResponse> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  const response = await fetch(`${API_BASE_URL}/api/posts/explore?${params}`, {
+    headers: await authHeaders(),
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to fetch explore sections');
+  }
+  return response.json();
+}
+
+export async function fetchExploreSection(
+  sectionId: ExploreSectionId,
+  limit: number = 20,
+  offset: number = 0
+): Promise<ExploreSectionResponse> {
+  const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+  const response = await fetch(`${API_BASE_URL}/api/posts/explore/${sectionId}?${params}`, {
+    headers: await authHeaders(),
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to fetch explore section');
   }
   return response.json();
 }
