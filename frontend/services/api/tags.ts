@@ -5,6 +5,7 @@ export interface Tag {
   id: number;
   name: string;
   type: 'cuisine' | 'meal' | 'dietary';
+  description?: string;
 }
 
 export interface TrendingTag extends Tag {
@@ -79,7 +80,7 @@ export interface HashtagPostsResponse {
 
 export async function fetchPostsByHashtag(
   tagId: number,
-  sort: 'recent' | 'popular' = 'recent',
+  sort: 'popular' | 'newest' | 'saved' = 'popular',
   limit = 20,
   offset = 0
 ): Promise<HashtagPostsResponse> {

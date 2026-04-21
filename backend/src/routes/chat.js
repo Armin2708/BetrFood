@@ -44,6 +44,17 @@ const POST_SUGGESTION_KEYWORDS = [
   'posts about', 'recipes on betrfood', 'find a recipe', 'search for',
   'any posts', 'any recipes', 'pasta recipe', 'chicken recipe', 'vegan recipe',
   'show me recipes', 'find recipes', 'look up', 'browse',
+  // Additional variations for post discovery
+  'what recipes', 'do you have', 'have any posts', 'have recipes',
+  'recipes with', 'recipes that have', 'recipes that use', 'recipes that contain',
+  'posts with', 'posts that have', 'something with', 'something that has',
+  'looking for', 'searching for', 'seek', 'seek a recipe',
+  'recipe ideas', 'post ideas', 'recipe suggestions', 'post suggestions',
+  'any ideas', 'give me a', 'give me some', 'show me a',
+  'recommend a recipe', 'recommend recipes', 'suggest a recipe',
+  'what can i make', 'what should i make', 'idea for', 'ideas for',
+  'posts featuring', 'recipes featuring', 'recipe using', 'recipe involving',
+  'on betrfood', 'from betrfood', 'betrfood recipe',
 ];
 
 function hasPantryIntent(message) {

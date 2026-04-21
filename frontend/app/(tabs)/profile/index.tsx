@@ -257,20 +257,25 @@ export default function ProfileScreen() {
             numColumns={3}
             ListHeaderComponent={renderProfileHeader}
             renderItem={({ item }) => (
-              <View>
-                {item.mediaType === 'video' ? (
-                  <VideoThumbnailView
-                    videoUri={getImageUrl(item.imagePath)}
-                    style={styles.gridItem}
-                  />
-                ) : (
-                  <Image
-                    source={{ uri: getImageUrl(item.imagePath) }}
-                    style={styles.gridItem}
-                    accessibilityLabel={item.caption || 'Post image'}
-                  />
-                )}
-              </View>
+              <Pressable
+                onPress={() => router.push(`/post/${item.id}`)}
+                style={styles.gridItemWrapper}
+              >
+                <View>
+                  {item.mediaType === 'video' ? (
+                    <VideoThumbnailView
+                      videoUri={getImageUrl(item.imagePath)}
+                      style={styles.gridItem}
+                    />
+                  ) : (
+                    <Image
+                      source={{ uri: getImageUrl(item.imagePath) }}
+                      style={styles.gridItem}
+                      accessibilityLabel={item.caption || 'Post image'}
+                    />
+                  )}
+                </View>
+              </Pressable>
             )}
             showsVerticalScrollIndicator={false}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#22C55E" />}
