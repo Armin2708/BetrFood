@@ -1,6 +1,97 @@
 const supabase = require('../db/supabase');
 const { getUserRecentInteractions, getUserEngagementMetrics, getNegativeFeedbackPostIds } = require('../db/interactions');
 
+const DIETARY_TAG_NAMES_BY_ID = {
+  17: 'Vegan',
+  18: 'Vegetarian',
+  19: 'Gluten-Free',
+  20: 'Keto',
+  21: 'Paleo',
+  22: 'Dairy-Free',
+  23: 'Nut-Free',
+  24: 'Low-Carb',
+};
+
+const FALLBACK_CUISINES = ['American', 'Italian', 'Mexican', 'Mediterranean'];
+const FALLBACK_MEAL_TYPES = ['Breakfast', 'Lunch', 'Dinner', 'Snack'];
+const COLD_START_TRANSITION_INTERACTIONS = 10;
+
+function normalizeStringList(values) {
+  if (!Array.isArray(values)) return [];
+
+  return values
+    .map((value) => (typeof value === 'string' ? value.trim() : ''))
+    .filter(Boolean);
+}
+
+function normalizeDietaryPreferences(userPrefs = {}) {
+  const explicitDietary = normalizeStringList(userPrefs.dietary_preferences);
+  const profileDietary = Array.isArray(userPrefs.profile_dietary_preferences)
+    ? userPrefs.profile_dietary_preferences
+        .map((tagId) => DIETARY_TAG_NAMES_BY_ID[Number(tagId)])
+        .filter(Boolean)
+    : [];
+
+  return [...new Set([...explicitDietary, ...profileDietary])];
+}
+
+function scoresFromList(values, score = 1) {
+  return values.reduce((acc, value) => {
+    acc[value] = score;
+    return acc;
+  }, {});
+}
+
+function mapOnboardingPreferencesToVector(userPrefs = {}) {
+  const cuisines = normalizeStringList(userPrefs.cuisines);
+  const dietary = normalizeDietaryPreferences(userPrefs);
+
+  return {
+    cuisine_scores: scoresFromList(cuisines),
+    meal_type_scores: {},
+    dietary_scores: scoresFromList(dietary),
+  };
+}
+
+function buildFallbackPreferenceVector() {
+  return {
+    cuisine_scores: scoresFromList(FALLBACK_CUISINES, 0.6),
+    meal_type_scores: scoresFromList(FALLBACK_MEAL_TYPES, 0.6),
+    dietary_scores: {},
+  };
+}
+
+function hasPreferenceSignals(vector) {
+  return Object.keys(vector.cuisine_scores || {}).length > 0
+    || Object.keys(vector.meal_type_scores || {}).length > 0
+    || Object.keys(vector.dietary_scores || {}).length > 0;
+}
+
+function blendScoreMaps(explicitScores = {}, behavioralScores = {}, behaviorWeight = 0) {
+  const keys = new Set([...Object.keys(explicitScores), ...Object.keys(behavioralScores)]);
+  const blended = {};
+
+  for (const key of keys) {
+    const explicitScore = explicitScores[key] || 0;
+    const behavioralScore = behavioralScores[key] || 0;
+    blended[key] = (explicitScore * (1 - behaviorWeight)) + (behavioralScore * behaviorWeight);
+  }
+
+  return blended;
+}
+
+function blendPreferenceVectors(explicitVector, behavioralVector, interactionCount = 0) {
+  const behaviorWeight = Math.min(Math.max(interactionCount, 0) / COLD_START_TRANSITION_INTERACTIONS, 1);
+
+  return {
+    cuisine_scores: blendScoreMaps(explicitVector.cuisine_scores, behavioralVector.cuisine_scores, behaviorWeight),
+    meal_type_scores: blendScoreMaps(explicitVector.meal_type_scores, behavioralVector.meal_type_scores, behaviorWeight),
+    dietary_scores: blendScoreMaps(explicitVector.dietary_scores, behavioralVector.dietary_scores, behaviorWeight),
+    cold_start_weight: Number((1 - behaviorWeight).toFixed(2)),
+    behavioral_weight: Number(behaviorWeight.toFixed(2)),
+  };
+}
+
 /**
  * Calculate a relevance score for a post based on user preferences and engagement
  * Score is normalized 0-1
@@ -23,7 +114,7 @@ function calculatePostRelevanceScore(post, userPrefVector, options = {}) {
 
   // 1. Tag matching (40% weight by default)
   // Match post tags to user's cuisine, meal type, and dietary preferences
-  if (post.tags && post.tags.length > 0 && Object.keys(userPrefVector.cuisine_scores || {}).length > 0) {
+  if (post.tags && post.tags.length > 0 && hasPreferenceSignals(userPrefVector)) {
     const tagScore = calculateTagRelevance(post.tags, userPrefVector);
     score += tagScore * tagWeight;
   } else {
@@ -152,9 +243,16 @@ async function calculateUserPreferenceVector(userId, userPrefs = {}) {
       return normalized;
     };
 
-    const normalizedCuisines = normalizeScores(cuisineScores);
-    const normalizedMeals = normalizeScores(mealTypeScores);
-    const normalizedDietary = normalizeScores(dietaryScores);
+    const behavioralVector = {
+      cuisine_scores: normalizeScores(cuisineScores),
+      meal_type_scores: normalizeScores(mealTypeScores),
+      dietary_scores: normalizeScores(dietaryScores),
+    };
+
+    const onboardingVector = mapOnboardingPreferencesToVector(userPrefs);
+    const explicitVector = hasPreferenceSignals(onboardingVector)
+      ? onboardingVector
+      : buildFallbackPreferenceVector();
 
     // Calculate engagement score (0-1)
     // Based on interaction frequency and view duration
@@ -172,13 +270,21 @@ async function calculateUserPreferenceVector(userId, userPrefs = {}) {
       return userPrefs.cooking_skill || 'beginner';
     };
 
+    const blendedVector = blendPreferenceVectors(
+      explicitVector,
+      behavioralVector,
+      metrics.totalInteractionCount
+    );
+
     const vector = {
-      cuisine_scores: normalizedCuisines,
-      meal_type_scores: normalizedMeals,
-      dietary_scores: normalizedDietary,
+      cuisine_scores: blendedVector.cuisine_scores,
+      meal_type_scores: blendedVector.meal_type_scores,
+      dietary_scores: blendedVector.dietary_scores,
       avg_engagement_score: avgEngagementScore,
       recent_interaction_count: metrics.recentInteractionCount,
       total_interaction_count: metrics.totalInteractionCount,
+      cold_start_weight: blendedVector.cold_start_weight,
+      behavioral_weight: blendedVector.behavioral_weight,
       preferred_cook_time_range: userPrefs.max_cook_time
         ? { min: 5, max: userPrefs.max_cook_time }
         : { min: 5, max: 60 },
@@ -242,16 +348,25 @@ async function getUserPreferenceVector(userId, userPreferences = {}) {
   }
 
   if (data) {
-    return data;
+    const shouldRefreshColdStartVector =
+      (data.total_interaction_count || 0) < COLD_START_TRANSITION_INTERACTIONS;
+
+    if (!shouldRefreshColdStartVector) {
+      return data;
+    }
   }
 
-  // Cold start: create neutral preference vector
+  // Cold start: create preference vector from onboarding data, with safe fallback
   const coldStartVector = await calculateUserPreferenceVector(userId, userPreferences);
   await saveUserPreferenceVector(userId, coldStartVector);
   return coldStartVector;
 }
 
 module.exports = {
+  COLD_START_TRANSITION_INTERACTIONS,
+  mapOnboardingPreferencesToVector,
+  buildFallbackPreferenceVector,
+  blendPreferenceVectors,
   calculatePostRelevanceScore,
   calculateTagRelevance,
   calculateUserPreferenceVector,
