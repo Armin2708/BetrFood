@@ -15,7 +15,7 @@ async function updateAllUserPreferenceVectors() {
 
     const { data: activeUsers, error: usersError } = await supabase
       .from('user_profiles')
-      .select('id')
+      .select('id, dietary_preferences')
       .gte('updated_at', thirtyDaysAgo.toISOString());
 
     if (usersError) throw usersError;
@@ -47,7 +47,10 @@ async function updateAllUserPreferenceVectors() {
               .single();
 
             // Calculate new preference vector
-            const vector = await calculateUserPreferenceVector(user.id, userPrefs || {});
+            const vector = await calculateUserPreferenceVector(user.id, {
+              ...(userPrefs || {}),
+              profile_dietary_preferences: user.dietary_preferences || [],
+            });
 
             // Save to database
             await saveUserPreferenceVector(user.id, vector);

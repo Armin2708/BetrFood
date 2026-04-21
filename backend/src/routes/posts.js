@@ -113,6 +113,33 @@ const upload = multer({
   },
 });
 
+async function getExplicitRecommendationPreferences(userId) {
+  const [preferencesResult, profileResult] = await Promise.all([
+    supabase
+      .from('user_preferences')
+      .select('dietary_preferences, cuisines, cooking_skill, max_cook_time')
+      .eq('user_id', userId)
+      .maybeSingle(),
+    supabase
+      .from('user_profiles')
+      .select('dietary_preferences')
+      .eq('id', userId)
+      .maybeSingle(),
+  ]);
+
+  if (preferencesResult.error) {
+    console.warn('Failed to fetch explicit user preferences:', preferencesResult.error.message);
+  }
+  if (profileResult.error) {
+    console.warn('Failed to fetch profile dietary preferences:', profileResult.error.message);
+  }
+
+  return {
+    ...(preferencesResult.data || {}),
+    profile_dietary_preferences: profileResult.data?.dietary_preferences || [],
+  };
+}
+
 // GET /api/posts - cursor-based paginated feed
 router.get('/', optionalAuth, async (req, res) => {
   try {
@@ -193,7 +220,8 @@ router.get('/', optionalAuth, async (req, res) => {
     let finalPosts = mapped;
     if (req.userId && mapped.length > 0) {
       try {
-        const userPrefVector = await getUserPreferenceVector(req.userId);
+        const explicitPreferences = await getExplicitRecommendationPreferences(req.userId);
+        const userPrefVector = await getUserPreferenceVector(req.userId, explicitPreferences);
         const notInterestedPostIds = await getNegativeFeedbackPostIds(req.userId);
         const notInterestedSet = new Set(notInterestedPostIds);
 
