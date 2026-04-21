@@ -340,6 +340,200 @@ router.post('/autocomplete/record', optionalAuth, async (req, res) => {
   }
 });
 
+// GET /api/posts/for-you
+// Personalized feed combining content-based and collaborative filtering.
+// Algorithm:
+//   1. Fetch a candidate pool of recent posts (5× the requested limit)
+//   2. Filter blocked users, private accounts, and "not interested" posts
+//   3. Score each post:
+//        - Tag preference match (50%) — from user's stored preference vector
+//        - Follow boost (+0.10) — posts by followed creators score higher
+//        - Collaborative boost (+0.08) — posts by users who share tag affinities
+//        - Popularity (15%) — likes normalised to 100
+//        - Recency (15%) — logarithmic decay over 24 hours
+//        - Not-interested penalty (−0.20)
+//   4. Return top `limit` posts sorted by score, with cursor for next page
+router.get('/for-you', requireAuth, async (req, res) => {
+  try {
+    const limit = Math.min(Math.max(parseInt(req.query.limit) || 10, 1), 30);
+    const cursor = req.query.cursor || null;
+    const poolSize = limit * 5;
+
+    // Parallel fetches: preference vector, exclusions, negative feedback, follows
+    const [userPrefVector, excludedIds, notInterestedPostIds, followsResult] =
+      await Promise.all([
+        getUserPreferenceVector(req.userId).catch(() => null),
+        getExcludedUserIds(req.userId),
+        getNegativeFeedbackPostIds(req.userId).catch(() => []),
+        supabase
+          .from('user_follows')
+          .select('following_id')
+          .eq('follower_id', req.userId),
+      ]);
+
+    const followedIds = new Set(
+      (followsResult.data || []).map((f) => f.following_id)
+    );
+    const notInterestedSet = new Set(notInterestedPostIds);
+
+    // Collaborative filtering: find users whose liked-post tags overlap with ours.
+    // We pull the user's top liked-post tag IDs, then find other likers of those posts.
+    let collaborativeUserIds = new Set();
+    try {
+      const { data: userLikes } = await supabase
+        .from('likes')
+        .select('post_id')
+        .eq('user_id', req.userId)
+        .limit(50);
+
+      if (userLikes && userLikes.length > 0) {
+        const likedPostIds = userLikes.map((l) => l.post_id);
+
+        const { data: ptRows } = await supabase
+          .from('post_tags')
+          .select('tag_id')
+          .in('post_id', likedPostIds);
+
+        if (ptRows && ptRows.length > 0) {
+          const tagFreq = {};
+          for (const { tag_id } of ptRows) {
+            tagFreq[tag_id] = (tagFreq[tag_id] || 0) + 1;
+          }
+          const topTagIds = Object.entries(tagFreq)
+            .sort(([, a], [, b]) => b - a)
+            .slice(0, 5)
+            .map(([id]) => parseInt(id));
+
+          const { data: tagPostRows } = await supabase
+            .from('post_tags')
+            .select('post_id')
+            .in('tag_id', topTagIds)
+            .limit(300);
+
+          if (tagPostRows && tagPostRows.length > 0) {
+            const tagPostIds = tagPostRows.map((r) => r.post_id);
+
+            const { data: similarLikers } = await supabase
+              .from('likes')
+              .select('user_id')
+              .in('post_id', tagPostIds)
+              .neq('user_id', req.userId)
+              .limit(100);
+
+            const freq = {};
+            for (const { user_id } of similarLikers || []) {
+              freq[user_id] = (freq[user_id] || 0) + 1;
+            }
+            collaborativeUserIds = new Set(
+              Object.entries(freq)
+                .sort(([, a], [, b]) => b - a)
+                .slice(0, 30)
+                .map(([uid]) => uid)
+            );
+          }
+        }
+      }
+    } catch {
+      // Non-critical — proceed without collaborative boost
+    }
+
+    // Fetch candidate pool of recent posts
+    let query = supabase
+      .from('posts')
+      .select('*')
+      .neq('user_id', req.userId)
+      .order('created_at', { ascending: false })
+      .limit(poolSize + 1);
+
+    if (cursor) {
+      const { data: cursorPost } = await supabase
+        .from('posts')
+        .select('created_at')
+        .eq('id', cursor)
+        .single();
+
+      if (!cursorPost) {
+        return res.json({ posts: [], nextCursor: null, hasMore: false });
+      }
+      query = query.lt('created_at', cursorPost.created_at);
+    }
+
+    const { data: rawPosts, error } = await query;
+    if (error) throw error;
+
+    // Filter blocked users + private accounts (same logic as general feed)
+    let candidates = excludedIds.size > 0
+      ? rawPosts.filter((p) => !excludedIds.has(p.user_id))
+      : rawPosts;
+
+    if (candidates.length > 0) {
+      const postUserIds = [...new Set(candidates.map((p) => p.user_id))];
+      const { data: privatePrefs } = await supabase
+        .from('user_preferences')
+        .select('user_id')
+        .in('user_id', postUserIds)
+        .eq('profile_visibility', 'private');
+
+      const privateUserIds = new Set((privatePrefs || []).map((p) => p.user_id));
+      if (privateUserIds.size > 0) {
+        candidates = candidates.filter((p) => {
+          if (!privateUserIds.has(p.user_id)) return true;
+          return followedIds.has(p.user_id);
+        });
+      }
+    }
+
+    const hasMoreCandidates = candidates.length > poolSize;
+    const pool = hasMoreCandidates ? candidates.slice(0, poolSize) : candidates;
+
+    // Enrich with tags, profiles, likes, etc.
+    let enriched = await enrichPostsWithProfiles(pool);
+    enriched = await enrichPostsWithTags(enriched);
+    enriched = await enrichPostsWithCommentCounts(enriched);
+    enriched = await enrichPostsWithLikes(enriched, req.userId);
+    enriched = await enrichPostsWithImages(enriched);
+    enriched = await enrichPostsWithRecipes(enriched);
+    const mapped = enriched.map(mapPost);
+
+    // Score and rank
+    const scored = mapped.map((post) => {
+      let score = userPrefVector
+        ? calculatePostRelevanceScore(
+            { ...post, hasNegativeFeedback: notInterestedSet.has(post.id) },
+            userPrefVector,
+            { tagWeight: 0.50, engagementWeight: 0.15, recencyWeight: 0.15, historyWeight: 0.10, negativeFeedbackPenalty: 0.20 }
+          )
+        : 0.5;
+
+      // Boost posts from followed creators (discovery still surfaces them higher)
+      if (followedIds.has(post.userId)) score = Math.min(1, score + 0.10);
+
+      // Collaborative filtering boost
+      if (collaborativeUserIds.has(post.userId)) score = Math.min(1, score + 0.08);
+
+      return { ...post, _score: score };
+    });
+
+    // Filter out not-interested posts after scoring (they get penalised above, but remove very low scores)
+    const filtered = scored.filter((p) => !notInterestedSet.has(p.id) || p._score > 0.1);
+
+    filtered.sort((a, b) => b._score - a._score);
+
+    const results = filtered.slice(0, limit).map(({ _score, ...post }) => post);
+
+    // Cursor points to the last post in the raw pool (not the ranked results) so
+    // next page fetches the next chronological window for re-ranking.
+    const lastPoolPost = pool[pool.length - 1];
+    const nextCursor = hasMoreCandidates && lastPoolPost ? lastPoolPost.id : null;
+    const hasMore = Boolean(nextCursor);
+
+    res.json({ posts: results, nextCursor, hasMore });
+  } catch (error) {
+    console.error('Error fetching for-you feed:', error);
+    res.status(500).json({ error: 'Failed to fetch For You feed.' });
+  }
+});
+
 // GET /api/posts/search
 // Query params:
 //   q          - required, search keywords

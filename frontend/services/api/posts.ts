@@ -223,6 +223,19 @@ export async function fetchFollowingFeed(cursor?: string | null, limit: number =
   return response.json();
 }
 
+export async function fetchForYouFeed(cursor?: string | null, limit: number = 10): Promise<PaginatedResponse> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (cursor) params.set('cursor', cursor);
+  const response = await fetch(`${API_BASE_URL}/api/posts/for-you?${params}`, {
+    headers: await authHeaders(),
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to fetch For You feed');
+  }
+  return response.json();
+}
+
 export async function searchPosts(
   query: string,
   limit: number = 20,

@@ -10,6 +10,7 @@ export {
   deletePost,
   updatePost,
   fetchFollowingFeed,
+  fetchForYouFeed,
   fetchLikedPosts,
   searchPosts,
   fetchAutocompleteSuggestions,

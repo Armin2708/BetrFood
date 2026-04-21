@@ -20,6 +20,7 @@ import {
   fetchPosts,
   fetchPostsByTags,
   fetchFollowingFeed,
+  fetchForYouFeed,
   fetchRecipe,
   getImageUrl,
   getAvatarUrl,
@@ -106,6 +107,11 @@ export default function HomeScreen() {
           rawPosts = data.posts;
           cursor = data.nextCursor;
           more = data.hasMore;
+        } else if (feed === 'community') {
+          const data = await fetchForYouFeed(null, PAGE_LIMIT);
+          rawPosts = data.posts;
+          cursor = data.nextCursor;
+          more = data.hasMore;
         } else {
           const data = await fetchPosts(null, PAGE_LIMIT);
           rawPosts = data.posts;
@@ -131,6 +137,8 @@ export default function HomeScreen() {
       const data =
         feedType === 'following'
           ? await fetchFollowingFeed(nextCursor, PAGE_LIMIT)
+          : feedType === 'community'
+          ? await fetchForYouFeed(nextCursor, PAGE_LIMIT)
           : await fetchPosts(nextCursor, PAGE_LIMIT);
 
       const enriched = await enrichWithPantryMatch(data.posts);
