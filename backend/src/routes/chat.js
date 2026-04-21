@@ -241,6 +241,7 @@ async function searchPosts(keywords, limit = 3) {
         mediaType: p.media_type || 'image',
         cookTime: recipe?.cook_time || null,
         servings: recipe?.servings || null,
+        difficulty: recipe?.difficulty || null,
         ingredients: ingredients.map(i => ({
           name: i.name,
           quantity: i.quantity,
@@ -261,6 +262,8 @@ async function searchPosts(keywords, limit = 3) {
 function formatPostForPrompt(p) {
   let text = `Post: "${p.caption || 'Untitled'}" by ${p.username}`;
   if (p.cookTime) text += `\nCook time: ${p.cookTime}`;
+  if (p.servings) text += `\nServings: ${p.servings}`;
+  if (p.difficulty) text += `\nDifficulty: ${p.difficulty}`;
   if (p.ingredients?.length) {
     text += `\nIngredients: ${p.ingredients.map(i => `${[i.quantity, i.unit, i.name].filter(Boolean).join(' ')}`).join(', ')}`;
   }
