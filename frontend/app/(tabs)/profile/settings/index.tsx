@@ -217,6 +217,14 @@ export default function Settings() {
             <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
           </Pressable>
           <View style={styles.divider} />
+          <Pressable
+            style={styles.navRow}
+            onPress={() => router.push("/profile/settings/export-data" as any)}
+          >
+            <Text style={styles.navLabel}>Export My Data</Text>
+            <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+          </Pressable>
+          <View style={styles.divider} />
           <Pressable style={styles.navRow} onPress={handleLogout}>
             <Text style={[styles.navLabel, { color: '#EF4444' }]}>Log Out</Text>
             <Ionicons name="log-out-outline" size={18} color="#EF4444" />

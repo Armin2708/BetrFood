@@ -58,3 +58,5 @@ export { sendChatMessage, fetchChatHistory } from './chat';
 export type { ChatMessage } from './chat';
 export { trackPostView, markPostNotInterested, removeNotInterestedFeedback, getNotInterestedPosts, resetRecommendations } from './interactions';
 export type { ResetRecommendationsResponse } from './interactions';
+export { exportMyData } from './export';
+export type { ExportResult } from './export';
