@@ -93,3 +93,34 @@ export async function getNotInterestedPosts(): Promise<{ notInterestedPostIds: s
 
   return response.json();
 }
+
+export interface ResetRecommendationsResponse {
+  message: string;
+  deleted: {
+    impressions: number;
+    negativeFeedback: number;
+    preferenceVector: number;
+  };
+}
+
+/**
+ * Clear all recommendation-signal data for the current user:
+ * view history (post_impressions), "not interested" feedback, and the learned preference vector.
+ * After calling this, the For You feed reverts to non-personalized content.
+ */
+export async function resetRecommendations(): Promise<ResetRecommendationsResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/users/me/reset-recommendations`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(await authHeaders()),
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.error || 'Failed to reset recommendations');
+  }
+
+  return response.json();
+}

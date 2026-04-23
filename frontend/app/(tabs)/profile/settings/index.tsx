@@ -131,6 +131,14 @@ export default function Settings() {
           <View style={styles.divider} />
           <Pressable
             style={styles.navRow}
+            onPress={() => router.push("/profile/settings/data-storage" as any)}
+          >
+            <Text style={styles.navLabel}>Data & Storage</Text>
+            <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+          </Pressable>
+          <View style={styles.divider} />
+          <Pressable
+            style={styles.navRow}
             onPress={() => router.push("/profile/settings/help" as any)}
           >
             <Text style={styles.navLabel}>Help & Support</Text>

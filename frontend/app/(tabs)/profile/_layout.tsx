@@ -16,6 +16,7 @@ export default function ProfileStack() {
       <Stack.Screen name="settings/help/index" options={{ title: 'Help & FAQ' }} />
       <Stack.Screen name="settings/appearance" options={{ title: 'Appearance' }} />
       <Stack.Screen name="settings/linked-accounts" options={{ title: 'Linked Accounts' }} />
+      <Stack.Screen name="settings/data-storage" options={{ title: 'Data & Storage' }} />
     </Stack>
   );
 }
