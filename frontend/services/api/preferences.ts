@@ -1,5 +1,16 @@
 import { API_BASE_URL, authHeaders } from './client';
 
+export interface NotificationPreferences {
+  notificationsEnabled: boolean;
+  expirationNotificationsEnabled: boolean;
+  notifNewFollower: boolean;
+  notifLikes: boolean;
+  notifComments: boolean;
+  notifCommentReplies: boolean;
+  notifAiChat: boolean;
+  notifWeeklyDigest: boolean;
+}
+
 export async function fetchPreferences() {
   const response = await fetch(`${API_BASE_URL}/api/preferences`, {
     headers: await authHeaders(),
@@ -20,6 +31,12 @@ export async function updatePreferences(prefs: {
   expiringItemsThreshold?: number;
   expirationNotificationsEnabled?: boolean;
   notificationsEnabled?: boolean;
+  notifNewFollower?: boolean;
+  notifLikes?: boolean;
+  notifComments?: boolean;
+  notifCommentReplies?: boolean;
+  notifAiChat?: boolean;
+  notifWeeklyDigest?: boolean;
 }) {
   const response = await fetch(`${API_BASE_URL}/api/preferences`, {
     method: 'PUT',
@@ -33,7 +50,7 @@ export async function updatePreferences(prefs: {
   return response.json();
 }
 
-export async function fetchNotificationPreferences(): Promise<{ notificationsEnabled: boolean }> {
+export async function fetchNotificationPreferences(): Promise<NotificationPreferences> {
   const response = await fetch(`${API_BASE_URL}/api/preferences/notifications`, {
     headers: await authHeaders(),
   });
@@ -45,8 +62,8 @@ export async function fetchNotificationPreferences(): Promise<{ notificationsEna
 }
 
 export async function updateNotificationPreferences(
-  prefs: { notificationsEnabled: boolean }
-): Promise<{ notificationsEnabled: boolean }> {
+  prefs: Partial<NotificationPreferences>
+): Promise<NotificationPreferences> {
   const response = await fetch(`${API_BASE_URL}/api/preferences/notifications`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },

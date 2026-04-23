@@ -47,6 +47,7 @@ export { savePost, unsavePost, checkSaveStatus, fetchCollections, createCollecti
 export { reportContent } from './reports';
 export { checkBlockStatus, checkMuteStatus, blockUser, unblockUser, muteUser, unmuteUser, fetchBlockedUsers, fetchMutedUsers } from './blocks';
 export { fetchPreferences, updatePreferences, fetchNotificationPreferences, updateNotificationPreferences } from './preferences';
+export type { NotificationPreferences } from './preferences';
 export { fetchNotifications, markNotificationRead, markAllNotificationsRead, clearAllNotifications, fetchUnreadNotificationCount, checkExpiringItems } from './notifications';
 export type { Notification } from './notifications';
 export { fetchAdminUsers, updateUserRole, fetchAdminStats, updateUserVerification } from './admin';
