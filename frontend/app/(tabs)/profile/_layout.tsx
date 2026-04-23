@@ -12,6 +12,7 @@ export default function ProfileStack() {
       <Stack.Screen name="settings/preferences" options={{ title: 'Food Preferences' }} />
       <Stack.Screen name="settings/privacy" options={{ title: 'Privacy' }} />
       <Stack.Screen name="settings/blocked" options={{ title: 'Blocked & Muted' }} />
+      <Stack.Screen name="settings/help/index" options={{ title: 'Help & FAQ' }} />
     </Stack>
   );
 }

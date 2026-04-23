@@ -105,7 +105,10 @@ export default function Settings() {
             <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
           </Pressable>
           <View style={styles.divider} />
-          <Pressable style={styles.navRow}>
+          <Pressable
+            style={styles.navRow}
+            onPress={() => router.push("/profile/settings/help" as any)}
+          >
             <Text style={styles.navLabel}>Help & Support</Text>
             <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
           </Pressable>
