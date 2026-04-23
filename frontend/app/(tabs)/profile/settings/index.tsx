@@ -195,6 +195,14 @@ export default function Settings() {
         <View style={styles.card}>
           <Pressable
             style={styles.navRow}
+            onPress={() => router.push("/profile/settings/linked-accounts" as any)}
+          >
+            <Text style={styles.navLabel}>Linked Accounts</Text>
+            <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+          </Pressable>
+          <View style={styles.divider} />
+          <Pressable
+            style={styles.navRow}
             onPress={() => router.push("/profile/settings/blocked" as any)}
           >
             <Text style={styles.navLabel}>Blocked & Muted</Text>
