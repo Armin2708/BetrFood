@@ -10,10 +10,11 @@ const { requireAuth } = require('../middleware/auth');
  */
 router.post('/check-expiring-all', async (req, res) => {
   try {
-    // Get all users who have expiration notifications enabled
+    // Get all users who have expiration notifications enabled AND global
+    // in-app notifications enabled (issue #113).
     const { data: users, error: usersError } = await supabase
       .from('user_preferences')
-      .select('user_id, expiring_items_threshold')
+      .select('user_id, expiring_items_threshold, notifications_enabled')
       .eq('expiration_notifications_enabled', true);
 
     if (usersError) throw usersError;
@@ -22,6 +23,8 @@ router.post('/check-expiring-all', async (req, res) => {
     let totalCreated = 0;
 
     for (const user of users || []) {
+      // Short-circuit when the user has globally disabled notifications.
+      if (user.notifications_enabled === false) continue;
       const { checked, created } = await checkExpiringItemsForUser(
         user.user_id,
         user.expiring_items_threshold || 7
@@ -53,13 +56,18 @@ router.post('/check-expiring', async (req, res) => {
     // Fetch user preferences
     const { data: prefs, error: prefsError } = await supabase
       .from('user_preferences')
-      .select('expiring_items_threshold, expiration_notifications_enabled')
+      .select('expiring_items_threshold, expiration_notifications_enabled, notifications_enabled')
       .eq('user_id', req.userId)
       .single();
 
     if (prefsError && prefsError.code !== 'PGRST116') throw prefsError;
 
     console.log('[EXPIRING-CHECK] userId:', req.userId, 'prefs:', JSON.stringify(prefs));
+
+    // Short-circuit when the user has globally disabled notifications (#113).
+    if (prefs?.notifications_enabled === false) {
+      return res.json({ checked: 0, created: 0, skipped: true });
+    }
 
     const threshold = prefs?.expiring_items_threshold || 7;
     const { checked, created } = await checkExpiringItemsForUser(req.userId, threshold);

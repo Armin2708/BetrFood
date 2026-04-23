@@ -86,6 +86,18 @@ export default function Settings() {
           </View>
         </View>
 
+        {/* NOTIFICATIONS */}
+        <Text style={styles.sectionHeader}>NOTIFICATIONS</Text>
+        <View style={styles.card}>
+          <Pressable
+            style={styles.navRow}
+            onPress={() => router.push("/profile/settings/notifications" as any)}
+          >
+            <Text style={styles.navLabel}>Push Notifications</Text>
+            <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+          </Pressable>
+        </View>
+
         {/* LEGAL */}
         <Text style={styles.sectionHeader}>LEGAL</Text>
         <View style={styles.card}>

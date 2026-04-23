@@ -46,7 +46,7 @@ export type { FollowRequest } from './follows';
 export { savePost, unsavePost, checkSaveStatus, fetchCollections, createCollection, deleteCollection, addPostToCollection, removePostFromCollection, fetchCollectionPosts } from './collections';
 export { reportContent } from './reports';
 export { checkBlockStatus, checkMuteStatus, blockUser, unblockUser, muteUser, unmuteUser, fetchBlockedUsers, fetchMutedUsers } from './blocks';
-export { fetchPreferences, updatePreferences } from './preferences';
+export { fetchPreferences, updatePreferences, fetchNotificationPreferences, updateNotificationPreferences } from './preferences';
 export { fetchNotifications, markNotificationRead, markAllNotificationsRead, clearAllNotifications, fetchUnreadNotificationCount, checkExpiringItems } from './notifications';
 export type { Notification } from './notifications';
 export { fetchAdminUsers, updateUserRole, fetchAdminStats, updateUserVerification } from './admin';

@@ -9,6 +9,7 @@ export interface Preferences {
   cuisines: string[];
   expiringItemsThreshold: number;
   expirationNotificationsEnabled: boolean;
+  notificationsEnabled: boolean;
   profileVisibility: "public" | "private";
   dietaryInfoVisible: boolean;
 }
@@ -31,6 +32,7 @@ const DEFAULT_PREFERENCES: Preferences = {
   cuisines: [],
   expiringItemsThreshold: 7,
   expirationNotificationsEnabled: false,
+  notificationsEnabled: true,
   profileVisibility: "public",
   dietaryInfoVisible: true,
 };
@@ -55,6 +57,7 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
         cuisines: prefs.cuisines || [],
         expiringItemsThreshold: prefs.expiringItemsThreshold ?? 7,
         expirationNotificationsEnabled: prefs.expirationNotificationsEnabled ?? false,
+        notificationsEnabled: prefs.notificationsEnabled ?? true,
         profileVisibility: prefs.profileVisibility || "public",
         dietaryInfoVisible: prefs.dietaryInfoVisible ?? true,
       });
