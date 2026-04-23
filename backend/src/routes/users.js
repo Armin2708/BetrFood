@@ -43,6 +43,185 @@ router.post("/me/reset-recommendations", requireAuth, async (req, res) => {
   }
 });
 
+// GET /api/users/me/export — synchronous personal data export (JSON attachment).
+// Aggregates every user-owned table and returns a single JSON file. Media is referenced
+// by existing Supabase Storage URL (image_path / avatar_url); raw bytes are NOT embedded.
+//
+// NOTE: synchronous, in-memory aggregation. Suitable for users with bounded data volume
+// (roughly <5k total rows across all tables). For users at scale this should be moved to
+// a background job with email delivery — tracked in the follow-up issue.
+router.get("/me/export", requireAuth, async (req, res) => {
+  const userId = req.userId;
+  try {
+    const [
+      userProfileRes,
+      userPreferencesRes,
+      userPreferenceVectorRes,
+      postsRes,
+      commentsRes,
+      likesRes,
+      savesRes,
+      pantryItemsRes,
+      collectionsRes,
+      notificationsRes,
+      followersRes,
+      followingRes,
+      followRequestsSentRes,
+      followRequestsReceivedRes,
+      blocksRes,
+      mutesRes,
+      postImpressionsRes,
+      postNegativeFeedbackRes,
+      chatConversationsRes,
+      chatMessagesRes,
+      reportsRes,
+    ] = await Promise.all([
+      supabase.from("user_profiles").select("*").eq("id", userId).maybeSingle(),
+      supabase.from("user_preferences").select("*").eq("user_id", userId).maybeSingle(),
+      supabase.from("user_preference_vectors").select("*").eq("user_id", userId).maybeSingle(),
+      supabase.from("posts").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
+      supabase.from("comments").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
+      supabase.from("likes").select("*").eq("user_id", userId),
+      supabase.from("saves").select("*").eq("user_id", userId),
+      supabase.from("pantry_items").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
+      supabase.from("collections").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
+      supabase.from("notifications").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
+      supabase.from("user_follows").select("*").eq("following_id", userId),
+      supabase.from("user_follows").select("*").eq("follower_id", userId),
+      supabase.from("follow_requests").select("*").eq("requester_id", userId),
+      supabase.from("follow_requests").select("*").eq("requested_user_id", userId),
+      supabase.from("user_blocks").select("*").eq("blocker_id", userId),
+      supabase.from("user_mutes").select("*").eq("muter_id", userId),
+      supabase.from("post_impressions").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
+      supabase.from("post_negative_feedback").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
+      supabase.from("chat_conversations").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
+      supabase.from("chat_messages").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
+      supabase.from("reports").select("*").eq("reporter_id", userId).order("created_at", { ascending: false }),
+    ]);
+
+    const results = {
+      user_profile: userProfileRes,
+      user_preferences: userPreferencesRes,
+      user_preference_vector: userPreferenceVectorRes,
+      posts: postsRes,
+      comments: commentsRes,
+      likes: likesRes,
+      saves: savesRes,
+      pantry_items: pantryItemsRes,
+      collections: collectionsRes,
+      notifications: notificationsRes,
+      followers: followersRes,
+      following: followingRes,
+      follow_requests_sent: followRequestsSentRes,
+      follow_requests_received: followRequestsReceivedRes,
+      blocks: blocksRes,
+      mutes: mutesRes,
+      post_impressions: postImpressionsRes,
+      post_negative_feedback: postNegativeFeedbackRes,
+      chat_conversations: chatConversationsRes,
+      chat_messages: chatMessagesRes,
+      reports: reportsRes,
+    };
+
+    for (const [key, r] of Object.entries(results)) {
+      if (r && r.error) {
+        throw new Error(`Failed to fetch ${key}: ${r.error.message}`);
+      }
+    }
+
+    const postIds = (postsRes.data || []).map(p => p.id);
+    const collectionIds = (collectionsRes.data || []).map(c => c.id);
+
+    // Nested children (only for rows owned by the user) fetched in parallel
+    const [
+      postImagesRes,
+      postTagsRes,
+      recipesRes,
+      collectionPostsRes,
+    ] = await Promise.all([
+      postIds.length
+        ? supabase.from("post_images").select("*").in("post_id", postIds)
+        : Promise.resolve({ data: [], error: null }),
+      postIds.length
+        ? supabase.from("post_tags").select("*").in("post_id", postIds)
+        : Promise.resolve({ data: [], error: null }),
+      postIds.length
+        ? supabase.from("recipes").select("*").in("post_id", postIds)
+        : Promise.resolve({ data: [], error: null }),
+      collectionIds.length
+        ? supabase.from("collection_posts").select("*").in("collection_id", collectionIds)
+        : Promise.resolve({ data: [], error: null }),
+    ]);
+
+    for (const [key, r] of Object.entries({ postImagesRes, postTagsRes, recipesRes, collectionPostsRes })) {
+      if (r && r.error) {
+        throw new Error(`Failed to fetch ${key}: ${r.error.message}`);
+      }
+    }
+
+    const recipeIds = (recipesRes.data || []).map(r => r.id);
+    const [recipeIngredientsRes, recipeStepsRes] = await Promise.all([
+      recipeIds.length
+        ? supabase.from("recipe_ingredients").select("*").in("recipe_id", recipeIds)
+        : Promise.resolve({ data: [], error: null }),
+      recipeIds.length
+        ? supabase.from("recipe_steps").select("*").in("recipe_id", recipeIds)
+        : Promise.resolve({ data: [], error: null }),
+    ]);
+
+    if (recipeIngredientsRes.error) throw new Error(`Failed to fetch recipe_ingredients: ${recipeIngredientsRes.error.message}`);
+    if (recipeStepsRes.error) throw new Error(`Failed to fetch recipe_steps: ${recipeStepsRes.error.message}`);
+
+    const exportedAt = new Date().toISOString();
+    const payload = {
+      export_metadata: {
+        user_id: userId,
+        exported_at: exportedAt,
+        schema_version: 1,
+        note: "Media files are referenced by Supabase Storage URL (see user_profile.avatar_url, posts[].image_path, post_images[].image_path). Raw bytes are not included.",
+      },
+      user_profile: userProfileRes.data || null,
+      user_preferences: userPreferencesRes.data || null,
+      user_preference_vector: userPreferenceVectorRes.data || null,
+      posts: postsRes.data || [],
+      post_images: postImagesRes.data || [],
+      post_tags: postTagsRes.data || [],
+      recipes: recipesRes.data || [],
+      recipe_ingredients: recipeIngredientsRes.data || [],
+      recipe_steps: recipeStepsRes.data || [],
+      comments: commentsRes.data || [],
+      likes: likesRes.data || [],
+      saves: savesRes.data || [],
+      pantry_items: pantryItemsRes.data || [],
+      collections: collectionsRes.data || [],
+      collection_posts: collectionPostsRes.data || [],
+      notifications: notificationsRes.data || [],
+      followers: followersRes.data || [],
+      following: followingRes.data || [],
+      follow_requests_sent: followRequestsSentRes.data || [],
+      follow_requests_received: followRequestsReceivedRes.data || [],
+      blocks: blocksRes.data || [],
+      mutes: mutesRes.data || [],
+      post_impressions: postImpressionsRes.data || [],
+      post_negative_feedback: postNegativeFeedbackRes.data || [],
+      chat_conversations: chatConversationsRes.data || [],
+      chat_messages: chatMessagesRes.data || [],
+      reports: reportsRes.data || [],
+    };
+
+    const datePart = exportedAt.slice(0, 10);
+    const safeUserId = String(userId).replace(/[^a-zA-Z0-9_-]/g, "_");
+    const filename = `betrfood-export-${safeUserId}-${datePart}.json`;
+
+    res.setHeader("Content-Type", "application/json; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.status(200).send(JSON.stringify(payload, null, 2));
+  } catch (error) {
+    console.error("Error exporting user data:", error);
+    res.status(500).json({ error: "Failed to export user data." });
+  }
+});
+
 // DELETE /api/users/me — permanently delete the current user's account and all data
 router.delete("/me", requireAuth, async (req, res) => {
   const userId = req.userId;
