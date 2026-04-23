@@ -98,6 +98,18 @@ export default function Settings() {
           </Pressable>
         </View>
 
+        {/* APPEARANCE */}
+        <Text style={styles.sectionHeader}>APPEARANCE</Text>
+        <View style={styles.card}>
+          <Pressable
+            style={styles.navRow}
+            onPress={() => router.push("/profile/settings/appearance" as any)}
+          >
+            <Text style={styles.navLabel}>Feed Layout</Text>
+            <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+          </Pressable>
+        </View>
+
         {/* LEGAL */}
         <Text style={styles.sectionHeader}>LEGAL</Text>
         <View style={styles.card}>
