@@ -4,6 +4,45 @@ const { requireAuth } = require("../middleware/auth");
 
 const router = express.Router();
 
+// POST /api/users/me/reset-recommendations — clear recommendation-signal data for the current user
+// Deletes: post_impressions, post_negative_feedback, and user_preference_vectors rows for this user.
+// After reset the For You feed falls back to non-personalized content (cold-start path in
+// getUserPreferenceVector rebuilds a neutral vector on next fetch).
+router.post("/me/reset-recommendations", requireAuth, async (req, res) => {
+  const userId = req.userId;
+  try {
+    const { count: impressionsCount, error: impErr } = await supabase
+      .from("post_impressions")
+      .delete({ count: "exact" })
+      .eq("user_id", userId);
+    if (impErr) throw impErr;
+
+    const { count: negativeCount, error: negErr } = await supabase
+      .from("post_negative_feedback")
+      .delete({ count: "exact" })
+      .eq("user_id", userId);
+    if (negErr) throw negErr;
+
+    const { count: vectorCount, error: vecErr } = await supabase
+      .from("user_preference_vectors")
+      .delete({ count: "exact" })
+      .eq("user_id", userId);
+    if (vecErr) throw vecErr;
+
+    res.json({
+      message: "Recommendations reset.",
+      deleted: {
+        impressions: impressionsCount || 0,
+        negativeFeedback: negativeCount || 0,
+        preferenceVector: vectorCount || 0,
+      },
+    });
+  } catch (error) {
+    console.error("Error resetting recommendations:", error);
+    res.status(500).json({ error: "Failed to reset recommendations." });
+  }
+});
+
 // DELETE /api/users/me — permanently delete the current user's account and all data
 router.delete("/me", requireAuth, async (req, res) => {
   const userId = req.userId;
