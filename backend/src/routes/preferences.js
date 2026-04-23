@@ -25,7 +25,8 @@ router.get('/', requireAuth, async (req, res) => {
         cookingSkill: 'beginner',
         maxCookTime: null,
         expiringItemsThreshold: 7,
-        expirationNotificationsEnabled: false
+        expirationNotificationsEnabled: false,
+        notificationsEnabled: true
       });
     }
 
@@ -44,7 +45,8 @@ router.get('/', requireAuth, async (req, res) => {
       cookingSkill: data.cooking_skill || 'beginner',
       maxCookTime: data.max_cook_time || null,
       expiringItemsThreshold: data.expiring_items_threshold || 7,
-      expirationNotificationsEnabled: data.expiration_notifications_enabled ?? false
+      expirationNotificationsEnabled: data.expiration_notifications_enabled ?? false,
+      notificationsEnabled: data.notifications_enabled ?? true
     });
   } catch (error) {
     console.error('Error fetching preferences:', error);
@@ -145,6 +147,14 @@ router.put('/', requireAuth, async (req, res) => {
       updates.expiration_notifications_enabled = expirationNotificationsEnabled;
     }
 
+    const { notificationsEnabled } = req.body;
+    if (notificationsEnabled !== undefined) {
+      if (typeof notificationsEnabled !== 'boolean') {
+        return res.status(400).json({ error: 'notificationsEnabled must be a boolean.' });
+      }
+      updates.notifications_enabled = notificationsEnabled;
+    }
+
     const { data, error } = await supabase
       .from('user_preferences')
       .upsert(updates, { onConflict: 'user_id' })
@@ -169,10 +179,64 @@ router.put('/', requireAuth, async (req, res) => {
       maxCookTime: data.max_cook_time || null,
       expiringItemsThreshold: data.expiring_items_threshold || 7,
       expirationNotificationsEnabled: data.expiration_notifications_enabled ?? false,
+      notificationsEnabled: data.notifications_enabled ?? true,
     });
   } catch (error) {
     console.error('Error updating preferences:', error);
     res.status(500).json({ error: 'Failed to update preferences.' });
+  }
+});
+
+// GET /api/preferences/notifications - Get notification preferences
+router.get('/notifications', requireAuth, async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('user_preferences')
+      .select('notifications_enabled')
+      .eq('user_id', req.userId)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    res.json({
+      notificationsEnabled: data?.notifications_enabled ?? true,
+    });
+  } catch (error) {
+    console.error('Error fetching notification preferences:', error);
+    res.status(500).json({ error: 'Failed to fetch notification preferences.' });
+  }
+});
+
+// PATCH /api/preferences/notifications - Update notification preferences
+router.patch('/notifications', requireAuth, async (req, res) => {
+  try {
+    const { notificationsEnabled } = req.body;
+
+    if (typeof notificationsEnabled !== 'boolean') {
+      return res.status(400).json({ error: 'notificationsEnabled must be a boolean.' });
+    }
+
+    const { data, error } = await supabase
+      .from('user_preferences')
+      .upsert(
+        {
+          user_id: req.userId,
+          notifications_enabled: notificationsEnabled,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id' }
+      )
+      .select('notifications_enabled')
+      .single();
+
+    if (error) throw error;
+
+    res.json({
+      notificationsEnabled: data.notifications_enabled ?? true,
+    });
+  } catch (error) {
+    console.error('Error updating notification preferences:', error);
+    res.status(500).json({ error: 'Failed to update notification preferences.' });
   }
 });
 
