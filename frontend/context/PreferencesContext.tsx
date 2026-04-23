@@ -10,6 +10,12 @@ export interface Preferences {
   expiringItemsThreshold: number;
   expirationNotificationsEnabled: boolean;
   notificationsEnabled: boolean;
+  notifNewFollower: boolean;
+  notifLikes: boolean;
+  notifComments: boolean;
+  notifCommentReplies: boolean;
+  notifAiChat: boolean;
+  notifWeeklyDigest: boolean;
   profileVisibility: "public" | "private";
   dietaryInfoVisible: boolean;
 }
@@ -33,6 +39,12 @@ const DEFAULT_PREFERENCES: Preferences = {
   expiringItemsThreshold: 7,
   expirationNotificationsEnabled: false,
   notificationsEnabled: true,
+  notifNewFollower: true,
+  notifLikes: true,
+  notifComments: true,
+  notifCommentReplies: true,
+  notifAiChat: true,
+  notifWeeklyDigest: true,
   profileVisibility: "public",
   dietaryInfoVisible: true,
 };
@@ -58,6 +70,12 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
         expiringItemsThreshold: prefs.expiringItemsThreshold ?? 7,
         expirationNotificationsEnabled: prefs.expirationNotificationsEnabled ?? false,
         notificationsEnabled: prefs.notificationsEnabled ?? true,
+        notifNewFollower: prefs.notifNewFollower ?? true,
+        notifLikes: prefs.notifLikes ?? true,
+        notifComments: prefs.notifComments ?? true,
+        notifCommentReplies: prefs.notifCommentReplies ?? true,
+        notifAiChat: prefs.notifAiChat ?? true,
+        notifWeeklyDigest: prefs.notifWeeklyDigest ?? true,
         profileVisibility: prefs.profileVisibility || "public",
         dietaryInfoVisible: prefs.dietaryInfoVisible ?? true,
       });

@@ -3,6 +3,28 @@ const router = express.Router();
 const supabase = require('../db/supabase');
 const { requireAuth } = require('../middleware/auth');
 
+// Granular per-type notification preference keys (camelCase <-> snake_case).
+// Source of truth for both GET serialization and PATCH validation. See #114.
+const NOTIFICATION_TYPE_KEYS = [
+  { api: 'notifNewFollower', db: 'notif_new_follower' },
+  { api: 'notifLikes', db: 'notif_likes' },
+  { api: 'notifComments', db: 'notif_comments' },
+  { api: 'notifCommentReplies', db: 'notif_comment_replies' },
+  { api: 'notifAiChat', db: 'notif_ai_chat' },
+  { api: 'notifWeeklyDigest', db: 'notif_weekly_digest' },
+];
+
+function buildNotificationPayload(row) {
+  const payload = {
+    notificationsEnabled: row?.notifications_enabled ?? true,
+    expirationNotificationsEnabled: row?.expiration_notifications_enabled ?? false,
+  };
+  for (const { api, db } of NOTIFICATION_TYPE_KEYS) {
+    payload[api] = row?.[db] ?? true;
+  }
+  return payload;
+}
+
 // GET /api/preferences - Get user preferences (auth required)
 router.get('/', requireAuth, async (req, res) => {
   try {
@@ -26,12 +48,18 @@ router.get('/', requireAuth, async (req, res) => {
         maxCookTime: null,
         expiringItemsThreshold: 7,
         expirationNotificationsEnabled: false,
-        notificationsEnabled: true
+        notificationsEnabled: true,
+        notifNewFollower: true,
+        notifLikes: true,
+        notifComments: true,
+        notifCommentReplies: true,
+        notifAiChat: true,
+        notifWeeklyDigest: true,
       });
     }
 
     // Normalize allergies to string array for frontend compatibility
-    const allergies = Array.isArray(data.allergies) 
+    const allergies = Array.isArray(data.allergies)
       ? data.allergies.map(a => typeof a === 'object' ? a.name : a)
       : [];
 
@@ -45,8 +73,7 @@ router.get('/', requireAuth, async (req, res) => {
       cookingSkill: data.cooking_skill || 'beginner',
       maxCookTime: data.max_cook_time || null,
       expiringItemsThreshold: data.expiring_items_threshold || 7,
-      expirationNotificationsEnabled: data.expiration_notifications_enabled ?? false,
-      notificationsEnabled: data.notifications_enabled ?? true
+      ...buildNotificationPayload(data),
     });
   } catch (error) {
     console.error('Error fetching preferences:', error);
@@ -155,6 +182,15 @@ router.put('/', requireAuth, async (req, res) => {
       updates.notifications_enabled = notificationsEnabled;
     }
 
+    for (const { api, db } of NOTIFICATION_TYPE_KEYS) {
+      const value = req.body[api];
+      if (value === undefined) continue;
+      if (typeof value !== 'boolean') {
+        return res.status(400).json({ error: `${api} must be a boolean.` });
+      }
+      updates[db] = value;
+    }
+
     const { data, error } = await supabase
       .from('user_preferences')
       .upsert(updates, { onConflict: 'user_id' })
@@ -178,8 +214,7 @@ router.put('/', requireAuth, async (req, res) => {
       cookingSkill: data.cooking_skill || 'beginner',
       maxCookTime: data.max_cook_time || null,
       expiringItemsThreshold: data.expiring_items_threshold || 7,
-      expirationNotificationsEnabled: data.expiration_notifications_enabled ?? false,
-      notificationsEnabled: data.notifications_enabled ?? true,
+      ...buildNotificationPayload(data),
     });
   } catch (error) {
     console.error('Error updating preferences:', error);
@@ -190,17 +225,21 @@ router.put('/', requireAuth, async (req, res) => {
 // GET /api/preferences/notifications - Get notification preferences
 router.get('/notifications', requireAuth, async (req, res) => {
   try {
+    const selectColumns = [
+      'notifications_enabled',
+      'expiration_notifications_enabled',
+      ...NOTIFICATION_TYPE_KEYS.map(({ db }) => db),
+    ].join(', ');
+
     const { data, error } = await supabase
       .from('user_preferences')
-      .select('notifications_enabled')
+      .select(selectColumns)
       .eq('user_id', req.userId)
       .maybeSingle();
 
     if (error) throw error;
 
-    res.json({
-      notificationsEnabled: data?.notifications_enabled ?? true,
-    });
+    res.json(buildNotificationPayload(data));
   } catch (error) {
     console.error('Error fetching notification preferences:', error);
     res.status(500).json({ error: 'Failed to fetch notification preferences.' });
@@ -210,30 +249,59 @@ router.get('/notifications', requireAuth, async (req, res) => {
 // PATCH /api/preferences/notifications - Update notification preferences
 router.patch('/notifications', requireAuth, async (req, res) => {
   try {
-    const { notificationsEnabled } = req.body;
+    const updates = {
+      user_id: req.userId,
+      updated_at: new Date().toISOString(),
+    };
 
-    if (typeof notificationsEnabled !== 'boolean') {
-      return res.status(400).json({ error: 'notificationsEnabled must be a boolean.' });
+    const { notificationsEnabled, expirationNotificationsEnabled } = req.body;
+
+    if (notificationsEnabled !== undefined) {
+      if (typeof notificationsEnabled !== 'boolean') {
+        return res.status(400).json({ error: 'notificationsEnabled must be a boolean.' });
+      }
+      updates.notifications_enabled = notificationsEnabled;
     }
+
+    if (expirationNotificationsEnabled !== undefined) {
+      if (typeof expirationNotificationsEnabled !== 'boolean') {
+        return res.status(400).json({ error: 'expirationNotificationsEnabled must be a boolean.' });
+      }
+      updates.expiration_notifications_enabled = expirationNotificationsEnabled;
+    }
+
+    for (const { api, db } of NOTIFICATION_TYPE_KEYS) {
+      const value = req.body[api];
+      if (value === undefined) continue;
+      if (typeof value !== 'boolean') {
+        return res.status(400).json({ error: `${api} must be a boolean.` });
+      }
+      updates[db] = value;
+    }
+
+    // Require at least one recognized notification field in the body.
+    const hasAny = Object.keys(updates).some(
+      (key) => key !== 'user_id' && key !== 'updated_at'
+    );
+    if (!hasAny) {
+      return res.status(400).json({ error: 'No notification preference fields provided.' });
+    }
+
+    const selectColumns = [
+      'notifications_enabled',
+      'expiration_notifications_enabled',
+      ...NOTIFICATION_TYPE_KEYS.map(({ db }) => db),
+    ].join(', ');
 
     const { data, error } = await supabase
       .from('user_preferences')
-      .upsert(
-        {
-          user_id: req.userId,
-          notifications_enabled: notificationsEnabled,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'user_id' }
-      )
-      .select('notifications_enabled')
+      .upsert(updates, { onConflict: 'user_id' })
+      .select(selectColumns)
       .single();
 
     if (error) throw error;
 
-    res.json({
-      notificationsEnabled: data.notifications_enabled ?? true,
-    });
+    res.json(buildNotificationPayload(data));
   } catch (error) {
     console.error('Error updating notification preferences:', error);
     res.status(500).json({ error: 'Failed to update notification preferences.' });

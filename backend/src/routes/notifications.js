@@ -64,8 +64,12 @@ router.post('/check-expiring', async (req, res) => {
 
     console.log('[EXPIRING-CHECK] userId:', req.userId, 'prefs:', JSON.stringify(prefs));
 
-    // Short-circuit when the user has globally disabled notifications (#113).
+    // Short-circuit when the user has globally disabled notifications (#113)
+    // or disabled the pantry-expiration type specifically (#114).
     if (prefs?.notifications_enabled === false) {
+      return res.json({ checked: 0, created: 0, skipped: true });
+    }
+    if (prefs?.expiration_notifications_enabled === false) {
       return res.json({ checked: 0, created: 0, skipped: true });
     }
 
