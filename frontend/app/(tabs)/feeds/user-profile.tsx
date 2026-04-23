@@ -4,6 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useState, useCallback, useContext, useEffect } from 'react';
 import { useActionSheet } from '@expo/react-native-action-sheet';
 import { AuthContext } from '../../../context/AuthenticationContext';
+import { useFeedLayout } from '../../../context/FeedLayoutContext';
 import VideoThumbnailView from '../../../components/VideoThumbnail';
 import {
   fetchUserProfile,
@@ -31,6 +32,7 @@ import { colors } from '../../../constants/theme';
 const { width } = Dimensions.get('window');
 const GRID_GAP = 2;
 const ITEM_SIZE = (width - GRID_GAP * 2) / 3;
+const LIST_ITEM_HEIGHT = Math.round(width * 0.9);
 
 function formatCount(count: number): string {
   if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(count % 1_000_000 === 0 ? 0 : 1)}M`;
@@ -42,6 +44,7 @@ export default function UserProfileScreen() {
   const router = useRouter();
   const { userId } = useLocalSearchParams<{ userId: string }>();
   const { user: currentUser } = useContext(AuthContext);
+  const { layout: feedLayout } = useFeedLayout();
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -432,26 +435,49 @@ export default function UserProfileScreen() {
       <View style={styles.container}>
         {(!isPrivate || isFollowing) ? (
           <FlatList
+            key={feedLayout}
             data={userPosts}
             keyExtractor={(item) => item.id}
-            numColumns={3}
+            numColumns={feedLayout === 'grid' ? 3 : 1}
             ListHeaderComponent={renderProfileHeader}
-            renderItem={({ item }) => (
-              <View>
-                {item.mediaType === 'video' ? (
-                  <VideoThumbnailView
-                    videoUri={getImageUrl(item.imagePath)}
-                    style={styles.gridItem}
-                  />
-                ) : (
-                  <Image
-                    source={{ uri: getImageUrl(item.imagePath) }}
-                    style={styles.gridItem}
-                    accessibilityLabel={item.caption || 'Post image'}
-                  />
-                )}
-              </View>
-            )}
+            renderItem={({ item }) =>
+              feedLayout === 'grid' ? (
+                <View>
+                  {item.mediaType === 'video' ? (
+                    <VideoThumbnailView
+                      videoUri={getImageUrl(item.imagePath)}
+                      style={styles.gridItem}
+                    />
+                  ) : (
+                    <Image
+                      source={{ uri: getImageUrl(item.imagePath) }}
+                      style={styles.gridItem}
+                      accessibilityLabel={item.caption || 'Post image'}
+                    />
+                  )}
+                </View>
+              ) : (
+                <View style={styles.listItem}>
+                  {item.mediaType === 'video' ? (
+                    <VideoThumbnailView
+                      videoUri={getImageUrl(item.imagePath)}
+                      style={styles.listMedia}
+                    />
+                  ) : (
+                    <Image
+                      source={{ uri: getImageUrl(item.imagePath) }}
+                      style={styles.listMedia}
+                      accessibilityLabel={item.caption || 'Post image'}
+                    />
+                  )}
+                  {item.caption ? (
+                    <Text style={styles.listCaption} numberOfLines={2}>
+                      {item.caption}
+                    </Text>
+                  ) : null}
+                </View>
+              )
+            }
             showsVerticalScrollIndicator={false}
             ListEmptyComponent={
               <View style={styles.emptyGrid}>
@@ -661,6 +687,28 @@ const styles = StyleSheet.create({
     backgroundColor: colors.borderLight,
     borderRadius: 8,
     overflow: 'hidden',
+  },
+
+  /* Post list */
+  listItem: {
+    width: '100%',
+    paddingHorizontal: 12,
+    paddingTop: 8,
+    paddingBottom: 16,
+    backgroundColor: colors.backgroundPrimary,
+  },
+  listMedia: {
+    width: '100%',
+    height: LIST_ITEM_HEIGHT,
+    backgroundColor: colors.borderLight,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  listCaption: {
+    marginTop: 10,
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.textPrimary,
   },
 
   /* Empty state */

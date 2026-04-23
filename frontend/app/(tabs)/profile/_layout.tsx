@@ -14,6 +14,7 @@ export default function ProfileStack() {
       <Stack.Screen name="settings/notifications" options={{ title: 'Notifications' }} />
       <Stack.Screen name="settings/blocked" options={{ title: 'Blocked & Muted' }} />
       <Stack.Screen name="settings/help/index" options={{ title: 'Help & FAQ' }} />
+      <Stack.Screen name="settings/appearance" options={{ title: 'Appearance' }} />
     </Stack>
   );
 }
