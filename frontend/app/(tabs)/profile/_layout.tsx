@@ -19,6 +19,7 @@ export default function ProfileStack() {
       <Stack.Screen name="settings/data-storage" options={{ title: 'Data & Storage' }} />
       <Stack.Screen name="settings/export-data" options={{ title: 'Export Data' }} />
       <Stack.Screen name="settings/text-size" options={{ title: 'Text Size' }} />
+      <Stack.Screen name="settings/bug-report" options={{ title: 'Report a Bug' }} />
     </Stack>
   );
 }

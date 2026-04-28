@@ -133,7 +133,7 @@ export default function Settings() {
             style={styles.navRow}
             onPress={() => router.push("/profile/settings/text-size" as any)}
           >
-            <Text style={styles.navLabel}>Display</Text>
+            <Text style={styles.navLabel}>Text Size</Text>
             <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
           </Pressable>
         </View>
@@ -181,6 +181,14 @@ export default function Settings() {
           <View style={styles.divider} />
           <Pressable style={styles.navRow}>
             <Text style={styles.navLabel}>Acknowledgments</Text>
+            <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+          </Pressable>
+          <View style={styles.divider} />
+          <Pressable
+            style={styles.navRow}
+            onPress={() => router.push("/profile/settings/bug-report" as any)}
+          >
+            <Text style={styles.navLabel}>Report a Bug</Text>
             <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
           </Pressable>
           <View style={styles.divider} />

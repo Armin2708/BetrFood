@@ -57,6 +57,8 @@ export type { PantryItem, PantryItemInput, IdentifiedItem, SingleItemResult } fr
 export { sendChatMessage, fetchChatHistory } from './chat';
 export type { ChatMessage } from './chat';
 export { trackPostView, markPostNotInterested, removeNotInterestedFeedback, getNotInterestedPosts, resetRecommendations } from './interactions';
+export { reportBug, getBugReports, getBugReport } from './bugReports';
+export type { BugReportSubmission, BugReportResponse, BugReport } from './bugReports';
 export type { ResetRecommendationsResponse } from './interactions';
 export { exportMyData } from './export';
 export type { ExportResult } from './export';
