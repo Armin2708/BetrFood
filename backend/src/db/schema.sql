@@ -40,6 +40,9 @@ CREATE TABLE IF NOT EXISTS user_preferences (
 ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS expiring_items_threshold INTEGER DEFAULT 7;
 ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS expiration_notifications_enabled BOOLEAN DEFAULT false;
 
+-- Add text_size_scale column for accessibility
+ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS text_size_scale TEXT DEFAULT 'default' 
+CHECK (text_size_scale IN ('small', 'default', 'large', 'xLarge'));
 
 -- ============================================================
 -- 3. Posts

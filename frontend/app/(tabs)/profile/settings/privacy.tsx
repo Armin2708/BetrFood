@@ -6,6 +6,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { usePreferences } from "../../../../context/PreferencesContext";
+import { useScaledTypography } from "../../../../hooks/useScaledTypography";
 
 export default function PrivacySettings() {
   const {
@@ -13,6 +14,7 @@ export default function PrivacySettings() {
     loading,
     updatePreferences,
   } = usePreferences();
+  const scaledTypography = useScaledTypography();
 
   const toggleVisibility = async (value: boolean) => {
     const newVisibility = value ? "public" : "private";

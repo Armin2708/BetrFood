@@ -102,5 +102,20 @@ export const typography = {
   label: { fontSize: 14, fontWeight: '600' as const },
 } as const;
 
+/**
+ * Helper function to scale typography based on user preference
+ * Pass the multiplier from useTextSize() hook to this function
+ */
+export function getScaledTypography(multiplier: number) {
+  return {
+    title: { ...typography.title, fontSize: Math.round(typography.title.fontSize * multiplier) },
+    subtitle: { ...typography.subtitle, fontSize: Math.round(typography.subtitle.fontSize * multiplier) },
+    body: { ...typography.body, fontSize: Math.round(typography.body.fontSize * multiplier) },
+    caption: { ...typography.caption, fontSize: Math.round(typography.caption.fontSize * multiplier) },
+    small: { ...typography.small, fontSize: Math.round(typography.small.fontSize * multiplier) },
+    label: { ...typography.label, fontSize: Math.round(typography.label.fontSize * multiplier) },
+  };
+}
+
 export const hitSlop = { top: 12, bottom: 12, left: 12, right: 12 };
 export const minTouchSize = 44; // Apple HIG minimum

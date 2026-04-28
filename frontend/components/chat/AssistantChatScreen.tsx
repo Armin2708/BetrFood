@@ -22,6 +22,7 @@ import Markdown from 'react-native-markdown-display';
 import * as Clipboard from 'expo-clipboard';
 import * as ImagePicker from 'expo-image-picker';
 import { useActionSheet } from '@expo/react-native-action-sheet';
+import { useScaledTypography } from '../../hooks/useScaledTypography';
 import { colors } from '../../constants/theme';
 import { getImageUrl } from '../../services/api';
 import {
@@ -112,6 +113,7 @@ function stripMarkdown(text: string) {
 }
 
 function renderAssistantContent(content: string) {
+  const scaledTypography = useScaledTypography();
   const lines = content.split('\n');
   const segments: { type: 'text' | 'allergen'; value: string }[] = [];
   let textBuffer = '';
@@ -144,7 +146,7 @@ function renderAssistantContent(content: string) {
           return (
             <View key={`${segment.type}-${index}`} style={styles.allergenWarning}>
               <Ionicons name="warning" size={15} color="#B45309" />
-              <Text style={styles.allergenText}>{segment.value}</Text>
+              <Text style={[styles.allergenText, scaledTypography.body]}>{segment.value}</Text>
             </View>
           );
         }
@@ -160,6 +162,7 @@ function renderAssistantContent(content: string) {
 }
 
 function SuggestedPostCard({ post }: { post: SuggestedPost }) {
+  const scaledTypography = useScaledTypography();
   const imageUri = post.imagePath ? getImageUrl(post.imagePath) : null;
 
   return (
@@ -176,10 +179,10 @@ function SuggestedPostCard({ post }: { post: SuggestedPost }) {
         </View>
       )}
       <View style={styles.suggestedCardBody}>
-        <Text numberOfLines={2} style={styles.suggestedCardTitle}>
+        <Text numberOfLines={2} style={[styles.suggestedCardTitle, scaledTypography.label]}>
           {post.caption || 'Untitled recipe'}
         </Text>
-        <Text style={styles.suggestedCardMeta}>by {post.username}</Text>
+        <Text style={[styles.suggestedCardMeta, scaledTypography.caption]}>by {post.username}</Text>
       </View>
       <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
     </TouchableOpacity>
@@ -226,6 +229,7 @@ export default function AssistantChatScreen({
   showBackButton = false,
 }: AssistantChatScreenProps) {
   const { showActionSheetWithOptions } = useActionSheet();
+  const scaledTypography = useScaledTypography();
   const flatListRef = useRef<FlatList<ChatMessage>>(null);
   const cancelStreamRef = useRef<(() => void) | null>(null);
   const toastOpacity = useRef(new Animated.Value(0)).current;
@@ -571,10 +575,10 @@ export default function AssistantChatScreen({
                 />
               ))}
               {visibleContent ? (
-                <Text style={styles.userMessageText}>{visibleContent}</Text>
+                <Text style={[styles.userMessageText, scaledTypography.body]}>{visibleContent}</Text>
               ) : null}
             </View>
-            <Text style={styles.userMeta}>{formatMessageMeta(item)}</Text>
+            <Text style={[styles.userMeta, scaledTypography.caption]}>{formatMessageMeta(item)}</Text>
           </View>
         ) : (
           <View style={styles.assistantMessageWrap}>
@@ -587,7 +591,7 @@ export default function AssistantChatScreen({
                 <TouchableOpacity style={styles.actionButton} onPress={() => handleCopy(item.content)}>
                   <Ionicons name="copy-outline" size={15} color={colors.textSecondary} />
                 </TouchableOpacity>
-                <Text style={styles.assistantMeta}>{formatTimestamp(item.created_at)}</Text>
+                <Text style={[styles.assistantMeta, scaledTypography.caption]}>{formatTimestamp(item.created_at)}</Text>
               </View>
             </View>
           </View>
@@ -595,7 +599,7 @@ export default function AssistantChatScreen({
 
         {hasSuggestedPosts ? (
           <View style={styles.suggestedPostsWrap}>
-            <Text style={styles.suggestedPostsLabel}>Suggested recipes</Text>
+            <Text style={[styles.suggestedPostsLabel, scaledTypography.label]}>Suggested recipes</Text>
               <ScrollView 
                 horizontal 
                 showsHorizontalScrollIndicator={false}
@@ -608,7 +612,7 @@ export default function AssistantChatScreen({
         ) : null}
       </View>
     );
-  }, [handleCopy]);
+  }, [handleCopy, scaledTypography]);
 
   const renderEmptyState = useCallback(() => {
     if (loading) {
@@ -619,10 +623,10 @@ export default function AssistantChatScreen({
       <View style={styles.emptyState}>
         <View style={styles.heroBadge}>
           <Ionicons name="sparkles" size={18} color={colors.primaryDark} />
-          <Text style={styles.heroBadgeText}>BetrFood Assistant</Text>
+          <Text style={[styles.heroBadgeText, scaledTypography.caption]}>BetrFood Assistant</Text>
         </View>
-        <Text style={styles.heroTitle}>Ask any food or cooking question</Text>
-        <Text style={styles.heroSubtitle}>
+        <Text style={[styles.heroTitle, scaledTypography.subtitle]}>Ask any food or cooking question</Text>
+        <Text style={[styles.heroSubtitle, scaledTypography.body]}>
           Get recipe help, ingredient swaps, meal ideas, and pantry-aware suggestions without leaving the app.
         </Text>
         <View style={styles.quickActionsGrid}>
@@ -639,8 +643,8 @@ export default function AssistantChatScreen({
                 <Ionicons name={action.icon} size={18} color={colors.primaryDark} />
               </View>
               <View style={styles.quickActionContent}>
-                <Text style={styles.quickActionLabel}>{action.label}</Text>
-                <Text numberOfLines={2} style={styles.quickActionHint}>
+                <Text style={[styles.quickActionLabel, scaledTypography.label]}>{action.label}</Text>
+                <Text numberOfLines={2} style={[styles.quickActionHint, scaledTypography.caption]}>
                   {action.message}
                 </Text>
               </View>

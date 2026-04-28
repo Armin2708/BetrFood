@@ -1,6 +1,5 @@
 import { View, Text, StyleSheet, Pressable, FlatList, ActivityIndicator, Alert } from "react-native";
 import { useState, useEffect, useCallback } from "react";
-import { Ionicons } from "@expo/vector-icons";
 import {
   fetchBlockedUsers,
   fetchMutedUsers,

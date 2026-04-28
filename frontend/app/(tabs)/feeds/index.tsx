@@ -16,6 +16,7 @@ import FeedHeader from '../../../components/FeedHeader';
 import ExploreSections from '../../../components/ExploreSections';
 import { AuthContext } from '../../../context/AuthenticationContext';
 import { usePantry } from '../../../context/PantryContext';
+import { useScaledTypography } from '../../../hooks/useScaledTypography';
 import { matchRecipeToPantry } from '../../../utils/pantryMatcher';
 import {
   fetchPosts,
@@ -44,6 +45,7 @@ type PostWithMatch = PostType & {
 export default function HomeScreen() {
   const { user } = useContext(AuthContext);
   const { items: pantryItems } = usePantry();
+  const scaledTypography = useScaledTypography();
 
   const [posts, setPosts] = useState<PostWithMatch[]>([]);
   const [loading, setLoading] = useState(true);
@@ -70,7 +72,7 @@ export default function HomeScreen() {
 
           try {
             const recipe = post.recipe ?? (await fetchRecipe(post.id));
-            const ingredientNames = (recipe.ingredients ?? []).map((i) => i.name);
+            const ingredientNames = (recipe?.ingredients ?? []).map((i) => i.name);
             const result = matchRecipeToPantry(ingredientNames, pantryItems);
             return {
               ...post,
@@ -264,14 +266,14 @@ export default function HomeScreen() {
   if (error && posts.length === 0) {
     return (
       <View style={styles.center}>
-        <Text style={styles.errorText}>{error}</Text>
+        <Text style={[styles.errorText, scaledTypography.body]}>{error}</Text>
         <TouchableOpacity
           style={styles.retryButton}
           onPress={fetchInitial}
           accessibilityRole="button"
           accessibilityLabel="Retry loading feed"
         >
-          <Text style={styles.retryText}>Retry</Text>
+          <Text style={[styles.retryText, scaledTypography.label]}>Retry</Text>
         </TouchableOpacity>
       </View>
     );
@@ -344,14 +346,14 @@ export default function HomeScreen() {
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <View style={styles.empty}>
-              <Text style={styles.emptyTitle}>
+              <Text style={[styles.emptyTitle, scaledTypography.subtitle]}>
                 {pantryFilterActive
                   ? 'No pantry matches'
                   : selectedTagIds.length > 0
                   ? 'No matches'
                   : 'No posts yet'}
               </Text>
-              <Text style={styles.emptyText}>
+              <Text style={[styles.emptyText, scaledTypography.body]}>
                 {pantryFilterActive
                   ? 'No recipes in the feed can be made with your current pantry.'
                   : selectedTagIds.length > 0

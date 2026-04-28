@@ -28,6 +28,7 @@ export async function updatePreferences(prefs: {
   cuisines?: string[];
   profileVisibility?: 'public' | 'private';
   dietaryInfoVisible?: boolean;
+  textSizeScale?: 'small' | 'default' | 'large' | 'xLarge';
   expiringItemsThreshold?: number;
   expirationNotificationsEnabled?: boolean;
   notificationsEnabled?: boolean;

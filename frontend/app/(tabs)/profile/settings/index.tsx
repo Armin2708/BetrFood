@@ -42,15 +42,6 @@ export default function Settings() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      {/* Header */}
-      {/* <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backButton} hitSlop={12}>
-          <Ionicons name="arrow-back" size={24} color="#0F172A" />
-        </Pressable>
-        <Text style={styles.headerTitle}>Settings</Text>
-        <View style={styles.headerSpacer} />
-      </View> */}
-
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -86,6 +77,35 @@ export default function Settings() {
           </View>
         </View>
 
+        {/* ACCOUNT ACTIONS */}
+        <Text style={styles.sectionHeader}>ACCOUNT</Text>
+        <View style={styles.card}>
+          <Pressable
+            style={styles.navRow}
+            onPress={() => router.push("/profile/settings/preferences" as any)}
+          >
+            <Text style={styles.navLabel}>Food Preferences</Text>
+            <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+          </Pressable>
+          <View style={styles.divider} />
+          <Pressable
+            style={styles.navRow}
+            onPress={() => router.push("/profile/settings/linked-accounts" as any)}
+          >
+            <Text style={styles.navLabel}>Linked Accounts</Text>
+            <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+          </Pressable>
+          <View style={styles.divider} />
+          <Pressable
+            style={styles.navRow}
+            onPress={() => router.push("/profile/settings/blocked" as any)}
+          >
+            <Text style={styles.navLabel}>Blocked & Muted</Text>
+            <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+          </Pressable>
+          <View style={styles.divider} />
+        </View>
+
         {/* NOTIFICATIONS */}
         <Text style={styles.sectionHeader}>NOTIFICATIONS</Text>
         <View style={styles.card}>
@@ -108,19 +128,19 @@ export default function Settings() {
             <Text style={styles.navLabel}>Feed Layout</Text>
             <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
           </Pressable>
-        </View>
-
-        {/* LEGAL */}
-        <Text style={styles.sectionHeader}>LEGAL</Text>
-        <View style={styles.card}>
+          <View style={styles.divider} />
           <Pressable
             style={styles.navRow}
-            onPress={() => router.push("/profile/settings/preferences" as any)}
+            onPress={() => router.push("/profile/settings/text-size" as any)}
           >
-            <Text style={styles.navLabel}>Account</Text>
+            <Text style={styles.navLabel}>Display</Text>
             <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
           </Pressable>
-          <View style={styles.divider} />
+        </View>
+
+        {/* DATA AND PRIVACY */}
+        <Text style={styles.sectionHeader}>DATA AND PRIVACY</Text>
+        <View style={styles.card}>
           <Pressable
             style={styles.navRow}
             onPress={() => router.push("/profile/settings/privacy" as any)}
@@ -139,21 +159,21 @@ export default function Settings() {
           <View style={styles.divider} />
           <Pressable
             style={styles.navRow}
-            onPress={() => router.push("/profile/settings/help" as any)}
+            onPress={() => router.push("/profile/settings/export-data" as any)}
           >
-            <Text style={styles.navLabel}>Help & Support</Text>
-            <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
-          </Pressable>
-          <View style={styles.divider} />
-          <Pressable style={styles.navRow}>
-            <Text style={styles.navLabel}>Cookie Policy</Text>
+            <Text style={styles.navLabel}>Export My Data</Text>
             <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
           </Pressable>
         </View>
 
-        {/* RESOURCES */}
-        <Text style={styles.sectionHeader}>RESOURCES</Text>
+        {/* LEGAL AND RESOURCES */}
+        <Text style={styles.sectionHeader}>LEGAL AND RESOURCES</Text>
         <View style={styles.card}>
+          <Pressable style={styles.navRow}>
+            <Text style={styles.navLabel}>Cookie Policy</Text>
+            <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+          </Pressable>
+          <View style={styles.divider} />
           <Pressable style={styles.navRow}>
             <Text style={styles.navLabel}>Open Source Licenses</Text>
             <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
@@ -162,6 +182,27 @@ export default function Settings() {
           <Pressable style={styles.navRow}>
             <Text style={styles.navLabel}>Acknowledgments</Text>
             <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+          </Pressable>
+          <View style={styles.divider} />
+          <Pressable
+            style={styles.navRow}
+            onPress={() => router.push("/profile/settings/help" as any)}
+          >
+            <Text style={styles.navLabel}>Help & Support</Text>
+            <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+          </Pressable>
+        </View>
+
+        <Text style={styles.sectionHeader}></Text>
+        <View style={styles.card}>
+          <Pressable style={styles.navRow} onPress={handleLogout}>
+            <Text style={[styles.navLabel, { color: '#EF4444' }]}>Log Out</Text>
+            <Ionicons name="log-out-outline" size={18} color="#EF4444" />
+          </Pressable>
+          <View style={styles.divider} />
+          <Pressable style={styles.navRow} onPress={handleDeleteAccount}>
+            <Text style={[styles.navLabel, { color: '#EF4444' }]}>Delete Account</Text>
+            <Ionicons name="trash-outline" size={18} color="#EF4444" />
           </Pressable>
         </View>
 
@@ -197,44 +238,6 @@ export default function Settings() {
             </View>
           </>
         )}
-
-        {/* ACCOUNT ACTIONS */}
-        <Text style={styles.sectionHeader}>ACCOUNT</Text>
-        <View style={styles.card}>
-          <Pressable
-            style={styles.navRow}
-            onPress={() => router.push("/profile/settings/linked-accounts" as any)}
-          >
-            <Text style={styles.navLabel}>Linked Accounts</Text>
-            <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
-          </Pressable>
-          <View style={styles.divider} />
-          <Pressable
-            style={styles.navRow}
-            onPress={() => router.push("/profile/settings/blocked" as any)}
-          >
-            <Text style={styles.navLabel}>Blocked & Muted</Text>
-            <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
-          </Pressable>
-          <View style={styles.divider} />
-          <Pressable
-            style={styles.navRow}
-            onPress={() => router.push("/profile/settings/export-data" as any)}
-          >
-            <Text style={styles.navLabel}>Export My Data</Text>
-            <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
-          </Pressable>
-          <View style={styles.divider} />
-          <Pressable style={styles.navRow} onPress={handleLogout}>
-            <Text style={[styles.navLabel, { color: '#EF4444' }]}>Log Out</Text>
-            <Ionicons name="log-out-outline" size={18} color="#EF4444" />
-          </Pressable>
-          <View style={styles.divider} />
-          <Pressable style={styles.navRow} onPress={handleDeleteAccount}>
-            <Text style={[styles.navLabel, { color: '#EF4444' }]}>Delete Account</Text>
-            <Ionicons name="trash-outline" size={18} color="#EF4444" />
-          </Pressable>
-        </View>
 
         {/* About Text */}
         <Text style={styles.aboutText}>

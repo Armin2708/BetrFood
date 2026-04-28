@@ -6,6 +6,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { AuthContext } from '../../../context/AuthenticationContext';
 import { fetchMyProfile, fetchFollowStats, fetchUserPosts, fetchLikedPosts, getImageUrl, getAvatarUrl, UserProfile, Post as PostType } from '../../../services/api';
 import { useCollections } from '../../../context/CollectionsContext';
+import { useScaledTypography } from '../../../hooks/useScaledTypography';
 import VideoThumbnailView from '../../../components/VideoThumbnail';
 import { colors } from '../../../constants/theme';
 
@@ -30,6 +31,7 @@ function formatCount(count: number): string {
 export default function ProfileScreen() {
   const router = useRouter();
   const { user } = useContext(AuthContext);
+  const scaledTypography = useScaledTypography();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [followStats, setFollowStats] = useState({ followerCount: 0, followingCount: 0 });

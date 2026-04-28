@@ -12,6 +12,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import { useCallback } from "react";
 import { colors } from "../../../../constants/theme"
 import { usePreferences, Preferences } from "../../../../context/PreferencesContext";
+import { useScaledTypography } from "../../../../hooks/useScaledTypography";
 import {
   requestNotificationPermission,
   cancelAllExpiryNotifications,
@@ -96,6 +97,7 @@ export default function FoodPreferences() {
     saving,
     updatePreferences,
   } = usePreferences();
+  const scaledTypography = useScaledTypography();
 
   // Local state for editing - separate from global context
   const [localPreferences, setLocalPreferences] = useState<Preferences | null>(null);

@@ -72,13 +72,13 @@ export default function ExportData() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
-      <View style={styles.header}>
+      {/* <View style={styles.header}>
         <Pressable onPress={() => router.back()} style={styles.backButton} hitSlop={12} disabled={loading}>
           <Ionicons name="arrow-back" size={24} color="#0F172A" />
         </Pressable>
         <Text style={styles.headerTitle}>Export My Data</Text>
         <View style={styles.headerSpacer} />
-      </View>
+      </View> */}
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.iconWrap}>

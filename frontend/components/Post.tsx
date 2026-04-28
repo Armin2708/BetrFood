@@ -6,6 +6,7 @@ import { Collection, useCollections } from "../context/CollectionsContext";
 import { Tag, Recipe, Comment, deletePost, fetchRecipe, likePost, unlikePost, reportContent, fetchComments, createComment, deleteComment, checkSaveStatus, blockUser, unblockUser, muteUser, unmuteUser, checkBlockStatus, checkMuteStatus, markPostNotInterested } from '../services/api';
 import { feedEvents, collectionEvents } from '../utils/feedEvents';
 import { usePostViewTracking } from '../hooks/usePostViewTracking';
+import { useScaledTypography } from '../hooks/useScaledTypography';
 import TagDisplay from './TagDisplay';
 import RecipeDisplay from './RecipeDisplay';
 import { useVideoPlayer, VideoView } from 'expo-video';
@@ -79,6 +80,7 @@ export default function Post({
   pantryMatchedCount,
   pantryMissingCount,
 }: PostProps) {
+  const scaledTypography = useScaledTypography();
   const [liked, setLiked] = useState(initialLiked);
   const [likeCount, setLikeCount] = useState(initialLikes);
   const [likeLoading, setLikeLoading] = useState(false);
@@ -265,7 +267,7 @@ export default function Post({
               <Image source={{ uri: comment.avatarUrl }} style={styles.commentAvatar} />
             ) : (
               <View style={[styles.commentAvatar, styles.commentAvatarPlaceholder]}>
-                <Text style={styles.commentAvatarText}>
+                <Text style={[styles.commentAvatarText, scaledTypography.label]}>
                   {(comment.displayName || comment.username || '?').charAt(0).toUpperCase()}
                 </Text>
               </View>
@@ -279,19 +281,19 @@ export default function Post({
                 accessibilityRole="button"
                 accessibilityLabel={`View ${comment.displayName || comment.username || 'user'}'s profile`}
               >
-                <Text style={styles.commentUsername}>
+                <Text style={[styles.commentUsername, scaledTypography.label]}>
                   {comment.displayName || comment.username || 'User'}
                 </Text>
               </TouchableOpacity>
               {comment.verified && <Text style={styles.commentVerifiedBadge}>{'\u2713'}</Text>}
-              <Text style={styles.commentTime}>{formatCommentTime(comment.createdAt)}</Text>
+              <Text style={[styles.commentTime, scaledTypography.caption]}>{formatCommentTime(comment.createdAt)}</Text>
             </View>
 
-            <Text style={styles.commentContent}>{comment.content}</Text>
+            <Text style={[styles.commentContent, scaledTypography.body]}>{comment.content}</Text>
 
             <View style={styles.commentActions}>
               <TouchableOpacity onPress={() => handleReply(comment)} style={styles.commentActionBtn} accessibilityRole="button" accessibilityLabel={`Reply to ${comment.displayName || comment.username || 'user'}`}>
-                <Text style={styles.commentActionText}>Reply</Text>
+                <Text style={[styles.commentActionText, scaledTypography.caption]}>Reply</Text>
               </TouchableOpacity>
               {isCommentOwner && (
                 <TouchableOpacity
@@ -300,7 +302,7 @@ export default function Post({
                   accessibilityRole="button"
                   accessibilityLabel="Delete comment"
                 >
-                  <Text style={[styles.commentActionText, styles.commentDeleteText]}>Delete</Text>
+                  <Text style={[styles.commentActionText, styles.commentDeleteText, scaledTypography.caption]}>Delete</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -767,8 +769,8 @@ export default function Post({
         {likeCount} {likeCount === 1 ? 'like' : 'likes'}
       </Text>
 
-      <Text style={styles.caption}>
-        <Text style={styles.captionUsername}>{username} </Text>{caption}
+      <Text style={[styles.caption, scaledTypography.body]}>
+        <Text style={[styles.captionUsername, scaledTypography.body]}>{username} </Text>{caption}
       </Text>
 
       {tags && tags.length > 0 && <TagDisplay tags={tags} />}
@@ -792,12 +794,9 @@ export default function Post({
             size={14}
             color={isPantryMatch ? '#16A34A' : '#92400E'}
           />
-          <Text
-            style={[
-              styles.pantryBadgeText,
+          <Text style={[styles.pantryBadgeText, scaledTypography.caption,
               isPantryMatch ? styles.pantryBadgeTextMatch : styles.pantryBadgeTextPartial,
-            ]}
-          >
+            ]}>
             {isPantryMatch ? '✓ Pantry match · ' : ''}
             {pantryMatchedCount} in pantry
             {(pantryMissingCount ?? 0) > 0
@@ -812,7 +811,7 @@ export default function Post({
       {/* View comments link */}
       {(commentCount ?? commentTotal) > 0 && (
         <TouchableOpacity onPress={handleOpenComments} style={styles.viewCommentsButton}>
-          <Text style={styles.viewCommentsText}>
+          <Text style={[styles.viewCommentsText, scaledTypography.label]}>
             View {commentCount ?? commentTotal} {(commentCount ?? commentTotal) === 1 ? 'comment' : 'comments'}
           </Text>
         </TouchableOpacity>
@@ -837,7 +836,7 @@ export default function Post({
 
                 {/* Header */}
                 <View style={styles.commentsModalHeader}>
-                  <Text style={styles.commentsModalTitle}>Comments</Text>
+                  <Text style={[styles.commentsModalTitle, scaledTypography.subtitle]}>Comments</Text>
                   <TouchableOpacity onPress={handleCloseComments} style={styles.commentsModalClose}>
                     <Ionicons name="close" size={24} color={colors.textPrimary} />
                   </TouchableOpacity>
@@ -853,7 +852,7 @@ export default function Post({
                 contentContainerStyle={styles.commentsModalListContent}
                 ListEmptyComponent={
                   !commentsLoading ? (
-                    <Text style={styles.noCommentsText}>No comments yet. Be the first to comment!</Text>
+                    <Text style={[styles.noCommentsText, scaledTypography.body]}>No comments yet. Be the first to comment!</Text>
                   ) : null
                 }
                 ListFooterComponent={
@@ -863,7 +862,7 @@ export default function Post({
                     )}
                     {hasMoreComments && !commentsLoading && (
                       <TouchableOpacity onPress={() => loadComments(commentsOffset)} style={styles.loadMoreButton}>
-                        <Text style={styles.loadMoreText}>Load more comments</Text>
+                        <Text style={[styles.loadMoreText, scaledTypography.label]}>Load more comments</Text>
                       </TouchableOpacity>
                     )}
                   </>
@@ -874,11 +873,11 @@ export default function Post({
               <View style={styles.commentsModalInputContainer}>
                 {replyTarget && (
                   <View style={styles.replyIndicator}>
-                    <Text style={styles.replyIndicatorText} numberOfLines={1}>
+                    <Text style={[styles.replyIndicatorText, scaledTypography.label]} numberOfLines={1}>
                       Replying to @{replyTarget.username || replyTarget.displayName || 'User'}
                     </Text>
                     <TouchableOpacity onPress={() => setReplyTarget(null)}>
-                      <Text style={styles.replyCancel}>Cancel</Text>
+                      <Text style={[styles.replyCancel, scaledTypography.label]}>Cancel</Text>
                     </TouchableOpacity>
                   </View>
                 )}

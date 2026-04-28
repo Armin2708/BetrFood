@@ -18,6 +18,7 @@ import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Swipeable } from 'react-native-gesture-handler';
+import { useScaledTypography } from '../../../hooks/useScaledTypography';
 import {
   searchUsers,
   searchPosts,
@@ -104,6 +105,7 @@ async function removeOneRecentSearch(query: string, current: string[]): Promise<
 // ── User row ──────────────────────────────────────────────────────────────────
 
 function UserRow({ item, onPress }: { item: SearchUserResult; onPress: (id: string) => void }) {
+  const scaledTypography = useScaledTypography();
   const avatarUri = getAvatarUrl(item.avatarUrl, item.displayName || item.username || item.id);
   const [avatarError, setAvatarError] = useState(false);
   const initial = (item.displayName || item.username || '?')[0].toUpperCase();
@@ -112,7 +114,7 @@ function UserRow({ item, onPress }: { item: SearchUserResult; onPress: (id: stri
     <TouchableOpacity style={styles.userRow} onPress={() => onPress(item.id)} activeOpacity={0.7}>
       {avatarError ? (
         <View style={[styles.avatar, styles.avatarFallback]}>
-          <Text style={styles.avatarFallbackText}>{initial}</Text>
+          <Text style={[styles.avatarFallbackText, scaledTypography.label]}>{initial}</Text>
         </View>
       ) : (
         <Image
@@ -123,7 +125,7 @@ function UserRow({ item, onPress }: { item: SearchUserResult; onPress: (id: stri
       )}
       <View style={styles.userInfo}>
         <View style={styles.nameRow}>
-          <Text style={styles.displayName} numberOfLines={1}>
+          <Text style={[styles.displayName, scaledTypography.label]} numberOfLines={1}>
             {item.displayName || item.username || 'User'}
           </Text>
           {item.verified && (
@@ -131,9 +133,9 @@ function UserRow({ item, onPress }: { item: SearchUserResult; onPress: (id: stri
           )}
         </View>
         {item.username && (
-          <Text style={styles.username} numberOfLines={1}>@{item.username}</Text>
+          <Text style={[styles.username, scaledTypography.caption]} numberOfLines={1}>@{item.username}</Text>
         )}
-        {item.bio ? <Text style={styles.bio} numberOfLines={1}>{item.bio}</Text> : null}
+        {item.bio ? <Text style={[styles.bio, scaledTypography.caption]} numberOfLines={1}>{item.bio}</Text> : null}
       </View>
     </TouchableOpacity>
   );
@@ -144,6 +146,7 @@ function UserRow({ item, onPress }: { item: SearchUserResult; onPress: (id: stri
 export default function SearchScreen() {
   const router = useRouter();
   const { user } = useContext(AuthContext);
+  const scaledTypography = useScaledTypography();
 
   const [query, setQuery] = useState('');
   const [activeTab, setActiveTab] = useState<SearchTab>('posts');
@@ -456,7 +459,7 @@ export default function SearchScreen() {
       <View style={styles.trendingSection}>
         <View style={styles.trendingSectionHeader}>
           <Ionicons name="trending-up" size={18} color="#F59E0B" />
-          <Text style={styles.trendingSectionTitle}>Trending Hashtags</Text>
+          <Text style={[styles.trendingSectionTitle, scaledTypography.label]}>Trending Hashtags</Text>
         </View>
         {trendingLoading ? (
           <ActivityIndicator size="small" color="#22C55E" style={{ marginVertical: 16 }} />
@@ -471,8 +474,8 @@ export default function SearchScreen() {
                   onPress={() => handleTrendingTagPress(tag)}
                   activeOpacity={0.7}
                 >
-                  <Text style={[styles.trendingChipName, { color }]}>#{tag.name}</Text>
-                  <Text style={styles.trendingChipCount}>
+                  <Text style={[styles.trendingChipName, scaledTypography.caption, { color }]}>#{tag.name}</Text>
+                  <Text style={[styles.trendingChipCount, scaledTypography.caption]}>
                     {tag.postCount} {tag.postCount === 1 ? 'post' : 'posts'}
                   </Text>
                 </TouchableOpacity>
@@ -492,16 +495,16 @@ export default function SearchScreen() {
       return (
         <View style={styles.emptyContainer}>
           <Ionicons name="search-outline" size={48} color="#CCC" />
-          <Text style={styles.emptyTitle}>Search for recipes</Text>
-          <Text style={styles.emptySubtitle}>Try "chicken pasta" or "vegan dessert"</Text>
+          <Text style={[styles.emptyTitle, scaledTypography.subtitle]}>Search for recipes</Text>
+          <Text style={[styles.emptySubtitle, scaledTypography.body]}>Try "chicken pasta" or "vegan dessert"</Text>
         </View>
       );
     }
     return (
       <View style={styles.emptyContainer}>
         <Ionicons name="restaurant-outline" size={48} color="#CCC" />
-        <Text style={styles.emptyTitle}>No posts found</Text>
-        <Text style={styles.emptySubtitle}>Try different keywords or fewer filters</Text>
+        <Text style={[styles.emptyTitle, scaledTypography.subtitle]}>No posts found</Text>
+        <Text style={[styles.emptySubtitle, scaledTypography.body]}>Try different keywords or fewer filters</Text>
       </View>
     );
   };
@@ -512,16 +515,16 @@ export default function SearchScreen() {
       return (
         <View style={styles.emptyContainer}>
           <Ionicons name="people-outline" size={48} color="#CCC" />
-          <Text style={styles.emptyTitle}>Search for people</Text>
-          <Text style={styles.emptySubtitle}>Find friends, chefs, and food lovers</Text>
+          <Text style={[styles.emptyTitle, scaledTypography.subtitle]}>Search for people</Text>
+          <Text style={[styles.emptySubtitle, scaledTypography.body]}>Find friends, chefs, and food lovers</Text>
         </View>
       );
     }
     return (
       <View style={styles.emptyContainer}>
         <Ionicons name="person-outline" size={48} color="#CCC" />
-        <Text style={styles.emptyTitle}>No users found</Text>
-        <Text style={styles.emptySubtitle}>Try a different search term</Text>
+        <Text style={[styles.emptyTitle, scaledTypography.subtitle]}>No users found</Text>
+        <Text style={[styles.emptySubtitle, scaledTypography.body]}>Try a different search term</Text>
       </View>
     );
   };
@@ -542,9 +545,9 @@ export default function SearchScreen() {
     return (
       <View style={styles.recentSearchesPanel}>
         <View style={styles.recentSearchesHeader}>
-          <Text style={styles.recentSearchesTitle}>Recent</Text>
+          <Text style={[styles.recentSearchesTitle, scaledTypography.label]}>Recent</Text>
           <TouchableOpacity onPress={handleClearAllRecent}>
-            <Text style={styles.recentSearchesClearAll}>Clear all</Text>
+            <Text style={[styles.recentSearchesClearAll, scaledTypography.caption]}>Clear all</Text>
           </TouchableOpacity>
         </View>
         {recentSearches.map((item, index) => (
@@ -562,7 +565,7 @@ export default function SearchScreen() {
               activeOpacity={0.7}
             >
               <Ionicons name="time-outline" size={16} color="#94A3B8" style={styles.recentSearchIcon} />
-              <Text style={styles.recentSearchText} numberOfLines={1}>{item}</Text>
+              <Text style={[styles.recentSearchText, scaledTypography.body]} numberOfLines={1}>{item}</Text>
               <TouchableOpacity
                 onPress={() => handleRemoveRecentSearch(item)}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}

@@ -3,6 +3,7 @@ import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import TagFilterBar from './TagFilterBar';
 import { colors, shadows } from '../constants/theme';
+import { useScaledTypography } from '../hooks/useScaledTypography';
 
 type FeedTab = 'following' | 'community' | 'explore';
 
@@ -31,6 +32,8 @@ export default function FeedHeader({
   onPantryFilterChange,
   onSearchPress,
 }: FeedHeaderProps) {
+  const scaledTypography = useScaledTypography();
+  
   return (
     <View style={styles.container}>
       <View style={styles.feedToggle}>
@@ -46,6 +49,7 @@ export default function FeedHeader({
               <Text
                 style={[
                   styles.feedToggleText,
+                  scaledTypography.label,
                   feedType === tab.key && styles.feedToggleTextActive,
                 ]}
               >

@@ -20,6 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { usePantry } from '../../../context/PantryContext';
+import { useScaledTypography } from '../../../hooks/useScaledTypography';
 import PantryItemCard from '../../../components/PantryItemCard';
 import ExpiringSoonSection from '../../../components/ExpiringSoonSection';
 import { PantryItem, PantryItemInput } from '../../../services/api';
@@ -297,6 +298,8 @@ function CategoryHeader({
 }: {
   category: string; count: number; collapsed: boolean; onToggle: () => void;
 }) {
+  const scaledTypography = useScaledTypography();
+  
   return (
     <TouchableOpacity
       style={styles.sectionHeader}
@@ -307,9 +310,9 @@ function CategoryHeader({
       accessibilityState={{ expanded: !collapsed }}
     >
       <View style={styles.sectionHeaderLeft}>
-        <Text style={styles.sectionHeaderText}>{category}</Text>
+        <Text style={[styles.sectionHeaderText, scaledTypography.label]}>{category}</Text>
         <View style={styles.countBadge}>
-          <Text style={styles.countBadgeText}>{count}</Text>
+          <Text style={[styles.countBadgeText, scaledTypography.caption]}>{count}</Text>
         </View>
       </View>
       <Ionicons name={collapsed ? 'chevron-forward' : 'chevron-down'} size={16} color={colors.textTertiary} />
@@ -385,13 +388,15 @@ function CategoryFilterChips({
   selected: string | null; onSelect: (cat: string) => void;
   onClear: () => void; availableCategories: string[];
 }) {
+  const scaledTypography = useScaledTypography();
+  
   if (availableCategories.length === 0) return null;
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{flexGrow: 0}} contentContainerStyle={styles.filterChipScroll}>
       {selected !== null && (
         <TouchableOpacity style={styles.clearFilterChip} onPress={onClear} accessibilityRole="button" accessibilityLabel="Clear category filter">
           <Ionicons name="close" size={12} color={colors.textSecondary} />
-          <Text style={styles.clearFilterChipText}>Clear</Text>
+          <Text style={[styles.clearFilterChipText, scaledTypography.caption]}>Clear</Text>
         </TouchableOpacity>
       )}
       {availableCategories.map((cat) => (
@@ -403,7 +408,7 @@ function CategoryFilterChips({
           accessibilityState={{ selected: selected === cat }}
           accessibilityLabel={`Filter by ${cat}`}
         >
-          <Text style={[styles.filterChipText, selected === cat && styles.filterChipTextSelected]}>{cat}</Text>
+          <Text style={[styles.filterChipText, scaledTypography.caption, selected === cat && styles.filterChipTextSelected]}>{cat}</Text>
         </TouchableOpacity>
       ))}
     </ScrollView>
@@ -419,6 +424,8 @@ function PantrySummary({
   items: PantryItem[];
   onCategoryPress: (category: string) => void;
 }) {
+  const scaledTypography = useScaledTypography();
+  
   // Build count map from actual items
   const countMap = useMemo(() => {
     const map: Record<string, number> = {};
@@ -434,7 +441,7 @@ function PantrySummary({
 
   return (
     <ScrollView style={styles.summaryScroll} contentContainerStyle={styles.summaryContent} showsVerticalScrollIndicator={false}>
-      <Text style={styles.summaryHint}>Tap a category to view its items</Text>
+      <Text style={[styles.summaryHint, scaledTypography.caption]}>Tap a category to view its items</Text>
       {ALL_SUMMARY_CATEGORIES.map((cat) => {
         const count = countMap[cat] ?? 0;
         const isEmpty = count === 0;
@@ -456,10 +463,10 @@ function PantrySummary({
           >
             {/* Category name + count */}
             <View style={styles.summaryCategoryLabel}>
-              <Text style={[styles.summaryCategoryName, isEmpty && styles.summaryCategoryNameEmpty]}>
+              <Text style={[styles.summaryCategoryName, scaledTypography.label, isEmpty && styles.summaryCategoryNameEmpty]}>
                 {cat}
               </Text>
-              <Text style={[styles.summaryCategoryCount, isEmpty && styles.summaryCategoryCountEmpty]}>
+              <Text style={[styles.summaryCategoryCount, scaledTypography.caption, isEmpty && styles.summaryCategoryCountEmpty]}>
                 {isEmpty ? 'Empty' : `${count} item${count !== 1 ? 's' : ''}`}
               </Text>
             </View>
@@ -490,6 +497,7 @@ type ScreenView = 'list' | 'summary';
 
 export default function PantryScreen() {
   const { items, loading, addItem, editItem, removeItem, refreshItems } = usePantry();
+  const scaledTypography = useScaledTypography();
   const [modalVisible, setModalVisible] = useState(false);
   const [editingItem, setEditingItem] = useState<PantryItem | null>(null);
   const [groupedView, setGroupedView] = useState(false);
@@ -679,7 +687,7 @@ export default function PantryScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title} accessibilityRole="header">My Pantry</Text>
+        <Text style={[styles.title, scaledTypography.title]} accessibilityRole="header">My Pantry</Text>
         <View style={styles.headerActions}>
           {/* Summary / List toggle */}
           <TouchableOpacity
@@ -741,8 +749,8 @@ export default function PantryScreen() {
         // ── Empty pantry ──────────────────────────────────────────────────────
         <View style={styles.emptyState}>
           <Ionicons name="basket-outline" size={64} color={colors.textTertiary} />
-          <Text style={styles.emptyTitle}>Your pantry is empty</Text>
-          <Text style={styles.emptySubtitle}>
+          <Text style={[styles.emptyTitle, scaledTypography.subtitle]}>Your pantry is empty</Text>
+          <Text style={[styles.emptySubtitle, scaledTypography.body]}>
             Tap the + button to add your first ingredient or food item.
           </Text>
           <TouchableOpacity
@@ -751,7 +759,7 @@ export default function PantryScreen() {
             accessibilityRole="button"
             accessibilityLabel="Add your first pantry item"
           >
-            <Text style={styles.emptyAddButtonText}>Add First Item</Text>
+            <Text style={[styles.emptyAddButtonText, scaledTypography.label]}>Add First Item</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -777,10 +785,10 @@ export default function PantryScreen() {
             ListEmptyComponent={
               <View style={styles.searchEmpty}>
                 <Ionicons name="search-outline" size={40} color={colors.textTertiary} />
-                <Text style={styles.searchEmptyTitle}>No items found</Text>
-                <Text style={styles.searchEmptySubtitle}>Try a different name or category.</Text>
+                <Text style={[styles.searchEmptyTitle, scaledTypography.subtitle]}>No items found</Text>
+                <Text style={[styles.searchEmptySubtitle, scaledTypography.body]}>Try a different name or category.</Text>
                 <TouchableOpacity onPress={handleClearAll} style={styles.clearAllButton} accessibilityRole="button" accessibilityLabel="Clear search and filters">
-                  <Text style={styles.clearAllButtonText}>Clear Search</Text>
+                  <Text style={[styles.clearAllButtonText, scaledTypography.label]}>Clear Search</Text>
                 </TouchableOpacity>
               </View>
             }

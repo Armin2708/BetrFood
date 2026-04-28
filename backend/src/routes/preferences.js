@@ -55,6 +55,7 @@ router.get('/', requireAuth, async (req, res) => {
         notifCommentReplies: true,
         notifAiChat: true,
         notifWeeklyDigest: true,
+        textSizeScale: 'default'
       });
     }
 
@@ -73,6 +74,7 @@ router.get('/', requireAuth, async (req, res) => {
       cookingSkill: data.cooking_skill || 'beginner',
       maxCookTime: data.max_cook_time || null,
       expiringItemsThreshold: data.expiring_items_threshold || 7,
+      textSizeScale: data.text_size_scale || 'default',
       ...buildNotificationPayload(data),
     });
   } catch (error) {
@@ -84,7 +86,7 @@ router.get('/', requireAuth, async (req, res) => {
 // PUT /api/preferences - Update user preferences (auth required)
 router.put('/', requireAuth, async (req, res) => {
   try {
-    const { dietaryPreferences, allergies, cuisines, profileVisibility, dietaryInfoVisible, expiringItemsThreshold, expirationNotificationsEnabled } = req.body;
+    const { dietaryPreferences, allergies, cuisines, profileVisibility, dietaryInfoVisible, expiringItemsThreshold, expirationNotificationsEnabled, textSizeScale } = req.body;
 
     const updates = {
       user_id: req.userId,
@@ -174,6 +176,14 @@ router.put('/', requireAuth, async (req, res) => {
       updates.expiration_notifications_enabled = expirationNotificationsEnabled;
     }
 
+    if (textSizeScale !== undefined) {
+      const validScales = ['small', 'default', 'large', 'xLarge'];
+      if (!validScales.includes(textSizeScale)) {
+        return res.status(400).json({ error: 'textSizeScale must be "small", "default", "large", or "xLarge".' });
+      }
+      updates.text_size_scale = textSizeScale;
+    }
+
     const { notificationsEnabled } = req.body;
     if (notificationsEnabled !== undefined) {
       if (typeof notificationsEnabled !== 'boolean') {
@@ -214,6 +224,7 @@ router.put('/', requireAuth, async (req, res) => {
       cookingSkill: data.cooking_skill || 'beginner',
       maxCookTime: data.max_cook_time || null,
       expiringItemsThreshold: data.expiring_items_threshold || 7,
+      textSizeScale: data.text_size_scale || 'default',
       ...buildNotificationPayload(data),
     });
   } catch (error) {

@@ -2,6 +2,7 @@ import { createContext, useContext, ReactNode, useEffect, useState } from "react
 import { fetchPreferences, updatePreferences } from "../services/api";
 import { Alert } from "react-native";
 import { AuthContext } from "./AuthenticationContext";
+import { TextSizeScale } from "../utils/textSizeScaling";
 
 export interface Preferences {
   dietaryPreferences: string[];
@@ -18,6 +19,7 @@ export interface Preferences {
   notifWeeklyDigest: boolean;
   profileVisibility: "public" | "private";
   dietaryInfoVisible: boolean;
+  textSizeScale: TextSizeScale;
 }
 
 interface PreferencesContextType {
@@ -47,6 +49,7 @@ const DEFAULT_PREFERENCES: Preferences = {
   notifWeeklyDigest: true,
   profileVisibility: "public",
   dietaryInfoVisible: true,
+  textSizeScale: "default",
 };
 
 export function PreferencesProvider({ children }: { children: ReactNode }) {
@@ -78,6 +81,7 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
         notifWeeklyDigest: prefs.notifWeeklyDigest ?? true,
         profileVisibility: prefs.profileVisibility || "public",
         dietaryInfoVisible: prefs.dietaryInfoVisible ?? true,
+        textSizeScale: (prefs.textSizeScale as TextSizeScale) || "default",
       });
     } catch {
       setPreferences(DEFAULT_PREFERENCES);
