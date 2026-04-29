@@ -6,11 +6,13 @@ import { useContext, useState } from "react";
 import { AuthContext } from "../../../../context/AuthenticationContext";
 import { deleteAccount } from "../../../../services/api";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useAppTheme } from "../../../../context/ThemeContext";
 
 export default function Settings() {
   const router = useRouter();
   const { signOut } = useClerk();
   const { user } = useContext(AuthContext);
+  const { colors } = useAppTheme();
 
   const isAdminOrMod = user?.role === 'admin' || user?.role === 'moderator';
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
@@ -41,7 +43,7 @@ export default function Settings() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.backgroundSecondary }]} edges={['top']}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -54,26 +56,26 @@ export default function Settings() {
             style={styles.logo}
             resizeMode="contain"
           />
-          <Text style={styles.brandTitle}>BetrFood</Text>
-          <Text style={styles.brandSubtitle}>Discover. Share. Eat Better.</Text>
+          <Text style={[styles.brandTitle, { color: colors.textPrimary }]}>BetrFood</Text>
+          <Text style={[styles.brandSubtitle, { color: colors.textSecondary }]}>Discover. Share. Eat Better.</Text>
         </View>
 
         {/* APP INFORMATION */}
-        <Text style={styles.sectionHeader}>APP INFORMATION</Text>
-        <View style={styles.card}>
+        <Text style={[styles.sectionHeader, { color: colors.textTertiary }]}>APP INFORMATION</Text>
+        <View style={[styles.card, { backgroundColor: colors.backgroundElevated }]}>
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Version</Text>
-            <Text style={styles.infoValue}>2.4.1</Text>
+            <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Version</Text>
+            <Text style={[styles.infoValue, { color: colors.textPrimary }]}>2.4.1</Text>
           </View>
-          <View style={styles.divider} />
+          <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Build Number</Text>
-            <Text style={styles.infoValue}>241</Text>
+            <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Build Number</Text>
+            <Text style={[styles.infoValue, { color: colors.textPrimary }]}>241</Text>
           </View>
-          <View style={styles.divider} />
+          <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Release Date</Text>
-            <Text style={styles.infoValue}>March 2026</Text>
+            <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Release Date</Text>
+            <Text style={[styles.infoValue, { color: colors.textPrimary }]}>March 2026</Text>
           </View>
         </View>
 
@@ -107,34 +109,34 @@ export default function Settings() {
         </View>
 
         {/* NOTIFICATIONS */}
-        <Text style={styles.sectionHeader}>NOTIFICATIONS</Text>
-        <View style={styles.card}>
+        <Text style={[styles.sectionHeader, { color: colors.textTertiary }]}>NOTIFICATIONS</Text>
+        <View style={[styles.card, { backgroundColor: colors.backgroundElevated }]}>
           <Pressable
             style={styles.navRow}
             onPress={() => router.push("/profile/settings/notifications" as any)}
           >
-            <Text style={styles.navLabel}>Push Notifications</Text>
-            <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+            <Text style={[styles.navLabel, { color: colors.textPrimary }]}>Push Notifications</Text>
+            <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
           </Pressable>
         </View>
 
         {/* APPEARANCE */}
-        <Text style={styles.sectionHeader}>APPEARANCE</Text>
-        <View style={styles.card}>
+        <Text style={[styles.sectionHeader, { color: colors.textTertiary }]}>APPEARANCE</Text>
+        <View style={[styles.card, { backgroundColor: colors.backgroundElevated }]}>
           <Pressable
             style={styles.navRow}
             onPress={() => router.push("/profile/settings/appearance" as any)}
           >
-            <Text style={styles.navLabel}>Feed Layout</Text>
-            <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+            <Text style={[styles.navLabel, { color: colors.textPrimary }]}>Theme & Layout</Text>
+            <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
           </Pressable>
-          <View style={styles.divider} />
+          <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
           <Pressable
             style={styles.navRow}
             onPress={() => router.push("/profile/settings/text-size" as any)}
           >
-            <Text style={styles.navLabel}>Text Size</Text>
-            <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+            <Text style={[styles.navLabel, { color: colors.textPrimary }]}>Text Size</Text>
+            <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
           </Pressable>
         </View>
 
@@ -233,19 +235,19 @@ export default function Settings() {
           </Pressable>
         </View>
         {/* FOLLOW US */}
-        <Text style={styles.sectionHeader}>FOLLOW US</Text>
+        <Text style={[styles.sectionHeader, { color: colors.textTertiary }]}>FOLLOW US</Text>
         <View style={styles.socialRow}>
-          <Pressable style={styles.socialIcon} onPress={() => openLink("https://instagram.com/betrfood")}>
-            <Ionicons name="logo-instagram" size={22} color="#0F172A" />
+          <Pressable style={[styles.socialIcon, { backgroundColor: colors.backgroundElevated }]} onPress={() => openLink("https://instagram.com/betrfood")}>
+            <Ionicons name="logo-instagram" size={22} color={colors.textPrimary} />
           </Pressable>
-          <Pressable style={styles.socialIcon} onPress={() => openLink("https://twitter.com/betrfood")}>
-            <Ionicons name="logo-twitter" size={22} color="#0F172A" />
+          <Pressable style={[styles.socialIcon, { backgroundColor: colors.backgroundElevated }]} onPress={() => openLink("https://twitter.com/betrfood")}>
+            <Ionicons name="logo-twitter" size={22} color={colors.textPrimary} />
           </Pressable>
-          <Pressable style={styles.socialIcon} onPress={() => openLink("https://tiktok.com/@betrfood")}>
-            <Ionicons name="logo-tiktok" size={22} color="#0F172A" />
+          <Pressable style={[styles.socialIcon, { backgroundColor: colors.backgroundElevated }]} onPress={() => openLink("https://tiktok.com/@betrfood")}>
+            <Ionicons name="logo-tiktok" size={22} color={colors.textPrimary} />
           </Pressable>
-          <Pressable style={styles.socialIcon} onPress={() => openLink("https://facebook.com/betrfood")}>
-            <Ionicons name="logo-facebook" size={22} color="#0F172A" />
+          <Pressable style={[styles.socialIcon, { backgroundColor: colors.backgroundElevated }]} onPress={() => openLink("https://facebook.com/betrfood")}>
+            <Ionicons name="logo-facebook" size={22} color={colors.textPrimary} />
           </Pressable>
         </View>
 
@@ -266,12 +268,12 @@ export default function Settings() {
         )}
 
         {/* About Text */}
-        <Text style={styles.aboutText}>
+        <Text style={[styles.aboutText, { color: colors.textSecondary }]}>
           BetrFood is made with love to help you discover healthier food choices, share recipes with friends, and build better eating habits together.
         </Text>
 
         {/* Copyright */}
-        <Text style={styles.copyright}>
+        <Text style={[styles.copyright, { color: colors.textTertiary }]}>
           {"\u00A9"} 2024 BetrFood, Inc. All rights reserved.
         </Text>
 
@@ -286,12 +288,12 @@ export default function Settings() {
         onRequestClose={() => !deleting && setDeleteModalVisible(false)}
       >
         <Pressable style={styles.modalOverlay} onPress={() => !deleting && setDeleteModalVisible(false)}>
-          <Pressable style={styles.modalBox} onPress={e => e.stopPropagation()}>
+          <Pressable style={[styles.modalBox, { backgroundColor: colors.backgroundElevated }]} onPress={e => e.stopPropagation()}>
             <View style={styles.modalIconRow}>
               <Ionicons name="warning-outline" size={32} color="#EF4444" />
             </View>
-            <Text style={styles.modalTitle}>Delete Account</Text>
-            <Text style={styles.modalMessage}>
+            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Delete Account</Text>
+            <Text style={[styles.modalMessage, { color: colors.textSecondary }]}>
               This action is permanent and cannot be undone. All your posts, comments, follows, and data will be permanently removed.
             </Text>
             <Pressable
@@ -304,11 +306,11 @@ export default function Settings() {
               </Text>
             </Pressable>
             <Pressable
-              style={styles.modalCancelButton}
+              style={[styles.modalCancelButton, { backgroundColor: colors.backgroundSubtle }]}
               onPress={() => setDeleteModalVisible(false)}
               disabled={deleting}
             >
-              <Text style={styles.modalCancelText}>Cancel</Text>
+              <Text style={[styles.modalCancelText, { color: colors.textPrimary }]}>Cancel</Text>
             </Pressable>
           </Pressable>
         </Pressable>

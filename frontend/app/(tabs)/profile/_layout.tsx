@@ -1,8 +1,20 @@
 import { Stack } from 'expo-router';
+import { useAppTheme } from '../../../context/ThemeContext';
 
 export default function ProfileStack() {
+  const { colors } = useAppTheme();
+
   return (
-    <Stack screenOptions={{ headerShown: true, headerBackTitle: 'Back' }}>
+    <Stack
+      screenOptions={{
+        headerShown: true,
+        headerBackTitle: 'Back',
+        headerStyle: { backgroundColor: colors.backgroundElevated },
+        headerTintColor: colors.textPrimary,
+        headerTitleStyle: { color: colors.textPrimary },
+        contentStyle: { backgroundColor: colors.backgroundPrimary },
+      }}
+    >
       <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="info/editProfile" options={{ title: 'Edit Profile' }} />
       <Stack.Screen name="info/FollowersScreen" options={{ title: 'Followers' }} />
