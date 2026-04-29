@@ -190,7 +190,10 @@ export default function Settings() {
             <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
           </Pressable>
           <View style={styles.divider} />
-          <Pressable style={styles.navRow}>
+          <Pressable
+            style={styles.navRow}
+            onPress={() => router.push("/profile/settings/open-source-licenses" as any)}
+          >
             <Text style={styles.navLabel}>Open Source Licenses</Text>
             <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
           </Pressable>
@@ -229,7 +232,6 @@ export default function Settings() {
             <Ionicons name="trash-outline" size={18} color="#EF4444" />
           </Pressable>
         </View>
-
         {/* FOLLOW US */}
         <Text style={styles.sectionHeader}>FOLLOW US</Text>
         <View style={styles.socialRow}>
