@@ -86,8 +86,8 @@ export default function Settings() {
           </View>
         </View>
 
-        {/* LEGAL */}
-        <Text style={styles.sectionHeader}>LEGAL</Text>
+        {/* ABOUT */}
+        <Text style={styles.sectionHeader}>ABOUT</Text>
         <View style={styles.card}>
           <Pressable
             style={styles.navRow}
@@ -105,6 +105,14 @@ export default function Settings() {
             <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
           </Pressable>
           <View style={styles.divider} />
+          <Pressable
+            style={styles.navRow}
+            onPress={() => router.push("/profile/settings/open-source-licenses" as any)}
+          >
+            <Text style={styles.navLabel}>Open Source Licenses</Text>
+            <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+          </Pressable>
+          <View style={styles.divider} />
           <Pressable style={styles.navRow}>
             <Text style={styles.navLabel}>Help & Support</Text>
             <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
@@ -112,20 +120,6 @@ export default function Settings() {
           <View style={styles.divider} />
           <Pressable style={styles.navRow}>
             <Text style={styles.navLabel}>Cookie Policy</Text>
-            <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
-          </Pressable>
-        </View>
-
-        {/* RESOURCES */}
-        <Text style={styles.sectionHeader}>RESOURCES</Text>
-        <View style={styles.card}>
-          <Pressable style={styles.navRow}>
-            <Text style={styles.navLabel}>Open Source Licenses</Text>
-            <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
-          </Pressable>
-          <View style={styles.divider} />
-          <Pressable style={styles.navRow}>
-            <Text style={styles.navLabel}>Acknowledgments</Text>
             <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
           </Pressable>
         </View>
