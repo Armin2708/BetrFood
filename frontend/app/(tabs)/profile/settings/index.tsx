@@ -77,8 +77,8 @@ export default function Settings() {
           </View>
         </View>
 
-        {/* ACCOUNT ACTIONS */}
-        <Text style={styles.sectionHeader}>ACCOUNT</Text>
+        {/* ABOUT */}
+        <Text style={styles.sectionHeader}>ABOUT</Text>
         <View style={styles.card}>
           <Pressable
             style={styles.navRow}
@@ -154,6 +154,22 @@ export default function Settings() {
             onPress={() => router.push("/profile/settings/data-storage" as any)}
           >
             <Text style={styles.navLabel}>Data & Storage</Text>
+            <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+          </Pressable>
+          <View style={styles.divider} />
+          <Pressable
+            style={styles.navRow}
+            onPress={() => router.push("/profile/settings/privacy-policy" as any)}
+          >
+            <Text style={styles.navLabel}>Privacy Policy</Text>
+            <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+          </Pressable>
+          <View style={styles.divider} />
+          <Pressable
+            style={styles.navRow}
+            onPress={() => router.push("/profile/settings/terms" as any)}
+          >
+            <Text style={styles.navLabel}>Terms of Service</Text>
             <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
           </Pressable>
           <View style={styles.divider} />
