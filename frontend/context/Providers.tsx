@@ -6,6 +6,7 @@ import { ActionSheetProvider } from "@expo/react-native-action-sheet";
 import { usePreferences, PreferencesProvider } from "./PreferencesContext";
 import { TextSizeProvider as TextSizeProviderComponent } from "./TextSizeContext";
 import { FeedLayoutProvider } from "./FeedLayoutContext";
+import { ThemeProvider } from "./ThemeContext";
 
 // Wrapper to pass preferences to TextSizeProvider
 function TextSizeProviderWithPreferences({ children }: { children: React.ReactNode }) {
@@ -20,18 +21,20 @@ function TextSizeProviderWithPreferences({ children }: { children: React.ReactNo
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <AuthProvider>
-      <ActionSheetProvider>
-        <PreferencesProvider>
-          <TextSizeProviderWithPreferences>
-            <FeedLayoutProvider>
-              <CollectionsProvider>
-                <PantryProvider>{children}</PantryProvider>
-              </CollectionsProvider>
-            </FeedLayoutProvider>
-          </TextSizeProviderWithPreferences>
-        </PreferencesProvider>
-      </ActionSheetProvider>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <ActionSheetProvider>
+          <PreferencesProvider>
+            <TextSizeProviderWithPreferences>
+              <FeedLayoutProvider>
+                <CollectionsProvider>
+                  <PantryProvider>{children}</PantryProvider>
+                </CollectionsProvider>
+              </FeedLayoutProvider>
+            </TextSizeProviderWithPreferences>
+          </PreferencesProvider>
+        </ActionSheetProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }

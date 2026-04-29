@@ -3,7 +3,7 @@
  * Single source of truth for colors, spacing, and typography.
  */
 
-export const colors = {
+const sharedColors = {
   // Brand
   primary: '#22C55E',
   primaryLight: '#4ADE80',
@@ -26,7 +26,14 @@ export const colors = {
   recipeBackground: '#F0FDF4',
   recipeBorder: '#BBF7D0',
 
-  // Neutrals
+  // Special
+  verified: '#1DA1F2',
+  liked: '#22C55E',
+  delete: '#e74c3c',
+} as const;
+
+export const lightColors = {
+  ...sharedColors,
   black: '#000',
   white: '#fff',
   textPrimary: '#0F172A',
@@ -35,22 +42,59 @@ export const colors = {
   textQuaternary: '#94A3B8',
   placeholder: '#94A3B8',
   border: '#E2E8F0',
-  borderLight: '#F8FAFC',
-  divider: '#e0e0e0',
+  borderLight: '#F1F5F9',
+  divider: '#E2E8F0',
   backgroundPrimary: '#fff',
-  backgroundSecondary: '#f5f5f5',
-  backgroundTertiary: '#f0f0f0',
-  backgroundSubtle: '#f8f8f8',
-  backgroundMuted: '#fafafa',
-
-  // Special
-  verified: '#1DA1F2',
-  liked: '#22C55E',
-  delete: '#e74c3c',
-
-  // Overlay
+  backgroundSecondary: '#F8FAFC',
+  backgroundTertiary: '#F1F5F9',
+  backgroundSubtle: '#FCFCFD',
+  backgroundMuted: '#FAFAFA',
+  backgroundElevated: '#FFFFFF',
   overlay: 'rgba(0,0,0,0.4)',
+  headerBackground: '#F8FAFC',
+  tabBarBackground: '#16A34A',
+  tabBarActive: '#FFFFFF',
+  tabBarInactive: 'rgba(255,255,255,0.55)',
+  tabBarBadgeBackground: '#FFFFFF',
+  tabBarBadgeText: '#16A34A',
+  fabBackground: '#FFFFFF',
+  fabIcon: '#16A34A',
+  cardShadow: 'rgba(15, 23, 42, 0.08)',
 } as const;
+
+export const darkColors = {
+  ...sharedColors,
+  black: '#000000',
+  white: '#FFFFFF',
+  textPrimary: '#F8FAFC',
+  textSecondary: '#CBD5E1',
+  textTertiary: '#94A3B8',
+  textQuaternary: '#64748B',
+  placeholder: '#64748B',
+  border: '#334155',
+  borderLight: '#1E293B',
+  divider: '#334155',
+  backgroundPrimary: '#020617',
+  backgroundSecondary: '#0F172A',
+  backgroundTertiary: '#111827',
+  backgroundSubtle: '#17212F',
+  backgroundMuted: '#111827',
+  backgroundElevated: '#1E293B',
+  overlay: 'rgba(0,0,0,0.6)',
+  headerBackground: '#020617',
+  tabBarBackground: '#14532D',
+  tabBarActive: '#F8FAFC',
+  tabBarInactive: 'rgba(248,250,252,0.6)',
+  tabBarBadgeBackground: '#F8FAFC',
+  tabBarBadgeText: '#14532D',
+  fabBackground: '#F8FAFC',
+  fabIcon: '#14532D',
+  cardShadow: 'rgba(0, 0, 0, 0.45)',
+} as const;
+
+export type ThemeColors = typeof lightColors;
+
+export const colors: ThemeColors = { ...lightColors };
 
 export const TAG_TYPE_COLORS: Record<string, string> = {
   cuisine: colors.tagCuisine,
