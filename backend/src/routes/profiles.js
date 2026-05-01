@@ -29,7 +29,7 @@ const avatarUpload = multer({
   fileFilter: (req, file, cb) => {
     const allowed = /jpeg|jpg|png|webp|heif|heic/;
     const ext = path.extname(file.originalname).toLowerCase();
-    const extOk = ext ? allowed.test(ext) : true; // no extension OK if MIME matches
+    const extOk = ext ? allowed.test(ext) : true;
     const mimeOk = allowed.test(file.mimetype.split('/')[1]);
     if (mimeOk && extOk) {
       cb(null, true);
@@ -67,6 +67,38 @@ function deleteClerkUser(userId) {
       });
     });
     req.on('error', reject);
+    req.end();
+  });
+}
+
+/**
+ * Fetch user email from Clerk API.
+ */
+function getClerkUserEmail(userId) {
+  return new Promise((resolve) => {
+    const options = {
+      hostname: 'api.clerk.com',
+      path: '/v1/users/' + userId,
+      method: 'GET',
+      headers: {
+        'Authorization': 'Bearer ' + CLERK_SECRET_KEY,
+        'Content-Type': 'application/json',
+      },
+    };
+    const req = https.request(options, (res) => {
+      let b = '';
+      res.on('data', (chunk) => (b += chunk));
+      res.on('end', () => {
+        try {
+          const data = JSON.parse(b);
+          const primary = data.email_addresses?.find(e => e.id === data.primary_email_address_id);
+          resolve(primary?.email_address || null);
+        } catch {
+          resolve(null);
+        }
+      });
+    });
+    req.on('error', () => resolve(null));
     req.end();
   });
 }
@@ -128,7 +160,6 @@ router.get('/me', requireAuth, async (req, res) => {
 
     if (!data) {
       console.log('[PROFILE] No profile found, auto-provisioning for:', req.userId);
-      // Auto-provision profile for new users (e.g. first OAuth sign-in)
       const { data: newProfile, error: createError } = await supabase
         .from('user_profiles')
         .insert({ id: req.userId, onboarding_completed: false })
@@ -156,7 +187,6 @@ router.put('/me', requireAuth, async (req, res) => {
   try {
     const { displayName, username, bio, avatarUrl, dietaryPreferences } = req.body;
 
-    // Build the update object
     const updates = { updated_at: new Date().toISOString() };
 
     if (displayName !== undefined) updates.display_name = displayName;
@@ -170,7 +200,6 @@ router.put('/me', requireAuth, async (req, res) => {
         return res.status(400).json({ error: 'Username must be 3-20 characters, lowercase alphanumeric and underscores only.' });
       }
 
-      // Check uniqueness (exclude current user)
       const { data: existing } = await supabase
         .from('user_profiles')
         .select('id')
@@ -185,7 +214,6 @@ router.put('/me', requireAuth, async (req, res) => {
       updates.username = lower;
     }
 
-    // Upsert: insert if not exists, update if exists
     const { data, error } = await supabase
       .from('user_profiles')
       .upsert({ id: req.userId, ...updates }, { onConflict: 'id' })
@@ -208,7 +236,6 @@ router.post('/me/avatar', requireAuth, avatarUpload.single('avatar'), async (req
       return res.status(400).json({ error: 'Avatar image is required.' });
     }
 
-    // Optimize: resize to max 400x400, convert to JPEG
     const optimizedFilename = `${uuidv4()}.jpg`;
     const optimizedPath = path.join(uploadsDir, optimizedFilename);
     try {
@@ -218,14 +245,28 @@ router.post('/me/avatar', requireAuth, avatarUpload.single('avatar'), async (req
         .toFile(optimizedPath);
       fs.unlinkSync(req.file.path);
     } catch (sharpErr) {
-      console.error('Avatar optimization failed, using original:', sharpErr.message);
+      console.error('Sharp optimization failed, using original:', sharpErr.message);
+      fs.renameSync(req.file.path, optimizedPath);
     }
-    const finalFilename = fs.existsSync(optimizedPath) ? optimizedFilename : req.file.filename;
-    const avatarUrl = `/uploads/${finalFilename}`;
+
+    // Upload to Supabase Storage
+    const fileBuffer = fs.readFileSync(optimizedPath);
+    const storageFilename = `avatars/${optimizedFilename}`;
+    const { error: uploadError } = await supabase.storage
+      .from('post-media')
+      .upload(storageFilename, fileBuffer, { contentType: 'image/jpeg', upsert: false });
+
+    fs.unlinkSync(optimizedPath);
+
+    if (uploadError) throw new Error(`Storage upload failed: ${uploadError.message}`);
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('post-media')
+      .getPublicUrl(storageFilename);
 
     const { data, error } = await supabase
       .from('user_profiles')
-      .upsert({ id: req.userId, avatar_url: avatarUrl, updated_at: new Date().toISOString() }, { onConflict: 'id' })
+      .upsert({ id: req.userId, avatar_url: publicUrl, updated_at: new Date().toISOString() }, { onConflict: 'id' })
       .select('*')
       .single();
 
@@ -238,31 +279,16 @@ router.post('/me/avatar', requireAuth, avatarUpload.single('avatar'), async (req
   }
 });
 
-// POST /api/profiles/me/complete-onboarding - Mark onboarding complete
+// POST /api/profiles/me/complete-onboarding
 router.post('/me/complete-onboarding', requireAuth, async (req, res) => {
   try {
-    // Verify the user has a username set
-    const { data: existing, error: fetchError } = await supabase
-      .from('user_profiles')
-      .select('*')
-      .eq('id', req.userId)
-      .maybeSingle();
-
-    if (fetchError) throw fetchError;
-
-    if (!existing || !existing.username) {
-      return res.status(400).json({ error: 'Username must be set before completing onboarding.' });
-    }
-
     const { data, error } = await supabase
       .from('user_profiles')
-      .update({ onboarding_completed: true, updated_at: new Date().toISOString() })
-      .eq('id', req.userId)
+      .upsert({ id: req.userId, onboarding_completed: true, updated_at: new Date().toISOString() }, { onConflict: 'id' })
       .select('*')
       .single();
 
     if (error) throw error;
-
     return res.json(formatProfile(data));
   } catch (error) {
     console.error('Error completing onboarding:', error);
@@ -270,140 +296,97 @@ router.post('/me/complete-onboarding', requireAuth, async (req, res) => {
   }
 });
 
-// DELETE /api/profiles/me - Delete own account (auth required)
-router.delete('/me', requireAuth, async (req, res) => {
+// ── Data Export ────────────────────────────────────────────────────────────────
+
+/**
+ * Aggregate all data for a user into a JSON object.
+ */
+async function aggregateUserData(userId) {
+  const [
+    profileResult,
+    prefsResult,
+    postsResult,
+    pantryResult,
+    collectionsResult,
+    likesResult,
+    commentsResult,
+    followersResult,
+    followingResult,
+  ] = await Promise.allSettled([
+    supabase.from('user_profiles').select('*').eq('id', userId).maybeSingle(),
+    supabase.from('user_preferences').select('*').eq('user_id', userId).maybeSingle(),
+    supabase.from('posts').select('*, recipes(*, recipe_ingredients(*), recipe_steps(*)), post_tags(tags(*)), post_images(*)').eq('user_id', userId).order('created_at', { ascending: false }),
+    supabase.from('pantry_items').select('*').eq('user_id', userId),
+    supabase.from('collections').select('*, collection_posts(post_id)').eq('user_id', userId),
+    supabase.from('likes').select('post_id, created_at').eq('user_id', userId),
+    supabase.from('comments').select('id, post_id, content, created_at').eq('user_id', userId),
+    supabase.from('user_follows').select('follower_id').eq('following_id', userId),
+    supabase.from('user_follows').select('following_id').eq('follower_id', userId),
+  ]);
+
+  const get = (result) => result.status === 'fulfilled' ? (result.value.data || null) : null;
+
+  return {
+    exportedAt: new Date().toISOString(),
+    exportVersion: '1.0',
+    profile: get(profileResult),
+    preferences: get(prefsResult),
+    posts: get(postsResult) || [],
+    pantry: get(pantryResult) || [],
+    collections: get(collectionsResult) || [],
+    likes: get(likesResult) || [],
+    comments: get(commentsResult) || [],
+    followers: (get(followersResult) || []).map(f => f.follower_id),
+    following: (get(followingResult) || []).map(f => f.following_id),
+  };
+}
+
+// POST /api/profiles/me/export
+// Synchronously aggregates user data, uploads to Supabase Storage,
+// and returns a signed download URL immediately.
+router.post('/me/export', requireAuth, async (req, res) => {
   try {
-    if (pool) {
-      // Use pg transaction for atomic account deletion
-      const client = await pool.connect();
-      try {
-        await client.query('BEGIN');
-        const userId = req.userId;
+    const userId = req.userId;
+    const exportId = uuidv4();
 
-        // Delete related data in dependency order
-        await client.query('DELETE FROM user_preferences WHERE user_id = $1', [userId]);
-        await client.query('DELETE FROM pantry_items WHERE user_id = $1', [userId]);
-        await client.query('DELETE FROM user_follows WHERE follower_id = $1 OR following_id = $1', [userId]);
-        await client.query('DELETE FROM user_blocks WHERE blocker_id = $1 OR blocked_id = $1', [userId]);
-        await client.query('DELETE FROM user_mutes WHERE muter_id = $1 OR muted_id = $1', [userId]);
-        await client.query('DELETE FROM likes WHERE user_id = $1', [userId]);
-        await client.query('DELETE FROM reports WHERE reporter_id = $1', [userId]);
-        await client.query('DELETE FROM comments WHERE user_id = $1', [userId]);
-        await client.query('DELETE FROM notifications WHERE user_id = $1 OR actor_id = $1', [userId]);
+    // Aggregate all user data
+    const userData = await aggregateUserData(userId);
 
-        // Delete collections and their posts
-        await client.query(`
-          DELETE FROM collection_posts WHERE collection_id IN
-            (SELECT id FROM collections WHERE user_id = $1)
-        `, [userId]);
-        await client.query('DELETE FROM collections WHERE user_id = $1', [userId]);
+    // Upload JSON to Supabase Storage
+    const filename = `exports/${userId}/${exportId}.json`;
+    const fileBuffer = Buffer.from(JSON.stringify(userData, null, 2), 'utf8');
 
-        // Delete post-related data
-        const { rows: posts } = await client.query('SELECT id FROM posts WHERE user_id = $1', [userId]);
-        if (posts.length > 0) {
-          const postIds = posts.map(p => p.id);
-          await client.query('DELETE FROM likes WHERE post_id = ANY($1)', [postIds]);
-          await client.query('DELETE FROM comments WHERE post_id = ANY($1)', [postIds]);
-          await client.query('DELETE FROM collection_posts WHERE post_id = ANY($1)', [postIds]);
-          await client.query('DELETE FROM reports WHERE target_id = ANY($1::text[])', [postIds.map(String)]);
-          await client.query('DELETE FROM post_tags WHERE post_id = ANY($1)', [postIds]);
-          await client.query('DELETE FROM post_images WHERE post_id = ANY($1)', [postIds]);
-          await client.query(`
-            DELETE FROM recipe_ingredients WHERE recipe_id IN
-              (SELECT id FROM recipes WHERE post_id = ANY($1))
-          `, [postIds]);
-          await client.query(`
-            DELETE FROM recipe_steps WHERE recipe_id IN
-              (SELECT id FROM recipes WHERE post_id = ANY($1))
-          `, [postIds]);
-          await client.query('DELETE FROM recipes WHERE post_id = ANY($1)', [postIds]);
-          await client.query('DELETE FROM posts WHERE user_id = $1', [userId]);
-        }
+    const { error: uploadError } = await supabase.storage
+      .from('post-media')
+      .upload(filename, fileBuffer, {
+        contentType: 'application/json',
+        upsert: true,
+      });
 
-        // Delete user profile
-        await client.query('DELETE FROM user_profiles WHERE id = $1', [userId]);
+    if (uploadError) throw new Error(`Storage upload failed: ${uploadError.message}`);
 
-        await client.query('COMMIT');
-      } catch (txErr) {
-        await client.query('ROLLBACK');
-        throw txErr;
-      } finally {
-        client.release();
-      }
-    } else {
-      // Fallback: sequential deletes via Supabase client (no transaction)
-      await supabase.from('user_preferences').delete().eq('user_id', req.userId);
-      await supabase.from('pantry_items').delete().eq('user_id', req.userId);
-      await supabase.from('user_follows').delete().eq('follower_id', req.userId);
-      await supabase.from('user_follows').delete().eq('following_id', req.userId);
-      await supabase.from('user_blocks').delete().eq('blocker_id', req.userId);
-      await supabase.from('user_blocks').delete().eq('blocked_id', req.userId);
-      await supabase.from('user_mutes').delete().eq('muter_id', req.userId);
-      await supabase.from('user_mutes').delete().eq('muted_id', req.userId);
-      await supabase.from('likes').delete().eq('user_id', req.userId);
-      await supabase.from('reports').delete().eq('reporter_id', req.userId);
-      await supabase.from('comments').delete().eq('user_id', req.userId);
-      await supabase.from('notifications').delete().eq('user_id', req.userId);
-      await supabase.from('notifications').delete().eq('actor_id', req.userId);
+    // Generate signed URL valid for 24 hours
+    const expiresInSeconds = 60 * 60 * 24;
+    const { data: signedData, error: signedError } = await supabase.storage
+      .from('post-media')
+      .createSignedUrl(filename, expiresInSeconds);
 
-      const { data: collections } = await supabase
-        .from('collections')
-        .select('id')
-        .eq('user_id', req.userId);
+    if (signedError) throw new Error(`Failed to create signed URL: ${signedError.message}`);
 
-      if (collections && collections.length > 0) {
-        const collectionIds = collections.map(c => c.id);
-        await supabase.from('collection_posts').delete().in('collection_id', collectionIds);
-        await supabase.from('collections').delete().eq('user_id', req.userId);
-      }
+    const expiresAt = new Date(Date.now() + expiresInSeconds * 1000).toISOString();
 
-      const { data: posts } = await supabase
-        .from('posts')
-        .select('id')
-        .eq('user_id', req.userId);
-
-      if (posts && posts.length > 0) {
-        const postIds = posts.map(p => p.id);
-        await supabase.from('likes').delete().in('post_id', postIds);
-        await supabase.from('comments').delete().in('post_id', postIds);
-        await supabase.from('collection_posts').delete().in('post_id', postIds);
-        await supabase.from('reports').delete().in('post_id', postIds);
-        await supabase.from('post_tags').delete().in('post_id', postIds);
-        await supabase.from('post_images').delete().in('post_id', postIds);
-        await supabase.from('recipe_ingredients').delete().in('recipe_id',
-          (await supabase.from('recipes').select('id').in('post_id', postIds)).data?.map(r => r.id) || []
-        );
-        await supabase.from('recipe_steps').delete().in('recipe_id',
-          (await supabase.from('recipes').select('id').in('post_id', postIds)).data?.map(r => r.id) || []
-        );
-        await supabase.from('recipes').delete().in('post_id', postIds);
-        await supabase.from('posts').delete().eq('user_id', req.userId);
-      }
-
-      const { error } = await supabase
-        .from('user_profiles')
-        .delete()
-        .eq('id', req.userId);
-
-      if (error) throw error;
-    }
-
-    // Delete the user from Clerk (outside transaction — best effort)
-    try {
-      await deleteClerkUser(req.userId);
-    } catch (clerkErr) {
-      console.error('Failed to delete Clerk user (profile already deleted):', clerkErr);
-    }
-
-    res.json({ message: 'Account deleted successfully.' });
+    res.json({
+      status: 'ready',
+      downloadUrl: signedData.signedUrl,
+      expiresAt,
+    });
   } catch (error) {
-    console.error('Error deleting account:', error);
-    res.status(500).json({ error: 'Failed to delete account.' });
+    console.error('Error generating data export:', error);
+    res.status(500).json({ error: 'Failed to generate data export.' });
   }
 });
 
-// GET /api/profiles/search?q=term - Search user profiles by username or display name
-// NOTE: Must be defined BEFORE /:userId to avoid "search" matching as :userId
+// GET /api/profiles/search?q=term
 router.get('/search', optionalAuth, async (req, res) => {
   try {
     const q = (req.query.q || '').trim();
@@ -436,7 +419,7 @@ router.get('/search', optionalAuth, async (req, res) => {
   }
 });
 
-// GET /api/profiles/:userId - Get profile by userId (respects privacy settings)
+// GET /api/profiles/:userId
 router.get('/:userId', optionalAuth, async (req, res) => {
   try {
     const { data, error } = await supabase
@@ -451,12 +434,10 @@ router.get('/:userId', optionalAuth, async (req, res) => {
       return res.status(404).json({ error: 'Profile not found.' });
     }
 
-    // If requesting own profile, always return full data
     if (req.userId === req.params.userId) {
       return res.json(formatProfile(data));
     }
 
-    // Check profile visibility preference
     const { data: prefs } = await supabase
       .from('user_preferences')
       .select('profile_visibility, dietary_info_visible')
@@ -464,7 +445,6 @@ router.get('/:userId', optionalAuth, async (req, res) => {
       .maybeSingle();
 
     if (prefs && prefs.profile_visibility === 'private') {
-      // Allow followers to see full profile even if private
       let isFollower = false;
       if (req.userId) {
         const { data: followRow } = await supabase
@@ -487,7 +467,6 @@ router.get('/:userId', optionalAuth, async (req, res) => {
       }
     }
 
-    // Enforce dietary info visibility — hide from non-followers if disabled
     const profile = formatProfile(data);
     if (prefs && prefs.dietary_info_visible === false) {
       let isFollower = false;
@@ -513,3 +492,4 @@ router.get('/:userId', optionalAuth, async (req, res) => {
 });
 
 module.exports = router;
+module.exports.getClerkUserEmail = getClerkUserEmail;
