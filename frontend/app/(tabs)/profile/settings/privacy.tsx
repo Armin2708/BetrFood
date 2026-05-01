@@ -49,6 +49,10 @@ export default function PrivacySettings() {
     await updatePreferences({ pantryVisibility: value });
   };
 
+  const toggleSearchable = async (value: boolean) => {
+    await updatePreferences({ searchable: value });
+  };
+
   if (loading || !preferences) {
     return (
       <View style={[styles.container, styles.centered]}>
@@ -59,6 +63,8 @@ export default function PrivacySettings() {
 
   const currentPantryVisibility: PantryVisibility =
     (preferences as any).pantryVisibility || 'only_me';
+  const isSearchable: boolean =
+    (preferences as any).searchable !== false;
 
   return (
     <View style={styles.container}>
@@ -95,6 +101,24 @@ export default function PrivacySettings() {
           <Switch
             value={preferences.dietaryInfoVisible}
             onValueChange={toggleDietaryInfo}
+            trackColor={{ false: "#ccc", true: "#007AFF" }}
+            thumbColor="#fff"
+          />
+        </View>
+
+        {/* Search visibility */}
+        <View style={styles.row}>
+          <View style={styles.rowInfo}>
+            <Text style={styles.rowTitle}>Appear in Search Results</Text>
+            <Text style={styles.rowDescription}>
+              {isSearchable
+                ? "Your profile can be found through search"
+                : "Your profile is hidden from search results"}
+            </Text>
+          </View>
+          <Switch
+            value={isSearchable}
+            onValueChange={toggleSearchable}
             trackColor={{ false: "#ccc", true: "#007AFF" }}
             thumbColor="#fff"
           />

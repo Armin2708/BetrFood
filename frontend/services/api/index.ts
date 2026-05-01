@@ -26,7 +26,14 @@ export type {
 } from './posts';
 export { fetchRecipe, createRecipe, updateRecipe, deleteRecipe } from './recipes';
 export type { Recipe, RecipeInput, RecipeIngredient, RecipeStep } from './recipes';
-export { fetchTags, addTagsToPost, removeTagFromPost, fetchPostTags, fetchPostsByTags } from './tags';
+export {
+  fetchTags,
+  fetchTags as fetchTrendingHashtags,
+  addTagsToPost,
+  removeTagFromPost,
+  fetchPostTags,
+  fetchPostsByTags,
+} from './tags';
 export type { Tag } from './tags';
 export {
   fetchMyProfile,
