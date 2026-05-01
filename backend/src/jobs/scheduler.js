@@ -3,13 +3,157 @@ const supabase = require('../db/supabase');
 const { calculateUserPreferenceVector, saveUserPreferenceVector } = require('../utils/recommendationEngine');
 
 /**
- * Update preference vectors for all active users
- * This runs once per day at 2 AM UTC
+ * Aggregate all data for a user into a JSON object.
+ */
+async function aggregateUserData(userId) {
+  const [
+    profileResult,
+    prefsResult,
+    postsResult,
+    pantryResult,
+    collectionsResult,
+    likesResult,
+    commentsResult,
+    followersResult,
+    followingResult,
+  ] = await Promise.allSettled([
+    supabase.from('user_profiles').select('*').eq('id', userId).maybeSingle(),
+    supabase.from('user_preferences').select('*').eq('user_id', userId).maybeSingle(),
+    supabase.from('posts').select('*, recipes(*, recipe_ingredients(*), recipe_steps(*)), post_tags(tags(*)), post_images(*)').eq('user_id', userId).order('created_at', { ascending: false }),
+    supabase.from('pantry_items').select('*').eq('user_id', userId),
+    supabase.from('collections').select('*, collection_posts(post_id)').eq('user_id', userId),
+    supabase.from('likes').select('post_id, created_at').eq('user_id', userId),
+    supabase.from('comments').select('id, post_id, content, created_at').eq('user_id', userId),
+    supabase.from('user_follows').select('follower_id').eq('following_id', userId),
+    supabase.from('user_follows').select('following_id').eq('follower_id', userId),
+  ]);
+
+  const get = (result) => result.status === 'fulfilled' ? (result.value.data || null) : null;
+
+  return {
+    exportedAt: new Date().toISOString(),
+    exportVersion: '1.0',
+    profile: get(profileResult),
+    preferences: get(prefsResult),
+    posts: get(postsResult) || [],
+    pantry: get(pantryResult) || [],
+    collections: get(collectionsResult) || [],
+    likes: get(likesResult) || [],
+    comments: get(commentsResult) || [],
+    followers: (get(followersResult) || []).map(f => f.follower_id),
+    following: (get(followingResult) || []).map(f => f.following_id),
+  };
+}
+
+/**
+ * Process a single pending export request.
+ */
+async function processExportRequest(request) {
+  const { id: requestId, user_id: userId } = request;
+
+  console.log(`[EXPORT] Processing request ${requestId} for user ${userId}`);
+
+  // Mark as processing
+  await supabase
+    .from('data_export_requests')
+    .update({ status: 'processing' })
+    .eq('id', requestId);
+
+  try {
+    // 1. Aggregate user data
+    const userData = await aggregateUserData(userId);
+
+    // 2. Write JSON to a temp file
+    const exportJson = JSON.stringify(userData, null, 2);
+    const filename = `exports/${userId}/${requestId}.json`;
+    const fileBuffer = Buffer.from(exportJson, 'utf8');
+
+    // 3. Upload to Supabase Storage
+    const { error: uploadError } = await supabase.storage
+      .from('post-media')
+      .upload(filename, fileBuffer, {
+        contentType: 'application/json',
+        upsert: true,
+      });
+
+    if (uploadError) throw new Error(`Storage upload failed: ${uploadError.message}`);
+
+    // 4. Generate a signed URL valid for 24 hours
+    const expiresInSeconds = 60 * 60 * 24; // 24 hours
+    const { data: signedData, error: signedError } = await supabase.storage
+      .from('post-media')
+      .createSignedUrl(filename, expiresInSeconds);
+
+    if (signedError) throw new Error(`Failed to create signed URL: ${signedError.message}`);
+
+    const downloadUrl = signedData.signedUrl;
+    const expiresAt = new Date(Date.now() + expiresInSeconds * 1000).toISOString();
+    const now = new Date().toISOString();
+
+    // 5. Mark request as ready
+    await supabase
+      .from('data_export_requests')
+      .update({
+        status: 'ready',
+        download_url: downloadUrl,
+        expires_at: expiresAt,
+        completed_at: now,
+      })
+      .eq('id', requestId);
+
+    console.log(`[EXPORT] ✓ Request ${requestId} completed`);
+  } catch (err) {
+    console.error(`[EXPORT] ✗ Request ${requestId} failed:`, err.message);
+
+    await supabase
+      .from('data_export_requests')
+      .update({
+        status: 'failed',
+        error_message: err.message,
+        completed_at: new Date().toISOString(),
+      })
+      .eq('id', requestId);
+  }
+}
+
+/**
+ * Process all pending data export requests.
+ * Runs every 5 minutes.
+ */
+async function processAllPendingExports() {
+  console.log('[EXPORT] Checking for pending export requests...');
+  try {
+    const { data: pending, error } = await supabase
+      .from('data_export_requests')
+      .select('id, user_id')
+      .eq('status', 'pending')
+      .order('requested_at', { ascending: true })
+      .limit(10); // Process up to 10 at a time
+
+    if (error) throw error;
+
+    if (!pending || pending.length === 0) {
+      return;
+    }
+
+    console.log(`[EXPORT] Found ${pending.length} pending export request(s)`);
+
+    // Process sequentially to avoid overwhelming storage
+    for (const request of pending) {
+      await processExportRequest(request);
+    }
+  } catch (err) {
+    console.error('[EXPORT] Error processing pending exports:', err.message);
+  }
+}
+
+/**
+ * Update preference vectors for all active users.
+ * Runs once per day at 2 AM UTC.
  */
 async function updateAllUserPreferenceVectors() {
   console.log('[PREF-VECTORS] Starting preference vector update job...');
   try {
-    // Get all users who have been active in the last 30 days
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
@@ -30,29 +174,24 @@ async function updateAllUserPreferenceVectors() {
     let successCount = 0;
     let errorCount = 0;
 
-    // Process users in batches to avoid overwhelming the system
     const BATCH_SIZE = 10;
     for (let i = 0; i < activeUsers.length; i += BATCH_SIZE) {
       const batch = activeUsers.slice(i, i + BATCH_SIZE);
 
-      // Process batch in parallel
       const results = await Promise.allSettled(
         batch.map(async (user) => {
           try {
-            // Fetch user preferences for cold-start
             const { data: userPrefs } = await supabase
               .from('user_preferences')
               .select('*')
               .eq('user_id', user.id)
               .single();
 
-            // Calculate new preference vector
             const vector = await calculateUserPreferenceVector(user.id, {
               ...(userPrefs || {}),
               profile_dietary_preferences: user.dietary_preferences || [],
             });
 
-            // Save to database
             await saveUserPreferenceVector(user.id, vector);
 
             console.log(`[PREF-VECTORS] ✓ Updated user ${user.id}`);
@@ -64,7 +203,6 @@ async function updateAllUserPreferenceVectors() {
         })
       );
 
-      // Count results
       results.forEach((result) => {
         if (result.status === 'fulfilled') {
           if (result.value.success) successCount += 1;
@@ -75,59 +213,48 @@ async function updateAllUserPreferenceVectors() {
       });
     }
 
-    console.log(
-      `[PREF-VECTORS] Job completed. Success: ${successCount}, Errors: ${errorCount}`
-    );
+    console.log(`[PREF-VECTORS] Job completed. Success: ${successCount}, Errors: ${errorCount}`);
   } catch (error) {
     console.error('[PREF-VECTORS] Fatal error in preference vector update job:', error.message);
   }
 }
 
 /**
- * Initialize the scheduler
- * Sets up recurring jobs that run on a schedule
+ * Initialize the scheduler.
  */
 function initializeScheduler() {
   console.log('[SCHEDULER] Initializing job scheduler...');
 
-  // Schedule preference vector update: Every day at 2:00 AM UTC
-  // Cron format: minute, hour, day, month, day-of-week
-  const updateVectorsCron = cron.schedule('0 2 * * *', async () => {
+  // Preference vectors: every day at 2 AM UTC
+  cron.schedule('0 2 * * *', async () => {
     console.log('[SCHEDULER] Running scheduled preference vector update (2 AM UTC)');
     await updateAllUserPreferenceVectors();
   });
 
+  // Data exports: every 5 minutes
+  cron.schedule('*/5 * * * *', async () => {
+    await processAllPendingExports();
+  });
+
   console.log('[SCHEDULER] ✓ Preference vector update scheduled for 2 AM UTC daily');
+  console.log('[SCHEDULER] ✓ Data export processing scheduled every 5 minutes');
 
-  // Optional: Allow manual trigger via HTTP endpoint (useful for testing)
-  // This is set up in the admin routes if needed
-
-  // Log next execution times
   const now = new Date();
   const nextExecution = new Date(now);
   nextExecution.setUTCHours(2, 0, 0, 0);
   if (nextExecution <= now) {
     nextExecution.setUTCDate(nextExecution.getUTCDate() + 1);
   }
-
   console.log(`[SCHEDULER] Next preference vector update: ${nextExecution.toUTCString()}`);
 
   return {
-    updateVectorsCron,
-    updateAllUserPreferenceVectors, // Expose for manual triggering
+    updateAllUserPreferenceVectors,
+    processAllPendingExports,
   };
-}
-
-/**
- * Manually trigger preference vector update (for testing or admin endpoints)
- */
-async function manuallyUpdatePreferenceVectors() {
-  console.log('[SCHEDULER] Manual preference vector update triggered');
-  await updateAllUserPreferenceVectors();
 }
 
 module.exports = {
   initializeScheduler,
   updateAllUserPreferenceVectors,
-  manuallyUpdatePreferenceVectors,
+  processAllPendingExports,
 };

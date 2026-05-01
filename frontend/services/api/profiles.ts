@@ -12,6 +12,18 @@ export interface UserProfile {
   verified: boolean;
 }
 
+export type ExportStatus = 'none' | 'pending' | 'processing' | 'ready' | 'failed' | 'expired';
+
+export interface DataExportStatus {
+  status: ExportStatus;
+  requestId?: string;
+  downloadUrl?: string | null;
+  expiresAt?: string | null;
+  requestedAt?: string;
+  completedAt?: string | null;
+  errorMessage?: string | null;
+}
+
 export async function fetchMyProfile(): Promise<UserProfile> {
   const headers = await authHeaders();
   const response = await fetch(`${API_BASE_URL}/api/profiles/me`, { headers });
@@ -142,6 +154,24 @@ export async function deleteAccount() {
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.error || 'Failed to delete account');
+  }
+  return response.json();
+}
+
+export interface DataExportResult {
+  status: 'ready';
+  downloadUrl: string;
+  expiresAt: string;
+}
+
+export async function requestDataExport(): Promise<DataExportResult> {
+  const response = await fetch(`${API_BASE_URL}/api/profiles/me/export`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to generate data export');
   }
   return response.json();
 }
