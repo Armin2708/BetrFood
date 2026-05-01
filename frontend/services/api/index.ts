@@ -45,6 +45,8 @@ export { followUser, unfollowUser, checkFollowStatus, fetchFollowStats, cancelFo
 export type { FollowRequest } from './follows';
 export { savePost, unsavePost, checkSaveStatus, fetchCollections, createCollection, deleteCollection, addPostToCollection, removePostFromCollection, fetchCollectionPosts } from './collections';
 export { reportContent } from './reports';
+export { submitSupportTicket } from './support';
+export type { SubmitSupportTicketInput, SupportTicket } from './support';
 export { checkBlockStatus, checkMuteStatus, blockUser, unblockUser, muteUser, unmuteUser, fetchBlockedUsers, fetchMutedUsers } from './blocks';
 export { fetchPreferences, updatePreferences, fetchNotificationPreferences, updateNotificationPreferences } from './preferences';
 export type { NotificationPreferences } from './preferences';

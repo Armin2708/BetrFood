@@ -8,6 +8,7 @@ import {
   TextInput,
   Linking,
 } from "react-native";
+import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
@@ -42,6 +43,7 @@ function filterCategories(query: string): FilteredCategory[] {
 }
 
 export default function HelpAndFaqScreen() {
+  const router = useRouter();
   const [query, setQuery] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
@@ -181,10 +183,16 @@ export default function HelpAndFaqScreen() {
             Reach out to our support team and we will get back to you within a
             few business days.
           </Text>
-          <Pressable style={styles.contactButton} onPress={openSupportEmail}>
-            <Ionicons name="mail-outline" size={16} color={colors.white} />
-            <Text style={styles.contactButtonText}>Email support</Text>
-          </Pressable>
+          <View style={{ display: 'flex', flexDirection: 'row', justifyContent: 'flex-start' }}>
+            <Pressable style={styles.contactButton} onPress={openSupportEmail}>
+              <Ionicons name="mail-outline" size={16} color={colors.white} />
+              <Text style={styles.contactButtonText}>Email support</Text>
+            </Pressable>
+            <Pressable style={styles.contactButton} onPress={() => router.push("/profile/settings/help/support-ticket") as any}>
+              <Ionicons name="mail-outline" size={16} color={colors.white} />
+              <Text style={styles.contactButtonText}>Submit a ticket</Text>
+            </Pressable>
+          </View>
         </View>
 
         <View style={{ height: 32 }} />
@@ -345,12 +353,14 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   contactButton: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
     backgroundColor: colors.primary,
     paddingHorizontal: 16,
     paddingVertical: 10,
+    marginHorizontal: 6,
     borderRadius: 12,
   },
   contactButtonText: {

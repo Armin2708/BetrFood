@@ -376,3 +376,21 @@ ALTER TABLE user_preference_vectors ADD COLUMN IF NOT EXISTS behavioral_weight N
 -- Add engagement tracking fields to user_profiles
 ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS last_feed_view_at TIMESTAMPTZ;
 ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS weekly_engagement_score NUMERIC(3,2) DEFAULT 0.5;
+
+-- ============================================================
+-- 21. Support Tickets
+-- ============================================================
+CREATE TABLE IF NOT EXISTS support_tickets (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id TEXT NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
+  subject TEXT NOT NULL,
+  description TEXT NOT NULL,
+  screenshot_path TEXT,
+  device_info TEXT,
+  os_version TEXT,
+  app_version TEXT,
+  status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'in_progress', 'resolved', 'closed')),
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_support_tickets_user_id ON support_tickets(user_id);
+CREATE INDEX IF NOT EXISTS idx_support_tickets_created_at ON support_tickets(created_at DESC);
