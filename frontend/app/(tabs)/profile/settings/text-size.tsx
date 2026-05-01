@@ -2,7 +2,7 @@
  * Text Size Settings Screen
  * Allows users to adjust text size for accessibility.
  * Features:
- * - Live preview of text size changes (via TextSizeContext)
+ * - Live preview of text size changes (via ThemeContext)
  * - Radio button selection for preset sizes
  * - Save preference to backend (via PreferencesContext)
  */
@@ -24,7 +24,7 @@ import { useRouter } from 'expo-router';
 
 import { colors, typography, spacing, radius } from '../../../../constants/theme';
 import { usePreferences } from '../../../../context/PreferencesContext';
-import { useTextSize } from '../../../../context/TextSizeContext';
+import { useAppTheme } from '../../../../context/ThemeContext';
 import {
   TextSizeScale,
   TEXT_SIZE_MULTIPLIERS,
@@ -38,7 +38,7 @@ const TEXT_SIZE_OPTIONS: TextSizeScale[] = ['small', 'default', 'large', 'xLarge
 export default function TextSizeSettings() {
   const router = useRouter();
   const { preferences, loading, saving, updatePreferences } = usePreferences();
-  const { scale, setScale } = useTextSize();
+  const { textSizeScale, setTextSizeScale } = useAppTheme();
 
   // Local state for editing - separate from global context
   const [localScale, setLocalScale] = useState<TextSizeScale>('default');
@@ -59,10 +59,10 @@ export default function TextSizeSettings() {
     }, [preferences?.textSizeScale])
   );
 
-  // Update live preview immediately (TextSizeContext)
+  // Update live preview immediately (ThemeContext)
   const handleSelectSize = (size: TextSizeScale) => {
     setLocalScale(size);
-    setScale(size); // Update live preview
+    setTextSizeScale(size); // Update live preview
   };
 
   // Save preference to backend

@@ -130,14 +130,6 @@ export default function Settings() {
             <Text style={[styles.navLabel, { color: colors.textPrimary }]}>Theme & Layout</Text>
             <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
           </Pressable>
-          <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
-          <Pressable
-            style={styles.navRow}
-            onPress={() => router.push("/profile/settings/text-size" as any)}
-          >
-            <Text style={[styles.navLabel, { color: colors.textPrimary }]}>Text Size</Text>
-            <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
-          </Pressable>
         </View>
 
         {/* DATA AND PRIVACY */}

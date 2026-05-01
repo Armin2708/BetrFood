@@ -7,6 +7,7 @@ import {
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { DarkTheme, DefaultTheme, Theme as NavigationTheme } from '@react-navigation/native';
 import { colors as sharedThemeColors, darkColors, lightColors, ThemeColors } from '../constants/theme';
+import { TEXT_SIZE_MULTIPLIERS, TextSizeScale } from '../utils/textSizeScaling';
 
 export type ThemePreference = 'system' | 'light' | 'dark';
 export type ResolvedTheme = 'light' | 'dark';
@@ -18,6 +19,10 @@ type ThemeContextValue = {
   isDark: boolean;
   navigationTheme: NavigationTheme;
   setThemePreference: (preference: ThemePreference) => Promise<void>;
+  // Text size context properties
+  textSizeScale: TextSizeScale;
+  textSizeMultiplier: number;
+  setTextSizeScale: (scale: TextSizeScale) => void;
 };
 
 const STORAGE_KEY = '@betrfood/theme-preference';
@@ -34,13 +39,14 @@ function resolveTheme(
   return preference;
 }
 
-export function ThemeProvider({ children }: { children: React.ReactNode }) {
+export function ThemeProvider({ children, initialTextSizeScale = 'default' }: { children: React.ReactNode; initialTextSizeScale?: TextSizeScale }) {
   const detectedScheme = useColorScheme();
   const [themePreference, setThemePreferenceState] = useState<ThemePreference>('system');
   const [systemScheme, setSystemScheme] = useState<ColorSchemeName>(
     detectedScheme ?? Appearance.getColorScheme()
   );
   const [loaded, setLoaded] = useState(false);
+  const [textSizeScale, setTextSizeScale] = useState<TextSizeScale>(initialTextSizeScale);
 
   useEffect(() => {
     AsyncStorage.getItem(STORAGE_KEY)
@@ -51,6 +57,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       })
       .finally(() => setLoaded(true));
   }, []);
+
+  // Update text size scale when initialTextSizeScale changes (e.g., preferences loaded from backend)
+  useEffect(() => {
+    setTextSizeScale(initialTextSizeScale);
+  }, [initialTextSizeScale]);
 
   useEffect(() => {
     if (detectedScheme) {
@@ -71,6 +82,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   const resolvedTheme = resolveTheme(themePreference, systemScheme);
   const colors = resolvedTheme === 'dark' ? darkColors : lightColors;
+  const textSizeMultiplier = TEXT_SIZE_MULTIPLIERS[textSizeScale] ?? 1.0;
 
   useEffect(() => {
     Object.assign(sharedThemeColors, colors);
@@ -101,8 +113,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       isDark: resolvedTheme === 'dark',
       navigationTheme,
       setThemePreference,
+      textSizeScale,
+      textSizeMultiplier,
+      setTextSizeScale,
     }),
-    [themePreference, resolvedTheme, colors, navigationTheme]
+    [themePreference, resolvedTheme, colors, navigationTheme, textSizeScale, textSizeMultiplier]
   );
 
   if (!loaded) {
@@ -118,4 +133,20 @@ export function useAppTheme() {
     throw new Error('useAppTheme must be used within a ThemeProvider');
   }
   return context;
+}
+
+/**
+ * Hook to use text size context
+ * @throws Error if used outside ThemeProvider
+ */
+export function useTextSize() {
+  const context = useContext(ThemeContext);
+  if (!context) {
+    throw new Error('useTextSize must be used within ThemeProvider');
+  }
+  return {
+    scale: context.textSizeScale,
+    multiplier: context.textSizeMultiplier,
+    setScale: context.setTextSizeScale,
+  };
 }

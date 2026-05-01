@@ -10,7 +10,7 @@
 
 import { useMemo } from 'react';
 import { typography, getScaledTypography } from '../constants/theme';
-import { useTextSize } from '../context/TextSizeContext';
+import { useTextSize } from '../context/ThemeContext';
 
 export function useScaledTypography() {
   const { multiplier } = useTextSize();
