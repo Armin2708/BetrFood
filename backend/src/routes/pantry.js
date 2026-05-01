@@ -1,6 +1,6 @@
 const express = require('express');
 const supabase = require('../db/supabase');
-const { requireAuth } = require('../middleware/auth');
+const { requireAuth, optionalAuth } = require('../middleware/auth');
 const OpenAI = require('openai');
 
 const router = express.Router();
@@ -59,7 +59,8 @@ Example: [{"name":"Banana","quantity":6,"unit":"pcs","category":"Produce"}]
 
 If no food items are visible, return an empty array: []`;
 
-// ─── helpers ────────────────────────────────────────────────────────────────
+// ─── helpers ─────────────────────────────────────────────────────────────────
+
 function getUserId(req) {
   return req.userId || (req.user && req.user.id) || req.headers['x-user-id'] || 'anonymous';
 }
@@ -82,162 +83,179 @@ function formatPantryItem(row) {
   };
 }
 
-// ─── Vision routes (defined BEFORE /:id to avoid path conflicts) ─────────────
+/**
+ * Check whether the requesting user is allowed to view the target user's pantry.
+ * Returns { allowed: true } or { allowed: false, reason: string }.
+ */
+async function checkPantryAccess(targetUserId, requestingUserId) {
+  // Owner always has access
+  if (requestingUserId && requestingUserId === targetUserId) {
+    return { allowed: true };
+  }
 
-// POST /api/pantry/identify — identify grocery items from a photo
+  // Fetch target user's pantry visibility preference
+  const { data: prefs } = await supabase
+    .from('user_preferences')
+    .select('pantry_visibility')
+    .eq('user_id', targetUserId)
+    .maybeSingle();
+
+  const visibility = prefs?.pantry_visibility || 'only_me';
+
+  if (visibility === 'only_me') {
+    return { allowed: false, reason: 'This pantry is private.' };
+  }
+
+  if (visibility === 'everyone') {
+    return { allowed: true };
+  }
+
+  // visibility === 'followers' — check if requester follows the target
+  if (!requestingUserId) {
+    return { allowed: false, reason: 'This pantry is visible to followers only.' };
+  }
+
+  const { data: follow } = await supabase
+    .from('user_follows')
+    .select('follower_id')
+    .eq('follower_id', requestingUserId)
+    .eq('following_id', targetUserId)
+    .maybeSingle();
+
+  if (follow) {
+    return { allowed: true };
+  }
+
+  return { allowed: false, reason: 'This pantry is visible to followers only.' };
+}
+
+// ─── Vision routes ────────────────────────────────────────────────────────────
+
+// POST /api/pantry/identify
 router.post('/identify', requireAuth, async (req, res) => {
   const { image } = req.body;
-
-  if (!image || typeof image !== 'string') {
-    return res.status(400).json({ error: 'base64 image is required' });
-  }
-  if (!openai) {
-    return res.status(503).json({ error: 'AI service not configured (missing OPENROUTER_API_KEY)' });
-  }
+  if (!image || typeof image !== 'string') return res.status(400).json({ error: 'base64 image is required' });
+  if (!openai) return res.status(503).json({ error: 'AI service not configured (missing OPENROUTER_API_KEY)' });
 
   try {
     const response = await openai.chat.completions.create({
       model: 'google/gemini-2.0-flash-001',
       max_tokens: 1024,
-      messages: [
-        {
-          role: 'user',
-          content: [
-            { type: 'text', text: IDENTIFY_PROMPT },
-            {
-              type: 'image_url',
-              image_url: { url: `data:image/jpeg;base64,${image}` },
-            },
-          ],
-        },
-      ],
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'text', text: IDENTIFY_PROMPT },
+          { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${image}` } },
+        ],
+      }],
     });
 
-    if (!response.choices || response.choices.length === 0) {
-      return res.status(422).json({ error: 'AI returned no response. Try a clearer photo.' });
-    }
+    if (!response.choices || response.choices.length === 0) return res.status(422).json({ error: 'AI returned no response. Try a clearer photo.' });
 
     const raw = response.choices[0].message.content.trim();
     const items = JSON.parse(stripCodeFences(raw));
-
-    if (!Array.isArray(items)) {
-      return res.status(422).json({ error: 'AI did not return a valid item list' });
-    }
+    if (!Array.isArray(items)) return res.status(422).json({ error: 'AI did not return a valid item list' });
 
     res.json({ items });
   } catch (err) {
     console.error('[IDENTIFY ERROR]', err.message);
-    console.error('[IDENTIFY ERROR DETAIL]', JSON.stringify(err?.response?.data || err?.error || {}, null, 2));
-    if (err instanceof SyntaxError) {
-      return res.status(422).json({ error: 'AI response was not valid JSON' });
-    }
+    if (err instanceof SyntaxError) return res.status(422).json({ error: 'AI response was not valid JSON' });
     res.status(500).json({ error: 'Failed to identify items' });
   }
 });
 
-// POST /api/pantry/identify-single — identify a single food item from a photo
+// POST /api/pantry/identify-single
 router.post('/identify-single', requireAuth, async (req, res) => {
   const { image } = req.body;
-
-  if (!image || typeof image !== 'string') {
-    return res.status(400).json({ error: 'base64 image is required' });
-  }
-  if (!openai) {
-    return res.status(503).json({ error: 'AI service not configured (missing OPENROUTER_API_KEY)' });
-  }
+  if (!image || typeof image !== 'string') return res.status(400).json({ error: 'base64 image is required' });
+  if (!openai) return res.status(503).json({ error: 'AI service not configured (missing OPENROUTER_API_KEY)' });
 
   try {
     const response = await openai.chat.completions.create({
       model: 'google/gemini-2.0-flash-001',
       max_tokens: 1024,
-      messages: [
-        {
-          role: 'user',
-          content: [
-            { type: 'text', text: IDENTIFY_SINGLE_PROMPT },
-            {
-              type: 'image_url',
-              image_url: { url: `data:image/jpeg;base64,${image}` },
-            },
-          ],
-        },
-      ],
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'text', text: IDENTIFY_SINGLE_PROMPT },
+          { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${image}` } },
+        ],
+      }],
     });
 
-    if (!response.choices || response.choices.length === 0) {
-      return res.status(422).json({ error: 'AI returned no response. Try a clearer photo.' });
-    }
+    if (!response.choices || response.choices.length === 0) return res.status(422).json({ error: 'AI returned no response. Try a clearer photo.' });
 
     const raw = response.choices[0].message.content.trim();
     const item = JSON.parse(stripCodeFences(raw));
-
-    if (typeof item !== 'object' || Array.isArray(item)) {
-      return res.status(422).json({ error: 'AI did not return a valid item object' });
-    }
+    if (typeof item !== 'object' || Array.isArray(item)) return res.status(422).json({ error: 'AI did not return a valid item object' });
 
     res.json({ name: item.name, category: item.category, confidence: item.confidence });
   } catch (err) {
     console.error('[IDENTIFY-SINGLE ERROR]', err.message);
-    console.error('[IDENTIFY-SINGLE ERROR DETAIL]', JSON.stringify(err?.response?.data || err?.error || {}, null, 2));
-    if (err instanceof SyntaxError) {
-      return res.status(422).json({ error: 'AI response was not valid JSON' });
-    }
+    if (err instanceof SyntaxError) return res.status(422).json({ error: 'AI response was not valid JSON' });
     res.status(500).json({ error: 'Failed to identify item' });
   }
 });
 
-// POST /api/pantry/scan-receipt — extract grocery items from a receipt photo
+// POST /api/pantry/scan-receipt
 router.post('/scan-receipt', requireAuth, async (req, res) => {
   const { image } = req.body;
-
-  if (!image || typeof image !== 'string') {
-    return res.status(400).json({ error: 'base64 image is required' });
-  }
-  if (!openai) {
-    return res.status(503).json({ error: 'AI service not configured (missing OPENROUTER_API_KEY)' });
-  }
+  if (!image || typeof image !== 'string') return res.status(400).json({ error: 'base64 image is required' });
+  if (!openai) return res.status(503).json({ error: 'AI service not configured (missing OPENROUTER_API_KEY)' });
 
   try {
     const response = await openai.chat.completions.create({
       model: 'google/gemini-2.0-flash-001',
       max_tokens: 2048,
-      messages: [
-        {
-          role: 'user',
-          content: [
-            { type: 'text', text: SCAN_RECEIPT_PROMPT },
-            {
-              type: 'image_url',
-              image_url: { url: `data:image/jpeg;base64,${image}` },
-            },
-          ],
-        },
-      ],
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'text', text: SCAN_RECEIPT_PROMPT },
+          { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${image}` } },
+        ],
+      }],
     });
 
-    if (!response.choices || response.choices.length === 0) {
-      return res.status(422).json({ error: 'AI returned no response. Try a clearer photo.' });
-    }
+    if (!response.choices || response.choices.length === 0) return res.status(422).json({ error: 'AI returned no response. Try a clearer photo.' });
 
     const raw = response.choices[0].message.content.trim();
     const items = JSON.parse(stripCodeFences(raw));
-
-    if (!Array.isArray(items)) {
-      return res.status(422).json({ error: 'AI did not return a valid item list' });
-    }
+    if (!Array.isArray(items)) return res.status(422).json({ error: 'AI did not return a valid item list' });
 
     res.json({ items });
   } catch (err) {
     console.error('[SCAN-RECEIPT ERROR]', err.message);
-    console.error('[SCAN-RECEIPT ERROR DETAIL]', JSON.stringify(err?.response?.data || err?.error || {}, null, 2));
-    if (err instanceof SyntaxError) {
-      return res.status(422).json({ error: 'AI response was not valid JSON' });
-    }
+    if (err instanceof SyntaxError) return res.status(422).json({ error: 'AI response was not valid JSON' });
     res.status(500).json({ error: 'Failed to scan receipt' });
   }
 });
 
-// ─── CRUD routes ─────────────────────────────────────────────────────────────
+// ─── Public pantry view route ─────────────────────────────────────────────────
+
+// GET /api/pantry/user/:userId
+// View another user's pantry — respects their pantry_visibility preference.
+// Must be defined BEFORE /:id to avoid path conflicts.
+router.get('/user/:userId', optionalAuth, async (req, res) => {
+  const targetUserId = req.params.userId;
+  const requestingUserId = req.userId || null;
+
+  const access = await checkPantryAccess(targetUserId, requestingUserId);
+  if (!access.allowed) {
+    return res.status(403).json({ error: access.reason });
+  }
+
+  const { data, error } = await supabase
+    .from('pantry_items')
+    .select('*')
+    .eq('user_id', targetUserId)
+    .order('category', { ascending: true })
+    .order('name', { ascending: true });
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.json((data || []).map(formatPantryItem));
+});
+
+// ─── Own pantry CRUD routes ───────────────────────────────────────────────────
 
 // GET /api/pantry
 router.get('/', requireAuth, async (req, res) => {
@@ -298,7 +316,6 @@ router.post('/', requireAuth, async (req, res) => {
 // PUT /api/pantry/:id
 router.put('/:id', requireAuth, async (req, res) => {
   const userId = getUserId(req);
-
   const { name, quantity, unit, category, expirationDate } = req.body;
   const updates = { updated_at: new Date().toISOString() };
   if (name !== undefined) updates.name = name;

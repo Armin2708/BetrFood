@@ -33,7 +33,6 @@ function buildQuietHoursPayload(row) {
   };
 }
 
-// Validate "HH:MM" time string
 function isValidTime(t) {
   return /^([01]\d|2[0-3]):([0-5]\d)$/.test(t);
 }
@@ -57,6 +56,7 @@ router.get('/', requireAuth, async (req, res) => {
         cuisines: [],
         profileVisibility: 'public',
         dietaryInfoVisible: true,
+        pantryVisibility: 'only_me',
         cookingSkill: 'beginner',
         maxCookTime: null,
         expiringItemsThreshold: 7,
@@ -87,6 +87,7 @@ router.get('/', requireAuth, async (req, res) => {
       cuisines: data.cuisines || [],
       profileVisibility: data.profile_visibility || 'public',
       dietaryInfoVisible: data.dietary_info_visible !== false,
+      pantryVisibility: data.pantry_visibility || 'only_me',
       cookingSkill: data.cooking_skill || 'beginner',
       maxCookTime: data.max_cook_time || null,
       expiringItemsThreshold: data.expiring_items_threshold || 7,
@@ -108,6 +109,7 @@ router.put('/', requireAuth, async (req, res) => {
       dietaryInfoVisible, expiringItemsThreshold, expirationNotificationsEnabled,
       textSizeScale, cookingSkill, maxCookTime, notificationsEnabled,
       quietHoursEnabled, quietHoursStart, quietHoursEnd, quietHoursTimezone,
+      pantryVisibility,
     } = req.body;
 
     const updates = {
@@ -150,6 +152,11 @@ router.put('/', requireAuth, async (req, res) => {
     if (dietaryInfoVisible !== undefined) {
       if (typeof dietaryInfoVisible !== 'boolean') return res.status(400).json({ error: 'dietaryInfoVisible must be a boolean.' });
       updates.dietary_info_visible = dietaryInfoVisible;
+    }
+
+    if (pantryVisibility !== undefined) {
+      if (!['only_me', 'followers', 'everyone'].includes(pantryVisibility)) return res.status(400).json({ error: 'pantryVisibility must be "only_me", "followers", or "everyone".' });
+      updates.pantry_visibility = pantryVisibility;
     }
 
     if (cookingSkill !== undefined) {
@@ -229,6 +236,7 @@ router.put('/', requireAuth, async (req, res) => {
       cuisines: data.cuisines || [],
       profileVisibility: data.profile_visibility || 'public',
       dietaryInfoVisible: data.dietary_info_visible !== false,
+      pantryVisibility: data.pantry_visibility || 'only_me',
       cookingSkill: data.cooking_skill || 'beginner',
       maxCookTime: data.max_cook_time || null,
       expiringItemsThreshold: data.expiring_items_threshold || 7,

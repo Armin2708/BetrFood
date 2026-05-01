@@ -10,10 +10,12 @@ export interface NotificationPreferences {
   notifAiChat: boolean;
   notifWeeklyDigest: boolean;
   quietHoursEnabled: boolean;
-  quietHoursStart: string;  // "HH:MM"
-  quietHoursEnd: string;    // "HH:MM"
-  quietHoursTimezone: string; // IANA timezone e.g. "America/Los_Angeles"
+  quietHoursStart: string;
+  quietHoursEnd: string;
+  quietHoursTimezone: string;
 }
+
+export type PantryVisibility = 'only_me' | 'followers' | 'everyone';
 
 export async function fetchPreferences() {
   const response = await fetch(`${API_BASE_URL}/api/preferences`, {
@@ -32,6 +34,7 @@ export async function updatePreferences(prefs: {
   cuisines?: string[];
   profileVisibility?: 'public' | 'private';
   dietaryInfoVisible?: boolean;
+  pantryVisibility?: PantryVisibility;
   textSizeScale?: 'small' | 'default' | 'large' | 'xLarge';
   expiringItemsThreshold?: number;
   expirationNotificationsEnabled?: boolean;
