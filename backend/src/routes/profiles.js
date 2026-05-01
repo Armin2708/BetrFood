@@ -395,15 +395,42 @@ router.get('/search', optionalAuth, async (req, res) => {
     }
 
     const searchTerm = `%${q}%`;
+
+    // Fetch users matching the query
     const { data, error } = await supabase
       .from('user_profiles')
       .select('id, username, display_name, avatar_url, bio, verified')
       .or(`username.ilike.${searchTerm},display_name.ilike.${searchTerm}`)
-      .limit(20);
+      .limit(40); // fetch extra to allow for filtering below
 
     if (error) throw error;
 
-    const users = (data || []).map(u => ({
+    if (!data || data.length === 0) {
+      return res.json({ users: [] });
+    }
+
+    // Fetch searchable preferences for matched users
+    const userIds = data.map(u => u.id);
+    const { data: prefs } = await supabase
+      .from('user_preferences')
+      .select('user_id, searchable')
+      .in('user_id', userIds);
+
+    // Build a set of opted-out user IDs
+    // Users with no preferences row default to searchable = true
+    const optedOut = new Set(
+      (prefs || [])
+        .filter(p => p.searchable === false)
+        .map(p => p.user_id)
+    );
+
+    // Always include the requesting user's own profile in results
+    // (so they can find themselves even if they opted out)
+    const filtered = data.filter(u =>
+      !optedOut.has(u.id) || u.id === req.userId
+    );
+
+    const users = filtered.slice(0, 20).map(u => ({
       id: u.id,
       username: u.username,
       displayName: u.display_name,

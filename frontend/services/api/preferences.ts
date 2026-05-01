@@ -35,6 +35,7 @@ export async function updatePreferences(prefs: {
   profileVisibility?: 'public' | 'private';
   dietaryInfoVisible?: boolean;
   pantryVisibility?: PantryVisibility;
+  searchable?: boolean;
   textSizeScale?: 'small' | 'default' | 'large' | 'xLarge';
   expiringItemsThreshold?: number;
   expirationNotificationsEnabled?: boolean;
