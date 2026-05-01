@@ -9,6 +9,10 @@ export interface NotificationPreferences {
   notifCommentReplies: boolean;
   notifAiChat: boolean;
   notifWeeklyDigest: boolean;
+  quietHoursEnabled: boolean;
+  quietHoursStart: string;  // "HH:MM"
+  quietHoursEnd: string;    // "HH:MM"
+  quietHoursTimezone: string; // IANA timezone e.g. "America/Los_Angeles"
 }
 
 export async function fetchPreferences() {
@@ -38,6 +42,10 @@ export async function updatePreferences(prefs: {
   notifCommentReplies?: boolean;
   notifAiChat?: boolean;
   notifWeeklyDigest?: boolean;
+  quietHoursEnabled?: boolean;
+  quietHoursStart?: string;
+  quietHoursEnd?: string;
+  quietHoursTimezone?: string;
 }) {
   const response = await fetch(`${API_BASE_URL}/api/preferences`, {
     method: 'PUT',
