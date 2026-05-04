@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -11,10 +11,58 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { resetRecommendations } from "../../../../services/api";
+import {
+  clearMediaCache,
+  formatCacheSize,
+  getMediaCacheSizeBytes,
+} from "../../../../utils/mediaCache";
 
 export default function DataStorageScreen() {
   const [confirmVisible, setConfirmVisible] = useState(false);
   const [resetting, setResetting] = useState(false);
+
+  const [cacheSizeBytes, setCacheSizeBytes] = useState<number | null>(null);
+  const [calculatingCache, setCalculatingCache] = useState(true);
+  const [cacheConfirmVisible, setCacheConfirmVisible] = useState(false);
+  const [clearingCache, setClearingCache] = useState(false);
+
+  const refreshCacheSize = useCallback(async () => {
+    setCalculatingCache(true);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    try {
+      setCacheSizeBytes(getMediaCacheSizeBytes());
+    } catch {
+      setCacheSizeBytes(0);
+    } finally {
+      setCalculatingCache(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshCacheSize();
+  }, [refreshCacheSize]);
+
+  const handleConfirmClearCache = async () => {
+    setClearingCache(true);
+    try {
+      await clearMediaCache();
+      setCacheSizeBytes(getMediaCacheSizeBytes());
+      setCacheConfirmVisible(false);
+      Alert.alert(
+        "Cache cleared",
+        "Images and videos will re-download as you browse."
+      );
+    } catch {
+      setCacheConfirmVisible(false);
+      Alert.alert("Something went wrong", "We couldn't clear the cache. Please try again.");
+    } finally {
+      setClearingCache(false);
+    }
+  };
+
+  const cacheIsEmpty = cacheSizeBytes !== null && cacheSizeBytes === 0;
+  const cacheSizeLabel =
+    cacheSizeBytes === null ? "Calculating…" : formatCacheSize(cacheSizeBytes);
 
   const handleConfirmReset = async () => {
     setResetting(true);
@@ -45,6 +93,33 @@ export default function DataStorageScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        <Text style={styles.sectionHeader}>CACHE</Text>
+        <View style={styles.card}>
+          <View style={styles.infoBlock}>
+            <Text style={styles.infoTitle}>Image & Video Cache</Text>
+            <Text style={styles.infoDescription}>
+              Cached media that BetrFood has saved on this device to load faster. Clearing it
+              frees up space; images and videos will re-download the next time you open them.
+            </Text>
+          </View>
+          <View style={styles.cacheSizeRow}>
+            <Text style={styles.cacheSizeLabel}>Currently using</Text>
+            {calculatingCache ? (
+              <ActivityIndicator size="small" color="#94A3B8" />
+            ) : (
+              <Text style={styles.cacheSizeValue}>{cacheSizeLabel}</Text>
+            )}
+          </View>
+          <Pressable
+            style={[styles.resetButton, (calculatingCache || clearingCache || cacheIsEmpty) && styles.resetButtonDisabled]}
+            onPress={() => setCacheConfirmVisible(true)}
+            disabled={calculatingCache || clearingCache || cacheIsEmpty}
+          >
+            <Ionicons name="trash-outline" size={18} color="#EF4444" />
+            <Text style={styles.resetButtonText}>Clear Cache</Text>
+          </Pressable>
+        </View>
+
         <Text style={styles.sectionHeader}>RECOMMENDATIONS</Text>
         <View style={styles.card}>
           <View style={styles.infoBlock}>
@@ -111,6 +186,46 @@ export default function DataStorageScreen() {
           </Pressable>
         </Pressable>
       </Modal>
+
+      <Modal
+        visible={cacheConfirmVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => !clearingCache && setCacheConfirmVisible(false)}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => !clearingCache && setCacheConfirmVisible(false)}
+        >
+          <Pressable style={styles.modalBox} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.modalIconRow}>
+              <Ionicons name="trash-outline" size={28} color="#EF4444" />
+            </View>
+            <Text style={styles.modalTitle}>Clear cached media?</Text>
+            <Text style={styles.modalMessage}>
+              This will remove {cacheSizeLabel} of cached images and videos. They'll re-download the next time you open them.
+            </Text>
+            <Pressable
+              style={[styles.modalConfirmButton, clearingCache && { opacity: 0.6 }]}
+              onPress={handleConfirmClearCache}
+              disabled={clearingCache}
+            >
+              {clearingCache ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.modalConfirmText}>Clear Cache</Text>
+              )}
+            </Pressable>
+            <Pressable
+              style={styles.modalCancelButton}
+              onPress={() => setCacheConfirmVisible(false)}
+              disabled={clearingCache}
+            >
+              <Text style={styles.modalCancelText}>Cancel</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -134,6 +249,7 @@ const styles = StyleSheet.create({
     color: "#94A3B8",
     letterSpacing: 0.5,
     textTransform: "uppercase",
+    marginTop: 24,
     marginBottom: 8,
     marginLeft: 4,
   },
@@ -167,10 +283,33 @@ const styles = StyleSheet.create({
     borderColor: "#FECACA",
     backgroundColor: "#FEF2F2",
   },
+  resetButtonDisabled: {
+    opacity: 0.5,
+  },
   resetButtonText: {
     color: "#EF4444",
     fontWeight: "600",
     fontSize: 15,
+  },
+  cacheSizeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    backgroundColor: "#F8FAFC",
+    marginBottom: 12,
+  },
+  cacheSizeLabel: {
+    fontSize: 13,
+    color: "#64748B",
+    fontWeight: "500",
+  },
+  cacheSizeValue: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#0F172A",
   },
   modalOverlay: {
     flex: 1,
