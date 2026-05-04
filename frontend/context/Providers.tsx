@@ -4,17 +4,20 @@ import { AuthProvider } from "./AuthenticationContext";
 import { PantryProvider } from "./PantryContext";
 import { ActionSheetProvider } from "@expo/react-native-action-sheet";
 import { PreferencesProvider } from "./PreferencesContext";
+import { ThemeProvider } from "./ThemeContext";
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <AuthProvider>
-      <ActionSheetProvider>
-        <PreferencesProvider>
-          <CollectionsProvider>
-            <PantryProvider>{children}</PantryProvider>
-          </CollectionsProvider>
-        </PreferencesProvider>
-      </ActionSheetProvider>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <ActionSheetProvider>
+          <PreferencesProvider>
+            <CollectionsProvider>
+              <PantryProvider>{children}</PantryProvider>
+            </CollectionsProvider>
+          </PreferencesProvider>
+        </ActionSheetProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }

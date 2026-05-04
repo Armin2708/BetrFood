@@ -22,10 +22,10 @@ import * as ImagePicker from 'expo-image-picker';
 import { usePantry } from '../../../context/PantryContext';
 import PantryItemCard from '../../../components/PantryItemCard';
 import ExpiringSoonSection from '../../../components/ExpiringSoonSection';
-import { PantryItem, PantryItemInput } from '../../../services/api';
-import { fetchPreferences } from '../../../services/api';
-import { identifyPantryItems, VisionPantryItem } from '../../../services/api/pantryVision';
+import { PantryItem, PantryItemInput, fetchPreferences } from '../../../services/api';
+import { identifyPantryItems } from '../../../services/api/pantryVision';
 import { colors } from '../../../constants/theme';
+import { useAppTheme } from '../../../context/ThemeContext';
 
 const CATEGORIES = [
   'Produce', 'Dairy', 'Proteins', 'Grains',
@@ -489,6 +489,7 @@ function PantrySummary({
 type ScreenView = 'list' | 'summary';
 
 export default function PantryScreen() {
+  const { colors: themeColors } = useAppTheme();
   const { items, loading, addItem, editItem, removeItem, refreshItems } = usePantry();
   const [modalVisible, setModalVisible] = useState(false);
   const [editingItem, setEditingItem] = useState<PantryItem | null>(null);
@@ -676,14 +677,18 @@ export default function PantryScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: themeColors.backgroundPrimary }]}>
       {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.title} accessibilityRole="header">My Pantry</Text>
+      <View style={[styles.header, { backgroundColor: themeColors.backgroundPrimary, borderColor: themeColors.border }]}>
+        <Text style={[styles.title, { color: themeColors.textPrimary }]} accessibilityRole="header">My Pantry</Text>
         <View style={styles.headerActions}>
           {/* Summary / List toggle */}
           <TouchableOpacity
-            style={[styles.summaryToggleButton, screenView === 'summary' && styles.summaryToggleButtonActive]}
+            style={[
+              styles.summaryToggleButton,
+              { borderColor: themeColors.borderLight, backgroundColor: themeColors.backgroundElevated },
+              screenView === 'summary' && styles.summaryToggleButtonActive,
+            ]}
             onPress={() => setScreenView((v) => (v === 'list' ? 'summary' : 'list'))}
             accessibilityRole="button"
             accessibilityLabel={screenView === 'summary' ? 'Switch to list view' : 'Switch to summary view'}
@@ -691,32 +696,32 @@ export default function PantryScreen() {
             <Ionicons
               name={screenView === 'summary' ? 'list-outline' : 'bar-chart-outline'}
               size={18}
-              color={screenView === 'summary' ? colors.primary : colors.textSecondary}
+              color={screenView === 'summary' ? themeColors.primary : themeColors.textSecondary}
             />
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.scanButton}
+            style={[styles.scanButton, { borderColor: themeColors.primary, backgroundColor: themeColors.backgroundElevated }]}
             onPress={handleScanPress}
             disabled={scanning}
             accessibilityRole="button"
             accessibilityLabel="Scan items from photo"
           >
             {scanning ? (
-              <ActivityIndicator size="small" color={colors.primary} />
+              <ActivityIndicator size="small" color={themeColors.primary} />
             ) : (
-              <Ionicons name="camera-outline" size={18} color={colors.primary} />
+              <Ionicons name="camera-outline" size={18} color={themeColors.primary} />
             )}
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.reviewButton}
+            style={[styles.reviewButton, { borderColor: themeColors.primary, backgroundColor: themeColors.backgroundElevated }]}
             onPress={handleOpenReview}
             accessibilityRole="button"
             accessibilityLabel="Review and add multiple items"
           >
-            <Ionicons name="clipboard-outline" size={18} color={colors.primary} />
-            <Text style={styles.reviewButtonText}>Review</Text>
+            <Ionicons name="clipboard-outline" size={18} color={themeColors.primary} />
+            <Text style={[styles.reviewButtonText, { color: themeColors.primary }]}>Review</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -725,14 +730,14 @@ export default function PantryScreen() {
             accessibilityRole="button"
             accessibilityLabel="Add new pantry item"
           >
-            <Ionicons name="add-circle" size={30} color={colors.primary} />
+            <Ionicons name="add-circle" size={30} color={themeColors.primary} />
           </TouchableOpacity>
         </View>
       </View>
 
       {loading ? (
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={themeColors.primary} />
         </View>
       ) : screenView === 'summary' ? (
         // ── Summary view ──────────────────────────────────────────────────────
@@ -740,13 +745,13 @@ export default function PantryScreen() {
       ) : items.length === 0 ? (
         // ── Empty pantry ──────────────────────────────────────────────────────
         <View style={styles.emptyState}>
-          <Ionicons name="basket-outline" size={64} color={colors.textTertiary} />
-          <Text style={styles.emptyTitle}>Your pantry is empty</Text>
-          <Text style={styles.emptySubtitle}>
+          <Ionicons name="basket-outline" size={64} color={themeColors.textTertiary} />
+          <Text style={[styles.emptyTitle, { color: themeColors.textPrimary }]}>Your pantry is empty</Text>
+          <Text style={[styles.emptySubtitle, { color: themeColors.textSecondary }]}>
             Tap the + button to add your first ingredient or food item.
           </Text>
           <TouchableOpacity
-            style={styles.emptyAddButton}
+            style={[styles.emptyAddButton, { backgroundColor: themeColors.primary }]}
             onPress={() => setModalVisible(true)}
             accessibilityRole="button"
             accessibilityLabel="Add your first pantry item"
@@ -777,9 +782,9 @@ export default function PantryScreen() {
             ListEmptyComponent={
               <View style={styles.searchEmpty}>
                 <Ionicons name="search-outline" size={40} color={colors.textTertiary} />
-                <Text style={styles.searchEmptyTitle}>No items found</Text>
-                <Text style={styles.searchEmptySubtitle}>Try a different name or category.</Text>
-                <TouchableOpacity onPress={handleClearAll} style={styles.clearAllButton} accessibilityRole="button" accessibilityLabel="Clear search and filters">
+                <Text style={[styles.searchEmptyTitle, { color: themeColors.textPrimary }]}>No items found</Text>
+                <Text style={[styles.searchEmptySubtitle, { color: themeColors.textSecondary }]}>Try a different name or category.</Text>
+                <TouchableOpacity onPress={handleClearAll} style={[styles.clearAllButton, { borderColor: themeColors.border, backgroundColor: themeColors.backgroundElevated }]} accessibilityRole="button" accessibilityLabel="Clear search and filters">
                   <Text style={styles.clearAllButtonText}>Clear Search</Text>
                 </TouchableOpacity>
               </View>
@@ -802,30 +807,30 @@ export default function PantryScreen() {
       {/* Scan Photo Modal */}
       <Modal visible={scanModalVisible} animationType="fade" transparent>
         <Pressable style={styles.modalOverlay} onPress={() => setScanModalVisible(false)}>
-          <Pressable style={styles.scanSheet} onPress={(e) => e.stopPropagation()}>
-            <Text style={styles.sheetTitle}>Scan Pantry Items</Text>
-            <Text style={{ color: colors.textSecondary, fontSize: 14, marginBottom: 16 }}>
+          <Pressable style={[styles.scanSheet, { backgroundColor: themeColors.backgroundElevated }]} onPress={(e) => e.stopPropagation()}>
+            <Text style={[styles.sheetTitle, { color: themeColors.textPrimary }]}>Scan Pantry Items</Text>
+            <Text style={{ color: themeColors.textSecondary, fontSize: 14, marginBottom: 16 }}>
               Add items by taking a photo or choosing from your library
             </Text>
             <TouchableOpacity
               style={styles.scanOption}
               onPress={() => { setScanModalVisible(false); handleScanPhoto(true); }}
             >
-              <Ionicons name="camera-outline" size={22} color={colors.primary} />
-              <Text style={styles.scanOptionText}>Take Photo</Text>
+              <Ionicons name="camera-outline" size={22} color={themeColors.primary} />
+              <Text style={[styles.scanOptionText, { color: themeColors.textPrimary }]}>Take Photo</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.scanOption}
               onPress={() => { setScanModalVisible(false); handleScanPhoto(false); }}
             >
-              <Ionicons name="images-outline" size={22} color={colors.primary} />
-              <Text style={styles.scanOptionText}>Choose from Library</Text>
+              <Ionicons name="images-outline" size={22} color={themeColors.primary} />
+              <Text style={[styles.scanOptionText, { color: themeColors.textPrimary }]}>Choose from Library</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.scanOption, { borderBottomWidth: 0 }]}
               onPress={() => setScanModalVisible(false)}
             >
-              <Text style={[styles.scanOptionText, { color: colors.textTertiary }]}>Cancel</Text>
+              <Text style={[styles.scanOptionText, { color: themeColors.textTertiary }]}>Cancel</Text>
             </TouchableOpacity>
           </Pressable>
         </Pressable>

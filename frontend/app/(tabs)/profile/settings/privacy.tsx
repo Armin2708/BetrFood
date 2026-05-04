@@ -6,8 +6,10 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { usePreferences } from "../../../../context/PreferencesContext";
+import { useAppTheme } from "../../../../context/ThemeContext";
 
 export default function PrivacySettings() {
+  const { colors } = useAppTheme();
   const {
     preferences,
     loading,
@@ -25,19 +27,19 @@ export default function PrivacySettings() {
 
   if (loading || !preferences) {
     return (
-      <View style={[styles.container, styles.centered]}>
-        <ActivityIndicator size="large" color="#007AFF" />
+      <View style={[styles.container, styles.centered, { backgroundColor: colors.backgroundSecondary }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.section}>
-        <View style={styles.row}>
+    <View style={[styles.container, { backgroundColor: colors.backgroundSecondary }]}>
+      <View style={[styles.section, { backgroundColor: colors.backgroundElevated, borderTopColor: colors.border }]}>
+        <View style={[styles.row, { borderBottomColor: colors.border }]}>
           <View style={styles.rowInfo}>
-            <Text style={styles.rowTitle}>Public Profile</Text>
-            <Text style={styles.rowDescription}>
+            <Text style={[styles.rowTitle, { color: colors.textPrimary }]}>Public Profile</Text>
+            <Text style={[styles.rowDescription, { color: colors.textSecondary }]}>
               {preferences.profileVisibility === "public"
                 ? "Anyone can see your profile"
                 : "Only followers can see your profile"}
@@ -46,15 +48,15 @@ export default function PrivacySettings() {
           <Switch
             value={preferences.profileVisibility === "public"}
             onValueChange={toggleVisibility}
-            trackColor={{ false: "#ccc", true: "#007AFF" }}
-            thumbColor="#fff"
+            trackColor={{ false: colors.border, true: colors.primary }}
+            thumbColor={colors.white}
           />
         </View>
 
-        <View style={styles.row}>
+        <View style={[styles.row, { borderBottomColor: colors.border }]}>
           <View style={styles.rowInfo}>
-            <Text style={styles.rowTitle}>Show Dietary Info</Text>
-            <Text style={styles.rowDescription}>
+            <Text style={[styles.rowTitle, { color: colors.textPrimary }]}>Show Dietary Info</Text>
+            <Text style={[styles.rowDescription, { color: colors.textSecondary }]}>
               {preferences.dietaryInfoVisible
                 ? "Your dietary preferences are visible on your profile"
                 : "Your dietary preferences are hidden"}
@@ -63,8 +65,8 @@ export default function PrivacySettings() {
           <Switch
             value={preferences.dietaryInfoVisible}
             onValueChange={toggleDietaryInfo}
-            trackColor={{ false: "#ccc", true: "#007AFF" }}
-            thumbColor="#fff"
+            trackColor={{ false: colors.border, true: colors.primary }}
+            thumbColor={colors.white}
           />
         </View>
       </View>
@@ -75,7 +77,6 @@ export default function PrivacySettings() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
     padding: 20,
   },
   centered: {
@@ -84,7 +85,8 @@ const styles = StyleSheet.create({
   },
   section: {
     borderTopWidth: 1,
-    borderTopColor: "#eee",
+    borderRadius: 18,
+    overflow: 'hidden',
   },
   row: {
     flexDirection: "row",
@@ -92,7 +94,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#eee",
   },
   rowInfo: {
     flex: 1,
@@ -100,11 +101,10 @@ const styles = StyleSheet.create({
   },
   rowTitle: {
     fontSize: 16,
-    fontWeight: "500",
+    fontWeight: "600",
   },
   rowDescription: {
     fontSize: 13,
-    color: "#888",
     marginTop: 3,
   },
 });

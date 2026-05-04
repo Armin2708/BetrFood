@@ -2,7 +2,8 @@ import React from 'react';
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import TagFilterBar from './TagFilterBar';
-import { colors, shadows } from '../constants/theme';
+import { shadows } from '../constants/theme';
+import { useAppTheme } from '../context/ThemeContext';
 
 type FeedTab = 'following' | 'community' | 'explore';
 
@@ -31,9 +32,11 @@ export default function FeedHeader({
   onPantryFilterChange,
   onSearchPress,
 }: FeedHeaderProps) {
+  const { colors } = useAppTheme();
+
   return (
-    <View style={styles.container}>
-      <View style={styles.feedToggle}>
+    <View style={[styles.container, { backgroundColor: colors.backgroundElevated }]}>
+      <View style={[styles.feedToggle, { backgroundColor: colors.backgroundElevated }]}>
         <View style={styles.feedToggleTabs}>
           {TABS.map((tab) => (
             <TouchableOpacity
@@ -46,7 +49,9 @@ export default function FeedHeader({
               <Text
                 style={[
                   styles.feedToggleText,
+                  { color: colors.textPrimary },
                   feedType === tab.key && styles.feedToggleTextActive,
+                  feedType === tab.key && { color: colors.primary },
                 ]}
               >
                 {tab.label}
@@ -60,7 +65,7 @@ export default function FeedHeader({
           accessibilityRole="button"
           accessibilityLabel="Search"
         >
-          <Ionicons name="search-outline" size={19} color="#000" />
+          <Ionicons name="search-outline" size={19} color={colors.textPrimary} />
         </TouchableOpacity>
       </View>
       {feedType !== 'explore' ? (
@@ -78,7 +83,6 @@ export default function FeedHeader({
 const styles = StyleSheet.create({
   container: {
     width: '100%',
-    backgroundColor: colors.white,
     borderBottomLeftRadius: 20,
     borderBottomRightRadius: 20,
     overflow: 'hidden',
@@ -89,7 +93,6 @@ const styles = StyleSheet.create({
   feedToggle: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.white,
     paddingHorizontal: 16,
   },
   feedToggleTabs: {
@@ -104,9 +107,7 @@ const styles = StyleSheet.create({
   feedToggleText: {
     fontSize: 17,
     fontWeight: '600',
-    color: colors.textPrimary,
   },
   feedToggleTextActive: {
-    color: colors.primary,
   },
 });

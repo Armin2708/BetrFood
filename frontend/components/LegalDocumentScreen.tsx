@@ -14,12 +14,14 @@ import {
   LegalDocumentContent,
   LegalDocumentType,
 } from '../services/legalDocuments';
+import { useAppTheme } from '../context/ThemeContext';
 
 type LegalDocumentScreenProps = {
   type: LegalDocumentType;
 };
 
 export default function LegalDocumentScreen({ type }: LegalDocumentScreenProps) {
+  const { colors, isDark } = useAppTheme();
   const [document, setDocument] = useState<LegalDocumentContent | null>(null);
   const [source, setSource] = useState<'remote' | 'cache' | 'bundled'>('remote');
   const [loading, setLoading] = useState(true);
@@ -52,21 +54,24 @@ export default function LegalDocumentScreen({ type }: LegalDocumentScreenProps) 
 
   if (loading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#22C55E" />
-        <Text style={styles.loadingText}>Loading document...</Text>
+      <View style={[styles.centered, { backgroundColor: colors.backgroundSecondary }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading document...</Text>
       </View>
     );
   }
 
   if (!document) {
     return (
-      <View style={styles.centered}>
-        <Text style={styles.errorTitle}>Document unavailable</Text>
-        <Text style={styles.errorText}>
+      <View style={[styles.centered, { backgroundColor: colors.backgroundSecondary }]}>
+        <Text style={[styles.errorTitle, { color: colors.textPrimary }]}>Document unavailable</Text>
+        <Text style={[styles.errorText, { color: colors.textSecondary }]}>
           {error || 'This document could not be loaded. Please try again when you are back online.'}
         </Text>
-        <TouchableOpacity style={styles.retryButton} onPress={loadDocument}>
+        <TouchableOpacity
+          style={[styles.retryButton, { backgroundColor: colors.primary }]}
+          onPress={loadDocument}
+        >
           <Text style={styles.retryText}>Try Again</Text>
         </TouchableOpacity>
       </View>
@@ -75,33 +80,47 @@ export default function LegalDocumentScreen({ type }: LegalDocumentScreenProps) 
 
   return (
     <ScrollView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.backgroundSecondary }]}
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
       refreshControl={
         <RefreshControl
           refreshing={refreshing}
           onRefresh={handleRefresh}
-          tintColor="#22C55E"
-          colors={['#22C55E']}
+          tintColor={colors.primary}
+          colors={[colors.primary]}
         />
       }
     >
-      <View style={styles.headerCard}>
-        <Text style={styles.title}>{document.title}</Text>
-        <Text style={styles.metaText}>Last updated: {document.lastUpdated}</Text>
-        <Text style={styles.metaText}>Version: {document.version}</Text>
+      <View style={[styles.headerCard, { backgroundColor: colors.backgroundElevated }]}>
+        <Text style={[styles.title, { color: colors.textPrimary }]}>{document.title}</Text>
+        <Text style={[styles.metaText, { color: colors.textSecondary }]}>
+          Last updated: {document.lastUpdated}
+        </Text>
+        <Text style={[styles.metaText, { color: colors.textSecondary }]}>
+          Version: {document.version}
+        </Text>
         {source !== 'remote' ? (
-          <View style={styles.cacheBadge}>
-            <Text style={styles.cacheBadgeText}>
+          <View
+            style={[
+              styles.cacheBadge,
+              { backgroundColor: isDark ? '#3F2C12' : '#FEF3C7' },
+            ]}
+          >
+            <Text
+              style={[
+                styles.cacheBadgeText,
+                { color: isDark ? '#FCD34D' : '#92400E' },
+              ]}
+            >
               {source === 'cache' ? 'Showing cached version' : 'Showing bundled fallback'}
             </Text>
           </View>
         ) : null}
       </View>
 
-      <View style={styles.documentCard}>
-        <Markdown style={markdownStyles}>{document.content}</Markdown>
+      <View style={[styles.documentCard, { backgroundColor: colors.backgroundElevated }]}>
+        <Markdown style={getMarkdownStyles(colors)}>{document.content}</Markdown>
       </View>
     </ScrollView>
   );
@@ -110,7 +129,6 @@ export default function LegalDocumentScreen({ type }: LegalDocumentScreenProps) 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
   },
   content: {
     padding: 16,
@@ -121,28 +139,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,
-    backgroundColor: '#F8FAFC',
   },
   loadingText: {
     marginTop: 12,
-    color: '#64748B',
     fontSize: 15,
   },
   errorTitle: {
-    color: '#0F172A',
     fontSize: 22,
     fontWeight: '700',
     marginBottom: 8,
   },
   errorText: {
-    color: '#64748B',
     fontSize: 15,
     lineHeight: 22,
     textAlign: 'center',
     marginBottom: 18,
   },
   retryButton: {
-    backgroundColor: '#22C55E',
     borderRadius: 12,
     paddingHorizontal: 20,
     paddingVertical: 12,
@@ -153,19 +166,16 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   headerCard: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 20,
     padding: 18,
     marginBottom: 14,
   },
   title: {
-    color: '#0F172A',
     fontSize: 26,
     fontWeight: '800',
     marginBottom: 10,
   },
   metaText: {
-    color: '#475569',
     fontSize: 14,
     marginTop: 2,
   },
@@ -183,35 +193,34 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   documentCard: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 20,
     paddingHorizontal: 18,
     paddingVertical: 12,
   },
 });
 
-const markdownStyles = {
+const getMarkdownStyles = (colors: ReturnType<typeof useAppTheme>['colors']) => ({
   body: {
-    color: '#334155',
+    color: colors.textSecondary,
     fontSize: 15,
     lineHeight: 24,
   },
   heading1: {
-    color: '#0F172A',
+    color: colors.textPrimary,
     fontSize: 24,
     fontWeight: '800' as const,
     marginTop: 8,
     marginBottom: 8,
   },
   heading2: {
-    color: '#0F172A',
+    color: colors.textPrimary,
     fontSize: 19,
     fontWeight: '700' as const,
     marginTop: 18,
     marginBottom: 6,
   },
   heading3: {
-    color: '#0F172A',
+    color: colors.textPrimary,
     fontSize: 16,
     fontWeight: '700' as const,
     marginTop: 14,
@@ -225,10 +234,10 @@ const markdownStyles = {
     marginBottom: 12,
   },
   list_item: {
-    color: '#334155',
+    color: colors.textSecondary,
   },
   strong: {
-    color: '#0F172A',
+    color: colors.textPrimary,
     fontWeight: '700' as const,
   },
-};
+});

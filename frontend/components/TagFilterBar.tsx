@@ -1,12 +1,13 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View, Text, TouchableOpacity, ScrollView, StyleSheet,
   ActivityIndicator, Modal, Pressable,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { fetchTags, Tag } from '../services/api';
-import { TAG_TYPE_COLORS, colors } from '../constants/theme';
+import { TAG_TYPE_COLORS, ThemeColors } from '../constants/theme';
 import { usePantry } from '../context/PantryContext';
+import { useAppTheme } from '../context/ThemeContext';
 
 interface TagFilterBarProps {
   selectedTagIds: number[];
@@ -21,6 +22,8 @@ export default function TagFilterBar({
   pantryFilterActive = false,
   onPantryFilterChange,
 }: TagFilterBarProps) {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [tags, setTags] = useState<Tag[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
@@ -198,110 +201,112 @@ export default function TagFilterBar({
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: colors.backgroundPrimary,
-    borderBottomWidth: 1,
-    borderColor: colors.borderLight,
-  },
-  loadingContainer: {
-    padding: 12,
-    alignItems: 'center',
-  },
-  scrollContent: {
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    gap: 8,
-  },
-  filterChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  filterChipText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: colors.textSecondary,
-  },
-  pantryChipActive: {
-    backgroundColor: '#22C55E',
-    borderColor: '#22C55E',
-  },
-  pantryChipTextActive: {
-    color: '#fff',
-  },
-  filtersChipActive: {
-    backgroundColor: colors.textPrimary,
-    borderColor: colors.textPrimary,
-  },
-  filtersChipTextActive: {
-    color: '#fff',
-  },
-  clearButton: {
-    marginRight: 12,
-  },
-  clearText: {
-    fontSize: 13,
-    color: '#e74c3c',
-    fontWeight: '600',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
-    maxHeight: '70%',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  modalHeaderRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.textPrimary,
-  },
-  tagGroup: {
-    marginBottom: 16,
-  },
-  tagGroupLabel: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.textSecondary,
-    marginBottom: 8,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  tagGroupChips: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  doneButton: {
-    marginTop: 16,
-    backgroundColor: '#22C55E',
-    paddingVertical: 14,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  doneButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-});
+function makeStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    container: {
+      backgroundColor: colors.backgroundPrimary,
+      borderBottomWidth: 1,
+      borderColor: colors.borderLight,
+    },
+    loadingContainer: {
+      padding: 12,
+      alignItems: 'center',
+    },
+    scrollContent: {
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      gap: 8,
+    },
+    filterChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    filterChipText: {
+      fontSize: 13,
+      fontWeight: '500',
+      color: colors.textSecondary,
+    },
+    pantryChipActive: {
+      backgroundColor: '#22C55E',
+      borderColor: '#22C55E',
+    },
+    pantryChipTextActive: {
+      color: '#fff',
+    },
+    filtersChipActive: {
+      backgroundColor: colors.textPrimary,
+      borderColor: colors.textPrimary,
+    },
+    filtersChipTextActive: {
+      color: '#fff',
+    },
+    clearButton: {
+      marginRight: 12,
+    },
+    clearText: {
+      fontSize: 13,
+      color: '#e74c3c',
+      fontWeight: '600',
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.4)',
+      justifyContent: 'flex-end',
+    },
+    modalContent: {
+      backgroundColor: colors.backgroundElevated,
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      padding: 20,
+      maxHeight: '70%',
+    },
+    modalHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 16,
+    },
+    modalHeaderRight: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    modalTitle: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: colors.textPrimary,
+    },
+    tagGroup: {
+      marginBottom: 16,
+    },
+    tagGroupLabel: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: colors.textSecondary,
+      marginBottom: 8,
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+    },
+    tagGroupChips: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+    },
+    doneButton: {
+      marginTop: 16,
+      backgroundColor: '#22C55E',
+      paddingVertical: 14,
+      borderRadius: 10,
+      alignItems: 'center',
+    },
+    doneButtonText: {
+      color: '#fff',
+      fontSize: 16,
+      fontWeight: '700',
+    },
+  });
+}

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -20,6 +20,8 @@ import {
   getImageUrl,
   Post,
 } from '../services/api';
+import { ThemeColors } from '../constants/theme';
+import { useAppTheme } from '../context/ThemeContext';
 
 const SECTION_IDS: ExploreSectionId[] = [
   'trending',
@@ -36,6 +38,8 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 function ExplorePostCard({ post }: { post: Post }) {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const title = post.caption?.trim() || 'Untitled post';
 
   return (
@@ -58,7 +62,9 @@ function ExplorePostCard({ post }: { post: Post }) {
 }
 
 function CategoryCard({ category }: { category: ExploreCategory }) {
-  const color = CATEGORY_COLORS[category.type] || '#0F172A';
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const color = CATEGORY_COLORS[category.type] || colors.textPrimary;
 
   return (
     <TouchableOpacity
@@ -88,6 +94,9 @@ function CategoryCard({ category }: { category: ExploreCategory }) {
 }
 
 function SectionSkeleton({ title }: { title: string }) {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+
   return (
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
@@ -106,6 +115,9 @@ function SectionSkeleton({ title }: { title: string }) {
 }
 
 function EmptySection({ title, description }: { title: string; description: string }) {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+
   return (
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
@@ -115,7 +127,7 @@ function EmptySection({ title, description }: { title: string; description: stri
         </View>
       </View>
       <View style={styles.emptySection}>
-        <Ionicons name="restaurant-outline" size={22} color="#94A3B8" />
+        <Ionicons name="restaurant-outline" size={22} color={colors.textTertiary} />
         <Text style={styles.emptyText}>Nothing here yet. New posts will appear as your team adds content.</Text>
       </View>
     </View>
@@ -123,6 +135,9 @@ function EmptySection({ title, description }: { title: string; description: stri
 }
 
 function ExploreCarousel({ section }: { section: ExploreSection }) {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+
   const hasItems =
     section.type === 'categories'
       ? (section.categories?.length || 0) > 0
@@ -155,7 +170,7 @@ function ExploreCarousel({ section }: { section: ExploreSection }) {
 
       <FlatList
         horizontal
-        data={section.type === 'categories' ? section.categories : section.posts}
+        data={(section.type === 'categories' ? section.categories : section.posts) as any[]}
         keyExtractor={(item) => `${section.id}-${item.id}`}
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.carouselContent}
@@ -172,6 +187,8 @@ function ExploreCarousel({ section }: { section: ExploreSection }) {
 }
 
 export default function ExploreSections() {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [sections, setSections] = useState<Partial<Record<ExploreSectionId, ExploreSection>>>({});
   const [loadingSections, setLoadingSections] = useState<Set<ExploreSectionId>>(new Set(SECTION_IDS));
   const [refreshing, setRefreshing] = useState(false);
@@ -252,178 +269,180 @@ export default function ExploreSections() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFFFFF' },
-  content: { paddingBottom: 32 },
-  hero: {
-    margin: 16,
-    padding: 20,
-    borderRadius: 28,
-    backgroundColor: '#0F172A',
-  },
-  heroKicker: {
-    color: '#86EFAC',
-    fontSize: 13,
-    fontWeight: '800',
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
-  },
-  heroTitle: {
-    color: '#FFFFFF',
-    fontSize: 26,
-    lineHeight: 31,
-    fontWeight: '800',
-    marginTop: 8,
-  },
-  heroText: {
-    color: '#CBD5E1',
-    fontSize: 14,
-    lineHeight: 20,
-    marginTop: 8,
-  },
-  section: { marginTop: 8, marginBottom: 18 },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    marginBottom: 10,
-    gap: 12,
-  },
-  sectionHeaderText: { flex: 1 },
-  sectionTitle: {
-    color: '#111827',
-    fontSize: 20,
-    fontWeight: '800',
-  },
-  sectionDescription: {
-    color: '#64748B',
-    fontSize: 13,
-    lineHeight: 18,
-    marginTop: 2,
-  },
-  seeAllButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingLeft: 10,
-    paddingVertical: 6,
-  },
-  seeAllText: {
-    color: '#22C55E',
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  carouselContent: {
-    paddingLeft: 16,
-    paddingRight: 8,
-    gap: 12,
-  },
-  postCard: {
-    width: 180,
-    height: 228,
-    borderRadius: 24,
-    backgroundColor: '#E5E7EB',
-    overflow: 'hidden',
-  },
-  postImage: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: '#E5E7EB',
-  },
-  postOverlay: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    padding: 12,
-    backgroundColor: 'rgba(15, 23, 42, 0.72)',
-  },
-  postTitle: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '800',
-  },
-  postMeta: {
-    color: '#CBD5E1',
-    fontSize: 12,
-    marginTop: 4,
-  },
-  categoryCard: {
-    width: 170,
-    minHeight: 150,
-    borderRadius: 24,
-    borderWidth: 1,
-    backgroundColor: '#F8FAFC',
-    padding: 14,
-  },
-  categoryIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-  },
-  categoryTitle: {
-    color: '#0F172A',
-    fontSize: 16,
-    fontWeight: '800',
-  },
-  categoryDescription: {
-    color: '#64748B',
-    fontSize: 12,
-    lineHeight: 17,
-    marginTop: 5,
-  },
-  categoryCount: {
-    fontSize: 12,
-    fontWeight: '800',
-    marginTop: 10,
-  },
-  skeletonRow: {
-    flexDirection: 'row',
-    gap: 12,
-    paddingHorizontal: 16,
-  },
-  skeletonCard: {
-    width: 180,
-    height: 228,
-    borderRadius: 24,
-    backgroundColor: '#E2E8F0',
-  },
-  emptySection: {
-    marginHorizontal: 16,
-    borderRadius: 20,
-    padding: 18,
-    backgroundColor: '#F8FAFC',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  emptyText: {
-    flex: 1,
-    color: '#64748B',
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  errorBox: {
-    marginHorizontal: 16,
-    marginBottom: 12,
-    padding: 12,
-    borderRadius: 16,
-    backgroundColor: '#FEF2F2',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  errorText: {
-    flex: 1,
-    color: '#B91C1C',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  loadingFooter: {
-    paddingVertical: 16,
-    alignItems: 'center',
-  },
-});
+function makeStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.backgroundPrimary },
+    content: { paddingBottom: 32 },
+    hero: {
+      margin: 16,
+      padding: 20,
+      borderRadius: 28,
+      backgroundColor: '#0F172A',
+    },
+    heroKicker: {
+      color: '#86EFAC',
+      fontSize: 13,
+      fontWeight: '800',
+      letterSpacing: 1.2,
+      textTransform: 'uppercase',
+    },
+    heroTitle: {
+      color: '#FFFFFF',
+      fontSize: 26,
+      lineHeight: 31,
+      fontWeight: '800',
+      marginTop: 8,
+    },
+    heroText: {
+      color: '#CBD5E1',
+      fontSize: 14,
+      lineHeight: 20,
+      marginTop: 8,
+    },
+    section: { marginTop: 8, marginBottom: 18 },
+    sectionHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 16,
+      marginBottom: 10,
+      gap: 12,
+    },
+    sectionHeaderText: { flex: 1 },
+    sectionTitle: {
+      color: colors.textPrimary,
+      fontSize: 20,
+      fontWeight: '800',
+    },
+    sectionDescription: {
+      color: colors.textSecondary,
+      fontSize: 13,
+      lineHeight: 18,
+      marginTop: 2,
+    },
+    seeAllButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingLeft: 10,
+      paddingVertical: 6,
+    },
+    seeAllText: {
+      color: '#22C55E',
+      fontSize: 13,
+      fontWeight: '800',
+    },
+    carouselContent: {
+      paddingLeft: 16,
+      paddingRight: 8,
+      gap: 12,
+    },
+    postCard: {
+      width: 180,
+      height: 228,
+      borderRadius: 24,
+      backgroundColor: colors.backgroundTertiary,
+      overflow: 'hidden',
+    },
+    postImage: {
+      width: '100%',
+      height: '100%',
+      backgroundColor: colors.backgroundTertiary,
+    },
+    postOverlay: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: 0,
+      padding: 12,
+      backgroundColor: 'rgba(15, 23, 42, 0.72)',
+    },
+    postTitle: {
+      color: '#FFFFFF',
+      fontSize: 15,
+      fontWeight: '800',
+    },
+    postMeta: {
+      color: '#CBD5E1',
+      fontSize: 12,
+      marginTop: 4,
+    },
+    categoryCard: {
+      width: 170,
+      minHeight: 150,
+      borderRadius: 24,
+      borderWidth: 1,
+      backgroundColor: colors.backgroundSecondary,
+      padding: 14,
+    },
+    categoryIcon: {
+      width: 38,
+      height: 38,
+      borderRadius: 19,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 12,
+    },
+    categoryTitle: {
+      color: colors.textPrimary,
+      fontSize: 16,
+      fontWeight: '800',
+    },
+    categoryDescription: {
+      color: colors.textSecondary,
+      fontSize: 12,
+      lineHeight: 17,
+      marginTop: 5,
+    },
+    categoryCount: {
+      fontSize: 12,
+      fontWeight: '800',
+      marginTop: 10,
+    },
+    skeletonRow: {
+      flexDirection: 'row',
+      gap: 12,
+      paddingHorizontal: 16,
+    },
+    skeletonCard: {
+      width: 180,
+      height: 228,
+      borderRadius: 24,
+      backgroundColor: colors.backgroundTertiary,
+    },
+    emptySection: {
+      marginHorizontal: 16,
+      borderRadius: 20,
+      padding: 18,
+      backgroundColor: colors.backgroundSecondary,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
+    emptyText: {
+      flex: 1,
+      color: colors.textSecondary,
+      fontSize: 13,
+      lineHeight: 18,
+    },
+    errorBox: {
+      marginHorizontal: 16,
+      marginBottom: 12,
+      padding: 12,
+      borderRadius: 16,
+      backgroundColor: '#FEF2F2',
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    errorText: {
+      flex: 1,
+      color: '#B91C1C',
+      fontSize: 13,
+      fontWeight: '600',
+    },
+    loadingFooter: {
+      paddingVertical: 16,
+      alignItems: 'center',
+    },
+  });
+}

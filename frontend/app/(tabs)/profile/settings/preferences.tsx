@@ -7,11 +7,10 @@ import {
   ActivityIndicator,
   Switch,
 } from "react-native";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useFocusEffect } from "@react-navigation/native";
-import { useCallback } from "react";
-import { colors } from "../../../../constants/theme"
 import { usePreferences, Preferences } from "../../../../context/PreferencesContext";
+import { useAppTheme } from "../../../../context/ThemeContext";
 import {
   requestNotificationPermission,
   cancelAllExpiryNotifications,
@@ -60,25 +59,43 @@ function ChipGroup({
   options,
   selected,
   onToggle,
+  colors,
 }: {
   label: string;
   options: string[];
   selected: string[];
   onToggle: (item: string) => void;
+  colors: ReturnType<typeof useAppTheme>['colors'];
 }) {
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{label}</Text>
+      <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>{label}</Text>
       <View style={styles.chipContainer}>
         {options.map((item) => {
           const active = selected.includes(item);
           return (
             <Pressable
               key={item}
-              style={[styles.chip, active && styles.chipActive]}
+              style={[
+                styles.chip,
+                {
+                  borderColor: colors.border,
+                  backgroundColor: colors.backgroundElevated,
+                },
+                active && {
+                  backgroundColor: colors.primary,
+                  borderColor: colors.primaryDark,
+                },
+              ]}
               onPress={() => onToggle(item)}
             >
-              <Text style={[styles.chipText, active && styles.chipTextActive]}>
+              <Text
+                style={[
+                  styles.chipText,
+                  { color: active ? colors.white : colors.textPrimary },
+                  active && styles.chipTextActive,
+                ]}
+              >
                 {item}
               </Text>
             </Pressable>
@@ -90,6 +107,7 @@ function ChipGroup({
 }
 
 export default function FoodPreferences() {
+  const { colors } = useAppTheme();
   const {
     preferences: contextPreferences,
     loading,
@@ -203,19 +221,29 @@ export default function FoodPreferences() {
 
   if (loading || !localPreferences) {
     return (
-      <View style={[styles.container, styles.centered]}>
-        <ActivityIndicator size="large" color="#007AFF" />
+      <View
+        style={[
+          styles.container,
+          styles.centered,
+          { backgroundColor: colors.backgroundSecondary },
+        ]}
+      >
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={[styles.container, { backgroundColor: colors.backgroundSecondary }]}
+      contentContainerStyle={styles.content}
+    >
       <ChipGroup
         label="Dietary Preferences"
         options={DIETARY_OPTIONS}
         selected={localPreferences.dietaryPreferences}
         onToggle={toggleDietaryPreference}
+        colors={colors}
       />
 
       <ChipGroup
@@ -223,6 +251,7 @@ export default function FoodPreferences() {
         options={ALLERGY_OPTIONS}
         selected={localPreferences.allergies}
         onToggle={toggleAllergy}
+        colors={colors}
       />
 
       <ChipGroup
@@ -230,25 +259,34 @@ export default function FoodPreferences() {
         options={CUISINE_OPTIONS}
         selected={localPreferences.cuisines}
         onToggle={toggleCuisine}
+        colors={colors}
       />
 
       {/* ── Pantry Preferences ─────────────────────────────────────────── */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Pantry Preferences</Text>
+        <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Pantry Preferences</Text>
 
         {/* Notification toggle */}
-        <View style={styles.toggleRow}>
+        <View
+          style={[
+            styles.toggleRow,
+            {
+              backgroundColor: colors.backgroundElevated,
+              borderColor: colors.border,
+            },
+          ]}
+        >
           <View style={styles.toggleTextGroup}>
-            <Text style={styles.toggleLabel}>Expiration Notifications</Text>
-            <Text style={styles.toggleSubLabel}>
+            <Text style={[styles.toggleLabel, { color: colors.textPrimary }]}>Expiration Notifications</Text>
+            <Text style={[styles.toggleSubLabel, { color: colors.textSecondary }]}>
               Get reminded when items are about to expire
             </Text>
           </View>
           <Switch
             value={localPreferences.expirationNotificationsEnabled}
             onValueChange={handleNotificationToggle}
-            trackColor={{ false: '#ddd', true: colors.primary }}
-            thumbColor="#fff"
+            trackColor={{ false: colors.border, true: colors.primary }}
+            thumbColor={colors.white}
             accessibilityLabel="Enable expiration notifications"
             accessibilityRole="switch"
           />
@@ -257,9 +295,11 @@ export default function FoodPreferences() {
         {/* Threshold picker — only shown when notifications are enabled */}
         {localPreferences.expirationNotificationsEnabled && (
           <View style={styles.thresholdSection}>
-            <Text style={styles.settingLabel}>
+            <Text style={[styles.settingLabel, { color: colors.textPrimary }]}>
               Notify me when items expire within:{' '}
-              <Text style={styles.settingValue}>{localPreferences.expiringItemsThreshold} days</Text>
+              <Text style={[styles.settingValue, { color: colors.primary }]}>
+                {localPreferences.expiringItemsThreshold} days
+              </Text>
             </Text>
             <View style={styles.sliderButtonContainer}>
               {[3, 7, 14, 30].map((days) => (
@@ -267,7 +307,14 @@ export default function FoodPreferences() {
                   key={days}
                   style={[
                     styles.thresholdButton,
-                    localPreferences.expiringItemsThreshold === days && styles.thresholdButtonActive,
+                    {
+                      borderColor: colors.border,
+                      backgroundColor: colors.backgroundElevated,
+                    },
+                    localPreferences.expiringItemsThreshold === days && {
+                      backgroundColor: colors.primary,
+                      borderColor: colors.primaryDark,
+                    },
                   ]}
                   onPress={() => handleThresholdChange(days)}
                   accessibilityRole="button"
@@ -277,6 +324,12 @@ export default function FoodPreferences() {
                   <Text
                     style={[
                       styles.thresholdButtonText,
+                      {
+                        color:
+                          localPreferences.expiringItemsThreshold === days
+                            ? colors.white
+                            : colors.textSecondary,
+                      },
                       localPreferences.expiringItemsThreshold === days && styles.thresholdButtonTextActive,
                     ]}
                   >
@@ -290,7 +343,11 @@ export default function FoodPreferences() {
       </View>
 
       <Pressable
-        style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+        style={[
+          styles.saveButton,
+          { backgroundColor: colors.primary },
+          saving && styles.saveButtonDisabled,
+        ]}
         onPress={handleSave}
         disabled={saving}
       >
@@ -307,7 +364,6 @@ export default function FoodPreferences() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
   },
   centered: {
     justifyContent: "center",
@@ -335,19 +391,11 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: "#ddd",
-    backgroundColor: "#f5f5f5",
-  },
-  chipActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primaryDark,
   },
   chipText: {
     fontSize: 14,
-    color: "#333",
   },
   chipTextActive: {
-    color: "white",
     fontWeight: "500",
   },
   // Notification toggle row
@@ -357,7 +405,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 12,
     paddingHorizontal: 14,
-    backgroundColor: '#f5f5f5',
+    borderWidth: 1,
     borderRadius: 12,
     marginBottom: 12,
   },
@@ -368,11 +416,9 @@ const styles = StyleSheet.create({
   toggleLabel: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#333',
   },
   toggleSubLabel: {
     fontSize: 12,
-    color: '#888',
     marginTop: 2,
   },
   // Threshold section (visible when notifications are on)
@@ -381,12 +427,10 @@ const styles = StyleSheet.create({
   },
   settingLabel: {
     fontSize: 14,
-    color: "#333",
     marginBottom: 12,
   },
   settingValue: {
     fontWeight: "600",
-    color: colors.primary,
   },
   sliderButtonContainer: {
     flexDirection: "row",
@@ -399,25 +443,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#ddd",
-    backgroundColor: "#f5f5f5",
     alignItems: "center",
-  },
-  thresholdButtonActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primaryDark,
   },
   thresholdButtonText: {
     fontSize: 13,
-    color: "#666",
     fontWeight: "500",
   },
   thresholdButtonTextActive: {
-    color: "white",
     fontWeight: "600",
   },
   saveButton: {
-    backgroundColor: colors.primary,
     padding: 16,
     borderRadius: 10,
     alignItems: "center",
