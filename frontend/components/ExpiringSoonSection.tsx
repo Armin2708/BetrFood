@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, FlatList, StyleSheet } from 'react-native';
 import { PantryItem } from '../services/api';
-import { colors } from '../constants/theme';
+import { useAppTheme } from '../context/ThemeContext';
 
 interface ExpiringSoonSectionProps {
   items: PantryItem[];
@@ -40,6 +40,7 @@ function getExpirationStatus(expirationDate: string | null): {
 }
 
 export default function ExpiringSoonSection({ items, threshold }: ExpiringSoonSectionProps) {
+  const { colors } = useAppTheme();
   // Filter items that are expiring soon or already expired
   const expiringSoonItems = items
     .filter((item) => {
@@ -64,16 +65,16 @@ export default function ExpiringSoonSection({ items, threshold }: ExpiringSoonSe
     if (!status) return null;
 
     return (
-      <View style={styles.card}>
+      <View style={[styles.card, { backgroundColor: colors.backgroundSubtle, borderColor: colors.borderLight }]}>
         <View style={styles.left}>
-          <Text style={styles.name} numberOfLines={1}>
+          <Text style={[styles.name, { color: colors.textPrimary }]} numberOfLines={1}>
             {item.name}
           </Text>
           <View style={styles.metaRow}>
-            <View style={styles.categoryChip}>
-              <Text style={styles.categoryText}>{item.category}</Text>
+            <View style={[styles.categoryChip, { backgroundColor: colors.backgroundTertiary }]}>
+              <Text style={[styles.categoryText, { color: colors.textSecondary }]}>{item.category}</Text>
             </View>
-            <Text style={styles.quantity}>
+            <Text style={[styles.quantity, { color: colors.textSecondary }]}>
               {item.quantity} {item.unit}
             </Text>
           </View>
@@ -89,12 +90,10 @@ export default function ExpiringSoonSection({ items, threshold }: ExpiringSoonSe
   const expiredCount = expiringSoonItems.filter(
     (item) => getExpirationStatus(item.expirationDate)?.isExpired
   ).length;
-  const expiringCount = expiringSoonItems.length - expiredCount;
-
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.backgroundSecondary, borderColor: colors.border }]}>
       <View style={styles.header}>
-        <Text style={styles.headerText}>Expiring Soon</Text>
+        <Text style={[styles.headerText, { color: colors.textPrimary }]}>Expiring Soon</Text>
         {expiredCount > 0 && (
           <View style={styles.expiredBadge}>
             <Text style={styles.expiredBadgeText}>{expiredCount} expired</Text>
@@ -115,9 +114,7 @@ export default function ExpiringSoonSection({ items, threshold }: ExpiringSoonSe
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#ffa8d4',
     borderBottomWidth: 1,
-    borderColor: colors.border,
   },
   header: {
     flexDirection: 'row',
@@ -129,7 +126,6 @@ const styles = StyleSheet.create({
   headerText: {
     fontSize: 16,
     fontWeight: '700',
-    color: colors.textPrimary,
   },
   expiredBadge: {
     backgroundColor: '#D32F2F',
@@ -149,9 +145,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#ffe0f0',
     borderBottomWidth: 1,
-    borderColor: colors.borderLight,
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
@@ -162,7 +156,6 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 15,
     fontWeight: '600',
-    color: colors.textPrimary,
   },
   metaRow: {
     flexDirection: 'row',
@@ -173,16 +166,13 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 8,
     paddingVertical: 2,
-    backgroundColor: '#F0F0F0',
   },
   categoryText: {
     fontSize: 11,
     fontWeight: '500',
-    color: colors.textSecondary,
   },
   quantity: {
     fontSize: 12,
-    color: colors.textSecondary,
   },
   statusBadge: {
     borderRadius: 6,

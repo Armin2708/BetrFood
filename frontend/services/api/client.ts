@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
+import { DEV_BYPASS_AUTH, DEV_BYPASS_ROLE, DEV_BYPASS_USER_ID } from '../../utils/devAuth';
 
 function getApiBaseUrl(): string {
   if (process.env.EXPO_PUBLIC_API_URL) {
@@ -48,6 +49,11 @@ async function getFreshToken(): Promise<string | null> {
 
 export async function authHeaders(): Promise<Record<string, string>> {
   const headers: Record<string, string> = {};
+  if (DEV_BYPASS_AUTH) {
+    headers['x-dev-bypass-user-id'] = DEV_BYPASS_USER_ID;
+    headers['x-dev-bypass-role'] = DEV_BYPASS_ROLE;
+    return headers;
+  }
   const token = await getFreshToken();
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;

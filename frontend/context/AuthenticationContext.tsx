@@ -1,6 +1,7 @@
 import React, { createContext, useState, useEffect, useCallback, useRef, ReactNode } from "react";
 import { useAuth, useUser } from "@clerk/clerk-expo";
 import { setAuthToken, setTokenGetter, fetchMyProfile, fetchMyRole } from "../services/api";
+import { DEV_BYPASS_AUTH, DEV_BYPASS_EMAIL, DEV_BYPASS_ROLE, DEV_BYPASS_USER_ID } from "../utils/devAuth";
 
 type User = {
   id: string;
@@ -50,6 +51,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   // Sync Clerk auth state to our context
   useEffect(() => {
+    if (DEV_BYPASS_AUTH) {
+      setToken('dev-bypass');
+      setAuthToken('dev-bypass');
+      setTokenGetter(null);
+      setNeedsOnboarding(false);
+      setUser({
+        id: DEV_BYPASS_USER_ID,
+        email: DEV_BYPASS_EMAIL,
+        firstName: 'Dev',
+        lastName: 'User',
+        role: DEV_BYPASS_ROLE,
+      });
+      setLoading(false);
+      return;
+    }
+
     if (!authLoaded || !userLoaded) return;
 
     let cancelled = false;
@@ -124,6 +141,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const refreshRole = useCallback(async () => {
     if (!userRef.current) return;
+    if (DEV_BYPASS_AUTH) {
+      setUser((prev) => (prev ? { ...prev, role: DEV_BYPASS_ROLE } : prev));
+      return;
+    }
     try {
       const { role } = await fetchMyRole();
       setUser((prev) => (prev ? { ...prev, role } : prev));

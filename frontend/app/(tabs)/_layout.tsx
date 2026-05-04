@@ -6,6 +6,7 @@ import { useAuth } from "@clerk/clerk-expo";
 import { useFocusEffect } from '@react-navigation/native';
 import { fetchUnreadNotificationCount } from '../../services/api';
 import { AuthContext } from '../../context/AuthenticationContext';
+import { DEV_BYPASS_AUTH } from '../../utils/devAuth';
 import { useAppTheme } from '../../context/ThemeContext';
 
 type IoniconName = ComponentProps<typeof Ionicons>['name'];
@@ -76,6 +77,8 @@ export default function TabsLayout() {
   const { colors } = useAppTheme();
   const { isSignedIn, isLoaded } = useAuth();
   const { loading: authLoading, token } = useContext(AuthContext);
+  const signedIn = DEV_BYPASS_AUTH || isSignedIn;
+  const authReady = DEV_BYPASS_AUTH || isLoaded;
   const [unreadCount, setUnreadCount] = useState(0);
   const router = useRouter();
   const segments = useSegments();
@@ -84,7 +87,7 @@ export default function TabsLayout() {
 
   useFocusEffect(
     useCallback(() => {
-      if (!isSignedIn || authLoading || !token) return;
+      if (!signedIn || authLoading || !token) return;
 
       let cancelled = false;
 
@@ -104,10 +107,10 @@ export default function TabsLayout() {
         cancelled = true;
         clearInterval(interval);
       };
-    }, [isSignedIn, authLoading, token])
+    }, [signedIn, authLoading, token])
   );
 
-  if (!isLoaded || authLoading) {
+  if (!authReady || authLoading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.backgroundPrimary }}>
         <ActivityIndicator size="large" color={colors.primary} />
@@ -115,7 +118,7 @@ export default function TabsLayout() {
     );
   }
 
-  if (!isSignedIn) {
+  if (!signedIn) {
     return <Redirect href="/(auth)/login" />;
   }
 

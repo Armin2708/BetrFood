@@ -1,4 +1,4 @@
-import React, { useCallback, useContext, useEffect, useState } from 'react';
+import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -21,6 +21,8 @@ import {
   getImageUrl,
   Post as FeedPost,
 } from '../../../services/api';
+import { ThemeColors } from '../../../constants/theme';
+import { useAppTheme } from '../../../context/ThemeContext';
 
 const PAGE_SIZE = 20;
 const CATEGORY_COLORS: Record<string, string> = {
@@ -39,7 +41,9 @@ const VALID_SECTIONS = new Set<ExploreSectionId>([
 
 function CategoryResultCard({ category }: { category: ExploreCategory }) {
   const router = useRouter();
-  const color = CATEGORY_COLORS[category.type] || '#0F172A';
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const color = CATEGORY_COLORS[category.type] || colors.textPrimary;
 
   return (
     <TouchableOpacity
@@ -70,6 +74,8 @@ function CategoryResultCard({ category }: { category: ExploreCategory }) {
 
 export default function ExploreSectionScreen() {
   const router = useRouter();
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { user } = useContext(AuthContext);
   const { sectionId, title } = useLocalSearchParams<{ sectionId: string; title?: string }>();
 
@@ -135,7 +141,7 @@ export default function ExploreSectionScreen() {
 
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#0F172A" />
+          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
         <View style={styles.headerCopy}>
           <Text style={styles.headerTitle} numberOfLines={1}>
@@ -199,7 +205,7 @@ export default function ExploreSectionScreen() {
           )}
           ListEmptyComponent={
             <View style={styles.empty}>
-              <Ionicons name="restaurant-outline" size={44} color="#CBD5E1" />
+              <Ionicons name="restaurant-outline" size={44} color={colors.textTertiary} />
               <Text style={styles.emptyTitle}>No posts yet</Text>
               <Text style={styles.emptyText}>This section will fill in as more content is added.</Text>
             </View>
@@ -211,118 +217,120 @@ export default function ExploreSectionScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFFFFF' },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingTop: Platform.OS === 'ios' ? 56 : 12,
-    paddingBottom: 14,
-    paddingHorizontal: 16,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#E5E7EB',
-  },
-  backButton: {
-    padding: 8,
-    width: 40,
-  },
-  headerCopy: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  headerTitle: {
-    color: '#0F172A',
-    fontSize: 18,
-    fontWeight: '800',
-  },
-  headerSubtitle: {
-    color: '#64748B',
-    fontSize: 12,
-    lineHeight: 16,
-    textAlign: 'center',
-    marginTop: 2,
-  },
-  headerRightSpacer: { width: 40 },
-  centered: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  errorText: {
-    color: '#B91C1C',
-    fontSize: 15,
-    textAlign: 'center',
-    marginBottom: 12,
-  },
-  retryButton: {
-    backgroundColor: '#22C55E',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 12,
-  },
-  retryText: {
-    color: '#FFFFFF',
-    fontWeight: '800',
-  },
-  categoryList: {
-    padding: 16,
-    gap: 12,
-  },
-  categoryCard: {
-    minHeight: 112,
-    borderRadius: 22,
-    borderWidth: 1,
-    backgroundColor: '#F8FAFC',
-    padding: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  categoryIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  categoryCopy: {
-    flex: 1,
-  },
-  categoryTitle: {
-    color: '#0F172A',
-    fontSize: 16,
-    fontWeight: '800',
-  },
-  categoryDescription: {
-    color: '#64748B',
-    fontSize: 12,
-    lineHeight: 17,
-    marginTop: 4,
-  },
-  categoryCount: {
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  empty: {
-    alignItems: 'center',
-    paddingTop: 80,
-    paddingHorizontal: 24,
-  },
-  emptyTitle: {
-    color: '#334155',
-    fontSize: 18,
-    fontWeight: '800',
-    marginTop: 12,
-  },
-  emptyText: {
-    color: '#64748B',
-    fontSize: 14,
-    textAlign: 'center',
-    marginTop: 6,
-  },
-  footer: {
-    marginVertical: 18,
-  },
-});
+function makeStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.backgroundPrimary },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingTop: Platform.OS === 'ios' ? 56 : 12,
+      paddingBottom: 14,
+      paddingHorizontal: 16,
+      backgroundColor: colors.backgroundElevated,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.border,
+    },
+    backButton: {
+      padding: 8,
+      width: 40,
+    },
+    headerCopy: {
+      flex: 1,
+      alignItems: 'center',
+    },
+    headerTitle: {
+      color: colors.textPrimary,
+      fontSize: 18,
+      fontWeight: '800',
+    },
+    headerSubtitle: {
+      color: colors.textSecondary,
+      fontSize: 12,
+      lineHeight: 16,
+      textAlign: 'center',
+      marginTop: 2,
+    },
+    headerRightSpacer: { width: 40 },
+    centered: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 24,
+    },
+    errorText: {
+      color: '#B91C1C',
+      fontSize: 15,
+      textAlign: 'center',
+      marginBottom: 12,
+    },
+    retryButton: {
+      backgroundColor: '#22C55E',
+      paddingHorizontal: 20,
+      paddingVertical: 10,
+      borderRadius: 12,
+    },
+    retryText: {
+      color: '#FFFFFF',
+      fontWeight: '800',
+    },
+    categoryList: {
+      padding: 16,
+      gap: 12,
+    },
+    categoryCard: {
+      minHeight: 112,
+      borderRadius: 22,
+      borderWidth: 1,
+      backgroundColor: colors.backgroundSecondary,
+      padding: 14,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+    },
+    categoryIcon: {
+      width: 42,
+      height: 42,
+      borderRadius: 21,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    categoryCopy: {
+      flex: 1,
+    },
+    categoryTitle: {
+      color: colors.textPrimary,
+      fontSize: 16,
+      fontWeight: '800',
+    },
+    categoryDescription: {
+      color: colors.textSecondary,
+      fontSize: 12,
+      lineHeight: 17,
+      marginTop: 4,
+    },
+    categoryCount: {
+      fontSize: 12,
+      fontWeight: '800',
+    },
+    empty: {
+      alignItems: 'center',
+      paddingTop: 80,
+      paddingHorizontal: 24,
+    },
+    emptyTitle: {
+      color: colors.textPrimary,
+      fontSize: 18,
+      fontWeight: '800',
+      marginTop: 12,
+    },
+    emptyText: {
+      color: colors.textSecondary,
+      fontSize: 14,
+      textAlign: 'center',
+      marginTop: 6,
+    },
+    footer: {
+      marginVertical: 18,
+    },
+  });
+}

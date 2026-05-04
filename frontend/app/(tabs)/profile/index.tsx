@@ -9,6 +9,7 @@ import { useCollections } from '../../../context/CollectionsContext';
 import { useScaledTypography } from '../../../hooks/useScaledTypography';
 import VideoThumbnailView from '../../../components/VideoThumbnail';
 import { colors } from '../../../constants/theme';
+import { useAppTheme } from '../../../context/ThemeContext';
 
 const { width } = Dimensions.get('window');
 const GRID_GAP = 2;
@@ -29,6 +30,7 @@ function formatCount(count: number): string {
 }
 
 export default function ProfileScreen() {
+  const { colors: themeColors } = useAppTheme();
   const router = useRouter();
   const { user } = useContext(AuthContext);
   const scaledTypography = useScaledTypography();
@@ -87,13 +89,13 @@ export default function ProfileScreen() {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
         <Stack.Screen options={{ headerShown: false }} />
-        <ActivityIndicator size="large" color={colors.primary} />
+        <ActivityIndicator size="large" color={themeColors.primary} />
       </View>
     );
   }
 
   const renderProfileHeader = () => (
-    <View style={styles.profileHeaderWrapper}>
+    <View style={[styles.profileHeaderWrapper, { backgroundColor: themeColors.backgroundElevated }]}>
       {/* Top navigation bar */}
       <View style={styles.topBar}>
         <Pressable
@@ -102,7 +104,7 @@ export default function ProfileScreen() {
           accessibilityRole="button"
           accessibilityLabel="Menu"
         >
-          <Ionicons name="menu-outline" size={26} color="#000" />
+          <Ionicons name="menu-outline" size={26} color={themeColors.textPrimary} />
         </Pressable>
         <View style={{ flex: 1 }} />
         <Pressable
@@ -111,7 +113,7 @@ export default function ProfileScreen() {
           accessibilityRole="button"
           accessibilityLabel="Settings"
         >
-          <Ionicons name="settings-outline" size={24} color="#000" />
+          <Ionicons name="settings-outline" size={24} color={themeColors.textPrimary} />
         </Pressable>
       </View>
 
@@ -127,7 +129,7 @@ export default function ProfileScreen() {
       {/* Display name */}
       {profile?.displayName ? (
         <View style={styles.displayNameRow}>
-          <Text style={styles.displayName}>{profile.displayName}</Text>
+          <Text style={[styles.displayName, { color: themeColors.textPrimary }]}>{profile.displayName}</Text>
           {profile.verified && (
             <Text style={styles.verifiedBadge}>{'\u2713'}</Text>
           )}
@@ -135,13 +137,13 @@ export default function ProfileScreen() {
       ) : null}
 
       {/* Username */}
-      <Text style={styles.username}>
+      <Text style={[styles.username, { color: themeColors.textSecondary }]}>
         {profile?.username ? `@${profile.username}` : '@unknown'}
       </Text>
 
       {/* Bio */}
       {profile?.bio ? (
-        <Text style={styles.bio}>{profile.bio}</Text>
+        <Text style={[styles.bio, { color: themeColors.textSecondary }]}>{profile.bio}</Text>
       ) : null}
 
       {/* Followers / Following stats */}
@@ -151,8 +153,8 @@ export default function ProfileScreen() {
           style={styles.followItem}
           accessibilityLabel={`${followStats.followerCount} Followers`}
         >
-          <Text style={styles.followCount}>{formatCount(followStats.followerCount)}</Text>
-          <Text style={styles.followLabel}>  Followers</Text>
+          <Text style={[styles.followCount, { color: themeColors.textPrimary }]}>{formatCount(followStats.followerCount)}</Text>
+          <Text style={[styles.followLabel, { color: themeColors.textSecondary }]}>  Followers</Text>
         </Pressable>
         <View style={styles.followSpacer} />
         <Pressable
@@ -160,23 +162,23 @@ export default function ProfileScreen() {
           style={styles.followItem}
           accessibilityLabel={`${followStats.followingCount} Following`}
         >
-          <Text style={styles.followCount}>{formatCount(followStats.followingCount)}</Text>
-          <Text style={styles.followLabel}>  Following</Text>
+          <Text style={[styles.followCount, { color: themeColors.textPrimary }]}>{formatCount(followStats.followingCount)}</Text>
+          <Text style={[styles.followLabel, { color: themeColors.textSecondary }]}>  Following</Text>
         </Pressable>
       </View>
 
       {/* Edit Profile button */}
       <Pressable
-        style={styles.editButton}
+        style={[styles.editButton, { borderColor: themeColors.border }]}
         onPress={() => router.push("/profile/info/editProfile")}
         accessibilityRole="button"
         accessibilityLabel="Edit profile"
       >
-        <Text style={styles.editButtonText}>Edit profile</Text>
+        <Text style={[styles.editButtonText, { color: themeColors.textSecondary }]}>Edit profile</Text>
       </Pressable>
 
       {/* Tab icons */}
-      <View style={styles.tabRow}>
+      <View style={[styles.tabRow, { borderBottomColor: themeColors.borderLight }]}>
         {TAB_ICONS.map((tab) => (
           <Pressable
             key={tab.key}
@@ -193,10 +195,10 @@ export default function ProfileScreen() {
               <Ionicons
                 name={tab.icon}
                 size={22}
-                color={activeTab === tab.key ? '#000' : '#94A3B8'}
+                color={activeTab === tab.key ? themeColors.textPrimary : themeColors.textTertiary}
               />
             </View>
-            {activeTab === tab.key && <View style={styles.tabIndicator} />}
+            {activeTab === tab.key && <View style={[styles.tabIndicator, { backgroundColor: themeColors.textPrimary }]} />}
           </Pressable>
         ))}
       </View>
@@ -207,7 +209,7 @@ export default function ProfileScreen() {
     <>
       <Stack.Screen options={{ headerShown: false }} />
 
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: themeColors.backgroundPrimary }]}>
         {activeTab === 'collections' ? (
           <FlatList
             data={collections}
@@ -244,11 +246,11 @@ export default function ProfileScreen() {
               </Pressable>
             )}
             showsVerticalScrollIndicator={false}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#22C55E" />}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={themeColors.primary} />}
             ListEmptyComponent={
               <View style={styles.emptyGrid}>
-                <Ionicons name="bookmark-outline" size={48} color="#CBD5E1" style={{ marginBottom: 12 }} />
-                <Text style={styles.emptyText}>No collections yet</Text>
+                <Ionicons name="bookmark-outline" size={48} color={themeColors.textTertiary} style={{ marginBottom: 12 }} />
+                <Text style={[styles.emptyText, { color: themeColors.textQuaternary }]}>No collections yet</Text>
               </View>
             }
           />
@@ -280,11 +282,11 @@ export default function ProfileScreen() {
               </Pressable>
             )}
             showsVerticalScrollIndicator={false}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#22C55E" />}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={themeColors.primary} />}
             ListEmptyComponent={
               <View style={styles.emptyGrid}>
-                <Ionicons name={activeTab === 'posts' ? 'camera-outline' : 'heart-outline'} size={48} color="#CBD5E1" style={{ marginBottom: 12 }} />
-                <Text style={styles.emptyText}>
+                <Ionicons name={activeTab === 'posts' ? 'camera-outline' : 'heart-outline'} size={48} color={themeColors.textTertiary} style={{ marginBottom: 12 }} />
+                <Text style={[styles.emptyText, { color: themeColors.textQuaternary }]}>
                   {activeTab === 'posts' ? 'No posts yet' : 'No liked posts yet'}
                 </Text>
               </View>
@@ -303,7 +305,6 @@ const styles = StyleSheet.create({
   },
   profileHeaderWrapper: {
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
   },
 
   /* Top navigation bar */

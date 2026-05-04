@@ -34,8 +34,8 @@ const sharedColors = {
 
 export const lightColors = {
   ...sharedColors,
-  black: '#000',
-  white: '#fff',
+  black: '#000000',
+  white: '#FFFFFF',
   textPrimary: '#0F172A',
   textSecondary: '#64748B',
   textTertiary: '#94A3B8',
@@ -44,7 +44,7 @@ export const lightColors = {
   border: '#E2E8F0',
   borderLight: '#F1F5F9',
   divider: '#E2E8F0',
-  backgroundPrimary: '#fff',
+  backgroundPrimary: '#FFFFFF',
   backgroundSecondary: '#F8FAFC',
   backgroundTertiary: '#F1F5F9',
   backgroundSubtle: '#FCFCFD',
@@ -162,4 +162,4 @@ export function getScaledTypography(multiplier: number) {
 }
 
 export const hitSlop = { top: 12, bottom: 12, left: 12, right: 12 };
-export const minTouchSize = 44; // Apple HIG minimum
+export const minTouchSize = 44;

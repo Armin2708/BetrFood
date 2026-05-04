@@ -2,8 +2,8 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { usePreferences } from '../context/PreferencesContext';
+import { useAppTheme } from '../context/ThemeContext';
 import { PantryItem } from '../services/api';
-import { colors } from '../constants/theme';
 import ConfirmDialog from './ConfirmDialog';
 
 interface PantryItemCardProps {
@@ -12,7 +12,11 @@ interface PantryItemCardProps {
   onEdit: (item: PantryItem) => void;
 }
 
-function getExpirationStatus(expirationDate: string | null, threshold: number | undefined): {
+function getExpirationStatus(
+  expirationDate: string | null,
+  threshold: number | undefined,
+  defaultColor: string
+): {
   label: string;
   color: string;
 } | null {
@@ -31,14 +35,15 @@ function getExpirationStatus(expirationDate: string | null, threshold: number | 
   if (threshold && diffDays <= threshold) return { label: `Expires in ${diffDays}d`, color: '#F57C00' };
   return {
     label: exp.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }),
-    color: colors.textTertiary,
+    color: defaultColor,
   };
 }
 
 export default function PantryItemCard({ item, onDelete, onEdit }: PantryItemCardProps) {
   const { preferences } = usePreferences();
+  const { colors } = useAppTheme();
   const threshold = preferences?.expiringItemsThreshold;
-  const expStatus = getExpirationStatus(item.expirationDate ?? null, threshold);
+  const expStatus = getExpirationStatus(item.expirationDate ?? null, threshold, colors.textTertiary);
   const [confirmVisible, setConfirmVisible] = React.useState(false);
 
   const handleConfirmDelete = async () => {
@@ -49,7 +54,7 @@ export default function PantryItemCard({ item, onDelete, onEdit }: PantryItemCar
   return (
     <>
       <View
-        style={styles.card}
+        style={[styles.card, { backgroundColor: colors.backgroundElevated, borderColor: colors.border }]}
         accessible
         accessibilityLabel={`${item.name}, ${item.quantity} ${item.unit}, category: ${item.category}`}
       >
@@ -60,12 +65,12 @@ export default function PantryItemCard({ item, onDelete, onEdit }: PantryItemCar
           accessibilityRole="button"
           accessibilityLabel={`Edit ${item.name}`}
         >
-          <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
+          <Text style={[styles.name, { color: colors.textPrimary }]} numberOfLines={1}>{item.name}</Text>
           <View style={styles.metaRow}>
-            <View style={styles.categoryChip}>
-              <Text style={styles.categoryText}>{item.category}</Text>
+            <View style={[styles.categoryChip, { backgroundColor: colors.backgroundTertiary }]}>
+              <Text style={[styles.categoryText, { color: colors.textSecondary }]}>{item.category}</Text>
             </View>
-            <Text style={styles.quantity}>
+            <Text style={[styles.quantity, { color: colors.textSecondary }]}>
               {item.quantity} {item.unit}
             </Text>
           </View>
@@ -114,18 +119,16 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.backgroundPrimary,
     borderBottomWidth: 1,
-    borderColor: colors.border,
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
   left: { flex: 1, gap: 4 },
-  name: { fontSize: 16, fontWeight: '600', color: colors.textPrimary },
+  name: { fontSize: 16, fontWeight: '600' },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  categoryChip: { borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2, backgroundColor: '#F0F0F0' },
-  categoryText: { fontSize: 11, fontWeight: '500', color: colors.textSecondary },
-  quantity: { fontSize: 13, color: colors.textSecondary },
+  categoryChip: { borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2 },
+  categoryText: { fontSize: 11, fontWeight: '500' },
+  quantity: { fontSize: 13 },
   expiration: { fontSize: 12 },
   editButton: { paddingLeft: 12 },
   deleteButton: { paddingLeft: 12 },

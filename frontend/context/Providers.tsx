@@ -10,7 +10,7 @@ import { ThemeProvider } from "./ThemeContext";
 // Wrapper to pass preferences to ThemeProvider
 function ThemeProviderWithPreferences({ children }: { children: React.ReactNode }) {
   const preferences = usePreferences();
-  
+
   return (
     <ThemeProvider initialTextSizeScale={preferences.preferences?.textSizeScale || 'default'}>
       {children}

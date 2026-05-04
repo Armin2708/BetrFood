@@ -4,7 +4,7 @@ import {
   ColorSchemeName,
   useColorScheme,
 } from 'react-native';
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { DarkTheme, DefaultTheme, Theme as NavigationTheme } from '@react-navigation/native';
 import { colors as sharedThemeColors, darkColors, lightColors, ThemeColors } from '../constants/theme';
 import { TEXT_SIZE_MULTIPLIERS, TextSizeScale } from '../utils/textSizeScaling';
@@ -75,15 +75,16 @@ export function ThemeProvider({ children, initialTextSizeScale = 'default' }: { 
     return () => subscription.remove();
   }, [detectedScheme]);
 
-  const setThemePreference = async (preference: ThemePreference) => {
+  const setThemePreference = useCallback(async (preference: ThemePreference) => {
     setThemePreferenceState(preference);
     await AsyncStorage.setItem(STORAGE_KEY, preference);
-  };
+  }, []);
 
   const resolvedTheme = resolveTheme(themePreference, systemScheme);
   const colors = resolvedTheme === 'dark' ? darkColors : lightColors;
   const textSizeMultiplier = TEXT_SIZE_MULTIPLIERS[textSizeScale] ?? 1.0;
 
+  // Bridge for legacy components that import `colors` directly from constants/theme
   useEffect(() => {
     Object.assign(sharedThemeColors, colors);
   }, [colors]);
@@ -117,7 +118,7 @@ export function ThemeProvider({ children, initialTextSizeScale = 'default' }: { 
       textSizeMultiplier,
       setTextSizeScale,
     }),
-    [themePreference, resolvedTheme, colors, navigationTheme, textSizeScale, textSizeMultiplier]
+    [themePreference, resolvedTheme, colors, navigationTheme, setThemePreference, textSizeScale, textSizeMultiplier]
   );
 
   if (!loaded) {

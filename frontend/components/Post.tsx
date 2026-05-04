@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useContext } from 'react';
+import React, { useState, useEffect, useRef, useContext, useMemo } from 'react';
 import SaveCollectionModal from "./SaveCollectionModal";
 import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,7 +10,8 @@ import { useScaledTypography } from '../hooks/useScaledTypography';
 import TagDisplay from './TagDisplay';
 import RecipeDisplay from './RecipeDisplay';
 import { useVideoPlayer, VideoView } from 'expo-video';
-import { colors } from '../constants/theme';
+import { ThemeColors } from '../constants/theme';
+import { useAppTheme } from '../context/ThemeContext';
 import { AuthContext } from '../context/AuthenticationContext';
 import {
   View,
@@ -112,6 +113,8 @@ export default function Post({
   const menuSlideAnim = useRef(new Animated.Value(Dimensions.get('window').height)).current;
   const commentInputRef = useRef<TextInput>(null);
   const { user } = useContext(AuthContext);
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [isBlocked, setIsBlocked] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [isNotInterested, setIsNotInterested] = useState(false);
@@ -1205,7 +1208,8 @@ function PostVideo({ uri }: { uri: string }) {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: ThemeColors) {
+  return StyleSheet.create({
   container: {
     marginVertical: 10,
     backgroundColor: colors.backgroundPrimary,
@@ -1605,4 +1609,5 @@ const styles = StyleSheet.create({
     color: colors.textTertiary,
     fontWeight: '500',
   },
-});
+  });
+}

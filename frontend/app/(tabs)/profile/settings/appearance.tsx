@@ -520,17 +520,6 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     lineHeight: 18,
   },
-  buttonContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    backgroundColor: colors.backgroundPrimary,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
   saveButton: {
     backgroundColor: colors.primary,
     paddingVertical: spacing.md,

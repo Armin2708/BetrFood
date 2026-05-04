@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import { usePreferences } from "../../../../context/PreferencesContext";
 import { useScaledTypography } from "../../../../hooks/useScaledTypography";
+import { useAppTheme } from "../../../../context/ThemeContext";
 import { PantryVisibility } from "../../../../services/api/preferences";
 
 const PANTRY_OPTIONS: { value: PantryVisibility; label: string; description: string }[] = [
@@ -29,6 +30,7 @@ const PANTRY_OPTIONS: { value: PantryVisibility; label: string; description: str
 ];
 
 export default function PrivacySettings() {
+  const { colors } = useAppTheme();
   const {
     preferences,
     loading,
@@ -55,8 +57,8 @@ export default function PrivacySettings() {
 
   if (loading || !preferences) {
     return (
-      <View style={[styles.container, styles.centered]}>
-        <ActivityIndicator size="large" color="#007AFF" />
+      <View style={[styles.container, styles.centered, { backgroundColor: colors.backgroundSecondary }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -67,14 +69,12 @@ export default function PrivacySettings() {
     (preferences as any).searchable !== false;
 
   return (
-    <View style={styles.container}>
-      <View style={styles.section}>
-
-        {/* Profile visibility */}
-        <View style={styles.row}>
+    <View style={[styles.container, { backgroundColor: colors.backgroundSecondary }]}>
+      <View style={[styles.section, { backgroundColor: colors.backgroundElevated, borderTopColor: colors.border }]}>
+        <View style={[styles.row, { borderBottomColor: colors.border }]}>
           <View style={styles.rowInfo}>
-            <Text style={styles.rowTitle}>Public Profile</Text>
-            <Text style={styles.rowDescription}>
+            <Text style={[styles.rowTitle, { color: colors.textPrimary }]}>Public Profile</Text>
+            <Text style={[styles.rowDescription, { color: colors.textSecondary }]}>
               {preferences.profileVisibility === "public"
                 ? "Anyone can see your profile"
                 : "Only followers can see your profile"}
@@ -83,16 +83,16 @@ export default function PrivacySettings() {
           <Switch
             value={preferences.profileVisibility === "public"}
             onValueChange={toggleVisibility}
-            trackColor={{ false: "#ccc", true: "#007AFF" }}
-            thumbColor="#fff"
+            trackColor={{ false: colors.border, true: colors.primary }}
+            thumbColor={colors.white}
           />
         </View>
 
         {/* Dietary info visibility */}
-        <View style={styles.row}>
+        <View style={[styles.row, { borderBottomColor: colors.border }]}>
           <View style={styles.rowInfo}>
-            <Text style={styles.rowTitle}>Show Dietary Info</Text>
-            <Text style={styles.rowDescription}>
+            <Text style={[styles.rowTitle, { color: colors.textPrimary }]}>Show Dietary Info</Text>
+            <Text style={[styles.rowDescription, { color: colors.textSecondary }]}>
               {preferences.dietaryInfoVisible
                 ? "Your dietary preferences are visible on your profile"
                 : "Your dietary preferences are hidden"}
@@ -101,16 +101,16 @@ export default function PrivacySettings() {
           <Switch
             value={preferences.dietaryInfoVisible}
             onValueChange={toggleDietaryInfo}
-            trackColor={{ false: "#ccc", true: "#007AFF" }}
-            thumbColor="#fff"
+            trackColor={{ false: colors.border, true: colors.primary }}
+            thumbColor={colors.white}
           />
         </View>
 
         {/* Search visibility */}
-        <View style={styles.row}>
+        <View style={[styles.row, { borderBottomColor: colors.border }]}>
           <View style={styles.rowInfo}>
-            <Text style={styles.rowTitle}>Appear in Search Results</Text>
-            <Text style={styles.rowDescription}>
+            <Text style={[styles.rowTitle, { color: colors.textPrimary }]}>Appear in Search Results</Text>
+            <Text style={[styles.rowDescription, { color: colors.textSecondary }]}>
               {isSearchable
                 ? "Your profile can be found through search"
                 : "Your profile is hidden from search results"}
@@ -119,19 +119,19 @@ export default function PrivacySettings() {
           <Switch
             value={isSearchable}
             onValueChange={toggleSearchable}
-            trackColor={{ false: "#ccc", true: "#007AFF" }}
-            thumbColor="#fff"
+            trackColor={{ false: colors.border, true: colors.primary }}
+            thumbColor={colors.white}
           />
         </View>
       </View>
 
       {/* Pantry visibility */}
-      <Text style={styles.sectionHeader}>Pantry Visibility</Text>
-      <Text style={styles.sectionSubtitle}>
+      <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>Pantry Visibility</Text>
+      <Text style={[styles.sectionSubtitle, { color: colors.textTertiary }]}>
         Choose who can see the items in your pantry. Defaults to only you.
       </Text>
 
-      <View style={styles.section}>
+      <View style={[styles.section, { backgroundColor: colors.backgroundElevated, borderTopColor: colors.border }]}>
         {PANTRY_OPTIONS.map(({ value, label, description }, idx) => {
           const isSelected = currentPantryVisibility === value;
           return (
@@ -139,20 +139,22 @@ export default function PrivacySettings() {
               key={value}
               style={[
                 styles.optionRow,
+                { borderBottomColor: colors.border },
                 idx === PANTRY_OPTIONS.length - 1 && styles.rowLast,
               ]}
               onPress={() => setPantryVisibility(value)}
               activeOpacity={0.7}
             >
               <View style={styles.rowInfo}>
-                <Text style={styles.rowTitle}>{label}</Text>
-                <Text style={styles.rowDescription}>{description}</Text>
+                <Text style={[styles.rowTitle, { color: colors.textPrimary }]}>{label}</Text>
+                <Text style={[styles.rowDescription, { color: colors.textSecondary }]}>{description}</Text>
               </View>
               <View style={[
                 styles.radioOuter,
+                { borderColor: isSelected ? colors.primary : colors.border },
                 isSelected && styles.radioOuterSelected,
               ]}>
-                {isSelected && <View style={styles.radioInner} />}
+                {isSelected && <View style={[styles.radioInner, { backgroundColor: colors.primary }]} />}
               </View>
             </TouchableOpacity>
           );
@@ -165,7 +167,6 @@ export default function PrivacySettings() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
     padding: 20,
   },
   centered: {
@@ -174,7 +175,8 @@ const styles = StyleSheet.create({
   },
   section: {
     borderTopWidth: 1,
-    borderTopColor: "#eee",
+    borderRadius: 18,
+    overflow: 'hidden',
   },
   sectionHeader: {
     marginTop: 28,
@@ -197,7 +199,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#eee",
   },
   optionRow: {
     flexDirection: "row",
@@ -205,7 +206,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#eee",
   },
   rowLast: {
     borderBottomWidth: 0,
@@ -216,11 +216,10 @@ const styles = StyleSheet.create({
   },
   rowTitle: {
     fontSize: 16,
-    fontWeight: "500",
+    fontWeight: "600",
   },
   rowDescription: {
     fontSize: 13,
-    color: "#888",
     marginTop: 3,
   },
   radioOuter: {

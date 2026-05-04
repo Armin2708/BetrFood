@@ -79,35 +79,6 @@ export default function Settings() {
           </View>
         </View>
 
-        {/* ABOUT */}
-        <Text style={styles.sectionHeader}>ABOUT</Text>
-        <View style={styles.card}>
-          <Pressable
-            style={styles.navRow}
-            onPress={() => router.push("/profile/settings/preferences" as any)}
-          >
-            <Text style={styles.navLabel}>Food Preferences</Text>
-            <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
-          </Pressable>
-          <View style={styles.divider} />
-          <Pressable
-            style={styles.navRow}
-            onPress={() => router.push("/profile/settings/linked-accounts" as any)}
-          >
-            <Text style={styles.navLabel}>Linked Accounts</Text>
-            <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
-          </Pressable>
-          <View style={styles.divider} />
-          <Pressable
-            style={styles.navRow}
-            onPress={() => router.push("/profile/settings/blocked" as any)}
-          >
-            <Text style={styles.navLabel}>Blocked & Muted</Text>
-            <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
-          </Pressable>
-          <View style={styles.divider} />
-        </View>
-
         {/* NOTIFICATIONS */}
         <Text style={[styles.sectionHeader, { color: colors.textTertiary }]}>NOTIFICATIONS</Text>
         <View style={[styles.card, { backgroundColor: colors.backgroundElevated }]}>
@@ -132,113 +103,116 @@ export default function Settings() {
           </Pressable>
         </View>
 
+        {/* ABOUT */}
+        <Text style={[styles.sectionHeader, { color: colors.textTertiary }]}>ABOUT</Text>
+        <View style={[styles.card, { backgroundColor: colors.backgroundElevated }]}>
+          <Pressable
+            style={styles.navRow}
+            onPress={() => router.push("/profile/settings/preferences" as any)}
+          >
+            <Text style={[styles.navLabel, { color: colors.textPrimary }]}>Food Preferences</Text>
+            <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+          </Pressable>
+          <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
+          <Pressable
+            style={styles.navRow}
+            onPress={() => router.push("/profile/settings/linked-accounts" as any)}
+          >
+            <Text style={[styles.navLabel, { color: colors.textPrimary }]}>Linked Accounts</Text>
+            <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+          </Pressable>
+        </View>
+
         {/* DATA AND PRIVACY */}
-        <Text style={styles.sectionHeader}>DATA AND PRIVACY</Text>
-        <View style={styles.card}>
+        <Text style={[styles.sectionHeader, { color: colors.textTertiary }]}>DATA AND PRIVACY</Text>
+        <View style={[styles.card, { backgroundColor: colors.backgroundElevated }]}>
           <Pressable
             style={styles.navRow}
             onPress={() => router.push("/profile/settings/privacy" as any)}
           >
-            <Text style={styles.navLabel}>Privacy</Text>
-            <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+            <Text style={[styles.navLabel, { color: colors.textPrimary }]}>Privacy</Text>
+            <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
           </Pressable>
-          <View style={styles.divider} />
+          <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
           <Pressable
             style={styles.navRow}
             onPress={() => router.push("/profile/settings/data-storage" as any)}
           >
-            <Text style={styles.navLabel}>Data & Storage</Text>
-            <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+            <Text style={[styles.navLabel, { color: colors.textPrimary }]}>Data & Storage</Text>
+            <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
           </Pressable>
-          <View style={styles.divider} />
-          <Pressable
-            style={styles.navRow}
-            onPress={() => router.push("/profile/settings/privacy-policy" as any)}
-          >
-            <Text style={styles.navLabel}>Privacy Policy</Text>
-            <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
-          </Pressable>
-          <View style={styles.divider} />
-          <Pressable
-            style={styles.navRow}
-            onPress={() => router.push("/profile/settings/terms" as any)}
-          >
-            <Text style={styles.navLabel}>Terms of Service</Text>
-            <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
-          </Pressable>
-          <View style={styles.divider} />
+          <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
           <Pressable
             style={styles.navRow}
             onPress={() => router.push("/profile/settings/export-data" as any)}
           >
-            <Text style={styles.navLabel}>Export My Data</Text>
-            <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+            <Text style={[styles.navLabel, { color: colors.textPrimary }]}>Export My Data</Text>
+            <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+          </Pressable>
+          <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
+          <Pressable
+            style={styles.navRow}
+            onPress={() => router.push("/profile/settings/terms" as any)}
+          >
+            <Text style={[styles.navLabel, { color: colors.textPrimary }]}>Terms of Service</Text>
+            <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+          </Pressable>
+          <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
+          <Pressable
+            style={styles.navRow}
+            onPress={() => router.push("/profile/settings/privacy-policy" as any)}
+          >
+            <Text style={[styles.navLabel, { color: colors.textPrimary }]}>Privacy Policy</Text>
+            <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
           </Pressable>
         </View>
 
         {/* LEGAL AND RESOURCES */}
-        <Text style={styles.sectionHeader}>LEGAL AND RESOURCES</Text>
-        <View style={styles.card}>
-          <Pressable style={styles.navRow}>
-            <Text style={styles.navLabel}>Cookie Policy</Text>
-            <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
-          </Pressable>
-          <View style={styles.divider} />
+        <Text style={[styles.sectionHeader, { color: colors.textTertiary }]}>LEGAL AND RESOURCES</Text>
+        <View style={[styles.card, { backgroundColor: colors.backgroundElevated }]}>
           <Pressable
             style={styles.navRow}
             onPress={() => router.push("/profile/settings/open-source-licenses" as any)}
           >
-            <Text style={styles.navLabel}>Open Source Licenses</Text>
-            <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+            <Text style={[styles.navLabel, { color: colors.textPrimary }]}>Open Source Licenses</Text>
+            <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
           </Pressable>
-          <View style={styles.divider} />
-          <Pressable style={styles.navRow}>
-            <Text style={styles.navLabel}>Acknowledgments</Text>
-            <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
-          </Pressable>
-          <View style={styles.divider} />
-          <Pressable
-            style={styles.navRow}
-            onPress={() => router.push("/profile/settings/bug-report" as any)}
-          >
-            <Text style={styles.navLabel}>Report a Bug</Text>
-            <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
-          </Pressable>
-          <View style={styles.divider} />
+          <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
           <Pressable
             style={styles.navRow}
             onPress={() => router.push("/profile/settings/help" as any)}
           >
-            <Text style={styles.navLabel}>Help & Support</Text>
-            <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+            <Text style={[styles.navLabel, { color: colors.textPrimary }]}>Help & Support</Text>
+            <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+          </Pressable>
+          <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
+          <Pressable
+            style={styles.navRow}
+            onPress={() => router.push("/profile/settings/bug-report" as any)}
+          >
+            <Text style={[styles.navLabel, { color: colors.textPrimary }]}>Report a Bug</Text>
+            <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+          </Pressable>
+          <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
+          <Pressable style={styles.navRow}>
+            <Text style={[styles.navLabel, { color: colors.textPrimary }]}>Cookie Policy</Text>
+            <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
           </Pressable>
         </View>
 
-        <Text style={styles.sectionHeader}></Text>
-        <View style={styles.card}>
-          <Pressable style={styles.navRow} onPress={handleLogout}>
-            <Text style={[styles.navLabel, { color: '#EF4444' }]}>Log Out</Text>
-            <Ionicons name="log-out-outline" size={18} color="#EF4444" />
-          </Pressable>
-          <View style={styles.divider} />
-          <Pressable style={styles.navRow} onPress={handleDeleteAccount}>
-            <Text style={[styles.navLabel, { color: '#EF4444' }]}>Delete Account</Text>
-            <Ionicons name="trash-outline" size={18} color="#EF4444" />
-          </Pressable>
-        </View>
         {/* FOLLOW US */}
         <Text style={[styles.sectionHeader, { color: colors.textTertiary }]}>FOLLOW US</Text>
         <View style={styles.socialRow}>
-          <Pressable style={[styles.socialIcon, { backgroundColor: colors.backgroundElevated }]} onPress={() => openLink("https://instagram.com/betrfood")}>
+          <Pressable style={[styles.socialIcon, { backgroundColor: colors.backgroundElevated, borderColor: colors.border }]} onPress={() => openLink("https://instagram.com/betrfood")}>
             <Ionicons name="logo-instagram" size={22} color={colors.textPrimary} />
           </Pressable>
-          <Pressable style={[styles.socialIcon, { backgroundColor: colors.backgroundElevated }]} onPress={() => openLink("https://twitter.com/betrfood")}>
+          <Pressable style={[styles.socialIcon, { backgroundColor: colors.backgroundElevated, borderColor: colors.border }]} onPress={() => openLink("https://twitter.com/betrfood")}>
             <Ionicons name="logo-twitter" size={22} color={colors.textPrimary} />
           </Pressable>
-          <Pressable style={[styles.socialIcon, { backgroundColor: colors.backgroundElevated }]} onPress={() => openLink("https://tiktok.com/@betrfood")}>
+          <Pressable style={[styles.socialIcon, { backgroundColor: colors.backgroundElevated, borderColor: colors.border }]} onPress={() => openLink("https://tiktok.com/@betrfood")}>
             <Ionicons name="logo-tiktok" size={22} color={colors.textPrimary} />
           </Pressable>
-          <Pressable style={[styles.socialIcon, { backgroundColor: colors.backgroundElevated }]} onPress={() => openLink("https://facebook.com/betrfood")}>
+          <Pressable style={[styles.socialIcon, { backgroundColor: colors.backgroundElevated, borderColor: colors.border }]} onPress={() => openLink("https://facebook.com/betrfood")}>
             <Ionicons name="logo-facebook" size={22} color={colors.textPrimary} />
           </Pressable>
         </View>
@@ -246,8 +220,8 @@ export default function Settings() {
         {/* Admin Panel Link */}
         {isAdminOrMod && (
           <>
-            <Text style={styles.sectionHeader}>ADMIN</Text>
-            <View style={styles.card}>
+            <Text style={[styles.sectionHeader, { color: colors.textTertiary }]}>ADMIN</Text>
+            <View style={[styles.card, { backgroundColor: colors.backgroundElevated }]}>
               <Pressable
                 style={styles.navRow}
                 onPress={() => router.push('/admin' as any)}
@@ -259,6 +233,28 @@ export default function Settings() {
           </>
         )}
 
+        {/* ACCOUNT ACTIONS */}
+        <Text style={[styles.sectionHeader, { color: colors.textTertiary }]}>ACCOUNT</Text>
+        <View style={[styles.card, { backgroundColor: colors.backgroundElevated }]}>
+          <Pressable
+            style={styles.navRow}
+            onPress={() => router.push("/profile/settings/blocked" as any)}
+          >
+            <Text style={[styles.navLabel, { color: colors.textPrimary }]}>Blocked & Muted</Text>
+            <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+          </Pressable>
+          <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
+          <Pressable style={styles.navRow} onPress={handleLogout}>
+            <Text style={[styles.navLabel, { color: '#EF4444' }]}>Log Out</Text>
+            <Ionicons name="log-out-outline" size={18} color="#EF4444" />
+          </Pressable>
+          <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
+          <Pressable style={styles.navRow} onPress={handleDeleteAccount}>
+            <Text style={[styles.navLabel, { color: '#EF4444' }]}>Delete Account</Text>
+            <Ionicons name="trash-outline" size={18} color="#EF4444" />
+          </Pressable>
+        </View>
+
         {/* About Text */}
         <Text style={[styles.aboutText, { color: colors.textSecondary }]}>
           BetrFood is made with love to help you discover healthier food choices, share recipes with friends, and build better eating habits together.
@@ -266,7 +262,7 @@ export default function Settings() {
 
         {/* Copyright */}
         <Text style={[styles.copyright, { color: colors.textTertiary }]}>
-          {"\u00A9"} 2024 BetrFood, Inc. All rights reserved.
+          {"©"} 2024 BetrFood, Inc. All rights reserved.
         </Text>
 
         <View style={{ height: 40 }} />
@@ -280,7 +276,10 @@ export default function Settings() {
         onRequestClose={() => !deleting && setDeleteModalVisible(false)}
       >
         <Pressable style={styles.modalOverlay} onPress={() => !deleting && setDeleteModalVisible(false)}>
-          <Pressable style={[styles.modalBox, { backgroundColor: colors.backgroundElevated }]} onPress={e => e.stopPropagation()}>
+          <Pressable
+            style={[styles.modalBox, { backgroundColor: colors.backgroundElevated }]}
+            onPress={e => e.stopPropagation()}
+          >
             <View style={styles.modalIconRow}>
               <Ionicons name="warning-outline" size={32} color="#EF4444" />
             </View>

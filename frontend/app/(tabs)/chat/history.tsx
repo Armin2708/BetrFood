@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -14,7 +14,8 @@ import Swipeable from 'react-native-gesture-handler/Swipeable';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { router } from 'expo-router';
-import { colors } from '../../../constants/theme';
+import { ThemeColors } from '../../../constants/theme';
+import { useAppTheme } from '../../../context/ThemeContext';
 import {
   Conversation,
   clearAllConversations,
@@ -41,6 +42,8 @@ function formatRelativeTime(dateString: string) {
 }
 
 export default function ChatHistoryScreen() {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [promptVisible, setPromptVisible] = useState(false);
@@ -246,124 +249,121 @@ export default function ChatHistoryScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.white,
-  },
-  centered: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    gap: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#D6E8DB',
-    backgroundColor: 'rgba(255,255,255,0.92)',
-  },
-  headerCopy: {
-    flex: 1,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.textPrimary,
-  },
-  subtitle: {
-    marginTop: 2,
-    fontSize: 12,
-    color: colors.textSecondary,
-  },
-  iconButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#EEF5EF',
-    borderWidth: 1,
-    borderColor: '#D9E9DD',
-  },
-  listContent: {
-    padding: 14,
-    gap: 10,
-  },
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    backgroundColor: colors.white,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: '#D9E9DD',
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-  },
-  cardIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.primaryDark,
-  },
-  cardBody: {
-    flex: 1,
-    gap: 2,
-  },
-  cardTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: colors.textPrimary,
-  },
-  cardPreview: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    lineHeight: 18,
-  },
-  cardMeta: {
-    fontSize: 12,
-    color: colors.textSecondary,
-  },
-  inlineButton: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#EEF5EF',
-  },
-  swipeDeleteAction: {
-    backgroundColor: '#DC2626',
-    justifyContent: 'center',
-    alignItems: 'center',
-    width: 80,
-    borderRadius: 18,
-    marginLeft: 8,
-    gap: 4,
-  },
-  swipeDeleteText: {
-    color: colors.white,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  clearAllButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    marginTop: 8,
-    marginBottom: 16,
-    paddingVertical: 12,
-  },
-  clearAllText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#DC2626',
-  },
-});
+function makeStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.backgroundPrimary,
+    },
+    centered: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+      gap: 12,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.border,
+      backgroundColor: colors.backgroundElevated,
+    },
+    headerCopy: {
+      flex: 1,
+    },
+    title: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: colors.textPrimary,
+    },
+    iconButton: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.backgroundTertiary,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    listContent: {
+      padding: 14,
+      gap: 10,
+    },
+    card: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      backgroundColor: colors.backgroundElevated,
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: colors.border,
+      paddingHorizontal: 14,
+      paddingVertical: 14,
+    },
+    cardIcon: {
+      width: 38,
+      height: 38,
+      borderRadius: 19,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.primaryDark,
+    },
+    cardBody: {
+      flex: 1,
+      gap: 2,
+    },
+    cardTitle: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: colors.textPrimary,
+    },
+    cardPreview: {
+      fontSize: 13,
+      color: colors.textSecondary,
+      lineHeight: 18,
+    },
+    cardMeta: {
+      fontSize: 12,
+      color: colors.textSecondary,
+    },
+    inlineButton: {
+      width: 30,
+      height: 30,
+      borderRadius: 15,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.backgroundTertiary,
+    },
+    swipeDeleteAction: {
+      backgroundColor: '#DC2626',
+      justifyContent: 'center',
+      alignItems: 'center',
+      width: 80,
+      borderRadius: 18,
+      marginLeft: 8,
+      gap: 4,
+    },
+    swipeDeleteText: {
+      color: colors.white,
+      fontSize: 12,
+      fontWeight: '600',
+    },
+    clearAllButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      marginTop: 8,
+      marginBottom: 16,
+      paddingVertical: 12,
+    },
+    clearAllText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: '#DC2626',
+    },
+  });
+}

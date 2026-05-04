@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -23,7 +23,8 @@ import * as Clipboard from 'expo-clipboard';
 import * as ImagePicker from 'expo-image-picker';
 import { useActionSheet } from '@expo/react-native-action-sheet';
 import { useScaledTypography } from '../../hooks/useScaledTypography';
-import { colors } from '../../constants/theme';
+import { ThemeColors } from '../../constants/theme';
+import { useAppTheme } from '../../context/ThemeContext';
 import { getImageUrl } from '../../services/api';
 import {
   ChatAttachment,
@@ -112,8 +113,9 @@ function stripMarkdown(text: string) {
     .trim();
 }
 
-function renderAssistantContent(content: string) {
-  const scaledTypography = useScaledTypography();
+function renderAssistantContent(content: string, colors: ThemeColors) {
+  const mdStyles = makeMarkdownStyles(colors);
+  const sheetStyles = makeStyles(colors);
   const lines = content.split('\n');
   const segments: { type: 'text' | 'allergen'; value: string }[] = [];
   let textBuffer = '';
@@ -136,23 +138,23 @@ function renderAssistantContent(content: string) {
   }
 
   if (segments.length === 0) {
-    return <Markdown style={markdownStyles} rules={markdownRules}>{content}</Markdown>;
+    return <Markdown style={mdStyles} rules={markdownRules}>{content}</Markdown>;
   }
 
   return (
-    <View style={styles.segmentStack}>
+    <View style={sheetStyles.segmentStack}>
       {segments.map((segment, index) => {
         if (segment.type === 'allergen') {
           return (
-            <View key={`${segment.type}-${index}`} style={styles.allergenWarning}>
+            <View key={`${segment.type}-${index}`} style={sheetStyles.allergenWarning}>
               <Ionicons name="warning" size={15} color="#B45309" />
-              <Text style={[styles.allergenText, scaledTypography.body]}>{segment.value}</Text>
+              <Text style={sheetStyles.allergenText}>{segment.value}</Text>
             </View>
           );
         }
 
         return (
-          <Markdown key={`${segment.type}-${index}`} style={markdownStyles} rules={markdownRules}>
+          <Markdown key={`${segment.type}-${index}`} style={mdStyles} rules={markdownRules}>
             {segment.value}
           </Markdown>
         );
@@ -163,6 +165,8 @@ function renderAssistantContent(content: string) {
 
 function SuggestedPostCard({ post }: { post: SuggestedPost }) {
   const scaledTypography = useScaledTypography();
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const imageUri = post.imagePath ? getImageUrl(post.imagePath) : null;
 
   return (
@@ -190,6 +194,8 @@ function SuggestedPostCard({ post }: { post: SuggestedPost }) {
 }
 
 function PostContextCard({ context }: { context: PostContext }) {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <View style={styles.postContextCard}>
       <View style={styles.postContextHeader}>
@@ -228,6 +234,8 @@ export default function AssistantChatScreen({
   postContext = null,
   showBackButton = false,
 }: AssistantChatScreenProps) {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { showActionSheetWithOptions } = useActionSheet();
   const scaledTypography = useScaledTypography();
   const flatListRef = useRef<FlatList<ChatMessage>>(null);
@@ -586,7 +594,7 @@ export default function AssistantChatScreen({
               <Ionicons name="sparkles" size={15} color={colors.white} />
             </View>
             <View style={styles.assistantBody}>
-              <View style={styles.assistantBubble}>{renderAssistantContent(item.content)}</View>
+              <View style={styles.assistantBubble}>{renderAssistantContent(item.content, colors)}</View>
               <View style={styles.assistantFooter}>
                 <TouchableOpacity style={styles.actionButton} onPress={() => handleCopy(item.content)}>
                   <Ionicons name="copy-outline" size={15} color={colors.textSecondary} />
@@ -612,7 +620,7 @@ export default function AssistantChatScreen({
         ) : null}
       </View>
     );
-  }, [handleCopy, scaledTypography]);
+  }, [handleCopy, scaledTypography, colors, styles]);
 
   const renderEmptyState = useCallback(() => {
     if (loading) {
@@ -653,7 +661,7 @@ export default function AssistantChatScreen({
         </View>
       </View>
     );
-  }, [handlePantrySuggestions, handleSend, isBusy, loading]);
+  }, [handlePantrySuggestions, handleSend, isBusy, loading, colors, styles]);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={[]}>
@@ -732,7 +740,7 @@ export default function AssistantChatScreen({
                 <View style={styles.assistantAvatar}>
                   <Ionicons name="sparkles" size={15} color={colors.white} />
                 </View>
-                <View style={styles.streamingBubble}>{renderAssistantContent(streamingContent)}</View>
+                <View style={styles.streamingBubble}>{renderAssistantContent(streamingContent, colors)}</View>
               </View>
             ) : null}
           </View>
@@ -837,7 +845,7 @@ function renderTextWithEmoji(text: string, key: string): React.ReactNode {
     }
     // Render each emoji in isolation so the OS emoji font fallback kicks in
     parts.push(
-      <Text key={`${key}e${i++}`} style={markdownStyles.emoji}>
+      <Text key={`${key}e${i++}`} style={{ includeFontPadding: false }}>
         {m[0]}
       </Text>
     );
@@ -854,7 +862,8 @@ const markdownRules = {
   text: (node: any) => renderTextWithEmoji(node.content ?? '', node.key),
 };
 
-const markdownStyles = StyleSheet.create({
+function makeMarkdownStyles(colors: ThemeColors) {
+  return StyleSheet.create({
   emoji: {
     includeFontPadding: false,
   },
@@ -879,29 +888,31 @@ const markdownStyles = StyleSheet.create({
     marginVertical: 2,
   },
   code_inline: {
-    backgroundColor: '#E2E8F0',
+    backgroundColor: colors.backgroundTertiary,
     borderRadius: 4,
     paddingHorizontal: 4,
     fontSize: 13,
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
   },
   fence: {
-    backgroundColor: '#E2E8F0',
+    backgroundColor: colors.backgroundTertiary,
     borderRadius: 10,
     padding: 10,
     fontSize: 13,
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
   },
-});
+  });
+}
 
-const styles = StyleSheet.create({
+function makeStyles(colors: ThemeColors) {
+  return StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.white,
+    backgroundColor: colors.backgroundPrimary,
   },
   shell: {
     flex: 1,
-    backgroundColor: colors.white,
+    backgroundColor: colors.backgroundPrimary,
   },
   flex: {
     flex: 1,
@@ -918,9 +929,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 4,
     paddingBottom: 8,
-    backgroundColor: colors.white,
+    backgroundColor: colors.backgroundElevated,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: colors.border,
   },
   headerLeft: {
     flexDirection: 'row',
@@ -945,9 +956,9 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#EEF5EF',
+    backgroundColor: colors.backgroundTertiary,
     borderWidth: 1,
-    borderColor: '#D9E9DD',
+    borderColor: colors.border,
   },
   listContent: {
     paddingHorizontal: 14,
@@ -1003,9 +1014,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 14,
     borderRadius: 20,
-    backgroundColor: colors.white,
+    backgroundColor: colors.backgroundElevated,
     borderWidth: 1,
-    borderColor: '#D9E9DD',
+    borderColor: colors.border,
     paddingHorizontal: 16,
     paddingVertical: 15,
   },
@@ -1081,13 +1092,13 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   assistantBubble: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.backgroundElevated,
     borderRadius: 22,
     borderTopLeftRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
   },
   assistantFooter: {
     flexDirection: 'row',
@@ -1105,7 +1116,7 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#EDF3EE',
+    backgroundColor: colors.backgroundTertiary,
   },
   segmentStack: {
     gap: 6,
@@ -1142,9 +1153,9 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: colors.white,
+    backgroundColor: colors.backgroundElevated,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
   },
   typingText: {
     fontSize: 14,
@@ -1156,15 +1167,15 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    backgroundColor: colors.white,
+    backgroundColor: colors.backgroundElevated,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
   },
   composerWrap: {
     paddingHorizontal: 12,
     paddingTop: 0,
     paddingBottom: 0,
-    backgroundColor: colors.white,
+    backgroundColor: colors.backgroundElevated,
   },
   attachmentPreviewCard: {
     alignSelf: 'flex-end',
@@ -1214,9 +1225,9 @@ const styles = StyleSheet.create({
     position: 'relative',
     overflow: 'hidden',
     justifyContent: 'flex-start',
-    backgroundColor: '#F4FBF5',
+    backgroundColor: colors.backgroundTertiary,
     borderWidth: 1,
-    borderColor: '#CFE5D4',
+    borderColor: colors.border,
     borderRadius: 24,
     paddingLeft: 18,
     paddingRight: 18,
@@ -1303,7 +1314,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     paddingHorizontal: 8,
     paddingVertical: 2,
-    backgroundColor: colors.white,
+    backgroundColor: colors.backgroundElevated,
     borderRadius: 10,
   },
   suggestedPostsWrap: {
@@ -1327,9 +1338,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
     borderRadius: 16,
-    backgroundColor: colors.white,
+    backgroundColor: colors.backgroundElevated,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
     padding: 10,
     minWidth: 200,
   },
@@ -1374,4 +1385,5 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
   },
-});
+  });
+}

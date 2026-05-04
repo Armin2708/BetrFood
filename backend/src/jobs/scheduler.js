@@ -187,6 +187,7 @@ async function updateAllUserPreferenceVectors() {
               .eq('user_id', user.id)
               .single();
 
+            // Calculate new preference vector
             const vector = await calculateUserPreferenceVector(user.id, {
               ...(userPrefs || {}),
               profile_dietary_preferences: user.dietary_preferences || [],
