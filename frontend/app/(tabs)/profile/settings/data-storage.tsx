@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   ScrollView,
   Modal,
   ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { resetRecommendations } from "../../../../services/api";
@@ -16,6 +17,32 @@ import {
   formatCacheSize,
   getMediaCacheSizeBytes,
 } from "../../../../utils/mediaCache";
+import {
+  getStorageBreakdown,
+  StorageBreakdown,
+} from "../../../../utils/storageUsage";
+
+type IoniconName = React.ComponentProps<typeof Ionicons>["name"];
+
+function StorageBreakdownRow({
+  icon,
+  label,
+  bytes,
+}: {
+  icon: IoniconName;
+  label: string;
+  bytes: number;
+}) {
+  return (
+    <View style={styles.storageRow}>
+      <View style={styles.storageIcon}>
+        <Ionicons name={icon} size={18} color="#475569" />
+      </View>
+      <Text style={styles.storageLabel}>{label}</Text>
+      <Text style={styles.storageValue}>{formatCacheSize(bytes)}</Text>
+    </View>
+  );
+}
 
 export default function DataStorageScreen() {
   const [confirmVisible, setConfirmVisible] = useState(false);
@@ -25,6 +52,10 @@ export default function DataStorageScreen() {
   const [calculatingCache, setCalculatingCache] = useState(true);
   const [cacheConfirmVisible, setCacheConfirmVisible] = useState(false);
   const [clearingCache, setClearingCache] = useState(false);
+
+  const [storage, setStorage] = useState<StorageBreakdown | null>(null);
+  const [calculatingStorage, setCalculatingStorage] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   const refreshCacheSize = useCallback(async () => {
     setCalculatingCache(true);
@@ -38,15 +69,38 @@ export default function DataStorageScreen() {
     }
   }, []);
 
+  const refreshStorageBreakdown = useCallback(async () => {
+    setCalculatingStorage(true);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    try {
+      setStorage(getStorageBreakdown());
+    } catch {
+      setStorage({ cacheBytes: 0, downloadsBytes: 0, appDataBytes: 0, totalBytes: 0 });
+    } finally {
+      setCalculatingStorage(false);
+    }
+  }, []);
+
   useEffect(() => {
     refreshCacheSize();
-  }, [refreshCacheSize]);
+    refreshStorageBreakdown();
+  }, [refreshCacheSize, refreshStorageBreakdown]);
+
+  const handlePullToRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([refreshCacheSize(), refreshStorageBreakdown()]);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refreshCacheSize, refreshStorageBreakdown]);
 
   const handleConfirmClearCache = async () => {
     setClearingCache(true);
     try {
       await clearMediaCache();
       setCacheSizeBytes(getMediaCacheSizeBytes());
+      await refreshStorageBreakdown();
       setCacheConfirmVisible(false);
       Alert.alert(
         "Cache cleared",
@@ -92,7 +146,57 @@ export default function DataStorageScreen() {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handlePullToRefresh}
+            tintColor="#94A3B8"
+          />
+        }
       >
+        <Text style={styles.sectionHeader}>STORAGE USAGE</Text>
+        <View style={styles.card}>
+          <View style={styles.infoBlock}>
+            <Text style={styles.infoTitle}>On this device</Text>
+            <Text style={styles.infoDescription}>
+              How much space BetrFood is using on your phone. Pull down to recalculate.
+            </Text>
+          </View>
+
+          {calculatingStorage && storage === null ? (
+            <View style={styles.storageLoading}>
+              <ActivityIndicator size="small" color="#94A3B8" />
+            </View>
+          ) : (
+            <View style={styles.storageBreakdown}>
+              <StorageBreakdownRow
+                icon="image-outline"
+                label="Cache"
+                bytes={storage?.cacheBytes ?? 0}
+              />
+              <View style={styles.storageDivider} />
+              <StorageBreakdownRow
+                icon="cloud-download-outline"
+                label="Downloads"
+                bytes={storage?.downloadsBytes ?? 0}
+              />
+              <View style={styles.storageDivider} />
+              <StorageBreakdownRow
+                icon="folder-outline"
+                label="App Data"
+                bytes={storage?.appDataBytes ?? 0}
+              />
+              <View style={[styles.storageDivider, styles.storageTotalDivider]} />
+              <View style={styles.storageRow}>
+                <Text style={styles.storageTotalLabel}>Total</Text>
+                <Text style={styles.storageTotalValue}>
+                  {formatCacheSize(storage?.totalBytes ?? 0)}
+                </Text>
+              </View>
+            </View>
+          )}
+        </View>
+
         <Text style={styles.sectionHeader}>CACHE</Text>
         <View style={styles.card}>
           <View style={styles.infoBlock}>
@@ -309,6 +413,56 @@ const styles = StyleSheet.create({
   cacheSizeValue: {
     fontSize: 15,
     fontWeight: "600",
+    color: "#0F172A",
+  },
+  storageLoading: {
+    paddingVertical: 24,
+    alignItems: "center",
+  },
+  storageBreakdown: {
+    backgroundColor: "#F8FAFC",
+    borderRadius: 12,
+    paddingVertical: 4,
+  },
+  storageRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+  },
+  storageIcon: {
+    width: 28,
+    alignItems: "center",
+  },
+  storageLabel: {
+    flex: 1,
+    marginLeft: 8,
+    fontSize: 14,
+    color: "#0F172A",
+  },
+  storageValue: {
+    fontSize: 14,
+    color: "#475569",
+    fontWeight: "500",
+  },
+  storageDivider: {
+    height: 1,
+    backgroundColor: "#E2E8F0",
+    marginHorizontal: 14,
+  },
+  storageTotalDivider: {
+    marginHorizontal: 0,
+    backgroundColor: "#CBD5E1",
+  },
+  storageTotalLabel: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#0F172A",
+  },
+  storageTotalValue: {
+    fontSize: 15,
+    fontWeight: "700",
     color: "#0F172A",
   },
   modalOverlay: {
