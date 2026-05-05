@@ -3,6 +3,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  Pressable,
   StyleSheet,
   ActivityIndicator,
   ScrollView,
@@ -15,6 +16,7 @@ import { useState, useCallback } from "react";
 import { useRouter, Redirect } from "expo-router";
 import { useAuth, useSignIn, useSignUp, useSSO } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import * as AuthSession from "expo-auth-session";
 import * as WebBrowser from "expo-web-browser";
 import Svg, { Path } from "react-native-svg";
@@ -70,6 +72,8 @@ function WebSignup() {
   const [pendingVerification, setPendingVerification] = useState(false);
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleSignup = async () => {
     if (!isLoaded || !signUp) return;
@@ -295,9 +299,12 @@ function WebSignup() {
           onChangeText={setPassword}
           value={password}
           style={styles.input}
-          secureTextEntry
+          secureTextEntry={!showPassword}
           autoCapitalize="none"
         />
+        <Pressable onPress={() => setShowPassword((v) => !v)} hitSlop={8} style={styles.eyeButton}>
+          <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={20} color="#94A3B8" />
+        </Pressable>
       </View>
 
       <Text style={styles.label}>Confirm Password</Text>
@@ -308,9 +315,12 @@ function WebSignup() {
           onChangeText={setConfirmPassword}
           value={confirmPassword}
           style={styles.input}
-          secureTextEntry
+          secureTextEntry={!showConfirmPassword}
           autoCapitalize="none"
         />
+        <Pressable onPress={() => setShowConfirmPassword((v) => !v)} hitSlop={8} style={styles.eyeButton}>
+          <Ionicons name={showConfirmPassword ? "eye-off-outline" : "eye-outline"} size={20} color="#94A3B8" />
+        </Pressable>
       </View>
 
       <TouchableOpacity
@@ -319,11 +329,18 @@ function WebSignup() {
         disabled={loading}
         activeOpacity={0.85}
       >
-        {loading ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.signUpButtonText}>Sign Up</Text>
-        )}
+        <LinearGradient
+          colors={["#22C55E", "#10B981"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.signUpButtonGradient}
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.signUpButtonText}>Sign Up</Text>
+          )}
+        </LinearGradient>
       </TouchableOpacity>
 
       <View style={styles.footer}>
@@ -359,6 +376,8 @@ function NativeSignup() {
   const [pendingVerification, setPendingVerification] = useState(false);
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleSignup = async () => {
     if (!isLoaded || !signUp) return;
@@ -598,9 +617,12 @@ function NativeSignup() {
             onChangeText={setPassword}
             value={password}
             style={styles.input}
-            secureTextEntry
+            secureTextEntry={!showPassword}
             autoCapitalize="none"
           />
+          <Pressable onPress={() => setShowPassword((v) => !v)} hitSlop={8} style={styles.eyeButton}>
+            <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={20} color="#94A3B8" />
+          </Pressable>
         </View>
 
         {/* Confirm Password */}
@@ -612,9 +634,12 @@ function NativeSignup() {
             onChangeText={setConfirmPassword}
             value={confirmPassword}
             style={styles.input}
-            secureTextEntry
+            secureTextEntry={!showConfirmPassword}
             autoCapitalize="none"
           />
+          <Pressable onPress={() => setShowConfirmPassword((v) => !v)} hitSlop={8} style={styles.eyeButton}>
+            <Ionicons name={showConfirmPassword ? "eye-off-outline" : "eye-outline"} size={20} color="#94A3B8" />
+          </Pressable>
         </View>
 
         {/* Sign Up Button */}
@@ -624,11 +649,18 @@ function NativeSignup() {
           disabled={loading}
           activeOpacity={0.85}
         >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.signUpButtonText}>Sign Up</Text>
-          )}
+          <LinearGradient
+            colors={["#22C55E", "#10B981"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.signUpButtonGradient}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.signUpButtonText}>Sign Up</Text>
+            )}
+          </LinearGradient>
         </TouchableOpacity>
 
         {/* Footer */}
@@ -740,18 +772,24 @@ const styles = StyleSheet.create({
     color: "#0F172A",
     flex: 1,
   },
+  eyeButton: {
+    paddingLeft: 8,
+  },
   signUpButton: {
-    backgroundColor: "#22C55E",
     borderRadius: 14,
+    overflow: "hidden",
+    marginTop: 20,
+    shadowColor: "#22C55E",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  signUpButtonGradient: {
     height: 52,
+    borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 20,
-    shadowColor: "rgba(34, 197, 94, 0.35)",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 1,
-    shadowRadius: 10,
-    elevation: 5,
   },
   signUpButtonText: {
     color: "#fff",

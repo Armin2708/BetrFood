@@ -92,6 +92,8 @@ function LoginFormUI({
   onForgotPassword: () => void;
   onSignup: () => void;
 }) {
+  const [showPassword, setShowPassword] = useState(false);
+
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
@@ -134,16 +136,21 @@ function LoginFormUI({
         />
 
         {/* Password input */}
-        <TextInput
-          placeholder="Password"
-          placeholderTextColor="#94A3B8"
-          secureTextEntry
-          onChangeText={setPassword}
-          value={password}
-          style={styles.input}
-          accessibilityLabel="Password"
-          accessibilityHint="Enter your password"
-        />
+        <View style={styles.passwordWrapper}>
+          <TextInput
+            placeholder="Password"
+            placeholderTextColor="#94A3B8"
+            secureTextEntry={!showPassword}
+            onChangeText={setPassword}
+            value={password}
+            style={[styles.input, styles.passwordInput]}
+            accessibilityLabel="Password"
+            accessibilityHint="Enter your password"
+          />
+          <Pressable style={styles.eyeButton} onPress={() => setShowPassword((v) => !v)} hitSlop={8}>
+            <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={20} color="#94A3B8" />
+          </Pressable>
+        </View>
 
         {/* Log In button */}
         <TouchableOpacity
@@ -658,6 +665,22 @@ const styles = StyleSheet.create({
     color: "#0F172A",
     backgroundColor: "#FFFFFF",
     marginBottom: 14,
+  },
+  passwordWrapper: {
+    position: "relative",
+    width: "100%",
+    marginBottom: 14,
+  },
+  passwordInput: {
+    marginBottom: 0,
+    paddingRight: 48,
+  },
+  eyeButton: {
+    position: "absolute",
+    right: 16,
+    top: 0,
+    bottom: 0,
+    justifyContent: "center",
   },
   button: {
     width: "100%",
