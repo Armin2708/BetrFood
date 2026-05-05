@@ -72,7 +72,7 @@ export { fetchAdminUsers, updateUserRole, fetchAdminStats, updateUserVerificatio
 export type { AdminUser, AdminStats } from './admin';
 export { fetchPantryItems, createPantryItem, updatePantryItem, deletePantryItem, identifyPantryItems, identifySingleItem, scanReceipt } from './pantry';
 export type { PantryItem, PantryItemInput, IdentifiedItem, SingleItemResult } from './pantry';
-export { sendChatMessage, fetchChatHistory } from './chat';
+export { sendChatMessage, fetchChatHistory, clearAllConversations } from './chat';
 export type { ChatMessage } from './chat';
 export { trackPostView, markPostNotInterested, removeNotInterestedFeedback, getNotInterestedPosts, resetRecommendations } from './interactions';
 export { fetchFaq, recordFaqView } from './faq';

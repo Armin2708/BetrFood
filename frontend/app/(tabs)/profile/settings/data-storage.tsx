@@ -14,7 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAppTheme } from "../../../../context/ThemeContext";
 import { useScaledTypography } from "../../../../hooks/useScaledTypography";
-import { resetRecommendations } from "../../../../services/api";
+import { clearAllConversations, resetRecommendations } from "../../../../services/api";
 
 const RECENT_SEARCHES_KEY = "betrfood:recent_searches";
 
@@ -62,6 +62,9 @@ export default function DataStorageScreen() {
 
   const [searchConfirmVisible, setSearchConfirmVisible] = useState(false);
   const [clearingSearch, setClearingSearch] = useState(false);
+
+  const [chatConfirmVisible, setChatConfirmVisible] = useState(false);
+  const [clearingChat, setClearingChat] = useState(false);
 
   const [cacheSizeBytes, setCacheSizeBytes] = useState<number | null>(null);
   const [calculatingCache, setCalculatingCache] = useState(true);
@@ -132,6 +135,20 @@ export default function DataStorageScreen() {
   const cacheIsEmpty = cacheSizeBytes !== null && cacheSizeBytes === 0;
   const cacheSizeLabel =
     cacheSizeBytes === null ? "Calculating…" : formatCacheSize(cacheSizeBytes);
+
+  const handleConfirmClearChatHistory = async () => {
+    setClearingChat(true);
+    try {
+      await clearAllConversations();
+      setChatConfirmVisible(false);
+      Alert.alert("Chat history cleared", "All AI chat sessions have been deleted.");
+    } catch {
+      setChatConfirmVisible(false);
+      Alert.alert("Something went wrong", "We couldn't clear your chat history. Please try again.");
+    } finally {
+      setClearingChat(false);
+    }
+  };
 
   const handleConfirmClearSearchHistory = async () => {
     setClearingSearch(true);
@@ -273,6 +290,23 @@ export default function DataStorageScreen() {
           </Pressable>
         </View>
 
+        <Text style={[styles.sectionHeader, scaledTypography.caption]}>AI CHAT HISTORY</Text>
+        <View style={styles.card}>
+          <View style={styles.infoBlock}>
+            <Text style={[styles.infoTitle, scaledTypography.label]}>Clear AI Chat History</Text>
+            <Text style={[styles.infoDescription, scaledTypography.small]}>
+              Permanently delete all your AI chat sessions and messages. This cannot be undone.
+            </Text>
+          </View>
+          <Pressable
+            style={styles.resetButton}
+            onPress={() => setChatConfirmVisible(true)}
+          >
+            <Ionicons name="chatbubbles-outline" size={18} color="#EF4444" />
+            <Text style={[styles.resetButtonText, scaledTypography.body]}>Clear Chat History</Text>
+          </Pressable>
+        </View>
+
         <Text style={[styles.sectionHeader, scaledTypography.caption]}>RECOMMENDATIONS</Text>
         <View style={styles.card}>
           <View style={styles.infoBlock}>
@@ -375,6 +409,46 @@ export default function DataStorageScreen() {
               disabled={clearingSearch}
             >
               <Text style={styles.modalCancelText}>Cancel</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      <Modal
+        visible={chatConfirmVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => !clearingChat && setChatConfirmVisible(false)}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => !clearingChat && setChatConfirmVisible(false)}
+        >
+          <Pressable style={styles.modalBox} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.modalIconRow}>
+              <Ionicons name="chatbubbles-outline" size={28} color="#EF4444" />
+            </View>
+            <Text style={styles.modalTitle}>Clear chat history?</Text>
+            <Text style={styles.modalMessage}>
+              All AI chat sessions and messages will be permanently deleted. This cannot be undone.
+            </Text>
+            <Pressable
+              style={[styles.modalConfirmButton, clearingChat && { opacity: 0.6 }]}
+              onPress={handleConfirmClearChatHistory}
+              disabled={clearingChat}
+            >
+              {clearingChat ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.modalConfirmText}>Clear History</Text>
+              )}
+            </Pressable>
+            <Pressable
+              style={styles.modalCancelButton}
+              onPress={() => setChatConfirmVisible(false)}
+              disabled={clearingChat}
+            >
+              <Text style={[styles.modalCancelText, scaledTypography.body]}>Cancel</Text>
             </Pressable>
           </Pressable>
         </Pressable>
