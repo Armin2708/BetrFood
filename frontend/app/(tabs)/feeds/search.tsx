@@ -185,7 +185,6 @@ export default function SearchScreen() {
   // Trending hashtags
   const [trendingTags, setTrendingTags] = useState<TrendingTag[]>([]);
   const [trendingLoading, setTrendingLoading] = useState(false);
-  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<TextInput>(null);
 
   const POSTS_PAGE = 20;
@@ -367,24 +366,6 @@ export default function SearchScreen() {
     }
   }, []);
 
-  const triggerSearch = useCallback((text: string, filters: SearchFilters) => {
-    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
-    if (text.trim().length === 0) {
-      setPostResults([]);
-      setUserResults([]);
-      setSearched(false);
-      return;
-    }
-    searchDebounceRef.current = setTimeout(() => {
-      setSearched(true);
-      setPostsOffset(0);
-      recordSearchQuery(text.trim());
-      saveRecentSearch(text.trim(), recentSearches).then(setRecentSearches);
-      runPostSearch(text, filters);
-      runUserSearch(text);
-    }, 350);
-  }, [runPostSearch, runUserSearch, recentSearches]);
-
   const handleSearch = useCallback((text: string) => {
     setQuery(text);
     if (autocompleteDebounceRef.current) clearTimeout(autocompleteDebounceRef.current);
@@ -396,8 +377,26 @@ export default function SearchScreen() {
         fetchSuggestions(text);
       }, 200);
     }
-    triggerSearch(text, currentFilters);
-  }, [triggerSearch, currentFilters, fetchSuggestions]);
+    if (text.trim().length === 0) {
+      setPostResults([]);
+      setUserResults([]);
+      setSearched(false);
+    }
+  }, [fetchSuggestions]);
+
+  const handleSubmitSearch = useCallback(() => {
+    const text = query.trim();
+    if (!text) return;
+    setShowSuggestions(false);
+    setSuggestions([]);
+    setInputFocused(false);
+    recordSearchQuery(text);
+    saveRecentSearch(text, recentSearches).then(setRecentSearches);
+    setSearched(true);
+    setPostsOffset(0);
+    runPostSearch(text, currentFilters);
+    runUserSearch(text);
+  }, [query, recentSearches, currentFilters, runPostSearch, runUserSearch]);
 
   const handleFiltersApplied = useCallback((
     tagIds: number[],
@@ -814,6 +813,7 @@ export default function SearchScreen() {
             autoCorrect={false}
             onFocus={handleInputFocus}
             onBlur={handleInputBlur}
+            onSubmitEditing={handleSubmitSearch}
           />
           {query.length > 0 && (
             <TouchableOpacity

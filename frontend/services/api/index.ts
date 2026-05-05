@@ -74,6 +74,6 @@ export { fetchPantryItems, createPantryItem, updatePantryItem, deletePantryItem,
 export type { PantryItem, PantryItemInput, IdentifiedItem, SingleItemResult } from './pantry';
 export { sendChatMessage, fetchChatHistory } from './chat';
 export type { ChatMessage } from './chat';
-export { trackPostView, markPostNotInterested, removeNotInterestedFeedback, getNotInterestedPosts } from './interactions';
+export { trackPostView, markPostNotInterested, removeNotInterestedFeedback, getNotInterestedPosts, resetRecommendations } from './interactions';
 export { fetchFaq, recordFaqView } from './faq';
 export type { FaqCategory, FaqItem } from './faq';

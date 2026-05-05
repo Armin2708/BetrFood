@@ -11,9 +11,13 @@ import {
   RefreshControl,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAppTheme } from "../../../../context/ThemeContext";
 import { useScaledTypography } from "../../../../hooks/useScaledTypography";
 import { resetRecommendations } from "../../../../services/api";
+
+const RECENT_SEARCHES_KEY = "betrfood:recent_searches";
+
 import {
   clearMediaCache,
   formatCacheSize,
@@ -37,7 +41,7 @@ function StorageBreakdownRow({
   label: string;
   bytes: number;
   scaledTypography: ReturnType<typeof useScaledTypography>;
-  colors: ReturnType<typeof useAppTheme>['colors'];
+  colors?: ReturnType<typeof useAppTheme>['colors'];
 }) {
   return (
     <View style={styles.storageRow}>
@@ -55,6 +59,9 @@ export default function DataStorageScreen() {
   const scaledTypography = useScaledTypography();
   const [confirmVisible, setConfirmVisible] = useState(false);
   const [resetting, setResetting] = useState(false);
+
+  const [searchConfirmVisible, setSearchConfirmVisible] = useState(false);
+  const [clearingSearch, setClearingSearch] = useState(false);
 
   const [cacheSizeBytes, setCacheSizeBytes] = useState<number | null>(null);
   const [calculatingCache, setCalculatingCache] = useState(true);
@@ -125,6 +132,20 @@ export default function DataStorageScreen() {
   const cacheIsEmpty = cacheSizeBytes !== null && cacheSizeBytes === 0;
   const cacheSizeLabel =
     cacheSizeBytes === null ? "Calculating…" : formatCacheSize(cacheSizeBytes);
+
+  const handleConfirmClearSearchHistory = async () => {
+    setClearingSearch(true);
+    try {
+      await AsyncStorage.removeItem(RECENT_SEARCHES_KEY);
+      setSearchConfirmVisible(false);
+      Alert.alert("Search history cleared", "Your recent searches have been removed.");
+    } catch {
+      setSearchConfirmVisible(false);
+      Alert.alert("Something went wrong", "We couldn't clear your search history. Please try again.");
+    } finally {
+      setClearingSearch(false);
+    }
+  };
 
   const handleConfirmReset = async () => {
     setResetting(true);
@@ -235,6 +256,23 @@ export default function DataStorageScreen() {
           </Pressable>
         </View>
 
+        <Text style={[styles.sectionHeader, scaledTypography.caption]}>SEARCH HISTORY</Text>
+        <View style={styles.card}>
+          <View style={styles.infoBlock}>
+            <Text style={[styles.infoTitle, scaledTypography.label]}>Clear Search History</Text>
+            <Text style={[styles.infoDescription, scaledTypography.small]}>
+              Remove all recent searches saved on this device. This won't affect search suggestions shown to other users.
+            </Text>
+          </View>
+          <Pressable
+            style={styles.resetButton}
+            onPress={() => setSearchConfirmVisible(true)}
+          >
+            <Ionicons name="search-outline" size={18} color="#EF4444" />
+            <Text style={[styles.resetButtonText, scaledTypography.body]}>Clear Search History</Text>
+          </Pressable>
+        </View>
+
         <Text style={[styles.sectionHeader, scaledTypography.caption]}>RECOMMENDATIONS</Text>
         <View style={styles.card}>
           <View style={styles.infoBlock}>
@@ -297,6 +335,46 @@ export default function DataStorageScreen() {
               disabled={resetting}
             >
               <Text style={[styles.modalCancelText, scaledTypography.body]}>Cancel</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      <Modal
+        visible={searchConfirmVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => !clearingSearch && setSearchConfirmVisible(false)}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => !clearingSearch && setSearchConfirmVisible(false)}
+        >
+          <Pressable style={styles.modalBox} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.modalIconRow}>
+              <Ionicons name="search-outline" size={28} color="#EF4444" />
+            </View>
+            <Text style={styles.modalTitle}>Clear search history?</Text>
+            <Text style={styles.modalMessage}>
+              All recent searches saved on this device will be removed.
+            </Text>
+            <Pressable
+              style={[styles.modalConfirmButton, clearingSearch && { opacity: 0.6 }]}
+              onPress={handleConfirmClearSearchHistory}
+              disabled={clearingSearch}
+            >
+              {clearingSearch ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.modalConfirmText}>Clear History</Text>
+              )}
+            </Pressable>
+            <Pressable
+              style={styles.modalCancelButton}
+              onPress={() => setSearchConfirmVisible(false)}
+              disabled={clearingSearch}
+            >
+              <Text style={styles.modalCancelText}>Cancel</Text>
             </Pressable>
           </Pressable>
         </Pressable>
