@@ -15,6 +15,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { Collection, useCollections } from "../context/CollectionsContext";
 import { colors } from "../constants/theme";
+import { useScaledTypography } from "../hooks/useScaledTypography";
 
 type Mode = "save" | "remove";
 
@@ -38,6 +39,7 @@ export default function SaveCollectionModal({
   savedInCollections = [],
 }: Props) {
   const { collections, addCollection } = useCollections();
+  const scaledTypography = useScaledTypography();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [newName, setNewName] = useState("");
   const [creating, setCreating] = useState(false);
@@ -129,7 +131,7 @@ export default function SaveCollectionModal({
           <Pressable onPress={(e) => e.stopPropagation()}>
             <View style={styles.handle} />
             <View style={styles.header}>
-              <Text style={styles.title}>{title}</Text>
+              <Text style={[styles.title, scaledTypography.subtitle]}>{title}</Text>
               <TouchableOpacity onPress={handleClose}>
                 <Ionicons name="close" size={22} color={colors.textPrimary} />
               </TouchableOpacity>
@@ -155,7 +157,7 @@ export default function SaveCollectionModal({
                           color={isRemoveMode ? '#e74c3c' : colors.primary}
                         />
                       </View>
-                      <Text style={styles.collectionName}>{collection.name}</Text>
+                      <Text style={[styles.collectionName, scaledTypography.body]}>{collection.name}</Text>
                     </View>
                     <View style={[
                       styles.checkbox,
@@ -175,7 +177,7 @@ export default function SaveCollectionModal({
                   placeholder="New collection name..."
                   value={newName}
                   onChangeText={setNewName}
-                  style={styles.input}
+                  style={[styles.input, scaledTypography.body]}
                   accessibilityLabel="New collection name"
                   onSubmitEditing={handleCreate}
                   returnKeyType="done"
@@ -188,7 +190,7 @@ export default function SaveCollectionModal({
                   {creating ? (
                     <ActivityIndicator size="small" color="#fff" />
                   ) : (
-                    <Text style={styles.createButtonText}>Create</Text>
+                    <Text style={[styles.createButtonText, scaledTypography.label]}>Create</Text>
                   )}
                 </TouchableOpacity>
               </View>
@@ -203,11 +205,11 @@ export default function SaveCollectionModal({
               onPress={handleConfirm}
               disabled={selected.size === 0}
             >
-              <Text style={styles.confirmButtonText}>{confirmLabel}</Text>
+              <Text style={[styles.confirmButtonText, scaledTypography.label]}>{confirmLabel}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity onPress={handleClose} style={styles.cancelButton}>
-              <Text style={styles.cancelText}>Cancel</Text>
+              <Text style={[styles.cancelText, scaledTypography.label]}>Cancel</Text>
             </TouchableOpacity>
           </Pressable>
         </Animated.View>
@@ -247,8 +249,6 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   title: {
-    fontWeight: "bold",
-    fontSize: 18,
     color: colors.textPrimary,
   },
   list: {
@@ -277,9 +277,7 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   collectionName: {
-    fontSize: 15,
     color: colors.textPrimary,
-    fontWeight: '500',
   },
   checkbox: {
     width: 22,
@@ -310,7 +308,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    fontSize: 14,
     color: colors.textPrimary,
   },
   createButton: {
@@ -325,8 +322,6 @@ const styles = StyleSheet.create({
   },
   createButtonText: {
     color: colors.white,
-    fontWeight: '600',
-    fontSize: 14,
   },
   confirmButton: {
     backgroundColor: colors.primary,
@@ -343,8 +338,6 @@ const styles = StyleSheet.create({
   },
   confirmButtonText: {
     color: colors.white,
-    fontSize: 16,
-    fontWeight: '700',
   },
   cancelButton: {
     marginTop: 10,
@@ -353,6 +346,5 @@ const styles = StyleSheet.create({
   cancelText: {
     textAlign: "center",
     color: colors.textTertiary,
-    fontSize: 15,
   },
 });

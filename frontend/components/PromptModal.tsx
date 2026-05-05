@@ -1,6 +1,7 @@
 import React, { useRef } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import { colors, radius } from '../constants/theme';
+import { useScaledTypography } from '../hooks/useScaledTypography';
 import BaseModal from './BaseModal';
 
 interface PromptModalProps {
@@ -14,13 +15,14 @@ interface PromptModalProps {
 
 export function PromptModal({ visible, title, value, onChangeText, onSubmit, onCancel }: PromptModalProps) {
   const inputRef = useRef<TextInput>(null);
+  const scaledTypography = useScaledTypography();
 
   return (
     <BaseModal visible={visible} onClose={onCancel}>
-      <Text style={styles.title}>{title}</Text>
+      <Text style={[styles.title, scaledTypography.subtitle]}>{title}</Text>
       <TextInput
         ref={inputRef}
-        style={styles.input}
+        style={[styles.input, scaledTypography.body]}
         value={value}
         onChangeText={onChangeText}
         placeholder="Enter a name..."
@@ -32,10 +34,10 @@ export function PromptModal({ visible, title, value, onChangeText, onSubmit, onC
       />
       <View style={styles.buttons}>
         <TouchableOpacity style={styles.cancelBtn} onPress={onCancel}>
-          <Text style={styles.cancelText}>Cancel</Text>
+          <Text style={[styles.cancelText, scaledTypography.body]}>Cancel</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.confirmBtn} onPress={onSubmit}>
-          <Text style={styles.confirmText}>OK</Text>
+          <Text style={[styles.confirmText, scaledTypography.body]}>OK</Text>
         </TouchableOpacity>
       </View>
     </BaseModal>
@@ -44,8 +46,6 @@ export function PromptModal({ visible, title, value, onChangeText, onSubmit, onC
 
 const styles = StyleSheet.create({
   title: {
-    fontSize: 18,
-    fontWeight: '700',
     color: colors.textPrimary,
     marginBottom: 16,
   },
@@ -55,7 +55,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.xs,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    fontSize: 15,
     color: colors.textPrimary,
     marginBottom: 16,
   },
@@ -72,8 +71,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cancelText: {
-    fontSize: 15,
-    fontWeight: '600',
     color: colors.textSecondary,
   },
   confirmBtn: {
@@ -84,8 +81,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   confirmText: {
-    fontSize: 15,
-    fontWeight: '600',
     color: colors.white,
   },
 });

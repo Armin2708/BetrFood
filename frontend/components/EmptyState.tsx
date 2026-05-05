@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, radius } from '../constants/theme';
+import { useScaledTypography } from '../hooks/useScaledTypography';
 import { ComponentProps } from 'react';
 
 type IoniconName = ComponentProps<typeof Ionicons>['name'];
@@ -21,16 +22,17 @@ export default function EmptyState({
   actionLabel,
   onAction,
 }: EmptyStateProps) {
+  const scaledTypography = useScaledTypography();
   return (
     <View style={styles.container}>
       <View style={styles.iconWrap}>
         <Ionicons name={icon} size={24} color={colors.primaryDark} />
       </View>
-      <Text style={styles.title}>{title}</Text>
-      {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+      <Text style={[styles.title, scaledTypography.title]}>{title}</Text>
+      {subtitle ? <Text style={[styles.subtitle, scaledTypography.label]}>{subtitle}</Text> : null}
       {actionLabel && onAction ? (
         <TouchableOpacity style={styles.actionBtn} onPress={onAction}>
-          <Text style={styles.actionText}>{actionLabel}</Text>
+          <Text style={[styles.actionText, scaledTypography.title]}>{actionLabel}</Text>
         </TouchableOpacity>
       ) : null}
     </View>
@@ -55,14 +57,11 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   title: {
-    fontSize: 20,
-    fontWeight: '700',
     color: colors.textPrimary,
     textAlign: 'center',
   },
   subtitle: {
     marginTop: 8,
-    fontSize: 14,
     lineHeight: 20,
     color: colors.textSecondary,
     textAlign: 'center',
@@ -76,7 +75,5 @@ const styles = StyleSheet.create({
   },
   actionText: {
     color: colors.white,
-    fontSize: 14,
-    fontWeight: '700',
   },
 });

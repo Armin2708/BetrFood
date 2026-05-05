@@ -14,6 +14,7 @@ import {
   LegalDocumentContent,
   LegalDocumentType,
 } from '../services/legalDocuments';
+import { useScaledTypography } from '../hooks/useScaledTypography';
 import { useAppTheme } from '../context/ThemeContext';
 
 type LegalDocumentScreenProps = {
@@ -22,6 +23,7 @@ type LegalDocumentScreenProps = {
 
 export default function LegalDocumentScreen({ type }: LegalDocumentScreenProps) {
   const { colors, isDark } = useAppTheme();
+  const scaledTypography = useScaledTypography();
   const [document, setDocument] = useState<LegalDocumentContent | null>(null);
   const [source, setSource] = useState<'remote' | 'cache' | 'bundled'>('remote');
   const [loading, setLoading] = useState(true);
@@ -56,7 +58,7 @@ export default function LegalDocumentScreen({ type }: LegalDocumentScreenProps) 
     return (
       <View style={[styles.centered, { backgroundColor: colors.backgroundSecondary }]}>
         <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading document...</Text>
+        <Text style={[styles.loadingText, scaledTypography.body, { color: colors.textSecondary }]}>Loading document...</Text>
       </View>
     );
   }
@@ -64,15 +66,15 @@ export default function LegalDocumentScreen({ type }: LegalDocumentScreenProps) 
   if (!document) {
     return (
       <View style={[styles.centered, { backgroundColor: colors.backgroundSecondary }]}>
-        <Text style={[styles.errorTitle, { color: colors.textPrimary }]}>Document unavailable</Text>
-        <Text style={[styles.errorText, { color: colors.textSecondary }]}>
+        <Text style={[styles.errorTitle, scaledTypography.title, { color: colors.textPrimary }]}>Document unavailable</Text>
+        <Text style={[styles.errorText, scaledTypography.body, { color: colors.textSecondary }]}>
           {error || 'This document could not be loaded. Please try again when you are back online.'}
         </Text>
         <TouchableOpacity
           style={[styles.retryButton, { backgroundColor: colors.primary }]}
           onPress={loadDocument}
         >
-          <Text style={styles.retryText}>Try Again</Text>
+          <Text style={[styles.retryText, scaledTypography.label]}>Try Again</Text>
         </TouchableOpacity>
       </View>
     );
@@ -93,11 +95,11 @@ export default function LegalDocumentScreen({ type }: LegalDocumentScreenProps) 
       }
     >
       <View style={[styles.headerCard, { backgroundColor: colors.backgroundElevated }]}>
-        <Text style={[styles.title, { color: colors.textPrimary }]}>{document.title}</Text>
-        <Text style={[styles.metaText, { color: colors.textSecondary }]}>
+        <Text style={[styles.title, scaledTypography.title, { color: colors.textPrimary }]}>{document.title}</Text>
+        <Text style={[styles.metaText, scaledTypography.caption, { color: colors.textSecondary }]}>
           Last updated: {document.lastUpdated}
         </Text>
-        <Text style={[styles.metaText, { color: colors.textSecondary }]}>
+        <Text style={[styles.metaText, scaledTypography.caption, { color: colors.textSecondary }]}>
           Version: {document.version}
         </Text>
         {source !== 'remote' ? (
@@ -110,6 +112,7 @@ export default function LegalDocumentScreen({ type }: LegalDocumentScreenProps) 
             <Text
               style={[
                 styles.cacheBadgeText,
+                scaledTypography.small,
                 { color: isDark ? '#FCD34D' : '#92400E' },
               ]}
             >
@@ -142,15 +145,11 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 12,
-    fontSize: 15,
   },
   errorTitle: {
-    fontSize: 22,
-    fontWeight: '700',
     marginBottom: 8,
   },
   errorText: {
-    fontSize: 15,
     lineHeight: 22,
     textAlign: 'center',
     marginBottom: 18,
@@ -162,8 +161,6 @@ const styles = StyleSheet.create({
   },
   retryText: {
     color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '700',
   },
   headerCard: {
     borderRadius: 20,
@@ -171,12 +168,9 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   title: {
-    fontSize: 26,
-    fontWeight: '800',
     marginBottom: 10,
   },
   metaText: {
-    fontSize: 14,
     marginTop: 2,
   },
   cacheBadge: {
@@ -189,8 +183,6 @@ const styles = StyleSheet.create({
   },
   cacheBadgeText: {
     color: '#92400E',
-    fontSize: 12,
-    fontWeight: '700',
   },
   documentCard: {
     borderRadius: 20,

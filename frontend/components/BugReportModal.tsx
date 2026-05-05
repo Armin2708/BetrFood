@@ -13,9 +13,10 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import BaseModal from './BaseModal';
-import { reportBug } from '../services/api';
+import { reportBug } from '../services/api/bugReports';
 import { formatDeviceInfo, getDeviceInfo } from '../utils/deviceInfo';
-import { colors, radius, spacing } from '../constants/theme';
+import { colors, radius, spacing, typography } from '../constants/theme';
+import { useScaledTypography } from '../hooks/useScaledTypography';
 
 interface BugReportModalProps {
   visible: boolean;
@@ -24,6 +25,7 @@ interface BugReportModalProps {
 }
 
 export default function BugReportModal({ visible, onClose, onSuccess }: BugReportModalProps) {
+  const scaledTypography = useScaledTypography();
   const [description, setDescription] = useState('');
   const [selectedImage, setSelectedImage] = useState<{
     uri: string;
@@ -154,14 +156,14 @@ export default function BugReportModal({ visible, onClose, onSuccess }: BugRepor
   return (
     <BaseModal visible={visible} onClose={handleClose} width={350}>
       {/* Header */}
-      <Text style={styles.title}>Report a Bug</Text>
-      <Text style={styles.subtitle}>Help us improve the app by describing the issue you found</Text>
+      <Text style={[styles.title, scaledTypography.title]}>Report a Bug</Text>
+      <Text style={[styles.subtitle, scaledTypography.caption]}>Help us improve the app by describing the issue you found</Text>
 
       {/* Description Input */}
       <View style={styles.section}>
-        <Text style={styles.label}>Description *</Text>
+        <Text style={[styles.label, scaledTypography.label]}>Description *</Text>
         <TextInput
-          style={styles.textInput}
+          style={[styles.textInput, scaledTypography.body]}
           placeholder="What went wrong? What did you expect to happen?"
           placeholderTextColor="#999"
           multiline
@@ -174,15 +176,15 @@ export default function BugReportModal({ visible, onClose, onSuccess }: BugRepor
         <View style={styles.charCountContainer}>
           <View style={[styles.charCountBar, { width: `${Math.min(charPercentage, 100)}%` }]} />
         </View>
-        <Text style={styles.charCount}>
+        <Text style={[styles.charCount, scaledTypography.small]}>
           {charCount}/{maxChars}
         </Text>
       </View>
 
       {/* Screenshot Section */}
       <View style={styles.section}>
-        <Text style={styles.label}>Screenshot (Optional)</Text>
-        <Text style={styles.screenshotHint}>Attach a screenshot to help us understand the issue</Text>
+        <Text style={[styles.label, scaledTypography.label]}>Screenshot (Optional)</Text>
+        <Text style={[styles.screenshotHint, scaledTypography.small]}>Attach a screenshot to help us understand the issue</Text>
 
         {selectedImage ? (
           <>
@@ -192,7 +194,7 @@ export default function BugReportModal({ visible, onClose, onSuccess }: BugRepor
               onPress={handleRemoveImage}
               disabled={loading}
             >
-              <Text style={styles.removeImageText}>Remove Image</Text>
+              <Text style={[styles.removeImageText, scaledTypography.caption]}>Remove Image</Text>
             </Pressable>
           </>
         ) : (
@@ -202,14 +204,14 @@ export default function BugReportModal({ visible, onClose, onSuccess }: BugRepor
               onPress={handlePickImage}
               disabled={loading}
             >
-              <Text style={styles.imageButtonText}>📸 Gallery</Text>
+              <Text style={[styles.imageButtonText, scaledTypography.caption]}>📸 Gallery</Text>
             </Pressable>
             <Pressable
               style={styles.imageButton}
               onPress={handleTakeScreenshot}
               disabled={loading}
             >
-              <Text style={styles.imageButtonText}>📷 Camera</Text>
+              <Text style={[styles.imageButtonText, scaledTypography.caption]}>📷 Camera</Text>
             </Pressable>
           </View>
         )}
@@ -217,11 +219,11 @@ export default function BugReportModal({ visible, onClose, onSuccess }: BugRepor
 
       {/* Device Info */}
       <View style={styles.section}>
-        <Text style={styles.label}>Device Information</Text>
+        <Text style={[styles.label, scaledTypography.label]}>Device Information</Text>
         <View style={styles.deviceInfoBox}>
-          <Text style={styles.deviceInfoText}>{formatDeviceInfo(deviceInfo)}</Text>
+          <Text style={[styles.deviceInfoText, scaledTypography.small]}>{formatDeviceInfo(deviceInfo)}</Text>
         </View>
-        <Text style={styles.deviceInfoNote}>
+        <Text style={[styles.deviceInfoNote, scaledTypography.small]}>
           This info helps us track bugs more easily
         </Text>
       </View>
@@ -233,7 +235,7 @@ export default function BugReportModal({ visible, onClose, onSuccess }: BugRepor
           onPress={handleClose}
           disabled={loading}
         >
-          <Text style={styles.cancelButtonText}>Cancel</Text>
+          <Text style={[styles.cancelButtonText, scaledTypography.label]}>Cancel</Text>
         </Pressable>
         <Pressable
           style={[styles.button, styles.submitButton, loading && styles.submitButtonDisabled]}
@@ -243,7 +245,7 @@ export default function BugReportModal({ visible, onClose, onSuccess }: BugRepor
           {loading ? (
             <ActivityIndicator color="#fff" size="small" />
           ) : (
-            <Text style={styles.submitButtonText}>Submit Report</Text>
+            <Text style={[styles.submitButtonText, scaledTypography.label]}>Submit Report</Text>
           )}
         </Pressable>
       </View>
@@ -256,13 +258,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   title: {
-    fontSize: 20,
-    fontWeight: '600',
     color: '#000',
     marginBottom: 4,
   },
   subtitle: {
-    fontSize: 13,
     color: '#666',
     marginBottom: spacing.md,
     lineHeight: 18,
@@ -271,8 +270,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   label: {
-    fontSize: 14,
-    fontWeight: '600',
     color: '#000',
     marginBottom: 8,
   },
@@ -281,7 +278,6 @@ const styles = StyleSheet.create({
     borderColor: '#e0e0e0',
     borderRadius: radius.sm,
     padding: 12,
-    fontSize: 14,
     color: '#000',
     textAlignVertical: 'top',
   },
@@ -298,13 +294,11 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
   charCount: {
-    fontSize: 12,
     color: '#999',
     marginTop: 4,
     textAlign: 'right',
   },
   screenshotHint: {
-    fontSize: 12,
     color: '#999',
     marginBottom: 12,
   },
@@ -324,9 +318,7 @@ const styles = StyleSheet.create({
     borderColor: '#ffc107',
   },
   removeImageText: {
-    fontSize: 13,
     color: '#856404',
-    fontWeight: '500',
     textAlign: 'center',
   },
   imageButtonsContainer: {
@@ -344,8 +336,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   imageButtonText: {
-    fontSize: 13,
-    fontWeight: '500',
     color: '#333',
   },
   deviceInfoBox: {
@@ -357,13 +347,11 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   deviceInfoText: {
-    fontSize: 12,
     color: '#666',
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
     lineHeight: 16,
   },
   deviceInfoNote: {
-    fontSize: 12,
     color: '#999',
     fontStyle: 'italic',
   },
@@ -386,8 +374,6 @@ const styles = StyleSheet.create({
     borderColor: '#e0e0e0',
   },
   cancelButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
     color: '#333',
   },
   submitButton: {
@@ -397,8 +383,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#ccc',
   },
   submitButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
     color: '#fff',
   },
 });

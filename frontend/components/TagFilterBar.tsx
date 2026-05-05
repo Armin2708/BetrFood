@@ -6,6 +6,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { fetchTags, Tag } from '../services/api';
 import { TAG_TYPE_COLORS, ThemeColors } from '../constants/theme';
+import { useScaledTypography } from '../hooks/useScaledTypography';
 import { usePantry } from '../context/PantryContext';
 import { useAppTheme } from '../context/ThemeContext';
 
@@ -23,7 +24,8 @@ export default function TagFilterBar({
   onPantryFilterChange,
 }: TagFilterBarProps) {
   const { colors } = useAppTheme();
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const scaledTypography = useScaledTypography();
+  const styles = useMemo(() => makeStyles(colors, scaledTypography), [colors, scaledTypography]);
   const [tags, setTags] = useState<Tag[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
@@ -139,11 +141,11 @@ export default function TagFilterBar({
         <Pressable style={styles.modalOverlay} onPress={() => setModalVisible(false)}>
           <Pressable style={styles.modalContent} onPress={e => e.stopPropagation()}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Filter by Tags</Text>
+              <Text style={[styles.modalTitle, scaledTypography.subtitle]}>Filter by Tags</Text>
               <View style={styles.modalHeaderRight}>
                 {hasActiveFilters && (
                   <TouchableOpacity onPress={clearFilters} style={styles.clearButton}>
-                    <Text style={styles.clearText}>Clear all</Text>
+                    <Text style={[styles.clearText, scaledTypography.caption]}>Clear all</Text>
                   </TouchableOpacity>
                 )}
                 <TouchableOpacity onPress={() => setModalVisible(false)}>
@@ -174,12 +176,13 @@ export default function TagFilterBar({
                           accessibilityLabel={`${isSelected ? 'Remove' : 'Add'} ${tag.name} filter`}
                           accessibilityState={{ selected: isSelected }}
                         >
-                          <Text style={[
-                            styles.filterChipText,
-                            isSelected ? { color: '#fff' } : { color: colors.textSecondary },
-                          ]}>
-                            {tag.name}
-                          </Text>
+                           <Text style={[
+                             styles.filterChipText,
+                             scaledTypography.caption,
+                             isSelected ? { color: '#fff' } : { color: colors.textSecondary },
+                           ]}>
+                             {tag.name}
+                           </Text>
                         </TouchableOpacity>
                       );
                     })}
@@ -192,7 +195,7 @@ export default function TagFilterBar({
               style={styles.doneButton}
               onPress={() => setModalVisible(false)}
             >
-              <Text style={styles.doneButtonText}>Done</Text>
+              <Text style={[styles.doneButtonText, scaledTypography.label]}>Done</Text>
             </TouchableOpacity>
           </Pressable>
         </Pressable>
@@ -201,7 +204,7 @@ export default function TagFilterBar({
   );
 }
 
-function makeStyles(colors: ThemeColors) {
+function makeStyles(colors: ThemeColors, scaledTypography: any) {
   return StyleSheet.create({
     container: {
       backgroundColor: colors.backgroundPrimary,
@@ -227,8 +230,6 @@ function makeStyles(colors: ThemeColors) {
       borderColor: colors.border,
     },
     filterChipText: {
-      fontSize: 13,
-      fontWeight: '500',
       color: colors.textSecondary,
     },
     pantryChipActive: {
@@ -249,9 +250,7 @@ function makeStyles(colors: ThemeColors) {
       marginRight: 12,
     },
     clearText: {
-      fontSize: 13,
       color: '#e74c3c',
-      fontWeight: '600',
     },
     modalOverlay: {
       flex: 1,
@@ -276,16 +275,12 @@ function makeStyles(colors: ThemeColors) {
       alignItems: 'center',
     },
     modalTitle: {
-      fontSize: 18,
-      fontWeight: '700',
       color: colors.textPrimary,
     },
     tagGroup: {
       marginBottom: 16,
     },
     tagGroupLabel: {
-      fontSize: 13,
-      fontWeight: '700',
       color: colors.textSecondary,
       marginBottom: 8,
       textTransform: 'uppercase',
@@ -305,8 +300,6 @@ function makeStyles(colors: ThemeColors) {
     },
     doneButtonText: {
       color: '#fff',
-      fontSize: 16,
-      fontWeight: '700',
     },
   });
 }

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Recipe } from '../services/api';
 import { colors, DIFFICULTY_COLORS } from '../constants/theme';
+import { useScaledTypography } from '../hooks/useScaledTypography';
 
 interface RecipeDisplayProps {
   recipe: Recipe;
@@ -9,6 +10,7 @@ interface RecipeDisplayProps {
 
 export default function RecipeDisplay({ recipe }: RecipeDisplayProps) {
   const [expanded, setExpanded] = useState(false);
+  const scaledTypography = useScaledTypography();
 
   const difficultyLabel = {
     easy: 'Easy',
@@ -28,8 +30,8 @@ export default function RecipeDisplay({ recipe }: RecipeDisplayProps) {
         accessibilityLabel={expanded ? 'Collapse recipe' : 'Expand recipe'}
         accessibilityState={{ expanded }}
       >
-        <Text style={styles.headerTitle}>Recipe</Text>
-        <Text style={styles.expandIcon}>{expanded ? '−' : '+'}</Text>
+        <Text style={[styles.headerTitle, scaledTypography.label]}>Recipe</Text>
+        <Text style={[styles.expandIcon, scaledTypography.title]}>{expanded ? '−' : '+'}</Text>
       </TouchableOpacity>
 
       {expanded && (
@@ -38,22 +40,23 @@ export default function RecipeDisplay({ recipe }: RecipeDisplayProps) {
           <View style={styles.metaRow}>
             {recipe.cookTime != null && (
               <View style={styles.metaItem}>
-                <Text style={styles.metaLabel}>Cook Time</Text>
-                <Text style={styles.metaValue}>{recipe.cookTime} min</Text>
+                <Text style={[styles.metaLabel, scaledTypography.small]}>Cook Time</Text>
+                <Text style={[styles.metaValue, scaledTypography.label]}>{recipe.cookTime} min</Text>
               </View>
             )}
             {recipe.servings != null && (
               <View style={styles.metaItem}>
-                <Text style={styles.metaLabel}>Servings</Text>
-                <Text style={styles.metaValue}>{recipe.servings}</Text>
+                <Text style={[styles.metaLabel, scaledTypography.small]}>Servings</Text>
+                <Text style={[styles.metaValue, scaledTypography.label]}>{recipe.servings}</Text>
               </View>
             )}
             {recipe.difficulty && (
               <View style={styles.metaItem}>
-                <Text style={styles.metaLabel}>Difficulty</Text>
+                <Text style={[styles.metaLabel, scaledTypography.small]}>Difficulty</Text>
                 <Text
                   style={[
                     styles.difficultyBadge,
+                    scaledTypography.caption,
                     { backgroundColor: difficultyColor[recipe.difficulty] },
                   ]}
                 >
@@ -66,11 +69,11 @@ export default function RecipeDisplay({ recipe }: RecipeDisplayProps) {
           {/* Ingredients */}
           {recipe.ingredients && recipe.ingredients.length > 0 && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Ingredients</Text>
+              <Text style={[styles.sectionTitle, scaledTypography.label]}>Ingredients</Text>
               {recipe.ingredients.map((ing, index) => (
                 <View key={ing.id || index} style={styles.ingredientRow}>
-                  <Text style={styles.bullet}>{'\u2022'}</Text>
-                  <Text style={styles.ingredientText}>
+                  <Text style={[styles.bullet, scaledTypography.body]}>{'\u2022'}</Text>
+                  <Text style={[styles.ingredientText, scaledTypography.body]}>
                     {ing.quantity ? `${ing.quantity} ` : ''}
                     {ing.unit ? `${ing.unit} ` : ''}
                     {ing.name}
@@ -83,13 +86,13 @@ export default function RecipeDisplay({ recipe }: RecipeDisplayProps) {
           {/* Steps */}
           {recipe.steps && recipe.steps.length > 0 && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Instructions</Text>
+              <Text style={[styles.sectionTitle, scaledTypography.label]}>Instructions</Text>
               {recipe.steps.map((step, index) => (
                 <View key={step.id || index} style={styles.stepRow}>
                   <View style={styles.stepNumber}>
-                    <Text style={styles.stepNumberText}>{step.stepNumber}</Text>
+                    <Text style={[styles.stepNumberText, scaledTypography.caption]}>{step.stepNumber}</Text>
                   </View>
-                  <Text style={styles.stepText}>{step.instruction}</Text>
+                  <Text style={[styles.stepText, scaledTypography.body]}>{step.instruction}</Text>
                 </View>
               ))}
             </View>
@@ -119,13 +122,9 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   headerTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
     color: colors.primary,
   },
   expandIcon: {
-    fontSize: 20,
-    fontWeight: 'bold',
     color: colors.primary,
   },
   content: {
@@ -142,19 +141,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   metaLabel: {
-    fontSize: 11,
     color: colors.textQuaternary,
     textTransform: 'uppercase',
     marginBottom: 2,
   },
   metaValue: {
-    fontSize: 15,
-    fontWeight: '600',
     color: colors.textPrimary,
   },
   difficultyBadge: {
-    fontSize: 13,
-    fontWeight: '600',
     color: colors.white,
     paddingHorizontal: 8,
     paddingVertical: 2,
@@ -165,8 +159,6 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   sectionTitle: {
-    fontSize: 15,
-    fontWeight: 'bold',
     color: colors.textPrimary,
     marginBottom: 8,
   },
@@ -176,13 +168,11 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   bullet: {
-    fontSize: 16,
     color: colors.primary,
     marginRight: 8,
     lineHeight: 20,
   },
   ingredientText: {
-    fontSize: 14,
     color: '#444',
     flex: 1,
     lineHeight: 20,
@@ -203,12 +193,9 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   stepNumberText: {
-    fontSize: 13,
-    fontWeight: 'bold',
     color: colors.white,
   },
   stepText: {
-    fontSize: 14,
     color: '#444',
     flex: 1,
     lineHeight: 20,

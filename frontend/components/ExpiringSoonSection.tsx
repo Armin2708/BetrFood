@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, FlatList, StyleSheet } from 'react-native';
 import { PantryItem } from '../services/api';
+import { useScaledTypography } from '../hooks/useScaledTypography';
 import { useAppTheme } from '../context/ThemeContext';
 
 interface ExpiringSoonSectionProps {
@@ -41,6 +42,7 @@ function getExpirationStatus(expirationDate: string | null): {
 
 export default function ExpiringSoonSection({ items, threshold }: ExpiringSoonSectionProps) {
   const { colors } = useAppTheme();
+  const scaledTypography = useScaledTypography();
   // Filter items that are expiring soon or already expired
   const expiringSoonItems = items
     .filter((item) => {
@@ -67,21 +69,21 @@ export default function ExpiringSoonSection({ items, threshold }: ExpiringSoonSe
     return (
       <View style={[styles.card, { backgroundColor: colors.backgroundSubtle, borderColor: colors.borderLight }]}>
         <View style={styles.left}>
-          <Text style={[styles.name, { color: colors.textPrimary }]} numberOfLines={1}>
+          <Text style={[styles.name, scaledTypography.label, { color: colors.textPrimary }]} numberOfLines={1}>
             {item.name}
           </Text>
           <View style={styles.metaRow}>
             <View style={[styles.categoryChip, { backgroundColor: colors.backgroundTertiary }]}>
-              <Text style={[styles.categoryText, { color: colors.textSecondary }]}>{item.category}</Text>
+              <Text style={[styles.categoryText, scaledTypography.small, { color: colors.textSecondary }]}>{item.category}</Text>
             </View>
-            <Text style={[styles.quantity, { color: colors.textSecondary }]}>
+            <Text style={[styles.quantity, scaledTypography.caption, { color: colors.textSecondary }]}>
               {item.quantity} {item.unit}
             </Text>
           </View>
         </View>
 
         <View style={[styles.statusBadge, { backgroundColor: status.color }]}>
-          <Text style={styles.statusText}>{status.label}</Text>
+          <Text style={[styles.statusText, scaledTypography.small]}>{status.label}</Text>
         </View>
       </View>
     );
@@ -93,10 +95,10 @@ export default function ExpiringSoonSection({ items, threshold }: ExpiringSoonSe
   return (
     <View style={[styles.container, { backgroundColor: colors.backgroundSecondary, borderColor: colors.border }]}>
       <View style={styles.header}>
-        <Text style={[styles.headerText, { color: colors.textPrimary }]}>Expiring Soon</Text>
+        <Text style={[styles.headerText, scaledTypography.label, { color: colors.textPrimary }]}>Expiring Soon</Text>
         {expiredCount > 0 && (
           <View style={styles.expiredBadge}>
-            <Text style={styles.expiredBadgeText}>{expiredCount} expired</Text>
+            <Text style={[styles.expiredBadgeText, scaledTypography.small]}>{expiredCount} expired</Text>
           </View>
         )}
       </View>
@@ -123,10 +125,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
-  headerText: {
-    fontSize: 16,
-    fontWeight: '700',
-  },
+  headerText: {},
   expiredBadge: {
     backgroundColor: '#D32F2F',
     borderRadius: 8,
@@ -134,8 +133,6 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   expiredBadgeText: {
-    fontSize: 12,
-    fontWeight: '600',
     color: '#FFFFFF',
   },
   list: {
@@ -153,10 +150,7 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 4,
   },
-  name: {
-    fontSize: 15,
-    fontWeight: '600',
-  },
+  name: {},
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -167,13 +161,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 2,
   },
-  categoryText: {
-    fontSize: 11,
-    fontWeight: '500',
-  },
-  quantity: {
-    fontSize: 12,
-  },
+  categoryText: {},
+  quantity: {},
   statusBadge: {
     borderRadius: 6,
     paddingHorizontal: 8,
@@ -181,8 +170,6 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
   statusText: {
-    fontSize: 11,
-    fontWeight: '600',
     color: '#FFFFFF',
   },
 });

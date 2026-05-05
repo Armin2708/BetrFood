@@ -22,6 +22,7 @@ import {
 } from '../services/api';
 import { ThemeColors } from '../constants/theme';
 import { useAppTheme } from '../context/ThemeContext';
+import { useScaledTypography } from '../hooks/useScaledTypography';
 
 const SECTION_IDS: ExploreSectionId[] = [
   'trending',
@@ -39,7 +40,8 @@ const CATEGORY_COLORS: Record<string, string> = {
 
 function ExplorePostCard({ post }: { post: Post }) {
   const { colors } = useAppTheme();
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const scaledTypography = useScaledTypography();
+  const styles = useMemo(() => makeStyles(colors, scaledTypography), [colors, scaledTypography]);
   const title = post.caption?.trim() || 'Untitled post';
 
   return (
@@ -50,10 +52,10 @@ function ExplorePostCard({ post }: { post: Post }) {
     >
       <Image source={{ uri: getImageUrl(post.imagePath) }} style={styles.postImage} />
       <View style={styles.postOverlay}>
-        <Text style={styles.postTitle} numberOfLines={2}>
+        <Text style={[styles.postTitle, scaledTypography.label]} numberOfLines={2}>
           {title}
         </Text>
-        <Text style={styles.postMeta} numberOfLines={1}>
+        <Text style={[styles.postMeta, scaledTypography.small]} numberOfLines={1}>
           {post.displayName || post.username || 'BetrFood creator'}
         </Text>
       </View>
@@ -63,7 +65,8 @@ function ExplorePostCard({ post }: { post: Post }) {
 
 function CategoryCard({ category }: { category: ExploreCategory }) {
   const { colors } = useAppTheme();
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const scaledTypography = useScaledTypography();
+  const styles = useMemo(() => makeStyles(colors, scaledTypography), [colors, scaledTypography]);
   const color = CATEGORY_COLORS[category.type] || colors.textPrimary;
 
   return (
@@ -80,13 +83,13 @@ function CategoryCard({ category }: { category: ExploreCategory }) {
       <View style={[styles.categoryIcon, { backgroundColor: `${color}18` }]}>
         <Ionicons name="pricetag-outline" size={20} color={color} />
       </View>
-      <Text style={styles.categoryTitle} numberOfLines={1}>
+      <Text style={[styles.categoryTitle, scaledTypography.label]} numberOfLines={1}>
         {category.name}
       </Text>
-      <Text style={styles.categoryDescription} numberOfLines={2}>
+      <Text style={[styles.categoryDescription, scaledTypography.small]} numberOfLines={2}>
         {category.description || `${category.postCount} posts to explore`}
       </Text>
-      <Text style={[styles.categoryCount, { color }]}>
+      <Text style={[styles.categoryCount, scaledTypography.small, { color }]}>
         {category.postCount} {category.postCount === 1 ? 'post' : 'posts'}
       </Text>
     </TouchableOpacity>
@@ -95,7 +98,8 @@ function CategoryCard({ category }: { category: ExploreCategory }) {
 
 function SectionSkeleton({ title }: { title: string }) {
   const { colors } = useAppTheme();
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const scaledTypography = useScaledTypography();
+  const styles = useMemo(() => makeStyles(colors, scaledTypography), [colors, scaledTypography]);
 
   return (
     <View style={styles.section}>
@@ -116,7 +120,8 @@ function SectionSkeleton({ title }: { title: string }) {
 
 function EmptySection({ title, description }: { title: string; description: string }) {
   const { colors } = useAppTheme();
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const scaledTypography = useScaledTypography();
+  const styles = useMemo(() => makeStyles(colors, scaledTypography), [colors, scaledTypography]);
 
   return (
     <View style={styles.section}>
@@ -136,7 +141,8 @@ function EmptySection({ title, description }: { title: string; description: stri
 
 function ExploreCarousel({ section }: { section: ExploreSection }) {
   const { colors } = useAppTheme();
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const scaledTypography = useScaledTypography();
+  const styles = useMemo(() => makeStyles(colors, scaledTypography), [colors, scaledTypography]);
 
   const hasItems =
     section.type === 'categories'
@@ -188,7 +194,8 @@ function ExploreCarousel({ section }: { section: ExploreSection }) {
 
 export default function ExploreSections() {
   const { colors } = useAppTheme();
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const scaledTypography = useScaledTypography();
+  const styles = useMemo(() => makeStyles(colors, scaledTypography), [colors, scaledTypography]);
   const [sections, setSections] = useState<Partial<Record<ExploreSectionId, ExploreSection>>>({});
   const [loadingSections, setLoadingSections] = useState<Set<ExploreSectionId>>(new Set(SECTION_IDS));
   const [refreshing, setRefreshing] = useState(false);
@@ -269,7 +276,7 @@ export default function ExploreSections() {
   );
 }
 
-function makeStyles(colors: ThemeColors) {
+function makeStyles(colors: ThemeColors, scaledTypography: ReturnType<typeof useScaledTypography>) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.backgroundPrimary },
     content: { paddingBottom: 32 },
@@ -281,21 +288,19 @@ function makeStyles(colors: ThemeColors) {
     },
     heroKicker: {
       color: '#86EFAC',
-      fontSize: 13,
-      fontWeight: '800',
+      ...scaledTypography.small,
       letterSpacing: 1.2,
       textTransform: 'uppercase',
     },
     heroTitle: {
       color: '#FFFFFF',
-      fontSize: 26,
+      ...scaledTypography.title,
       lineHeight: 31,
-      fontWeight: '800',
       marginTop: 8,
     },
     heroText: {
       color: '#CBD5E1',
-      fontSize: 14,
+      ...scaledTypography.body,
       lineHeight: 20,
       marginTop: 8,
     },
@@ -311,12 +316,11 @@ function makeStyles(colors: ThemeColors) {
     sectionHeaderText: { flex: 1 },
     sectionTitle: {
       color: colors.textPrimary,
-      fontSize: 20,
-      fontWeight: '800',
+      ...scaledTypography.title,
     },
     sectionDescription: {
       color: colors.textSecondary,
-      fontSize: 13,
+      ...scaledTypography.small,
       lineHeight: 18,
       marginTop: 2,
     },
@@ -328,8 +332,7 @@ function makeStyles(colors: ThemeColors) {
     },
     seeAllText: {
       color: '#22C55E',
-      fontSize: 13,
-      fontWeight: '800',
+      ...scaledTypography.small,
     },
     carouselContent: {
       paddingLeft: 16,
@@ -358,12 +361,9 @@ function makeStyles(colors: ThemeColors) {
     },
     postTitle: {
       color: '#FFFFFF',
-      fontSize: 15,
-      fontWeight: '800',
     },
     postMeta: {
       color: '#CBD5E1',
-      fontSize: 12,
       marginTop: 4,
     },
     categoryCard: {
@@ -384,18 +384,13 @@ function makeStyles(colors: ThemeColors) {
     },
     categoryTitle: {
       color: colors.textPrimary,
-      fontSize: 16,
-      fontWeight: '800',
     },
     categoryDescription: {
       color: colors.textSecondary,
-      fontSize: 12,
       lineHeight: 17,
       marginTop: 5,
     },
     categoryCount: {
-      fontSize: 12,
-      fontWeight: '800',
       marginTop: 10,
     },
     skeletonRow: {
@@ -421,7 +416,7 @@ function makeStyles(colors: ThemeColors) {
     emptyText: {
       flex: 1,
       color: colors.textSecondary,
-      fontSize: 13,
+      ...scaledTypography.small,
       lineHeight: 18,
     },
     errorBox: {
@@ -437,8 +432,7 @@ function makeStyles(colors: ThemeColors) {
     errorText: {
       flex: 1,
       color: '#B91C1C',
-      fontSize: 13,
-      fontWeight: '600',
+      ...scaledTypography.small,
     },
     loadingFooter: {
       paddingVertical: 16,

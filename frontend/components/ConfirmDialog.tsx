@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { colors, radius } from '../constants/theme';
+import { useScaledTypography } from '../hooks/useScaledTypography';
 import BaseModal from './BaseModal';
 
 type ConfirmDialogProps = {
@@ -24,19 +25,20 @@ export default function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
+  const scaledTypography = useScaledTypography();
   return (
     <BaseModal visible={visible} onClose={onCancel}>
-      <Text style={styles.title}>{title}</Text>
-      <Text style={styles.message}>{message}</Text>
+      <Text style={[styles.title, scaledTypography.subtitle]}>{title}</Text>
+      <Text style={[styles.message, scaledTypography.body]}>{message}</Text>
       <View style={styles.buttons}>
         <TouchableOpacity style={styles.cancelBtn} onPress={onCancel}>
-          <Text style={styles.cancelText}>{cancelLabel}</Text>
+          <Text style={[styles.cancelText, scaledTypography.body]}>{cancelLabel}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.confirmBtn, destructive && styles.confirmBtnDestructive]}
           onPress={onConfirm}
         >
-          <Text style={[styles.confirmText, destructive && styles.confirmTextDestructive]}>
+          <Text style={[styles.confirmText, scaledTypography.body, destructive && styles.confirmTextDestructive]}>
             {confirmLabel}
           </Text>
         </TouchableOpacity>
@@ -47,13 +49,10 @@ export default function ConfirmDialog({
 
 const styles = StyleSheet.create({
   title: {
-    fontSize: 18,
-    fontWeight: '700',
     color: colors.textPrimary,
     marginBottom: 8,
   },
   message: {
-    fontSize: 15,
     lineHeight: 22,
     color: colors.textSecondary,
     marginBottom: 20,
@@ -71,8 +70,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cancelText: {
-    fontSize: 15,
-    fontWeight: '600',
     color: colors.textSecondary,
   },
   confirmBtn: {
@@ -86,8 +83,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.delete,
   },
   confirmText: {
-    fontSize: 15,
-    fontWeight: '600',
     color: colors.white,
   },
   confirmTextDestructive: {

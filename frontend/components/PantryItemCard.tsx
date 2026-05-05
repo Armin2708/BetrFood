@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { usePreferences } from '../context/PreferencesContext';
 import { useAppTheme } from '../context/ThemeContext';
+import { useScaledTypography } from '../hooks/useScaledTypography';
 import { PantryItem } from '../services/api';
 import ConfirmDialog from './ConfirmDialog';
 
@@ -42,6 +43,7 @@ function getExpirationStatus(
 export default function PantryItemCard({ item, onDelete, onEdit }: PantryItemCardProps) {
   const { preferences } = usePreferences();
   const { colors } = useAppTheme();
+  const scaledTypography = useScaledTypography();
   const threshold = preferences?.expiringItemsThreshold;
   const expStatus = getExpirationStatus(item.expirationDate ?? null, threshold, colors.textTertiary);
   const [confirmVisible, setConfirmVisible] = React.useState(false);
@@ -65,17 +67,17 @@ export default function PantryItemCard({ item, onDelete, onEdit }: PantryItemCar
           accessibilityRole="button"
           accessibilityLabel={`Edit ${item.name}`}
         >
-          <Text style={[styles.name, { color: colors.textPrimary }]} numberOfLines={1}>{item.name}</Text>
+          <Text style={[styles.name, scaledTypography.label, { color: colors.textPrimary }]} numberOfLines={1}>{item.name}</Text>
           <View style={styles.metaRow}>
             <View style={[styles.categoryChip, { backgroundColor: colors.backgroundTertiary }]}>
-              <Text style={[styles.categoryText, { color: colors.textSecondary }]}>{item.category}</Text>
+              <Text style={[styles.categoryText, scaledTypography.small, { color: colors.textSecondary }]}>{item.category}</Text>
             </View>
-            <Text style={[styles.quantity, { color: colors.textSecondary }]}>
+            <Text style={[styles.quantity, scaledTypography.caption, { color: colors.textSecondary }]}>
               {item.quantity} {item.unit}
             </Text>
           </View>
           {expStatus && (
-            <Text style={[styles.expiration, { color: expStatus.color }]}>
+            <Text style={[styles.expiration, scaledTypography.small, { color: expStatus.color }]}>
               {expStatus.label}
             </Text>
           )}
@@ -124,12 +126,12 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   left: { flex: 1, gap: 4 },
-  name: { fontSize: 16, fontWeight: '600' },
+  name: {},
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   categoryChip: { borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2 },
-  categoryText: { fontSize: 11, fontWeight: '500' },
-  quantity: { fontSize: 13 },
-  expiration: { fontSize: 12 },
+  categoryText: {},
+  quantity: {},
+  expiration: {},
   editButton: { paddingLeft: 12 },
   deleteButton: { paddingLeft: 12 },
 });

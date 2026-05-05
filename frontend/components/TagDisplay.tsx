@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Tag } from '../services/api';
 import { TAG_TYPE_COLORS } from '../constants/theme';
+import { useScaledTypography } from '../hooks/useScaledTypography';
 
 interface TagDisplayProps {
   tags: Tag[];
@@ -10,6 +11,7 @@ interface TagDisplayProps {
 
 export default function TagDisplay({ tags }: TagDisplayProps) {
   const router = useRouter();
+  const scaledTypography = useScaledTypography();
   if (!tags || tags.length === 0) return null;
 
   return (
@@ -23,7 +25,7 @@ export default function TagDisplay({ tags }: TagDisplayProps) {
             onPress={() => router.push(`/feeds/hashtag?tagId=${tag.id}&tagName=${encodeURIComponent(tag.name)}` as any)}
             activeOpacity={0.7}
           >
-            <Text style={[styles.tagText, { color }]}>{tag.name}</Text>
+            <Text style={[styles.tagText, scaledTypography.small, { color }]}>{tag.name}</Text>
           </TouchableOpacity>
         );
       })}
@@ -45,8 +47,5 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
   },
-  tagText: {
-    fontSize: 11,
-    fontWeight: '500',
-  },
+  tagText: {},
 });
