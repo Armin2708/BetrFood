@@ -72,7 +72,7 @@ export { fetchNotifications, markNotificationRead, markAllNotificationsRead, cle
 export type { Notification } from './notifications';
 export { fetchAdminUsers, updateUserRole, fetchAdminStats, updateUserVerification } from './admin';
 export type { AdminUser, AdminStats } from './admin';
-export { fetchPantryItems, createPantryItem, updatePantryItem, deletePantryItem, identifyPantryItems, identifySingleItem, scanReceipt } from './pantry';
+export { fetchPantryItems, fetchUserPantry, createPantryItem, updatePantryItem, deletePantryItem, identifyPantryItems, identifySingleItem, scanReceipt } from './pantry';
 export type { PantryItem, PantryItemInput, IdentifiedItem, SingleItemResult } from './pantry';
 export { sendChatMessage, fetchChatHistory, clearAllConversations } from './chat';
 export type { ChatMessage } from './chat';

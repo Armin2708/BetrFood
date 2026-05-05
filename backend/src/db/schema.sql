@@ -41,8 +41,15 @@ ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS expiring_items_threshold I
 ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS expiration_notifications_enabled BOOLEAN DEFAULT false;
 
 -- Add text_size_scale column for accessibility
-ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS text_size_scale TEXT DEFAULT 'default' 
+ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS text_size_scale TEXT DEFAULT 'default'
 CHECK (text_size_scale IN ('small', 'default', 'large', 'xLarge'));
+
+-- Pantry visibility: defaults to only_me (private) per GDPR / user story requirement
+ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS pantry_visibility TEXT DEFAULT 'only_me'
+CHECK (pantry_visibility IN ('only_me', 'followers', 'everyone'));
+
+-- Searchable: controls whether the user appears in search results
+ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS searchable BOOLEAN DEFAULT true;
 
 -- ============================================================
 -- 3. Posts
@@ -394,3 +401,19 @@ CREATE TABLE IF NOT EXISTS support_tickets (
 );
 CREATE INDEX IF NOT EXISTS idx_support_tickets_user_id ON support_tickets(user_id);
 CREATE INDEX IF NOT EXISTS idx_support_tickets_created_at ON support_tickets(created_at DESC);
+
+-- ============================================================
+-- 22. Data Export Requests
+-- ============================================================
+CREATE TABLE IF NOT EXISTS data_export_requests (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id TEXT NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'ready', 'failed', 'expired')),
+  download_url TEXT,
+  expires_at TIMESTAMPTZ,
+  error_message TEXT,
+  requested_at TIMESTAMPTZ DEFAULT now(),
+  completed_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS idx_data_export_requests_user_id ON data_export_requests(user_id);
+CREATE INDEX IF NOT EXISTS idx_data_export_requests_status ON data_export_requests(status) WHERE status IN ('pending', 'processing');

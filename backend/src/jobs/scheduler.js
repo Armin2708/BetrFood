@@ -1,49 +1,9 @@
 const cron = require('node-cron');
 const supabase = require('../db/supabase');
 const { calculateUserPreferenceVector, saveUserPreferenceVector } = require('../utils/recommendationEngine');
-
-/**
- * Aggregate all data for a user into a JSON object.
- */
-async function aggregateUserData(userId) {
-  const [
-    profileResult,
-    prefsResult,
-    postsResult,
-    pantryResult,
-    collectionsResult,
-    likesResult,
-    commentsResult,
-    followersResult,
-    followingResult,
-  ] = await Promise.allSettled([
-    supabase.from('user_profiles').select('*').eq('id', userId).maybeSingle(),
-    supabase.from('user_preferences').select('*').eq('user_id', userId).maybeSingle(),
-    supabase.from('posts').select('*, recipes(*, recipe_ingredients(*), recipe_steps(*)), post_tags(tags(*)), post_images(*)').eq('user_id', userId).order('created_at', { ascending: false }),
-    supabase.from('pantry_items').select('*').eq('user_id', userId),
-    supabase.from('collections').select('*, collection_posts(post_id)').eq('user_id', userId),
-    supabase.from('likes').select('post_id, created_at').eq('user_id', userId),
-    supabase.from('comments').select('id, post_id, content, created_at').eq('user_id', userId),
-    supabase.from('user_follows').select('follower_id').eq('following_id', userId),
-    supabase.from('user_follows').select('following_id').eq('follower_id', userId),
-  ]);
-
-  const get = (result) => result.status === 'fulfilled' ? (result.value.data || null) : null;
-
-  return {
-    exportedAt: new Date().toISOString(),
-    exportVersion: '1.0',
-    profile: get(profileResult),
-    preferences: get(prefsResult),
-    posts: get(postsResult) || [],
-    pantry: get(pantryResult) || [],
-    collections: get(collectionsResult) || [],
-    likes: get(likesResult) || [],
-    comments: get(commentsResult) || [],
-    followers: (get(followersResult) || []).map(f => f.follower_id),
-    following: (get(followingResult) || []).map(f => f.following_id),
-  };
-}
+const { aggregateUserData } = require('../utils/exportUtils');
+const { sendEmail } = require('../utils/email');
+const { getClerkUserEmail } = require('../routes/profiles');
 
 /**
  * Process a single pending export request.
@@ -100,6 +60,47 @@ async function processExportRequest(request) {
         completed_at: now,
       })
       .eq('id', requestId);
+
+    // 6. Email notification (fire-and-forget)
+    getClerkUserEmail(userId)
+      .then((email) => {
+        if (!email) return;
+        const expiresDate = new Date(expiresAt).toLocaleString('en-US', {
+          dateStyle: 'medium',
+          timeStyle: 'short',
+        });
+        return sendEmail({
+          to: email,
+          subject: 'Your BetrFood Data Export is Ready',
+          text: [
+            'Your BetrFood data export is ready for download.',
+            '',
+            `Download link: ${downloadUrl}`,
+            '',
+            `This link expires on ${expiresDate}.`,
+            '',
+            'Your export includes your profile, posts, recipes, pantry, collections, likes, comments, and follow relationships in JSON format.',
+            '',
+            'The BetrFood Team',
+          ].join('\n'),
+          html: `
+            <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:24px">
+              <h2 style="color:#0F172A;margin-bottom:8px">Your data export is ready</h2>
+              <p style="color:#64748B;margin-bottom:24px">
+                Your BetrFood data export has been generated. Click the button below to download your data.
+              </p>
+              <a href="${downloadUrl}"
+                 style="display:inline-block;background:#22C55E;color:#fff;text-decoration:none;padding:14px 28px;border-radius:10px;font-weight:600;font-size:15px">
+                Download My Data
+              </a>
+              <p style="color:#94A3B8;font-size:13px;margin-top:20px">
+                This link expires on ${expiresDate}. Your export includes your profile, posts, recipes,
+                pantry items, collections, likes, comments, and follow relationships in JSON format.
+              </p>
+            </div>`,
+        });
+      })
+      .catch((err) => console.error(`[EXPORT] Email notification failed for request ${requestId}:`, err.message));
 
     console.log(`[EXPORT] ✓ Request ${requestId} completed`);
   } catch (err) {

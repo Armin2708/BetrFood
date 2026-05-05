@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -7,24 +7,36 @@ import {
   ActivityIndicator,
   ScrollView,
   Alert,
+  Platform,
 } from 'react-native';
-import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
+import { Linking } from 'react-native';
 import { useAppTheme } from '../../../../context/ThemeContext';
 import { useScaledTypography } from '../../../../hooks/useScaledTypography';
 import { requestDataExport, DataExportResult } from '../../../../services/api';
+import { ThemeColors } from '../../../../constants/theme';
+
+const INCLUDED_DATA = [
+  'Profile and preferences',
+  'Posts and recipes',
+  'Pantry items',
+  'Collections',
+  'Likes and comments',
+  'Followers and following',
+];
 
 export default function ExportDataScreen() {
-  const router = useRouter();
   const { colors } = useAppTheme();
   const scaledTypography = useScaledTypography();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const [loading, setLoading] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const [result, setResult] = useState<DataExportResult | null>(null);
   const [countdown, setCountdown] = useState('');
 
-  // Countdown timer — updates every second while result is present
   useEffect(() => {
     if (!result?.expiresAt) return;
     const expiresAt = new Date(result.expiresAt).getTime();
@@ -55,7 +67,7 @@ export default function ExportDataScreen() {
       const data = await requestDataExport();
       setResult(data);
     } catch (err: any) {
-      Alert.alert('Error', err.message || 'Failed to generate export. Please try again.');
+      Alert.alert('Export Failed', err.message || 'Failed to generate export. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -63,92 +75,143 @@ export default function ExportDataScreen() {
 
   const handleDownload = async () => {
     if (!result?.downloadUrl) return;
+    setDownloading(true);
     try {
-      const response = await fetch(result.downloadUrl);
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `betrfood-export-${new Date().toISOString().split('T')[0]}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      const filename = `betrfood-export-${new Date().toISOString().split('T')[0]}.json`;
+
+      if (Platform.OS === 'web') {
+        const a = document.createElement('a');
+        a.href = result.downloadUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        return;
+      }
+
+      // Native: try downloading to cache and sharing via system sheet.
+      // Supabase signed URLs can redirect, so we fall back to opening in
+      // the system browser if FileSystem.downloadAsync fails.
+      let downloaded = false;
+      try {
+        const fileUri = (FileSystem.cacheDirectory ?? '') + filename;
+        const dl = await FileSystem.downloadAsync(result.downloadUrl, fileUri);
+        if (dl.status === 200 && (await Sharing.isAvailableAsync())) {
+          await Sharing.shareAsync(dl.uri, {
+            mimeType: 'application/json',
+            dialogTitle: 'Save your BetrFood data export',
+            UTI: 'public.json',
+          });
+          downloaded = true;
+        }
+      } catch {
+        // fall through to browser fallback
+      }
+
+      if (!downloaded) {
+        await Linking.openURL(result.downloadUrl);
+      }
     } catch {
-      Alert.alert('Error', 'Failed to download export file.');
+      Alert.alert('Download Failed', 'Could not open the export. The link has been sent to your email as well.');
+    } finally {
+      setDownloading(false);
     }
   };
 
-  return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.backgroundSecondary }]} edges={['top']}>
-      {/* Header */}
-      <View style={[styles.header, { backgroundColor: colors.backgroundSecondary }]}>
-        <Pressable onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={22} color={colors.textPrimary} />
-        </Pressable>
-        <Text style={[styles.headerTitle, scaledTypography.title, { color: colors.textPrimary }]}>Export My Data</Text>
-        <View style={styles.headerSpacer} />
-      </View>
+  const isExpired = countdown === 'Expired';
 
+  return (
+    <View style={[styles.container, { backgroundColor: colors.backgroundSecondary }]}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
         {/* Info card */}
-        <View style={[styles.infoCard, { backgroundColor: colors.backgroundElevated }]}>
-          <View style={styles.infoIconRow}>
+        <View style={[styles.card, { backgroundColor: colors.backgroundElevated }]}>
+          <View style={styles.iconRow}>
             <Ionicons name="shield-checkmark-outline" size={28} color="#22C55E" />
           </View>
-          <Text style={[styles.infoTitle, scaledTypography.subtitle, { color: colors.textPrimary }]}>Your data, your rights</Text>
-          <Text style={[styles.infoBody, scaledTypography.body, { color: colors.textSecondary }]}>
-            In accordance with GDPR, you can download a copy of all your personal data stored on BetrFood. Your export includes:
+          <Text style={[styles.cardTitle, scaledTypography.subtitle, { color: colors.textPrimary }]}>
+            Your data, your rights
+          </Text>
+          <Text style={[styles.cardBody, scaledTypography.body, { color: colors.textSecondary }]}>
+            In accordance with GDPR, you can download a copy of all your personal data stored on
+            BetrFood. Your export includes:
           </Text>
           <View style={styles.dataList}>
-            {[
-              'Profile and preferences',
-              'Posts and recipes',
-              'Pantry items',
-              'Collections',
-              'Likes and comments',
-              'Followers and following',
-            ].map(item => (
+            {INCLUDED_DATA.map((item) => (
               <View key={item} style={styles.dataListRow}>
-                <Ionicons name="checkmark" size={14} color="#22C55E" style={{ marginRight: 8 }} />
-                <Text style={[styles.dataListItem, scaledTypography.body, { color: colors.textSecondary }]}>{item}</Text>
+                <Ionicons name="checkmark" size={14} color="#22C55E" style={styles.checkIcon} />
+                <Text style={[scaledTypography.body, { color: colors.textSecondary }]}>{item}</Text>
               </View>
             ))}
           </View>
-          <Text style={[styles.infoFootnote, scaledTypography.small, { color: colors.textTertiary }]}>
-            Export is provided as a JSON file. The download link expires after 24 hours.
+          <Text style={[styles.footnote, scaledTypography.small, { color: colors.textTertiary }]}>
+            Export is provided as a JSON file. A download link will also be sent to your email address. The link expires after 24 hours.
           </Text>
         </View>
 
         {/* Result card — shown after successful export */}
         {result && (
           <>
-            <Text style={[styles.sectionHeader, scaledTypography.caption, { color: colors.textTertiary }]}>YOUR EXPORT</Text>
+            <Text style={[styles.sectionHeader, scaledTypography.caption, { color: colors.textTertiary }]}>
+              YOUR EXPORT
+            </Text>
             <View style={[styles.resultCard, { backgroundColor: colors.backgroundElevated }]}>
               <View style={styles.resultRow}>
-                <Ionicons name="checkmark-circle" size={20} color="#22C55E" style={{ marginRight: 10 }} />
-                <Text style={[styles.resultText, scaledTypography.body, { color: colors.textPrimary }]}>Export ready</Text>
+                <Ionicons name="checkmark-circle" size={20} color="#22C55E" style={styles.resultIcon} />
+                <Text style={[scaledTypography.body, { color: colors.textPrimary, fontWeight: '600' }]}>
+                  Export ready
+                </Text>
               </View>
               <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
               <View style={styles.resultRow}>
-                <Text style={[styles.resultLabel, scaledTypography.body, { color: colors.textSecondary }]}>Link expires in</Text>
-                <Text style={[styles.resultValue, scaledTypography.body, { color: countdown === 'Expired' ? '#EF4444' : '#22C55E', fontVariant: ['tabular-nums'] }]}>
+                <Ionicons name="mail-outline" size={18} color={colors.textTertiary} style={styles.resultIcon} />
+                <Text style={[scaledTypography.small, { color: colors.textSecondary, flex: 1 }]}>
+                  Download link sent to your email
+                </Text>
+              </View>
+              <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
+              <View style={styles.resultRow}>
+                <Text style={[scaledTypography.body, { color: colors.textSecondary, flex: 1 }]}>
+                  Link expires in
+                </Text>
+                <Text
+                  style={[
+                    scaledTypography.body,
+                    { color: isExpired ? '#EF4444' : '#22C55E', fontVariant: ['tabular-nums'] },
+                  ]}
+                >
                   {countdown}
                 </Text>
               </View>
             </View>
 
-            <Pressable style={styles.downloadButton} onPress={handleDownload}>
-              <Ionicons name="download-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
-              <Text style={[styles.downloadButtonText, scaledTypography.body]}>Download My Data</Text>
+            <Pressable
+              style={[styles.downloadButton, (downloading || isExpired) && styles.buttonDisabled]}
+              onPress={handleDownload}
+              disabled={downloading || isExpired}
+            >
+              {downloading ? (
+                <>
+                  <ActivityIndicator size="small" color="#fff" style={styles.buttonIcon} />
+                  <Text style={[styles.downloadButtonText, scaledTypography.body]}>Downloading…</Text>
+                </>
+              ) : (
+                <>
+                  <Ionicons name="download-outline" size={20} color="#fff" style={styles.buttonIcon} />
+                  <Text style={[styles.downloadButtonText, scaledTypography.body]}>
+                    {isExpired ? 'Link Expired' : 'Download My Data'}
+                  </Text>
+                </>
+              )}
             </Pressable>
 
-            <Pressable style={styles.newExportButton} onPress={handleRequestExport} disabled={loading}>
-              <Text style={[styles.newExportText, scaledTypography.body, { color: colors.textSecondary }]}>Generate new export</Text>
+            <Pressable style={styles.secondaryButton} onPress={handleRequestExport} disabled={loading}>
+              <Text style={[scaledTypography.body, { color: colors.textSecondary }]}>
+                Generate new export
+              </Text>
             </Pressable>
           </>
         )}
@@ -156,18 +219,20 @@ export default function ExportDataScreen() {
         {/* Request button — shown before export */}
         {!result && (
           <Pressable
-            style={[styles.requestButton, loading && styles.requestButtonDisabled]}
+            style={[styles.requestButton, loading && styles.buttonDisabled]}
             onPress={handleRequestExport}
             disabled={loading}
           >
             {loading ? (
               <>
-                <ActivityIndicator size="small" color="#fff" style={{ marginRight: 8 }} />
-                <Text style={[styles.requestButtonText, scaledTypography.body]}>Generating your export…</Text>
+                <ActivityIndicator size="small" color="#fff" style={styles.buttonIcon} />
+                <Text style={[styles.requestButtonText, scaledTypography.body]}>
+                  Generating your export…
+                </Text>
               </>
             ) : (
               <>
-                <Ionicons name="cloud-download-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
+                <Ionicons name="cloud-download-outline" size={20} color="#fff" style={styles.buttonIcon} />
                 <Text style={[styles.requestButtonText, scaledTypography.body]}>Export My Data</Text>
               </>
             )}
@@ -176,82 +241,72 @@ export default function ExportDataScreen() {
 
         <View style={{ height: 40 }} />
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-  },
-  backButton: { width: 32 },
-  headerTitle: { },
-  headerSpacer: { width: 32 },
-  scrollView: { flex: 1 },
-  scrollContent: { paddingHorizontal: 20, paddingTop: 8 },
-  infoCard: {
-    borderRadius: 18,
-    padding: 20,
-    marginBottom: 8,
-  },
-  infoIconRow: { alignItems: 'center', marginBottom: 12 },
-  infoTitle: { textAlign: 'center', marginBottom: 10 },
-  infoBody: { lineHeight: 20, marginBottom: 14 },
-  dataList: { marginBottom: 14 },
-  dataListRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
-  dataListItem: { },
-  infoFootnote: { lineHeight: 18 },
-  sectionHeader: {
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
-    marginTop: 24,
-    marginBottom: 8,
-    marginLeft: 4,
-  },
-  resultCard: {
-    borderRadius: 18,
-    overflow: 'hidden',
-  },
-  resultRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-  },
-  resultText: { fontWeight: '600' },
-  resultLabel: { flex: 1 },
-  resultValue: { fontWeight: '500' },
-  divider: { height: 1, marginLeft: 16 },
-  downloadButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#22C55E',
-    borderRadius: 14,
-    paddingVertical: 16,
-    marginTop: 16,
-  },
-  downloadButtonText: { color: '#fff' },
-  newExportButton: {
-    alignItems: 'center',
-    paddingVertical: 12,
-    marginTop: 8,
-  },
-  newExportText: { },
-  requestButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#22C55E',
-    borderRadius: 14,
-    paddingVertical: 16,
-    marginTop: 16,
-  },
-  requestButtonDisabled: { backgroundColor: '#86EFAC' },
-  requestButtonText: { color: '#fff' },
-});
+function makeStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    container: { flex: 1 },
+    scrollView: { flex: 1 },
+    scrollContent: { paddingHorizontal: 20, paddingTop: 16 },
+    card: {
+      borderRadius: 18,
+      padding: 20,
+      marginBottom: 8,
+    },
+    iconRow: { alignItems: 'center', marginBottom: 12 },
+    cardTitle: { textAlign: 'center', marginBottom: 10 },
+    cardBody: { lineHeight: 20, marginBottom: 14 },
+    dataList: { marginBottom: 14 },
+    dataListRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
+    checkIcon: { marginRight: 8 },
+    footnote: { lineHeight: 18 },
+    sectionHeader: {
+      letterSpacing: 0.5,
+      textTransform: 'uppercase',
+      marginTop: 24,
+      marginBottom: 8,
+      marginLeft: 4,
+    },
+    resultCard: {
+      borderRadius: 18,
+      overflow: 'hidden',
+    },
+    resultRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+    },
+    resultIcon: { marginRight: 10 },
+    divider: { height: 1, marginLeft: 16 },
+    downloadButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: '#22C55E',
+      borderRadius: 14,
+      paddingVertical: 16,
+      marginTop: 16,
+    },
+    downloadButtonText: { color: '#fff' },
+    secondaryButton: {
+      alignItems: 'center',
+      paddingVertical: 12,
+      marginTop: 8,
+    },
+    requestButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: '#22C55E',
+      borderRadius: 14,
+      paddingVertical: 16,
+      marginTop: 16,
+    },
+    requestButtonText: { color: '#fff' },
+    buttonDisabled: { opacity: 0.5 },
+    buttonIcon: { marginRight: 8 },
+  });
+}
