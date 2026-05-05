@@ -53,6 +53,8 @@ export {
   deleteAccount,
   searchUsers,
   requestDataExport,
+  requestEmailChange,
+  confirmEmailChange,
 } from './profiles';
 export type { UserProfile, SearchUserResult, DataExportResult } from './profiles';
 export { likePost, unlikePost } from './likes';

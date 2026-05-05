@@ -35,6 +35,7 @@ export default function ProfileStack() {
       <Stack.Screen name="settings/data-storage" options={{ title: 'Data & Storage' }} />
       <Stack.Screen name="settings/export-data" options={{ title: 'Export Data' }} />
       <Stack.Screen name="settings/bug-report" options={{ title: 'Report a Bug' }} />
+      <Stack.Screen name="settings/change-email" options={{ title: 'Change Email' }} />
     </Stack>
   );
 }
