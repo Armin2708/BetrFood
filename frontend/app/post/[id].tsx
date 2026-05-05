@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useMemo, useState, useEffect, useContext } from 'react';
 import {
   View,
   Text,
@@ -10,12 +10,15 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, router } from 'expo-router';
-import { colors } from '../../constants/theme';
+import { ThemeColors } from '../../constants/theme';
+import { useAppTheme } from '../../context/ThemeContext';
 import { fetchPost, getImageUrl, getAvatarUrl, Post as PostType } from '../../services/api';
 import { AuthContext } from '../../context/AuthenticationContext';
 import Post from '../../components/Post';
 
 export default function PostDetailScreen() {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useContext(AuthContext);
 
@@ -85,35 +88,37 @@ export default function PostDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.white },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: colors.primary,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
-  },
-  backButton: { padding: 4, marginRight: 4 },
-  headerTitle: {
-    flex: 1,
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.white,
-  },
-  headerRight: { width: 32 },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12, paddingHorizontal: 32 },
-  errorText: { fontSize: 15, color: colors.textSecondary, textAlign: 'center' },
-  backLink: {
-    marginTop: 4,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    backgroundColor: colors.primary,
-    borderRadius: 20,
-  },
-  backLinkText: { color: colors.white, fontWeight: '600', fontSize: 15 },
-  scrollContent: { paddingBottom: 32 },
-});
+function makeStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.backgroundPrimary },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      backgroundColor: colors.primary,
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+      borderBottomLeftRadius: 20,
+      borderBottomRightRadius: 20,
+    },
+    backButton: { padding: 4, marginRight: 4 },
+    headerTitle: {
+      flex: 1,
+      fontSize: 18,
+      fontWeight: '700',
+      color: colors.white,
+    },
+    headerRight: { width: 32 },
+    centered: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12, paddingHorizontal: 32 },
+    errorText: { fontSize: 15, color: colors.textSecondary, textAlign: 'center' },
+    backLink: {
+      marginTop: 4,
+      paddingHorizontal: 20,
+      paddingVertical: 10,
+      backgroundColor: colors.primary,
+      borderRadius: 20,
+    },
+    backLinkText: { color: colors.white, fontWeight: '600', fontSize: 15 },
+    scrollContent: { paddingBottom: 32 },
+  });
+}
