@@ -475,6 +475,75 @@ router.post('/me/email/confirm', requireAuth, async (req, res) => {
   res.json({ message: 'Email address updated successfully.' });
 });
 
+// ── Password Change ────────────────────────────────────────────────────────────
+
+// POST /api/profiles/me/password
+// Verifies current password, updates to new password in Clerk, sends confirmation email.
+router.post('/me/password', requireAuth, async (req, res) => {
+  const userId = req.userId;
+  const { currentPassword, newPassword } = req.body;
+
+  if (!currentPassword || typeof currentPassword !== 'string') {
+    return res.status(400).json({ error: 'Current password is required.' });
+  }
+  if (!newPassword || typeof newPassword !== 'string' || newPassword.length < 8) {
+    return res.status(400).json({ error: 'New password must be at least 8 characters.' });
+  }
+  if (currentPassword === newPassword) {
+    return res.status(400).json({ error: 'New password must be different from your current password.' });
+  }
+
+  // 1. Verify current password
+  let verifyResult;
+  try {
+    verifyResult = await clerkRequest('POST', `/v1/users/${userId}/verify_password`, { password: currentPassword });
+  } catch (err) {
+    console.error('[PASSWORD CHANGE] verify_password error:', err.message);
+    return res.status(500).json({ error: 'Unable to verify password. Please try again.' });
+  }
+
+  if (verifyResult.status !== 200 || !verifyResult.data?.verified) {
+    const clerkCode = verifyResult.data?.errors?.[0]?.code || '';
+    if (clerkCode === 'form_password_not_enabled') {
+      return res.status(400).json({ error: 'Password sign-in is not enabled on this account. Manage your password through your OAuth provider.' });
+    }
+    return res.status(401).json({ error: 'Incorrect current password.' });
+  }
+
+  // 2. Update password in Clerk
+  let updateResult;
+  try {
+    updateResult = await clerkRequest('PATCH', `/v1/users/${userId}`, {
+      password: newPassword,
+      skip_password_checks: false,
+    });
+  } catch (err) {
+    console.error('[PASSWORD CHANGE] update password error:', err.message);
+    return res.status(500).json({ error: 'Failed to update password. Please try again.' });
+  }
+
+  if (updateResult.status !== 200) {
+    const errMsg = updateResult.data?.errors?.[0]?.long_message
+      || updateResult.data?.errors?.[0]?.message
+      || 'Failed to update password.';
+    return res.status(400).json({ error: errMsg });
+  }
+
+  // 3. Send confirmation email (fire-and-forget)
+  getClerkUserEmail(userId).then((userEmail) => {
+    if (!userEmail) return;
+    sendEmail({
+      to: userEmail,
+      subject: 'Your BetrFood password has been changed',
+      text: `Hello,\n\nYour BetrFood account password was successfully changed.\n\nIf you did not make this change, please contact support immediately and reset your password.\n\nThe BetrFood Team`,
+      html: `<p>Hello,</p><p>Your BetrFood account password was successfully changed.</p><p>If you did not make this change, please contact support immediately and reset your password.</p><p>The BetrFood Team</p>`,
+    }).catch((err) => console.error('[PASSWORD CHANGE] Confirmation email failed:', err.message));
+  }).catch(() => {});
+
+  console.log(`[PASSWORD CHANGE] Password updated for user ${userId}`);
+  res.json({ message: 'Password updated successfully.' });
+});
+
 // ── Data Export ────────────────────────────────────────────────────────────────
 
 /**
