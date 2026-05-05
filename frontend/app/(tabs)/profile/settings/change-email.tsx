@@ -2,6 +2,7 @@ import React, { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  InputAccessoryView,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -17,7 +18,7 @@ import { router } from "expo-router";
 import { ThemeColors } from "../../../../constants/theme";
 import { useAppTheme } from "../../../../context/ThemeContext";
 import { useScaledTypography } from "../../../../hooks/useScaledTypography";
-import { confirmEmailChange, requestEmailChange } from "../../../../services/api";
+import { requestEmailChange } from "../../../../services/api";
 
 type Step = "request" | "verify";
 
@@ -60,17 +61,31 @@ export default function ChangeEmailScreen() {
       setRequestError("Please enter your current password.");
       return;
     }
+    if (!user) {
+      setRequestError("Not signed in. Please restart the app.");
+      return;
+    }
     setRequesting(true);
     try {
-      const result = await requestEmailChange(newEmail.trim().toLowerCase(), password);
-      setEmailAddressId(result.emailAddressId);
+      // Verify password via backend
+      await requestEmailChange(newEmail.trim().toLowerCase(), password);
+
+      // Create the new email address and send verification code via Clerk frontend SDK
+      const emailAddr = await user.createEmailAddress({ email: newEmail.trim().toLowerCase() });
+      await emailAddr.prepareVerification({ strategy: "email_code" });
+
+      setEmailAddressId(emailAddr.id);
       setStep("verify");
-    } catch (err) {
-      setRequestError(err instanceof Error ? err.message : "Something went wrong.");
+    } catch (err: any) {
+      const msg =
+        err?.errors?.[0]?.longMessage ||
+        err?.errors?.[0]?.message ||
+        (err instanceof Error ? err.message : "Something went wrong.");
+      setRequestError(msg);
     } finally {
       setRequesting(false);
     }
-  }, [newEmail, password]);
+  }, [newEmail, password, user]);
 
   const handleConfirm = useCallback(async () => {
     setConfirmError("");
@@ -78,27 +93,54 @@ export default function ChangeEmailScreen() {
       setConfirmError("Please enter the verification code.");
       return;
     }
+    if (!user) {
+      setConfirmError("Not signed in. Please restart the app.");
+      return;
+    }
     setConfirming(true);
     try {
-      await confirmEmailChange(emailAddressId, code.trim());
+      await user.reload();
+
+      const emailAddr = user.emailAddresses.find((e) => e.id === emailAddressId);
+      if (!emailAddr) throw new Error("Email address not found. Please go back and try again.");
+
+      await emailAddr.attemptVerification({ code: code.trim() });
+      await user.update({ primaryEmailAddressId: emailAddr.id });
+
+      // Remove old email addresses best-effort
+      for (const addr of user.emailAddresses) {
+        if (addr.id !== emailAddr.id) {
+          await addr.destroy().catch(() => {});
+        }
+      }
+
       Alert.alert(
         "Email updated",
         "Your email address has been changed. You may need to sign in again.",
         [{ text: "OK", onPress: () => router.back() }]
       );
-    } catch (err) {
-      setConfirmError(err instanceof Error ? err.message : "Something went wrong.");
+    } catch (err: any) {
+      const msg =
+        err?.errors?.[0]?.longMessage ||
+        err?.errors?.[0]?.message ||
+        (err instanceof Error ? err.message : "Something went wrong.");
+      setConfirmError(msg);
     } finally {
       setConfirming(false);
     }
-  }, [emailAddressId, code]);
+  }, [emailAddressId, code, user]);
 
   const handleBackToRequest = useCallback(() => {
+    // Clean up the pending unverified email address
+    if (emailAddressId && user) {
+      const addr = user.emailAddresses.find((e) => e.id === emailAddressId);
+      addr?.destroy().catch(() => {});
+    }
     setStep("request");
     setCode("");
     setConfirmError("");
     setEmailAddressId("");
-  }, []);
+  }, [emailAddressId, user]);
 
   return (
     <View style={styles.container}>
@@ -224,9 +266,9 @@ export default function ChangeEmailScreen() {
                   placeholder="• • • • • •"
                   placeholderTextColor={colors.placeholder}
                   keyboardType="number-pad"
-                  returnKeyType="done"
                   onSubmitEditing={handleConfirm}
                   maxLength={6}
+                  inputAccessoryViewID={Platform.OS === "ios" ? "change-email-code" : undefined}
                 />
               </View>
 
@@ -260,6 +302,9 @@ export default function ChangeEmailScreen() {
           )}
         </ScrollView>
       </KeyboardAvoidingView>
+      {Platform.OS === "ios" && (
+        <InputAccessoryView nativeID="change-email-code" />
+      )}
     </View>
   );
 }

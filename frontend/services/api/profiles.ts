@@ -167,7 +167,7 @@ export interface DataExportResult {
 export async function requestEmailChange(
   newEmail: string,
   currentPassword: string
-): Promise<{ emailAddressId: string; message: string }> {
+): Promise<{ message: string }> {
   const response = await fetch(`${API_BASE_URL}/api/profiles/me/email/request`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
@@ -176,22 +176,6 @@ export async function requestEmailChange(
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.error || 'Failed to request email change');
-  }
-  return response.json();
-}
-
-export async function confirmEmailChange(
-  emailAddressId: string,
-  code: string
-): Promise<{ message: string }> {
-  const response = await fetch(`${API_BASE_URL}/api/profiles/me/email/confirm`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
-    body: JSON.stringify({ emailAddressId, code }),
-  });
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Failed to confirm email change');
   }
   return response.json();
 }

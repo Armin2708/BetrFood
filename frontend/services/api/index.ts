@@ -54,7 +54,6 @@ export {
   searchUsers,
   requestDataExport,
   requestEmailChange,
-  confirmEmailChange,
   changePassword,
 } from './profiles';
 export type { UserProfile, SearchUserResult, DataExportResult } from './profiles';
