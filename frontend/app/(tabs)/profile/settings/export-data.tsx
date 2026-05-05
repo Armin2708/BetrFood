@@ -12,7 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
-import * as Linking from 'expo-linking';
+import { Linking } from 'react-native';
 import { useAppTheme } from '../../../../context/ThemeContext';
 import { useScaledTypography } from '../../../../hooks/useScaledTypography';
 import { requestDataExport, DataExportResult } from '../../../../services/api';
@@ -89,22 +89,30 @@ export default function ExportDataScreen() {
         return;
       }
 
-      // Native: download to cache then share/save via system sheet
-      const fileUri = (FileSystem.cacheDirectory ?? '') + filename;
-      const { uri } = await FileSystem.downloadAsync(result.downloadUrl, fileUri);
+      // Native: try downloading to cache and sharing via system sheet.
+      // Supabase signed URLs can redirect, so we fall back to opening in
+      // the system browser if FileSystem.downloadAsync fails.
+      let downloaded = false;
+      try {
+        const fileUri = (FileSystem.cacheDirectory ?? '') + filename;
+        const dl = await FileSystem.downloadAsync(result.downloadUrl, fileUri);
+        if (dl.status === 200 && (await Sharing.isAvailableAsync())) {
+          await Sharing.shareAsync(dl.uri, {
+            mimeType: 'application/json',
+            dialogTitle: 'Save your BetrFood data export',
+            UTI: 'public.json',
+          });
+          downloaded = true;
+        }
+      } catch {
+        // fall through to browser fallback
+      }
 
-      const canShare = await Sharing.isAvailableAsync();
-      if (canShare) {
-        await Sharing.shareAsync(uri, {
-          mimeType: 'application/json',
-          dialogTitle: 'Save your BetrFood data export',
-          UTI: 'public.json',
-        });
-      } else {
+      if (!downloaded) {
         await Linking.openURL(result.downloadUrl);
       }
     } catch {
-      Alert.alert('Download Failed', 'Could not download the export file. Please try again.');
+      Alert.alert('Download Failed', 'Could not open the export. The link has been sent to your email as well.');
     } finally {
       setDownloading(false);
     }
