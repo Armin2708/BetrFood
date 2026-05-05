@@ -31,6 +31,17 @@ export async function fetchPantryItems(): Promise<PantryItem[]> {
   return response.json();
 }
 
+export async function fetchUserPantry(userId: string): Promise<PantryItem[]> {
+  const response = await fetch(`${API_BASE_URL}/api/pantry/user/${userId}`, {
+    headers: await authHeaders(),
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Unable to view this pantry.');
+  }
+  return response.json();
+}
+
 export async function createPantryItem(item: PantryItemInput): Promise<PantryItem> {
   const response = await fetch(`${API_BASE_URL}/api/pantry`, {
     method: 'POST',

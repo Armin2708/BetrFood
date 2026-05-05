@@ -1,7 +1,7 @@
 import { View, Text, Pressable, StyleSheet, Image, FlatList, Dimensions, ActivityIndicator, Alert, Platform } from 'react-native';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from "@expo/vector-icons";
-import { useState, useCallback, useContext, useEffect } from 'react';
+import { useState, useCallback, useContext, useEffect, useMemo } from 'react';
 import { useActionSheet } from '@expo/react-native-action-sheet';
 import { AuthContext } from '../../../context/AuthenticationContext';
 import { useFeedLayout } from '../../../context/FeedLayoutContext';
@@ -11,6 +11,7 @@ import {
   fetchUserProfile,
   fetchFollowStats,
   fetchUserPosts,
+  fetchUserPantry,
   getImageUrl,
   getAvatarUrl,
   followUser,
@@ -27,6 +28,7 @@ import {
   cancelFollowRequest,
   UserProfile,
   Post as PostType,
+  PantryItem,
 } from '../../../services/api';
 import { colors } from '../../../constants/theme';
 
@@ -40,6 +42,10 @@ function formatCount(count: number): string {
   if (count >= 1_000) return `${(count / 1_000).toFixed(count % 1_000 === 0 ? 0 : 1)}K`;
   return String(count);
 }
+
+type PantryListRow =
+  | { type: 'category'; category: string }
+  | { type: 'item'; item: PantryItem };
 
 export default function UserProfileScreen() {
   const router = useRouter();
@@ -59,6 +65,12 @@ export default function UserProfileScreen() {
   const [isPrivate, setIsPrivate] = useState(false);
   const [followRequestStatus, setFollowRequestStatus] = useState<'none' | 'pending' | 'accepted'>('none');
   const { showActionSheetWithOptions } = useActionSheet();
+
+  const [activeTab, setActiveTab] = useState<'posts' | 'pantry'>('posts');
+  const [pantryItems, setPantryItems] = useState<PantryItem[]>([]);
+  const [pantryLoading, setPantryLoading] = useState(false);
+  const [pantryError, setPantryError] = useState<string | null>(null);
+  const [pantryLoaded, setPantryLoaded] = useState(false);
 
   const handleToggleBlock = () => {
     if (!userId) return;
@@ -241,6 +253,43 @@ export default function UserProfileScreen() {
     loadProfile();
   }, [loadProfile]);
 
+  const loadPantry = useCallback(async () => {
+    if (!userId || pantryLoaded || pantryLoading) return;
+    setPantryLoading(true);
+    setPantryError(null);
+    try {
+      const items = await fetchUserPantry(userId);
+      setPantryItems(items);
+      setPantryLoaded(true);
+    } catch (err: any) {
+      setPantryError(err.message || 'Unable to load pantry.');
+    } finally {
+      setPantryLoading(false);
+    }
+  }, [userId, pantryLoaded, pantryLoading]);
+
+  const handleTabSwitch = (tab: 'posts' | 'pantry') => {
+    setActiveTab(tab);
+    if (tab === 'pantry' && !pantryLoaded && !pantryLoading) {
+      loadPantry();
+    }
+  };
+
+  const pantryListData = useMemo<PantryListRow[]>(() => {
+    const groups: Record<string, PantryItem[]> = {};
+    pantryItems.forEach(item => {
+      const cat = item.category || 'Other';
+      if (!groups[cat]) groups[cat] = [];
+      groups[cat].push(item);
+    });
+    const rows: PantryListRow[] = [];
+    Object.keys(groups).sort().forEach(cat => {
+      rows.push({ type: 'category', category: cat });
+      groups[cat].forEach(item => rows.push({ type: 'item', item }));
+    });
+    return rows;
+  }, [pantryItems]);
+
   const handleFollowToggle = async () => {
     if (!userId || followLoading) return;
 
@@ -323,7 +372,7 @@ export default function UserProfileScreen() {
         <View style={styles.displayNameRow}>
           <Text style={[styles.displayName, scaledTypography.title]}>{profile.displayName}</Text>
           {profile.verified && (
-            <Text style={[styles.verifiedBadge, scaledTypography.label]}>{'\u2713'}</Text>
+            <Text style={[styles.verifiedBadge, scaledTypography.label]}>{'✓'}</Text>
           )}
         </View>
       ) : null}
@@ -405,16 +454,57 @@ export default function UserProfileScreen() {
         </View>
       )}
 
-      {/* Tab divider */}
+      {/* Tab bar */}
       {(!isPrivate || isFollowing) && (
-        <View style={styles.tabDivider}>
-          <View style={styles.tabIconContainer}>
-            <Ionicons name="albums-outline" size={22} color="#000" />
-          </View>
+        <View style={styles.tabBar}>
+          <Pressable
+            style={[styles.tabItem, activeTab === 'posts' && styles.tabItemActive]}
+            onPress={() => handleTabSwitch('posts')}
+            accessibilityRole="tab"
+            accessibilityLabel="Posts tab"
+          >
+            <Ionicons
+              name="albums-outline"
+              size={22}
+              color={activeTab === 'posts' ? colors.primary : '#94A3B8'}
+            />
+          </Pressable>
+          <Pressable
+            style={[styles.tabItem, activeTab === 'pantry' && styles.tabItemActive]}
+            onPress={() => handleTabSwitch('pantry')}
+            accessibilityRole="tab"
+            accessibilityLabel="Pantry tab"
+          >
+            <Ionicons
+              name="basket-outline"
+              size={22}
+              color={activeTab === 'pantry' ? colors.primary : '#94A3B8'}
+            />
+          </Pressable>
         </View>
       )}
     </View>
   );
+
+  const renderPantryRow = ({ item }: { item: PantryListRow }) => {
+    if (item.type === 'category') {
+      return (
+        <View style={styles.pantryCategoryHeader}>
+          <Text style={[styles.pantryCategoryText, scaledTypography.caption]}>{item.category}</Text>
+        </View>
+      );
+    }
+    return (
+      <View style={styles.pantryItemRow}>
+        <Text style={[styles.pantryItemName, scaledTypography.body]} numberOfLines={1}>
+          {item.item.name}
+        </Text>
+        <Text style={[styles.pantryItemQty, scaledTypography.caption]}>
+          {item.item.quantity}{item.item.unit ? ` ${item.item.unit}` : ''}
+        </Text>
+      </View>
+    );
+  };
 
   return (
     <>
@@ -437,58 +527,88 @@ export default function UserProfileScreen() {
 
       <View style={styles.container}>
         {(!isPrivate || isFollowing) ? (
-          <FlatList
-            key={feedLayout}
-            data={userPosts}
-            keyExtractor={(item) => item.id}
-            numColumns={feedLayout === 'grid' ? 3 : 1}
-            ListHeaderComponent={renderProfileHeader}
-            renderItem={({ item }) =>
-              feedLayout === 'grid' ? (
-                <View>
-                  {item.mediaType === 'video' ? (
-                    <VideoThumbnailView
-                      videoUri={getImageUrl(item.imagePath)}
-                      style={styles.gridItem}
-                    />
-                  ) : (
-                    <Image
-                      source={{ uri: getImageUrl(item.imagePath) }}
-                      style={styles.gridItem}
-                      accessibilityLabel={item.caption || 'Post image'}
-                    />
-                  )}
+          activeTab === 'posts' ? (
+            <FlatList
+              key={feedLayout + '-posts'}
+              data={userPosts}
+              keyExtractor={(item) => item.id}
+              numColumns={feedLayout === 'grid' ? 3 : 1}
+              ListHeaderComponent={renderProfileHeader}
+              renderItem={({ item }) =>
+                feedLayout === 'grid' ? (
+                  <View>
+                    {item.mediaType === 'video' ? (
+                      <VideoThumbnailView
+                        videoUri={getImageUrl(item.imagePath)}
+                        style={styles.gridItem}
+                      />
+                    ) : (
+                      <Image
+                        source={{ uri: getImageUrl(item.imagePath) }}
+                        style={styles.gridItem}
+                        accessibilityLabel={item.caption || 'Post image'}
+                      />
+                    )}
+                  </View>
+                ) : (
+                  <View style={styles.listItem}>
+                    {item.mediaType === 'video' ? (
+                      <VideoThumbnailView
+                        videoUri={getImageUrl(item.imagePath)}
+                        style={styles.listMedia}
+                      />
+                    ) : (
+                      <Image
+                        source={{ uri: getImageUrl(item.imagePath) }}
+                        style={styles.listMedia}
+                        accessibilityLabel={item.caption || 'Post image'}
+                      />
+                    )}
+                    {item.caption ? (
+                      <Text style={[styles.listCaption, scaledTypography.body]} numberOfLines={2}>
+                        {item.caption}
+                      </Text>
+                    ) : null}
+                  </View>
+                )
+              }
+              showsVerticalScrollIndicator={false}
+              ListEmptyComponent={
+                <View style={styles.emptyGrid}>
+                  <Ionicons name="camera-outline" size={48} color="#CBD5E1" style={{ marginBottom: 12 }} />
+                  <Text style={[styles.emptyText, scaledTypography.body]}>No posts yet</Text>
                 </View>
-              ) : (
-                <View style={styles.listItem}>
-                  {item.mediaType === 'video' ? (
-                    <VideoThumbnailView
-                      videoUri={getImageUrl(item.imagePath)}
-                      style={styles.listMedia}
-                    />
-                  ) : (
-                    <Image
-                      source={{ uri: getImageUrl(item.imagePath) }}
-                      style={styles.listMedia}
-                      accessibilityLabel={item.caption || 'Post image'}
-                    />
-                  )}
-                  {item.caption ? (
-                    <Text style={[styles.listCaption, scaledTypography.body]} numberOfLines={2}>
-                      {item.caption}
-                    </Text>
-                  ) : null}
-                </View>
-              )
-            }
-            showsVerticalScrollIndicator={false}
-            ListEmptyComponent={
-              <View style={styles.emptyGrid}>
-                <Ionicons name="camera-outline" size={48} color="#CBD5E1" style={{ marginBottom: 12 }} />
-                <Text style={[styles.emptyText, scaledTypography.body]}>No posts yet</Text>
-              </View>
-            }
-          />
+              }
+            />
+          ) : (
+            <FlatList<PantryListRow>
+              key="pantry"
+              data={pantryListData}
+              keyExtractor={(item, index) =>
+                item.type === 'item' ? item.item.id : `cat-${item.category}-${index}`
+              }
+              ListHeaderComponent={renderProfileHeader}
+              renderItem={renderPantryRow}
+              showsVerticalScrollIndicator={false}
+              ListEmptyComponent={
+                pantryLoading ? (
+                  <View style={styles.emptyGrid}>
+                    <ActivityIndicator size="large" color={colors.primary} />
+                  </View>
+                ) : pantryError ? (
+                  <View style={styles.emptyGrid}>
+                    <Ionicons name="lock-closed-outline" size={48} color="#CBD5E1" style={{ marginBottom: 12 }} />
+                    <Text style={[styles.emptyText, scaledTypography.body]}>{pantryError}</Text>
+                  </View>
+                ) : (
+                  <View style={styles.emptyGrid}>
+                    <Ionicons name="basket-outline" size={48} color="#CBD5E1" style={{ marginBottom: 12 }} />
+                    <Text style={[styles.emptyText, scaledTypography.body]}>No pantry items</Text>
+                  </View>
+                )
+              }
+            />
+          )
         ) : (
           renderProfileHeader()
         )}
@@ -650,21 +770,22 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  /* Tab divider */
-  tabDivider: {
+  /* Tab bar */
+  tabBar: {
     width: '100%',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    flexDirection: 'row',
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+  },
+  tabItem: {
+    flex: 1,
     alignItems: 'center',
     paddingVertical: 12,
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
   },
-  tabIconContainer: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 20,
-    backgroundColor: '#F0FDF4',
+  tabItemActive: {
+    borderBottomColor: colors.primary,
   },
 
   /* Post grid */
@@ -695,6 +816,37 @@ const styles = StyleSheet.create({
     marginTop: 10,
     lineHeight: 20,
     color: colors.textPrimary,
+  },
+
+  /* Pantry */
+  pantryCategoryHeader: {
+    paddingHorizontal: 16,
+    paddingTop: 20,
+    paddingBottom: 6,
+    backgroundColor: colors.backgroundPrimary,
+  },
+  pantryCategoryText: {
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  pantryItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+    backgroundColor: '#FFFFFF',
+  },
+  pantryItemName: {
+    flex: 1,
+    color: colors.textPrimary,
+  },
+  pantryItemQty: {
+    color: colors.textSecondary,
+    marginLeft: 12,
   },
 
   /* Empty state */

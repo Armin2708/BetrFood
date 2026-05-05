@@ -6,6 +6,8 @@ import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { Platform } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { StatusBar } from "expo-status-bar";
+import { useFonts } from 'expo-font';
+import { Ionicons } from '@expo/vector-icons';
 import Providers from "../context/Providers";
 import { useAppTheme } from "../context/ThemeContext";
 
@@ -44,6 +46,8 @@ function RootNavigator() {
 }
 
 export default function RootLayout() {
+  useFonts({ ...Ionicons.font });
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
