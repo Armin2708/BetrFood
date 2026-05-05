@@ -41,8 +41,15 @@ ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS expiring_items_threshold I
 ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS expiration_notifications_enabled BOOLEAN DEFAULT false;
 
 -- Add text_size_scale column for accessibility
-ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS text_size_scale TEXT DEFAULT 'default' 
+ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS text_size_scale TEXT DEFAULT 'default'
 CHECK (text_size_scale IN ('small', 'default', 'large', 'xLarge'));
+
+-- Pantry visibility: defaults to only_me (private) per GDPR / user story requirement
+ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS pantry_visibility TEXT DEFAULT 'only_me'
+CHECK (pantry_visibility IN ('only_me', 'followers', 'everyone'));
+
+-- Searchable: controls whether the user appears in search results
+ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS searchable BOOLEAN DEFAULT true;
 
 -- ============================================================
 -- 3. Posts
