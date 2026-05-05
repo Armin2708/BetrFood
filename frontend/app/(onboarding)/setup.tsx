@@ -266,16 +266,6 @@ export default function OnboardingSetup() {
           <Text style={styles.errorText}>This username is already taken</Text>
         )}
       </View>
-
-      <View style={styles.buttonRow}>
-        <TouchableOpacity
-          style={[styles.nextButton, !isUsernameValid && styles.buttonDisabled]}
-          onPress={handleNext}
-          disabled={!isUsernameValid}
-        >
-          <Text style={styles.nextButtonText}>Next</Text>
-        </TouchableOpacity>
-      </View>
     </View>
   );
 
@@ -308,18 +298,6 @@ export default function OnboardingSetup() {
         />
         <Text style={styles.charCount}>{bio.length}/150</Text>
       </View>
-
-      <View style={styles.buttonRow}>
-        <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-          <Text style={styles.backButtonText}>Back</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
-          <Text style={styles.nextButtonText}>Next</Text>
-        </TouchableOpacity>
-      </View>
-      <TouchableOpacity onPress={handleNext} style={styles.skipLink}>
-        <Text style={styles.skipText}>Skip</Text>
-      </TouchableOpacity>
     </View>
   );
 
@@ -345,18 +323,6 @@ export default function OnboardingSetup() {
           );
         })}
       </View>
-
-      <View style={styles.buttonRow}>
-        <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-          <Text style={styles.backButtonText}>Back</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
-          <Text style={styles.nextButtonText}>Next</Text>
-        </TouchableOpacity>
-      </View>
-      <TouchableOpacity onPress={handleNext} style={styles.skipLink}>
-        <Text style={styles.skipText}>Skip</Text>
-      </TouchableOpacity>
     </View>
   );
 
@@ -382,18 +348,6 @@ export default function OnboardingSetup() {
           );
         })}
       </View>
-
-      <View style={styles.buttonRow}>
-        <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-          <Text style={styles.backButtonText}>Back</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
-          <Text style={styles.nextButtonText}>Next</Text>
-        </TouchableOpacity>
-      </View>
-      <TouchableOpacity onPress={handleNext} style={styles.skipLink}>
-        <Text style={styles.skipText}>Skip</Text>
-      </TouchableOpacity>
     </View>
   );
 
@@ -419,28 +373,11 @@ export default function OnboardingSetup() {
           );
         })}
       </View>
-
-      <View style={styles.buttonRow}>
-        <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-          <Text style={styles.backButtonText}>Back</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.nextButton, submitting && styles.buttonDisabled]}
-          onPress={handleFinish}
-          disabled={submitting}
-        >
-          {submitting ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.nextButtonText}>Finish</Text>
-          )}
-        </TouchableOpacity>
-      </View>
-      <TouchableOpacity onPress={handleFinish} style={styles.skipLink} disabled={submitting}>
-        <Text style={styles.skipText}>Skip</Text>
-      </TouchableOpacity>
     </View>
   );
+
+  const isLastStep = step === TOTAL_STEPS;
+  const canProceed = step === 1 ? isUsernameValid : true;
 
   return (
     <KeyboardAvoidingView
@@ -455,6 +392,48 @@ export default function OnboardingSetup() {
         {step === 4 && renderStep4()}
         {step === 5 && renderStep5()}
       </ScrollView>
+
+      {/* Fixed bottom bar — same position on every step */}
+      <View style={styles.bottomBar}>
+        {step > 1 && step < TOTAL_STEPS && (
+          <TouchableOpacity onPress={handleNext} style={styles.skipLink}>
+            <Text style={styles.skipText}>Skip</Text>
+          </TouchableOpacity>
+        )}
+        {step === TOTAL_STEPS && (
+          <TouchableOpacity onPress={handleFinish} style={styles.skipLink} disabled={submitting}>
+            <Text style={styles.skipText}>Skip</Text>
+          </TouchableOpacity>
+        )}
+        <View style={styles.buttonRow}>
+          {step > 1 && (
+            <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+              <Text style={styles.backButtonText}>Back</Text>
+            </TouchableOpacity>
+          )}
+          {isLastStep ? (
+            <TouchableOpacity
+              style={[styles.nextButton, submitting && styles.buttonDisabled]}
+              onPress={handleFinish}
+              disabled={submitting}
+            >
+              {submitting ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.nextButtonText}>Finish</Text>
+              )}
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={[styles.nextButton, !canProceed && styles.buttonDisabled]}
+              onPress={handleNext}
+              disabled={!canProceed}
+            >
+              <Text style={styles.nextButtonText}>Next</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
     </KeyboardAvoidingView>
   );
 }
@@ -543,10 +522,17 @@ const styles = StyleSheet.create({
     color: colors.error,
     marginTop: 4,
   },
+  bottomBar: {
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    paddingBottom: Platform.OS === 'ios' ? 36 : 24,
+    backgroundColor: '#fff',
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+  },
   buttonRow: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    marginTop: 24,
     gap: 12,
   },
   nextButton: {
@@ -579,7 +565,7 @@ const styles = StyleSheet.create({
   },
   skipLink: {
     alignItems: 'center',
-    marginTop: 16,
+    marginBottom: 10,
   },
   skipText: {
     color: '#999',
