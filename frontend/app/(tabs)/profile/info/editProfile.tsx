@@ -5,9 +5,12 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import * as ImagePicker from 'expo-image-picker';
 import { fetchMyProfile, updateMyProfile, uploadAvatar, getAvatarUrl, checkUsername, UserProfile } from "../../../../services/api";
 import { colors, spacing } from "../../../../constants/theme";
+import { useScaledTypography } from "../../../../hooks/useScaledTypography";
+import { useAppTheme } from "../../../../context/ThemeContext";
 
 export default function EditProfile() {
   const router = useRouter();
+  const scaledTypography = useScaledTypography();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -135,13 +138,13 @@ export default function EditProfile() {
           </View>
         )}
         <View style={styles.changePhoto}>
-          <Text style={styles.changePhotoText}>Change Photo</Text>
+          <Text style={[styles.changePhotoText, scaledTypography.label]}>Change Photo</Text>
         </View>
       </Pressable>
 
       {/* Display Name */}
       <View style={styles.inputGroup}>
-        <Text style={styles.label}>Display Name</Text>
+        <Text style={[styles.label, scaledTypography.label]}>Display Name</Text>
         <TextInput
           style={styles.input}
           placeholder="Enter display name"
@@ -152,7 +155,7 @@ export default function EditProfile() {
 
       {/* Username */}
       <View style={styles.inputGroup}>
-        <Text style={styles.label}>Username</Text>
+        <Text style={[styles.label, scaledTypography.label]}>Username</Text>
         <TextInput
           style={styles.input}
           placeholder="Enter username"
@@ -186,7 +189,7 @@ export default function EditProfile() {
 
       {/* Bio */}
       <View style={styles.inputGroup}>
-        <Text style={styles.label}>Bio</Text>
+        <Text style={[styles.label, scaledTypography.label]}>Bio</Text>
         <TextInput
           style={[styles.input, styles.bio]}
           placeholder="Tell us about yourself"
@@ -195,7 +198,7 @@ export default function EditProfile() {
           onChangeText={(text) => setBio(text.slice(0, 150))}
           maxLength={150}
         />
-        <Text style={styles.charCount}>{bio.length}/150</Text>
+        <Text style={[styles.charCount, scaledTypography.small]}>{bio.length}/150</Text>
       </View>
 
       {/* Save Button */}
@@ -203,7 +206,7 @@ export default function EditProfile() {
         {saving ? (
           <ActivityIndicator color={colors.white} />
         ) : (
-          <Text style={styles.saveText}>Save Changes</Text>
+          <Text style={[styles.saveText, scaledTypography.label]}>Save Changes</Text>
         )}
       </Pressable>
     </View>
@@ -247,7 +250,6 @@ const styles = StyleSheet.create({
   changePhotoText: {
     color: colors.primary,
     fontWeight: "600",
-    fontSize: 14,
   },
 
   inputGroup: {
@@ -258,7 +260,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: colors.textPrimary,
     marginBottom: 6,
-    fontSize: 14,
   },
 
   input: {
@@ -277,7 +278,6 @@ const styles = StyleSheet.create({
   },
 
   charCount: {
-    fontSize: 12,
     color: colors.textQuaternary,
     textAlign: 'right',
     marginTop: spacing.xs,
@@ -291,13 +291,11 @@ const styles = StyleSheet.create({
   },
 
   usernameAvailable: {
-    fontSize: 13,
     color: '#4CAF50',
     fontWeight: '500',
   },
 
   usernameTaken: {
-    fontSize: 13,
     color: '#e74c3c',
     fontWeight: '500',
   },
@@ -319,6 +317,5 @@ const styles = StyleSheet.create({
   saveText: {
     color: colors.white,
     fontWeight: "600",
-    fontSize: 16,
   },
 });

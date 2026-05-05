@@ -129,7 +129,7 @@ export default function ProfileScreen() {
       {/* Display name */}
       {profile?.displayName ? (
         <View style={styles.displayNameRow}>
-          <Text style={[styles.displayName, { color: themeColors.textPrimary }]}>{profile.displayName}</Text>
+          <Text style={[styles.displayName, scaledTypography.title, { color: themeColors.textPrimary }]}>{profile.displayName}</Text>
           {profile.verified && (
             <Text style={styles.verifiedBadge}>{'\u2713'}</Text>
           )}
@@ -137,13 +137,13 @@ export default function ProfileScreen() {
       ) : null}
 
       {/* Username */}
-      <Text style={[styles.username, { color: themeColors.textSecondary }]}>
+      <Text style={[styles.username, scaledTypography.small, { color: themeColors.textSecondary }]}>
         {profile?.username ? `@${profile.username}` : '@unknown'}
       </Text>
 
       {/* Bio */}
       {profile?.bio ? (
-        <Text style={[styles.bio, { color: themeColors.textSecondary }]}>{profile.bio}</Text>
+        <Text style={[styles.bio, scaledTypography.body, { color: themeColors.textSecondary }]}>{profile.bio}</Text>
       ) : null}
 
       {/* Followers / Following stats */}
@@ -153,8 +153,8 @@ export default function ProfileScreen() {
           style={styles.followItem}
           accessibilityLabel={`${followStats.followerCount} Followers`}
         >
-          <Text style={[styles.followCount, { color: themeColors.textPrimary }]}>{formatCount(followStats.followerCount)}</Text>
-          <Text style={[styles.followLabel, { color: themeColors.textSecondary }]}>  Followers</Text>
+          <Text style={[styles.followCount, scaledTypography.label, { color: themeColors.textPrimary }]}>{formatCount(followStats.followerCount)}</Text>
+          <Text style={[styles.followLabel, scaledTypography.label, { color: themeColors.textSecondary }]}>  Followers</Text>
         </Pressable>
         <View style={styles.followSpacer} />
         <Pressable
@@ -162,8 +162,8 @@ export default function ProfileScreen() {
           style={styles.followItem}
           accessibilityLabel={`${followStats.followingCount} Following`}
         >
-          <Text style={[styles.followCount, { color: themeColors.textPrimary }]}>{formatCount(followStats.followingCount)}</Text>
-          <Text style={[styles.followLabel, { color: themeColors.textSecondary }]}>  Following</Text>
+          <Text style={[styles.followCount, scaledTypography.label, { color: themeColors.textPrimary }]}>{formatCount(followStats.followingCount)}</Text>
+          <Text style={[styles.followLabel, scaledTypography.label, { color: themeColors.textSecondary }]}>  Following</Text>
         </Pressable>
       </View>
 
@@ -174,7 +174,7 @@ export default function ProfileScreen() {
         accessibilityRole="button"
         accessibilityLabel="Edit profile"
       >
-        <Text style={[styles.editButtonText, { color: themeColors.textSecondary }]}>Edit profile</Text>
+        <Text style={[styles.editButtonText, scaledTypography.label, { color: themeColors.textSecondary }]}>Edit profile</Text>
       </Pressable>
 
       {/* Tab icons */}
@@ -250,7 +250,7 @@ export default function ProfileScreen() {
             ListEmptyComponent={
               <View style={styles.emptyGrid}>
                 <Ionicons name="bookmark-outline" size={48} color={themeColors.textTertiary} style={{ marginBottom: 12 }} />
-                <Text style={[styles.emptyText, { color: themeColors.textQuaternary }]}>No collections yet</Text>
+                <Text style={[styles.emptyText, scaledTypography.body, { color: themeColors.textQuaternary }]}>No collections yet</Text>
               </View>
             }
           />
@@ -286,7 +286,7 @@ export default function ProfileScreen() {
             ListEmptyComponent={
               <View style={styles.emptyGrid}>
                 <Ionicons name={activeTab === 'posts' ? 'camera-outline' : 'heart-outline'} size={48} color={themeColors.textTertiary} style={{ marginBottom: 12 }} />
-                <Text style={[styles.emptyText, { color: themeColors.textQuaternary }]}>
+                <Text style={[styles.emptyText, scaledTypography.body, { color: themeColors.textQuaternary }]}>
                   {activeTab === 'posts' ? 'No posts yet' : 'No liked posts yet'}
                 </Text>
               </View>
@@ -351,7 +351,6 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   displayName: {
-    fontSize: 25,
     fontWeight: '600',
     color: colors.textPrimary,
     textAlign: 'center',
@@ -365,7 +364,6 @@ const styles = StyleSheet.create({
 
   /* Username */
   username: {
-    fontSize: 12,
     color: colors.textSecondary,
     textAlign: 'center',
     marginBottom: 8,
@@ -373,7 +371,6 @@ const styles = StyleSheet.create({
 
   /* Bio */
   bio: {
-    fontSize: 14,
     color: colors.textSecondary,
     textAlign: 'center',
     paddingHorizontal: 40,
@@ -393,12 +390,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   followCount: {
-    fontSize: 14,
-    fontWeight: '700',
     color: '#000000',
   },
   followLabel: {
-    fontSize: 14,
     color: '#64748B',
   },
   followSpacer: {
@@ -418,8 +412,6 @@ const styles = StyleSheet.create({
     minWidth: 200,
   },
   editButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
     color: '#64748B',
   },
 
@@ -488,12 +480,9 @@ const styles = StyleSheet.create({
   },
   collectionOverlayName: {
     color: '#FFFFFF',
-    fontSize: 11,
-    fontWeight: '600',
   },
   collectionOverlayCount: {
     color: 'rgba(255,255,255,0.8)',
-    fontSize: 10,
   },
 
   /* Empty state */
@@ -502,7 +491,6 @@ const styles = StyleSheet.create({
     paddingVertical: 60,
   },
   emptyText: {
-    fontSize: 15,
     color: colors.textQuaternary,
   },
 });

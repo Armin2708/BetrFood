@@ -12,6 +12,8 @@ import {
 import { useRouter } from 'expo-router';
 import { AuthContext } from '../../../../context/AuthenticationContext';
 import { fetchFollowing, followUser, unfollowUser, type FollowingUser } from '../../../../services/api/follows';
+import { useScaledTypography } from '../../../../hooks/useScaledTypography';
+import { useAppTheme } from '../../../../context/ThemeContext';
 
 type UserRowProps = {
   user: FollowingUser;
@@ -20,6 +22,7 @@ type UserRowProps = {
 };
 
 const UserRow: React.FC<UserRowProps> = ({ user, onToggleFollow, onProfilePress }) => {
+  const scaledTypography = useScaledTypography();
   return (
     <TouchableOpacity 
       style={styles.row}
@@ -29,8 +32,8 @@ const UserRow: React.FC<UserRowProps> = ({ user, onToggleFollow, onProfilePress 
       <Image source={{ uri: user.avatar }} style={styles.avatar} />
 
       <View style={styles.info}>
-        <Text style={styles.username}>{user.username}</Text>
-        <Text style={styles.name}>{user.name}</Text>
+        <Text style={[styles.username, scaledTypography.label]}>{user.username}</Text>
+        <Text style={[styles.name, scaledTypography.small]}>{user.name}</Text>
       </View>
 
       <TouchableOpacity
@@ -43,6 +46,7 @@ const UserRow: React.FC<UserRowProps> = ({ user, onToggleFollow, onProfilePress 
         <Text
           style={[
             styles.buttonText,
+            scaledTypography.small,
             user.isFollowing ? styles.followingText : styles.followText,
           ]}
         >
@@ -56,6 +60,7 @@ const UserRow: React.FC<UserRowProps> = ({ user, onToggleFollow, onProfilePress 
 export default function FollowingScreen() {
   const router = useRouter();
   const { user } = useContext(AuthContext);
+  const scaledTypography = useScaledTypography();
   const [users, setUsers] = useState<FollowingUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -144,7 +149,7 @@ export default function FollowingScreen() {
         )}
         ListEmptyComponent={
           <View style={styles.centered}>
-            <Text style={styles.emptyText}>Not following anyone yet</Text>
+            <Text style={[styles.emptyText, scaledTypography.body]}>Not following anyone yet</Text>
           </View>
         }
       />
@@ -164,7 +169,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emptyText: {
-    fontSize: 16,
     color: 'gray',
     marginTop: 40,
   },
@@ -184,7 +188,6 @@ const styles = StyleSheet.create({
   },
   username: {
     fontWeight: 'bold',
-    fontSize: 16,
   },
   name: {
     color: 'gray',

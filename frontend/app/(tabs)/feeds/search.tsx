@@ -185,6 +185,7 @@ export default function SearchScreen() {
   // Trending hashtags
   const [trendingTags, setTrendingTags] = useState<TrendingTag[]>([]);
   const [trendingLoading, setTrendingLoading] = useState(false);
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<TextInput>(null);
 
   const POSTS_PAGE = 20;
@@ -366,6 +367,24 @@ export default function SearchScreen() {
     }
   }, []);
 
+  const triggerSearch = useCallback((text: string, filters: SearchFilters) => {
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    if (text.trim().length === 0) {
+      setPostResults([]);
+      setUserResults([]);
+      setSearched(false);
+      return;
+    }
+    searchDebounceRef.current = setTimeout(() => {
+      setSearched(true);
+      setPostsOffset(0);
+      recordSearchQuery(text.trim());
+      saveRecentSearch(text.trim(), recentSearches).then(setRecentSearches);
+      runPostSearch(text, filters);
+      runUserSearch(text);
+    }, 350);
+  }, [runPostSearch, runUserSearch, recentSearches]);
+
   const handleSearch = useCallback((text: string) => {
     setQuery(text);
     if (autocompleteDebounceRef.current) clearTimeout(autocompleteDebounceRef.current);
@@ -377,26 +396,8 @@ export default function SearchScreen() {
         fetchSuggestions(text);
       }, 200);
     }
-    if (text.trim().length === 0) {
-      setPostResults([]);
-      setUserResults([]);
-      setSearched(false);
-    }
-  }, [fetchSuggestions]);
-
-  const handleSubmitSearch = useCallback(() => {
-    const text = query.trim();
-    if (!text) return;
-    setShowSuggestions(false);
-    setSuggestions([]);
-    setInputFocused(false);
-    recordSearchQuery(text);
-    saveRecentSearch(text, recentSearches).then(setRecentSearches);
-    setSearched(true);
-    setPostsOffset(0);
-    runPostSearch(text, currentFilters);
-    runUserSearch(text);
-  }, [query, recentSearches, currentFilters, runPostSearch, runUserSearch]);
+    triggerSearch(text, currentFilters);
+  }, [triggerSearch, currentFilters, fetchSuggestions]);
 
   const handleFiltersApplied = useCallback((
     tagIds: number[],
@@ -600,7 +601,7 @@ export default function SearchScreen() {
               style={[styles.activeChip, { backgroundColor: color, borderColor: color }]}
               onPress={() => handleRemoveTagFilter(id)}
             >
-              <Text style={styles.activeChipText}>{tag.name}</Text>
+              <Text style={[styles.activeChipText, scaledTypography.caption]}>{tag.name}</Text>
               <Ionicons name="close" size={12} color="#fff" style={{ marginLeft: 4 }} />
             </TouchableOpacity>
           );
@@ -610,7 +611,7 @@ export default function SearchScreen() {
             style={[styles.activeChip, { backgroundColor: '#8B5CF6', borderColor: '#8B5CF6' }]}
             onPress={handleRemoveDifficulty}
           >
-            <Text style={styles.activeChipText}>
+            <Text style={[styles.activeChipText, scaledTypography.caption]}>
               {selectedDifficulty.charAt(0).toUpperCase() + selectedDifficulty.slice(1)}
             </Text>
             <Ionicons name="close" size={12} color="#fff" style={{ marginLeft: 4 }} />
@@ -621,12 +622,12 @@ export default function SearchScreen() {
             style={[styles.activeChip, { backgroundColor: '#F97316', borderColor: '#F97316' }]}
             onPress={handleRemoveCookTime}
           >
-            <Text style={styles.activeChipText}>≤ {selectedCookTime} min</Text>
+            <Text style={[styles.activeChipText, scaledTypography.caption]}>≤ {selectedCookTime} min</Text>
             <Ionicons name="close" size={12} color="#fff" style={{ marginLeft: 4 }} />
           </TouchableOpacity>
         )}
         <TouchableOpacity style={styles.clearAllChip} onPress={handleClearAllFilters}>
-          <Text style={styles.clearAllText}>Clear all</Text>
+          <Text style={[styles.clearAllText, scaledTypography.caption]}>Clear all</Text>
         </TouchableOpacity>
       </ScrollView>
     );
@@ -651,10 +652,10 @@ export default function SearchScreen() {
               activeOpacity={0.7}
             >
               <Ionicons name={iconName} size={16} color={iconColor} style={styles.suggestionIcon} />
-              <Text style={styles.suggestionText} numberOfLines={1}>{suggestion.text}</Text>
+              <Text style={[styles.suggestionText, scaledTypography.body]} numberOfLines={1}>{suggestion.text}</Text>
               {suggestion.type === 'tag' && suggestion.tagType && (
                 <View style={[styles.suggestionBadge, { backgroundColor: TAG_TYPE_COLORS[suggestion.tagType] || '#999' }]}>
-                  <Text style={styles.suggestionBadgeText}>{suggestion.tagType}</Text>
+                  <Text style={[styles.suggestionBadgeText, scaledTypography.caption]}>{suggestion.tagType}</Text>
                 </View>
               )}
               <Ionicons name="arrow-back-outline" size={14} color="#CBD5E1" style={{ marginLeft: 'auto' }} />
@@ -693,14 +694,14 @@ export default function SearchScreen() {
       <Pressable style={styles.modalOverlay} onPress={() => setFilterModalVisible(false)}>
         <Pressable style={styles.modalContent} onPress={e => e.stopPropagation()}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Filters</Text>
+            <Text style={[styles.modalTitle, scaledTypography.title]}>Filters</Text>
             <View style={styles.modalHeaderRight}>
               {(modalTagIds.length > 0 || modalDifficulty || modalCookTime) && (
                 <TouchableOpacity
                   onPress={() => { setModalTagIds([]); setModalDifficulty(null); setModalCookTime(null); }}
                   style={{ marginRight: 16 }}
                 >
-                  <Text style={styles.clearText}>Clear all</Text>
+                  <Text style={[styles.clearText, scaledTypography.caption]}>Clear all</Text>
                 </TouchableOpacity>
               )}
               <TouchableOpacity onPress={() => setFilterModalVisible(false)}>
@@ -710,7 +711,7 @@ export default function SearchScreen() {
           </View>
           <ScrollView showsVerticalScrollIndicator={false}>
             <View style={styles.filterSection}>
-              <Text style={styles.filterSectionLabel}>DIFFICULTY</Text>
+              <Text style={[styles.filterSectionLabel, scaledTypography.label]}>DIFFICULTY</Text>
               <View style={styles.chipRow}>
                 {DIFFICULTY_OPTIONS.map(opt => {
                   const isSelected = modalDifficulty === opt.value;
@@ -727,7 +728,7 @@ export default function SearchScreen() {
               </View>
             </View>
             <View style={styles.filterSection}>
-              <Text style={styles.filterSectionLabel}>MAX COOK TIME</Text>
+              <Text style={[styles.filterSectionLabel, scaledTypography.label]}>MAX COOK TIME</Text>
               <View style={styles.chipRow}>
                 {COOK_TIME_OPTIONS.map(opt => {
                   const isSelected = modalCookTime === opt.value;
@@ -737,7 +738,7 @@ export default function SearchScreen() {
                       style={[styles.filterChip, isSelected && { backgroundColor: '#F97316', borderColor: '#F97316' }]}
                       onPress={() => setModalCookTime(isSelected ? null : opt.value)}
                     >
-                      <Text style={[styles.filterChipText, isSelected && { color: '#fff' }]}>{opt.label}</Text>
+                      <Text style={[styles.filterChipText, scaledTypography.caption, isSelected && { color: '#fff' }]}>{opt.label}</Text>
                     </TouchableOpacity>
                   );
                 })}
@@ -750,7 +751,7 @@ export default function SearchScreen() {
                 const color = TAG_TYPE_COLORS[type] || '#999';
                 return (
                   <View key={type} style={styles.filterSection}>
-                    <Text style={styles.filterSectionLabel}>{type.toUpperCase()}</Text>
+                    <Text style={[styles.filterSectionLabel, scaledTypography.label]}>{type.toUpperCase()}</Text>
                     <View style={styles.chipRow}>
                       {typeTags.map(tag => {
                         const isSelected = modalTagIds.includes(tag.id);
@@ -760,7 +761,7 @@ export default function SearchScreen() {
                             style={[styles.filterChip, isSelected && { backgroundColor: color, borderColor: color }]}
                             onPress={() => toggleModalTag(tag.id)}
                           >
-                            <Text style={[styles.filterChipText, isSelected && { color: '#fff' }]}>{tag.name}</Text>
+                            <Text style={[styles.filterChipText, scaledTypography.caption, isSelected && { color: '#fff' }]}>{tag.name}</Text>
                           </TouchableOpacity>
                         );
                       })}
@@ -774,7 +775,7 @@ export default function SearchScreen() {
             style={styles.doneButton}
             onPress={() => handleFiltersApplied(modalTagIds, modalDifficulty, modalCookTime)}
           >
-            <Text style={styles.doneButtonText}>
+            <Text style={[styles.doneButtonText, scaledTypography.label]}>
               Show Results{(modalTagIds.length > 0 || modalDifficulty || modalCookTime)
                 ? ` · ${modalTagIds.length + (modalDifficulty ? 1 : 0) + (modalCookTime ? 1 : 0)} active`
                 : ''}
@@ -813,7 +814,6 @@ export default function SearchScreen() {
             autoCorrect={false}
             onFocus={handleInputFocus}
             onBlur={handleInputBlur}
-            onSubmitEditing={handleSubmitSearch}
           />
           {query.length > 0 && (
             <TouchableOpacity
@@ -968,7 +968,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  filterBadgeText: { fontSize: 10, fontWeight: '700', color: '#fff' },
+  filterBadgeText: { color: '#fff' },
   recentSearchesPanel: {
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
@@ -984,13 +984,11 @@ const styles = StyleSheet.create({
     paddingBottom: 6,
   },
   recentSearchesTitle: {
-    fontSize: 13,
-    fontWeight: '700',
     color: '#94A3B8',
     letterSpacing: 0.6,
     textTransform: 'uppercase',
   },
-  recentSearchesClearAll: { fontSize: 13, fontWeight: '600', color: '#e74c3c' },
+  recentSearchesClearAll: { color: '#e74c3c' },
   recentSearchRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1003,7 +1001,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#F1F5F9',
   },
   recentSearchIcon: { marginRight: 12, width: 16 },
-  recentSearchText: { flex: 1, fontSize: 15, color: '#0F172A' },
+  recentSearchText: { flex: 1, color: '#0F172A' },
   recentSearchRemove: { padding: 4, marginLeft: 8 },
   swipeDeleteAction: {
     backgroundColor: '#e74c3c',
@@ -1025,9 +1023,9 @@ const styles = StyleSheet.create({
   suggestionRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12 },
   suggestionRowBorder: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#F1F5F9' },
   suggestionIcon: { marginRight: 12, width: 16 },
-  suggestionText: { flex: 1, fontSize: 15, color: '#0F172A' },
+  suggestionText: { flex: 1, color: '#0F172A' },
   suggestionBadge: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 8, marginLeft: 8 },
-  suggestionBadgeText: { fontSize: 11, fontWeight: '600', color: '#fff', textTransform: 'capitalize' },
+  suggestionBadgeText: { color: '#fff', textTransform: 'capitalize' },
   tabBar: {
     flexDirection: 'row',
     borderBottomWidth: StyleSheet.hairlineWidth,
@@ -1035,14 +1033,14 @@ const styles = StyleSheet.create({
   },
   tab: { flex: 1, paddingVertical: 12, alignItems: 'center' },
   tabActive: { borderBottomWidth: 2, borderBottomColor: '#22C55E' },
-  tabText: { fontSize: 15, fontWeight: '500', color: '#999' },
-  tabTextActive: { color: '#22C55E', fontWeight: '600' },
+  tabText: { color: '#999' },
+  tabTextActive: { color: '#22C55E' },
   activeFiltersRow: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E5E5E5' },
   activeFiltersContent: { paddingHorizontal: 12, paddingVertical: 8, gap: 8, flexDirection: 'row', alignItems: 'center' },
   activeChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 14, borderWidth: 1 },
-  activeChipText: { fontSize: 13, fontWeight: '600', color: '#fff' },
+  activeChipText: { color: '#fff' },
   clearAllChip: { paddingHorizontal: 10, paddingVertical: 5 },
-  clearAllText: { fontSize: 13, color: '#e74c3c', fontWeight: '600' },
+  clearAllText: { color: '#e74c3c' },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   // Trending hashtags
   trendingSection: {
@@ -1056,8 +1054,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   trendingSectionTitle: {
-    fontSize: 15,
-    fontWeight: '700',
     color: '#0F172A',
     marginLeft: 6,
   },
@@ -1074,18 +1070,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#FAFAFA',
   },
   trendingChipName: {
-    fontSize: 14,
-    fontWeight: '600',
   },
   trendingChipCount: {
-    fontSize: 11,
     color: '#94A3B8',
     marginTop: 2,
   },
 
   emptyContainer: { alignItems: 'center', justifyContent: 'center', paddingTop: 80 },
-  emptyTitle: { fontSize: 18, fontWeight: '600', color: '#333', marginTop: 16 },
-  emptySubtitle: { fontSize: 14, color: '#999', marginTop: 8 },
+  emptyTitle: { color: '#333', marginTop: 16 },
+  emptySubtitle: { color: '#999', marginTop: 8 },
   userRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1096,24 +1089,24 @@ const styles = StyleSheet.create({
   },
   avatar: { width: 50, height: 50, borderRadius: 25, marginRight: 12, backgroundColor: '#F0F0F0' },
   avatarFallback: { backgroundColor: '#22C55E', justifyContent: 'center', alignItems: 'center' },
-  avatarFallbackText: { fontSize: 20, fontWeight: 'bold', color: '#fff' },
+  avatarFallbackText: { color: '#fff' },
   userInfo: { flex: 1 },
   nameRow: { flexDirection: 'row', alignItems: 'center' },
-  displayName: { fontSize: 16, fontWeight: '600', color: '#000' },
-  username: { fontSize: 14, color: '#666', marginTop: 1 },
-  bio: { fontSize: 13, color: '#999', marginTop: 2 },
+  displayName: { color: '#000' },
+  username: { color: '#666', marginTop: 1 },
+  bio: { color: '#999', marginTop: 2 },
   footer: { paddingVertical: 20, alignItems: 'center' },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
   modalContent: { backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, maxHeight: '80%' },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   modalHeaderRight: { flexDirection: 'row', alignItems: 'center' },
-  modalTitle: { fontSize: 18, fontWeight: '700', color: '#000' },
-  clearText: { fontSize: 13, color: '#e74c3c', fontWeight: '600' },
+  modalTitle: { color: '#000' },
+  clearText: { color: '#e74c3c' },
   filterSection: { marginBottom: 20 },
-  filterSectionLabel: { fontSize: 12, fontWeight: '700', color: '#999', letterSpacing: 0.8, marginBottom: 10 },
+  filterSectionLabel: { color: '#999', letterSpacing: 0.8, marginBottom: 10 },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   filterChip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 16, borderWidth: 1, borderColor: '#E0E0E0' },
-  filterChipText: { fontSize: 13, fontWeight: '500', color: '#555' },
+  filterChipText: { color: '#555' },
   doneButton: { marginTop: 16, backgroundColor: '#22C55E', paddingVertical: 14, borderRadius: 12, alignItems: 'center' },
-  doneButtonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  doneButtonText: { color: '#fff' },
 });

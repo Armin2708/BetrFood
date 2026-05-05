@@ -11,6 +11,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createPostApi, RecipeInput, addTagsToPost } from '../services/api';
+import { useScaledTypography } from '../hooks/useScaledTypography';
 import TagSelector from '../components/TagSelector';
 import VideoThumbnailView from '../components/VideoThumbnail';
 
@@ -45,6 +46,7 @@ export interface Draft {
 
 export default function CreatePostScreen() {
   const { draftId } = useLocalSearchParams<{ draftId?: string }>();
+  const scaledTypography = useScaledTypography();
   const [images, setImages] = useState<string[]>([]);
   const [mediaTypes, setMediaTypes] = useState<('image' | 'video')[]>([]);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
@@ -305,15 +307,15 @@ export default function CreatePostScreen() {
       <ScrollView contentContainerStyle={styles.scroll}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.replace('/feeds')}>
-            <Text style={styles.cancelText}>Cancel</Text>
+            <Text style={[styles.cancelText, scaledTypography.body]}>Cancel</Text>
           </TouchableOpacity>
-          <Text style={styles.title}>New Post</Text>
+          <Text style={[styles.title, scaledTypography.title]}>New Post</Text>
           <View style={styles.headerRight}>
             <TouchableOpacity onPress={saveDraft} style={styles.draftButton}>
-              <Text style={styles.draftButtonText}>Save Draft</Text>
+              <Text style={[styles.draftButtonText, scaledTypography.body]}>Save Draft</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={submitPost} disabled={!!uploadStatus || images.length === 0}>
-              <Text style={[styles.postText, (images.length === 0 || !!uploadStatus) && styles.disabledText]}>Post</Text>
+              <Text style={[styles.postText, (images.length === 0 || !!uploadStatus) && styles.disabledText, scaledTypography.body]}>Post</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -323,7 +325,7 @@ export default function CreatePostScreen() {
           style={styles.draftsLink}
           onPress={() => router.push('/drafts')}
         >
-          <Text style={styles.draftsLinkText}>View Drafts</Text>
+          <Text style={[styles.draftsLinkText, scaledTypography.caption]}>View Drafts</Text>
         </TouchableOpacity>
 
         <View style={styles.imageSection}>
@@ -384,11 +386,11 @@ export default function CreatePostScreen() {
                 <View style={styles.addMoreRow}>
                   <TouchableOpacity style={styles.addMoreButton} onPress={pickMedia}>
                     <Ionicons name="images-outline" size={18} color="#22C55E" />
-                    <Text style={styles.addMoreText}>Add More</Text>
+                    <Text style={[styles.addMoreText, scaledTypography.body]}>Add More</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.addMoreButton} onPress={takePhoto}>
                     <Ionicons name="camera-outline" size={18} color="#22C55E" />
-                    <Text style={styles.addMoreText}>Take Photo</Text>
+                    <Text style={[styles.addMoreText, scaledTypography.body]}>Take Photo</Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -396,23 +398,23 @@ export default function CreatePostScreen() {
           ) : (
             <View style={styles.imagePlaceholder}>
               <TouchableOpacity style={styles.imageButton} onPress={pickMedia}>
-                <Text style={styles.imageButtonText}>Choose from Gallery</Text>
+                <Text style={[styles.imageButtonText, scaledTypography.small]}>Choose from Gallery</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.imageButton} onPress={takePhoto}>
-                <Text style={styles.imageButtonText}>Take a Photo</Text>
+                <Text style={[styles.imageButtonText, scaledTypography.small]}>Take a Photo</Text>
               </TouchableOpacity>
-              <Text style={styles.imageHint}>You can select up to {MAX_IMAGES} photos or videos</Text>
+              <Text style={[styles.imageHint, scaledTypography.small]}>You can select up to {MAX_IMAGES} photos or videos</Text>
             </View>
           )}
         </View>
 
         <View style={styles.captionSection}>
           <TextInput
-            style={styles.captionInput} placeholder="Write a caption..."
+            style={[styles.captionInput, scaledTypography.small]} placeholder="Write a caption..."
             placeholderTextColor="#999" multiline maxLength={MAX_CAPTION_LENGTH}
             value={caption} onChangeText={setCaption}
           />
-          <Text style={styles.charCount}>{caption.length}/{MAX_CAPTION_LENGTH}</Text>
+          <Text style={[styles.charCount, scaledTypography.small]}>{caption.length}/{MAX_CAPTION_LENGTH}</Text>
         </View>
 
         {/* Tag Selection */}
@@ -426,7 +428,7 @@ export default function CreatePostScreen() {
           style={[styles.recipeToggle, showRecipe && styles.recipeToggleActive]}
           onPress={() => setShowRecipe(!showRecipe)}
         >
-          <Text style={[styles.recipeToggleText, showRecipe && styles.recipeToggleTextActive]}>
+          <Text style={[styles.recipeToggleText, showRecipe && styles.recipeToggleTextActive, scaledTypography.label]}>
             {showRecipe ? 'Remove Recipe' : 'Add Recipe'}
           </Text>
         </TouchableOpacity>
@@ -625,9 +627,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
-  cancelText: { fontSize: 16, color: '#666' },
-  title: { fontSize: 18, fontWeight: 'bold' },
-  postText: { fontSize: 16, fontWeight: 'bold', color: '#22C55E' },
+  cancelText: { color: '#666' },
+  title: { },
+  postText: { color: '#22C55E' },
   disabledText: { color: '#ccc' },
   draftButton: {
     paddingHorizontal: 10,
@@ -637,8 +639,6 @@ const styles = StyleSheet.create({
     borderColor: '#22C55E',
   },
   draftButtonText: {
-    fontSize: 13,
-    fontWeight: '600',
     color: '#22C55E',
   },
   draftsLink: {
@@ -647,9 +647,7 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
   draftsLinkText: {
-    fontSize: 14,
     color: '#22C55E',
-    fontWeight: '500',
   },
   imageSection: { paddingVertical: 20 },
   mainPreviewContainer: { marginHorizontal: 16, position: 'relative', alignItems: 'center' },
@@ -670,24 +668,24 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject, justifyContent: 'center',
     alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.2)',
   },
-  imageCounter: { textAlign: 'center', color: '#666', marginTop: 8, fontSize: 13, fontWeight: '500' },
+  imageCounter: { textAlign: 'center', color: '#666', marginTop: 8 },
   addMoreRow: { flexDirection: 'row', justifyContent: 'center', gap: 16, marginTop: 12 },
   addMoreButton: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: '#22C55E' },
-  addMoreText: { fontSize: 14, fontWeight: '600', color: '#22C55E' },
-  imageHint: { fontSize: 13, color: '#999', marginTop: 8 },
+  addMoreText: { color: '#22C55E' },
+  imageHint: { color: '#999', marginTop: 8 },
   imagePlaceholder: {
     width: 300, height: 300, borderRadius: 12, borderWidth: 2,
     borderColor: '#ddd', borderStyle: 'dashed', justifyContent: 'center',
     alignItems: 'center', gap: 16, alignSelf: 'center',
   },
   imageButton: { backgroundColor: '#22C55E', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 },
-  imageButtonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
+  imageButtonText: { color: '#fff' },
   captionSection: { paddingHorizontal: 16, paddingVertical: 12 },
   captionInput: {
     fontSize: 16, minHeight: 100, textAlignVertical: 'top',
     borderWidth: 1, borderColor: '#eee', borderRadius: 8, padding: 12,
   },
-  charCount: { textAlign: 'right', color: '#999', marginTop: 4, fontSize: 12 },
+  charCount: { textAlign: 'right', color: '#999', marginTop: 4 },
   uploadOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: '#fff',
@@ -712,14 +710,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#e74c3c',
   },
   uploadTitle: {
-    fontSize: 22,
-    fontWeight: '700',
     color: '#111',
     marginTop: 16,
     textAlign: 'center',
   },
   uploadSubtitle: {
-    fontSize: 15,
     color: '#666',
     marginTop: 8,
     textAlign: 'center',
@@ -734,8 +729,6 @@ const styles = StyleSheet.create({
   },
   retryButtonText: {
     color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
   },
   retryButtonOutline: {
     marginTop: 12,
@@ -747,8 +740,6 @@ const styles = StyleSheet.create({
   },
   retryButtonOutlineText: {
     color: '#22C55E',
-    fontSize: 16,
-    fontWeight: '600',
   },
   toast: {
     position: 'absolute',
@@ -763,8 +754,6 @@ const styles = StyleSheet.create({
   },
   toastText: {
     color: '#fff',
-    fontSize: 15,
-    fontWeight: '600',
   },
 
   // Recipe toggle
@@ -781,8 +770,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF0E8',
   },
   recipeToggleText: {
-    fontSize: 15,
-    fontWeight: '600',
     color: '#22C55E',
   },
   recipeToggleTextActive: {

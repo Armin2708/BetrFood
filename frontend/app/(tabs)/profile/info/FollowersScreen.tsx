@@ -12,6 +12,8 @@ import {
 import { useRouter } from 'expo-router';
 import { AuthContext } from '../../../../context/AuthenticationContext';
 import { fetchFollowers, followUser, unfollowUser, type FollowerUser } from '../../../../services/api/follows';
+import { useScaledTypography } from '../../../../hooks/useScaledTypography';
+import { useAppTheme } from '../../../../context/ThemeContext';
 
 type FollowerRowProps = {
   follower: FollowerUser;
@@ -24,6 +26,7 @@ const FollowerRow: React.FC<FollowerRowProps> = ({
   onToggleFollowBack,
   onProfilePress,
 }) => {
+  const scaledTypography = useScaledTypography();
   return (
     <TouchableOpacity 
       style={styles.row}
@@ -33,8 +36,8 @@ const FollowerRow: React.FC<FollowerRowProps> = ({
       <Image source={{ uri: follower.avatar }} style={styles.avatar} />
 
       <View style={styles.info}>
-        <Text style={styles.username}>{follower.username}</Text>
-        <Text style={styles.name}>{follower.name}</Text>
+        <Text style={[styles.username, scaledTypography.label]}>{follower.username}</Text>
+        <Text style={[styles.name, scaledTypography.small]}>{follower.name}</Text>
       </View>
 
       <TouchableOpacity
@@ -47,6 +50,7 @@ const FollowerRow: React.FC<FollowerRowProps> = ({
         <Text
           style={[
             styles.buttonText,
+            scaledTypography.small,
             follower.isFollowingBack ? styles.followingText : styles.followText,
           ]}
         >
@@ -60,6 +64,7 @@ const FollowerRow: React.FC<FollowerRowProps> = ({
 export default function FollowersScreen() {
   const router = useRouter();
   const { user } = useContext(AuthContext);
+  const scaledTypography = useScaledTypography();
   const [followers, setFollowers] = useState<FollowerUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -148,7 +153,7 @@ export default function FollowersScreen() {
         )}
         ListEmptyComponent={
           <View style={styles.centered}>
-            <Text style={styles.emptyText}>No followers yet</Text>
+            <Text style={[styles.emptyText, scaledTypography.body]}>No followers yet</Text>
           </View>
         }
       />
@@ -168,7 +173,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emptyText: {
-    fontSize: 16,
     color: 'gray',
     marginTop: 40,
   },
@@ -188,7 +192,6 @@ const styles = StyleSheet.create({
   },
   username: {
     fontWeight: 'bold',
-    fontSize: 16,
   },
   name: {
     color: 'gray',
@@ -207,7 +210,6 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     fontWeight: '600',
-    fontSize: 14,
   },
   followText: {
     color: '#fff',

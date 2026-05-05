@@ -5,6 +5,7 @@ import { useState, useCallback, useContext, useEffect } from 'react';
 import { useActionSheet } from '@expo/react-native-action-sheet';
 import { AuthContext } from '../../../context/AuthenticationContext';
 import { useFeedLayout } from '../../../context/FeedLayoutContext';
+import { useScaledTypography } from '../../../hooks/useScaledTypography';
 import VideoThumbnailView from '../../../components/VideoThumbnail';
 import {
   fetchUserProfile,
@@ -45,6 +46,7 @@ export default function UserProfileScreen() {
   const { userId } = useLocalSearchParams<{ userId: string }>();
   const { user: currentUser } = useContext(AuthContext);
   const { layout: feedLayout } = useFeedLayout();
+  const scaledTypography = useScaledTypography();
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -319,33 +321,33 @@ export default function UserProfileScreen() {
       {/* Display name */}
       {profile?.displayName ? (
         <View style={styles.displayNameRow}>
-          <Text style={styles.displayName}>{profile.displayName}</Text>
+          <Text style={[styles.displayName, scaledTypography.title]}>{profile.displayName}</Text>
           {profile.verified && (
-            <Text style={styles.verifiedBadge}>{'\u2713'}</Text>
+            <Text style={[styles.verifiedBadge, scaledTypography.label]}>{'\u2713'}</Text>
           )}
         </View>
       ) : null}
 
       {/* Username */}
-      <Text style={styles.username}>
+      <Text style={[styles.username, scaledTypography.caption]}>
         {profile?.username ? `@${profile.username}` : '@unknown'}
       </Text>
 
       {/* Bio */}
       {profile?.bio ? (
-        <Text style={styles.bio}>{profile.bio}</Text>
+        <Text style={[styles.bio, scaledTypography.body]}>{profile.bio}</Text>
       ) : null}
 
       {/* Followers / Following / Posts stats */}
       <View style={styles.followRow}>
         <View style={styles.followItem}>
-          <Text style={styles.followCount}>{formatCount(followStats.followerCount)}</Text>
-          <Text style={styles.followLabel}>  Followers</Text>
+          <Text style={[styles.followCount, scaledTypography.label]}>{formatCount(followStats.followerCount)}</Text>
+          <Text style={[styles.followLabel, scaledTypography.caption]}>  Followers</Text>
         </View>
         <View style={styles.followSpacer} />
         <View style={styles.followItem}>
-          <Text style={styles.followCount}>{formatCount(followStats.followingCount)}</Text>
-          <Text style={styles.followLabel}>  Following</Text>
+          <Text style={[styles.followCount, scaledTypography.label]}>{formatCount(followStats.followingCount)}</Text>
+          <Text style={[styles.followLabel, scaledTypography.caption]}>  Following</Text>
         </View>
       </View>
 
@@ -353,13 +355,13 @@ export default function UserProfileScreen() {
       {isBlocked && (
         <View style={styles.statusBanner}>
           <Ionicons name="ban-outline" size={16} color="#DC2626" />
-          <Text style={styles.statusBannerText}>You have blocked this user</Text>
+          <Text style={[styles.statusBannerText, scaledTypography.caption]}>You have blocked this user</Text>
         </View>
       )}
       {isMuted && !isBlocked && (
         <View style={[styles.statusBanner, styles.statusBannerMuted]}>
           <Ionicons name="volume-mute-outline" size={16} color="#D97706" />
-          <Text style={[styles.statusBannerText, styles.statusBannerTextMuted]}>You have muted this user</Text>
+          <Text style={[styles.statusBannerText, styles.statusBannerTextMuted, scaledTypography.caption]}>You have muted this user</Text>
         </View>
       )}
 
@@ -384,6 +386,7 @@ export default function UserProfileScreen() {
         ) : (
           <Text style={[
             styles.followButtonText,
+            scaledTypography.label,
             (isFollowing || followRequestStatus === 'pending') && styles.followingButtonText,
           ]}>
             {isFollowing ? 'Following' :
@@ -397,8 +400,8 @@ export default function UserProfileScreen() {
       {isPrivate && !isFollowing && (
         <View style={styles.privateNotice}>
           <Ionicons name="lock-closed" size={40} color={colors.textQuaternary} />
-          <Text style={styles.privateTitle}>This account is private</Text>
-          <Text style={styles.privateSubtitle}>Follow this account to see their posts</Text>
+          <Text style={[styles.privateTitle, scaledTypography.title]}>This account is private</Text>
+          <Text style={[styles.privateSubtitle, scaledTypography.body]}>Follow this account to see their posts</Text>
         </View>
       )}
 
@@ -471,7 +474,7 @@ export default function UserProfileScreen() {
                     />
                   )}
                   {item.caption ? (
-                    <Text style={styles.listCaption} numberOfLines={2}>
+                    <Text style={[styles.listCaption, scaledTypography.body]} numberOfLines={2}>
                       {item.caption}
                     </Text>
                   ) : null}
@@ -482,7 +485,7 @@ export default function UserProfileScreen() {
             ListEmptyComponent={
               <View style={styles.emptyGrid}>
                 <Ionicons name="camera-outline" size={48} color="#CBD5E1" style={{ marginBottom: 12 }} />
-                <Text style={styles.emptyText}>No posts yet</Text>
+                <Text style={[styles.emptyText, scaledTypography.body]}>No posts yet</Text>
               </View>
             }
           />
@@ -536,21 +539,16 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   displayName: {
-    fontSize: 25,
-    fontWeight: '600',
     color: colors.textPrimary,
     textAlign: 'center',
   },
   verifiedBadge: {
     color: colors.verified,
-    fontSize: 16,
-    fontWeight: 'bold',
     marginLeft: 6,
   },
 
   /* Username */
   username: {
-    fontSize: 12,
     color: colors.textSecondary,
     textAlign: 'center',
     marginBottom: 8,
@@ -558,7 +556,6 @@ const styles = StyleSheet.create({
 
   /* Bio */
   bio: {
-    fontSize: 14,
     color: colors.textSecondary,
     textAlign: 'center',
     paddingHorizontal: 40,
@@ -578,12 +575,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   followCount: {
-    fontSize: 14,
-    fontWeight: '700',
     color: '#000000',
   },
   followLabel: {
-    fontSize: 14,
     color: '#64748B',
   },
   followSpacer: {
@@ -606,9 +600,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FEF3C7',
   },
   statusBannerText: {
-    fontSize: 14,
     color: '#DC2626',
-    fontWeight: '500',
   },
   statusBannerTextMuted: {
     color: '#D97706',
@@ -637,8 +629,6 @@ const styles = StyleSheet.create({
   },
   followButtonText: {
     color: colors.white,
-    fontWeight: '600',
-    fontSize: 15,
   },
   followingButtonText: {
     color: '#64748B',
@@ -651,13 +641,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
   },
   privateTitle: {
-    fontSize: 18,
-    fontWeight: '600',
     color: colors.textPrimary,
     marginTop: 16,
   },
   privateSubtitle: {
-    fontSize: 14,
     color: colors.textSecondary,
     marginTop: 8,
     textAlign: 'center',
@@ -706,7 +693,6 @@ const styles = StyleSheet.create({
   },
   listCaption: {
     marginTop: 10,
-    fontSize: 14,
     lineHeight: 20,
     color: colors.textPrimary,
   },
@@ -717,7 +703,6 @@ const styles = StyleSheet.create({
     paddingVertical: 60,
   },
   emptyText: {
-    fontSize: 15,
     color: colors.textQuaternary,
   },
 });

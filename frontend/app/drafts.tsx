@@ -6,6 +6,7 @@ import { router } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
+import { useScaledTypography } from '../hooks/useScaledTypography';
 import type { Draft } from './create-post';
 
 const DRAFTS_STORAGE_KEY = 'drafts';
@@ -13,6 +14,7 @@ const DRAFTS_STORAGE_KEY = 'drafts';
 export default function DraftsScreen() {
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [loading, setLoading] = useState(true);
+  const scaledTypography = useScaledTypography();
 
   const loadDrafts = useCallback(async () => {
     try {
@@ -84,11 +86,11 @@ export default function DraftsScreen() {
           </View>
         )}
         <View style={styles.draftContent}>
-          <Text style={styles.draftPreview} numberOfLines={2}>{preview}</Text>
+          <Text style={[styles.draftPreview, scaledTypography.body]} numberOfLines={2}>{preview}</Text>
           {details.length > 0 && (
-            <Text style={styles.draftDetails}>{details.join(' / ')}</Text>
+            <Text style={[styles.draftDetails, scaledTypography.small]}>{details.join(' / ')}</Text>
           )}
-          <Text style={styles.draftDate}>{formatDate(item.timestamp)}</Text>
+          <Text style={[styles.draftDate, scaledTypography.small]}>{formatDate(item.timestamp)}</Text>
         </View>
         <TouchableOpacity style={styles.deleteButton} onPress={() => deleteDraft(item.id)}>
           <Ionicons name="trash-outline" size={20} color="#ff3b30" />
@@ -111,7 +113,7 @@ export default function DraftsScreen() {
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color="#333" />
         </TouchableOpacity>
-        <Text style={styles.title}>Drafts</Text>
+        <Text style={[styles.title, scaledTypography.title]}>Drafts</Text>
         <View style={{ width: 24 }} />
       </View>
 
@@ -123,8 +125,8 @@ export default function DraftsScreen() {
         ListEmptyComponent={
           <View style={styles.emptyState}>
             <Ionicons name="document-text-outline" size={48} color="#ccc" />
-            <Text style={styles.emptyTitle}>No drafts saved</Text>
-            <Text style={styles.emptySubtitle}>
+            <Text style={[styles.emptyTitle, scaledTypography.label]}>No drafts saved</Text>
+            <Text style={[styles.emptySubtitle, scaledTypography.label]}>
               Drafts you save while creating a post will appear here.
             </Text>
           </View>
@@ -154,8 +156,6 @@ const styles = StyleSheet.create({
     borderColor: '#eee',
   },
   title: {
-    fontSize: 18,
-    fontWeight: 'bold',
   },
   list: {
     padding: 16,
@@ -188,17 +188,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   draftPreview: {
-    fontSize: 15,
-    fontWeight: '500',
     color: '#333',
   },
   draftDetails: {
-    fontSize: 13,
     color: '#22C55E',
     marginTop: 4,
   },
   draftDate: {
-    fontSize: 12,
     color: '#999',
     marginTop: 4,
   },
@@ -216,13 +212,10 @@ const styles = StyleSheet.create({
     padding: 40,
   },
   emptyTitle: {
-    fontSize: 18,
-    fontWeight: '600',
     color: '#666',
     marginTop: 12,
   },
   emptySubtitle: {
-    fontSize: 14,
     color: '#999',
     textAlign: 'center',
     marginTop: 8,
