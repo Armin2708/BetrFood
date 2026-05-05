@@ -9,8 +9,11 @@ import {
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
+import { ThemeColors } from '../../../constants/theme';
+import { useAppTheme } from '../../../context/ThemeContext';
+import { useScaledTypography } from '../../../hooks/useScaledTypography';
 import {
   fetchNotifications,
   markNotificationRead,
@@ -22,8 +25,6 @@ import {
   clearAllNotifications,
   Notification,
 } from '../../../services/api';
-import { useScaledTypography } from '../../../hooks/useScaledTypography';
-import { useAppTheme } from '../../../context/ThemeContext';
 
 function getRelativeTime(dateString: string): string {
   const now = new Date();
@@ -101,6 +102,8 @@ function getNotificationMessage(notification: Notification): string {
 export default function NotificationsScreen() {
   const router = useRouter();
   const scaledTypography = useScaledTypography();
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -364,112 +367,121 @@ export default function NotificationsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  notificationItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#EEEEEE',
-  },
-  unreadItem: {
-    backgroundColor: '#FFF5F0',
-  },
-  iconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  contentContainer: {
-    flex: 1,
-    marginRight: 8,
-  },
-  messageText: {
-    color: '#333333',
-    lineHeight: 20,
-  },
-  unreadText: {
-    fontWeight: '600',
-  },
-  followRequestActions: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 8,
-  },
-  acceptButton: {
-    backgroundColor: '#22C55E',
-    paddingVertical: 6,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-  },
-  acceptButtonText: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  denyButton: {
-    backgroundColor: '#F2F2F7',
-    paddingVertical: 6,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-  },
-  denyButtonText: {
-    color: '#666666',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  timeText: {
-    color: '#999999',
-    marginTop: 2,
-  },
-  unreadDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#22C55E',
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: 80,
-  },
-  emptyTitle: {
-    color: '#333333',
-    marginTop: 16,
-  },
-  emptySubtitle: {
-    color: '#999999',
-    marginTop: 8,
-    textAlign: 'center',
-    paddingHorizontal: 40,
-  },
-  emptyList: {
-    flexGrow: 1,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  markAllButton: {
-    marginRight: 8,
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-  },
-  markAllText: {
-    color: '#22C55E',
-  },
-});
+function makeStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.backgroundPrimary,
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    notificationItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.borderLight,
+    },
+    unreadItem: {
+      backgroundColor: colors.backgroundSubtle,
+    },
+    iconContainer: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: 12,
+    },
+    contentContainer: {
+      flex: 1,
+      marginRight: 8,
+    },
+    messageText: {
+      fontSize: 15,
+      color: colors.textPrimary,
+      lineHeight: 20,
+    },
+    unreadText: {
+      fontWeight: '600',
+    },
+    followRequestActions: {
+      flexDirection: 'row',
+      gap: 8,
+      marginTop: 8,
+    },
+    acceptButton: {
+      backgroundColor: '#22C55E',
+      paddingVertical: 6,
+      paddingHorizontal: 20,
+      borderRadius: 8,
+    },
+    acceptButtonText: {
+      color: '#FFFFFF',
+      fontSize: 13,
+      fontWeight: '600',
+    },
+    denyButton: {
+      backgroundColor: colors.backgroundTertiary,
+      paddingVertical: 6,
+      paddingHorizontal: 20,
+      borderRadius: 8,
+    },
+    denyButtonText: {
+      color: colors.textSecondary,
+      fontSize: 13,
+      fontWeight: '600',
+    },
+    timeText: {
+      fontSize: 13,
+      color: colors.textTertiary,
+      marginTop: 2,
+    },
+    unreadDot: {
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+      backgroundColor: '#22C55E',
+    },
+    emptyContainer: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingTop: 80,
+    },
+    emptyTitle: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: colors.textPrimary,
+      marginTop: 16,
+    },
+    emptySubtitle: {
+      fontSize: 14,
+      color: colors.textTertiary,
+      marginTop: 8,
+      textAlign: 'center',
+      paddingHorizontal: 40,
+    },
+    emptyList: {
+      flexGrow: 1,
+    },
+    headerActions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    markAllButton: {
+      marginRight: 8,
+      paddingVertical: 4,
+      paddingHorizontal: 8,
+    },
+    markAllText: {
+      fontSize: 14,
+      color: '#22C55E',
+      fontWeight: '600',
+    },
+  });
+}
