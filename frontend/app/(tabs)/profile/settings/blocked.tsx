@@ -1,5 +1,7 @@
 import { View, Text, StyleSheet, Pressable, FlatList, ActivityIndicator, Alert } from "react-native";
 import { useState, useEffect, useCallback } from "react";
+import { useScaledTypography } from "../../../../hooks/useScaledTypography";
+import { useAppTheme } from "../../../../context/ThemeContext";
 import {
   fetchBlockedUsers,
   fetchMutedUsers,
@@ -17,6 +19,8 @@ export default function BlockedMutedScreen() {
   const [blockedUsers, setBlockedUsers] = useState<BlockedMutedUser[]>([]);
   const [mutedUsers, setMutedUsers] = useState<BlockedMutedUser[]>([]);
   const [loading, setLoading] = useState(true);
+  const { colors } = useAppTheme();
+  const scaledTypography = useScaledTypography();
 
   const loadUsers = useCallback(async () => {
     try {
@@ -66,9 +70,9 @@ export default function BlockedMutedScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.sectionTitle}>Blocked Users</Text>
+      <Text style={[scaledTypography.title, { color: colors.textPrimary }]}>Blocked Users</Text>
       {blockedUsers.length === 0 ? (
-        <Text style={styles.emptyText}>No blocked users</Text>
+        <Text style={[scaledTypography.body, { color: colors.textTertiary }]}>No blocked users</Text>
       ) : (
         <FlatList
           data={blockedUsers}
@@ -77,18 +81,18 @@ export default function BlockedMutedScreen() {
           renderItem={({ item }) => (
             <View style={styles.userRow}>
               <View style={styles.userInfo}>
-                <Text style={styles.userName}>
+                <Text style={[scaledTypography.body, { color: colors.textPrimary }]}>
                   {item.displayName || item.username || "Unknown User"}
                 </Text>
                 {item.username && (
-                  <Text style={styles.userHandle}>@{item.username}</Text>
+                  <Text style={[scaledTypography.small, { color: colors.textTertiary }]}>@{item.username}</Text>
                 )}
               </View>
               <Pressable
                 style={styles.actionButton}
                 onPress={() => handleUnblock(item.userId)}
               >
-                <Text style={styles.actionButtonText}>Unblock</Text>
+                <Text style={[scaledTypography.label, { color: "#fff" }]}>Unblock</Text>
               </Pressable>
             </View>
           )}
@@ -97,9 +101,9 @@ export default function BlockedMutedScreen() {
 
       <View style={styles.divider} />
 
-      <Text style={styles.sectionTitle}>Muted Users</Text>
+      <Text style={[scaledTypography.title, { color: colors.textPrimary }]}>Muted Users</Text>
       {mutedUsers.length === 0 ? (
-        <Text style={styles.emptyText}>No muted users</Text>
+        <Text style={[scaledTypography.body, { color: colors.textTertiary }]}>No muted users</Text>
       ) : (
         <FlatList
           data={mutedUsers}
@@ -108,18 +112,18 @@ export default function BlockedMutedScreen() {
           renderItem={({ item }) => (
             <View style={styles.userRow}>
               <View style={styles.userInfo}>
-                <Text style={styles.userName}>
+                <Text style={[scaledTypography.body, { color: colors.textPrimary }]}>
                   {item.displayName || item.username || "Unknown User"}
                 </Text>
                 {item.username && (
-                  <Text style={styles.userHandle}>@{item.username}</Text>
+                  <Text style={[scaledTypography.small, { color: colors.textTertiary }]}>@{item.username}</Text>
                 )}
               </View>
               <Pressable
                 style={[styles.actionButton, styles.unmuteButton]}
                 onPress={() => handleUnmute(item.userId)}
               >
-                <Text style={[styles.actionButtonText, styles.unmuteButtonText]}>Unmute</Text>
+                <Text style={[scaledTypography.label, styles.unmuteButtonText]}>Unmute</Text>
               </Pressable>
             </View>
           )}
@@ -139,17 +143,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#333",
-    marginBottom: 12,
-  },
-  emptyText: {
-    fontSize: 14,
-    color: "#999",
-    marginBottom: 8,
-  },
   divider: {
     height: 1,
     backgroundColor: "#eee",
@@ -166,26 +159,11 @@ const styles = StyleSheet.create({
   userInfo: {
     flex: 1,
   },
-  userName: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#333",
-  },
-  userHandle: {
-    fontSize: 13,
-    color: "#888",
-    marginTop: 2,
-  },
   actionButton: {
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 6,
     backgroundColor: "#ff3b30",
-  },
-  actionButtonText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 14,
   },
   unmuteButton: {
     backgroundColor: "#fff",

@@ -5,6 +5,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import { useCallback } from "react";
 import { FeedLayout, useFeedLayout } from "../../../../context/FeedLayoutContext";
 import { ThemePreference, useAppTheme } from "../../../../context/ThemeContext";
+import { useScaledTypography } from "../../../../hooks/useScaledTypography";
 import { usePreferences } from "../../../../context/PreferencesContext";
 import {
   TextSizeScale,
@@ -71,6 +72,7 @@ export default function AppearanceSettings() {
   const { colors: themeColors, themePreference, resolvedTheme, setThemePreference, textSizeScale, setTextSizeScale } = useAppTheme();
   const { layout, setLayout } = useFeedLayout();
   const { preferences, loading, saving, updatePreferences } = usePreferences();
+  const scaledTypography = useScaledTypography();
 
   // Text size local state for editing - separate from global context
   const [localScale, setLocalScale] = useState<TextSizeScale>('default');
@@ -122,8 +124,8 @@ export default function AppearanceSettings() {
       style={[styles.container, { backgroundColor: themeColors.backgroundSecondary }]}
       contentContainerStyle={styles.content}
     >
-      <Text style={[styles.sectionHeader, { color: themeColors.textTertiary }]}>THEME</Text>
-      <Text style={[styles.sectionDescription, { color: themeColors.textSecondary }]}>
+      <Text style={[scaledTypography.caption, { color: themeColors.textTertiary }]}>THEME</Text>
+      <Text style={[scaledTypography.body, { color: themeColors.textSecondary }]}>
         Switch between light, dark, and system appearance. Active theme: {resolvedTheme === "dark" ? "Dark" : "Light"}.
       </Text>
 
@@ -157,8 +159,8 @@ export default function AppearanceSettings() {
                 />
               </View>
               <View style={styles.optionText}>
-                <Text style={[styles.optionTitle, { color: themeColors.textPrimary }]}>{option.title}</Text>
-                <Text style={[styles.optionDescription, { color: themeColors.textSecondary }]}>
+                <Text style={[styles.optionTitle, scaledTypography.label, { color: themeColors.textPrimary }]}>{option.title}</Text>
+                <Text style={[styles.optionDescription, scaledTypography.small, { color: themeColors.textSecondary }]}>
                   {option.description}
                 </Text>
               </View>
@@ -170,8 +172,8 @@ export default function AppearanceSettings() {
         })}
       </View>
 
-      <Text style={[styles.sectionHeader, { color: themeColors.textTertiary, marginTop: 28 }]}>FEED LAYOUT</Text>
-      <Text style={[styles.sectionDescription, { color: themeColors.textSecondary }]}>
+      <Text style={[scaledTypography.caption, { color: themeColors.textTertiary, marginTop: 28 }]}>FEED LAYOUT</Text>
+      <Text style={[scaledTypography.body, { color: themeColors.textSecondary }]}>
         Choose how posts appear on profile feeds. Changes apply instantly.
       </Text>
 
@@ -205,8 +207,8 @@ export default function AppearanceSettings() {
                 />
               </View>
               <View style={styles.optionText}>
-                <Text style={[styles.optionTitle, { color: themeColors.textPrimary }]}>{option.title}</Text>
-                <Text style={[styles.optionDescription, { color: themeColors.textSecondary }]}>
+                <Text style={[styles.optionTitle, scaledTypography.label, { color: themeColors.textPrimary }]}>{option.title}</Text>
+                <Text style={[styles.optionDescription, scaledTypography.small, { color: themeColors.textSecondary }]}>
                   {option.description}
                 </Text>
               </View>
@@ -218,14 +220,14 @@ export default function AppearanceSettings() {
         })}
       </View>
 
-      <Text style={[styles.sectionHeader, { color: themeColors.textTertiary, marginTop: 28 }]}>TEXT SIZE</Text>
-      <Text style={[styles.sectionDescription, { color: themeColors.textSecondary }]}>
+      <Text style={[scaledTypography.caption, { color: themeColors.textTertiary, marginTop: 28 }]}>TEXT SIZE</Text>
+      <Text style={[scaledTypography.body, { color: themeColors.textSecondary }]}>
         Adjust text size across the app for better readability. Changes will be previewed in real time.
       </Text>
 
       {/* Live Preview Section */}
       <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>Preview</Text>
+        <Text style={[scaledTypography.label, { color: themeColors.textPrimary }]}>Preview</Text>
         <View style={[styles.previewCard, { backgroundColor: themeColors.backgroundSecondary, borderColor: themeColors.border }]}>
           <Text
             style={[
@@ -265,7 +267,7 @@ export default function AppearanceSettings() {
 
       {/* Size Selection */}
       <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>Select Text Size</Text>
+        <Text style={[scaledTypography.label, { color: themeColors.textPrimary }]}>Select Text Size</Text>
 
         {TEXT_SIZE_OPTIONS.map((size) => {
           const isSelected = localScale === size;
@@ -291,13 +293,13 @@ export default function AppearanceSettings() {
                 {isSelected && <View style={[styles.radioInner, { backgroundColor: themeColors.primary }]} />}
               </View>
               <View style={styles.sizeOptionContent}>
-                <Text style={[styles.sizeOptionLabel, { color: isSelected ? themeColors.primary : themeColors.textPrimary }]}>
+                <Text style={[scaledTypography.label, { color: isSelected ? themeColors.primary : themeColors.textPrimary }]}>
                   {displayName}
                 </Text>
-                <Text style={[styles.sizeOptionDescription, { color: themeColors.textSecondary }]}>
+                <Text style={[scaledTypography.small, { color: themeColors.textSecondary }]}>
                   {description}
                 </Text>
-                <Text style={[styles.sizeOptionMultiplier, { color: isSelected ? themeColors.primary : themeColors.textTertiary }]}>
+                <Text style={[scaledTypography.small, { color: isSelected ? themeColors.primary : themeColors.textTertiary }]}>
                   {multiplierValue}x size
                 </Text>
               </View>
@@ -312,8 +314,8 @@ export default function AppearanceSettings() {
           <Ionicons name="information-circle-outline" size={20} color={themeColors.info} />
         </View>
         <View style={styles.infoContent}>
-          <Text style={[styles.infoTitle, { color: themeColors.textPrimary }]}>Accessibility</Text>
-          <Text style={[styles.infoText, { color: themeColors.textSecondary }]}>
+          <Text style={[scaledTypography.label, { color: themeColors.textPrimary }]}>Accessibility</Text>
+          <Text style={[scaledTypography.small, { color: themeColors.textSecondary }]}>
             Text size preferences are saved and will apply across all screens in the app.
           </Text>
         </View>
@@ -332,7 +334,7 @@ export default function AppearanceSettings() {
         {saving ? (
           <ActivityIndicator color="white" />
         ) : (
-          <Text style={styles.saveButtonText}>
+          <Text style={[scaledTypography.body, styles.saveButtonText]}>
             {localScale === preferences.textSizeScale ? 'Text Size Saved' : 'Save Text Size'}
           </Text>
         )}
@@ -354,17 +356,12 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
   sectionHeader: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#94A3B8",
     letterSpacing: 0.5,
     textTransform: "uppercase",
     marginBottom: 6,
     marginLeft: 4,
   },
   sectionDescription: {
-    fontSize: 13,
-    color: "#64748B",
     marginBottom: 16,
     marginLeft: 4,
     lineHeight: 18,
@@ -391,14 +388,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   optionTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#0F172A",
     marginBottom: 2,
   },
   optionDescription: {
-    fontSize: 13,
-    color: "#64748B",
     lineHeight: 18,
   },
   radio: {
@@ -418,9 +410,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   sectionTitle: {
-    fontSize: typography.label.fontSize,
-    fontWeight: typography.label.fontWeight,
-    color: colors.textPrimary,
     marginBottom: spacing.md,
   },
   previewCard: {
@@ -478,19 +467,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   sizeOptionLabel: {
-    fontSize: typography.label.fontSize,
-    fontWeight: '600',
-    color: colors.textPrimary,
     marginBottom: spacing.xs,
   },
   sizeOptionDescription: {
-    fontSize: typography.small.fontSize,
-    color: colors.textSecondary,
     marginBottom: spacing.xs,
   },
   sizeOptionMultiplier: {
-    fontSize: typography.small.fontSize,
-    color: colors.textTertiary,
     fontWeight: '500',
   },
   infoCard: {
@@ -510,14 +492,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   infoTitle: {
-    fontSize: typography.label.fontSize,
-    fontWeight: '600',
-    color: colors.textPrimary,
     marginBottom: spacing.xs,
   },
   infoText: {
-    fontSize: typography.small.fontSize,
-    color: colors.textSecondary,
     lineHeight: 18,
   },
   saveButton: {
@@ -533,6 +510,5 @@ const styles = StyleSheet.create({
   saveButtonText: {
     color: 'white',
     fontWeight: '600',
-    fontSize: typography.label.fontSize,
   },
 });

@@ -6,6 +6,7 @@ import { useContext, useState } from "react";
 import { AuthContext } from "../../../../context/AuthenticationContext";
 import { deleteAccount } from "../../../../services/api";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useScaledTypography } from "../../../../hooks/useScaledTypography";
 import { useAppTheme } from "../../../../context/ThemeContext";
 
 export default function Settings() {
@@ -13,6 +14,7 @@ export default function Settings() {
   const { signOut } = useClerk();
   const { user } = useContext(AuthContext);
   const { colors } = useAppTheme();
+  const scaledTypography = useScaledTypography();
 
   const isAdminOrMod = user?.role === 'admin' || user?.role === 'moderator';
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
@@ -56,61 +58,61 @@ export default function Settings() {
             style={styles.logo}
             resizeMode="contain"
           />
-          <Text style={[styles.brandTitle, { color: colors.textPrimary }]}>BetrFood</Text>
-          <Text style={[styles.brandSubtitle, { color: colors.textSecondary }]}>Discover. Share. Eat Better.</Text>
+          <Text style={[scaledTypography.title, { color: colors.textPrimary }]}>BetrFood</Text>
+          <Text style={[scaledTypography.small, { color: colors.textSecondary }]}>Discover. Share. Eat Better.</Text>
         </View>
 
         {/* APP INFORMATION */}
-        <Text style={[styles.sectionHeader, { color: colors.textTertiary }]}>APP INFORMATION</Text>
+        <Text style={[scaledTypography.caption, { color: colors.textTertiary }]}>APP INFORMATION</Text>
         <View style={[styles.card, { backgroundColor: colors.backgroundElevated }]}>
           <View style={styles.infoRow}>
-            <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Version</Text>
-            <Text style={[styles.infoValue, { color: colors.textPrimary }]}>2.4.1</Text>
+            <Text style={[scaledTypography.label, { color: colors.textSecondary }]}>Version</Text>
+            <Text style={[scaledTypography.label, { color: colors.textPrimary }]}>2.4.1</Text>
           </View>
           <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
           <View style={styles.infoRow}>
-            <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Build Number</Text>
-            <Text style={[styles.infoValue, { color: colors.textPrimary }]}>241</Text>
+            <Text style={[scaledTypography.label, { color: colors.textSecondary }]}>Build Number</Text>
+            <Text style={[scaledTypography.label, { color: colors.textPrimary }]}>241</Text>
           </View>
           <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
           <View style={styles.infoRow}>
-            <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Release Date</Text>
-            <Text style={[styles.infoValue, { color: colors.textPrimary }]}>March 2026</Text>
+            <Text style={[scaledTypography.label, { color: colors.textSecondary }]}>Release Date</Text>
+            <Text style={[scaledTypography.label, { color: colors.textPrimary }]}>March 2026</Text>
           </View>
         </View>
 
         {/* NOTIFICATIONS */}
-        <Text style={[styles.sectionHeader, { color: colors.textTertiary }]}>NOTIFICATIONS</Text>
+        <Text style={[scaledTypography.caption, { color: colors.textTertiary }]}>NOTIFICATIONS</Text>
         <View style={[styles.card, { backgroundColor: colors.backgroundElevated }]}>
           <Pressable
             style={styles.navRow}
             onPress={() => router.push("/profile/settings/notifications" as any)}
           >
-            <Text style={[styles.navLabel, { color: colors.textPrimary }]}>Push Notifications</Text>
+            <Text style={[scaledTypography.body, { color: colors.textPrimary }]}>Push Notifications</Text>
             <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
           </Pressable>
         </View>
 
         {/* APPEARANCE */}
-        <Text style={[styles.sectionHeader, { color: colors.textTertiary }]}>APPEARANCE</Text>
+        <Text style={[scaledTypography.caption, { color: colors.textTertiary }]}>APPEARANCE</Text>
         <View style={[styles.card, { backgroundColor: colors.backgroundElevated }]}>
           <Pressable
             style={styles.navRow}
             onPress={() => router.push("/profile/settings/appearance" as any)}
           >
-            <Text style={[styles.navLabel, { color: colors.textPrimary }]}>Theme & Layout</Text>
+            <Text style={[scaledTypography.body, { color: colors.textPrimary }]}>Theme & Layout</Text>
             <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
           </Pressable>
         </View>
 
         {/* ABOUT */}
-        <Text style={[styles.sectionHeader, { color: colors.textTertiary }]}>ABOUT</Text>
+        <Text style={[scaledTypography.caption, { color: colors.textTertiary }]}>ABOUT</Text>
         <View style={[styles.card, { backgroundColor: colors.backgroundElevated }]}>
           <Pressable
             style={styles.navRow}
             onPress={() => router.push("/profile/settings/preferences" as any)}
           >
-            <Text style={[styles.navLabel, { color: colors.textPrimary }]}>Food Preferences</Text>
+            <Text style={[scaledTypography.body, { color: colors.textPrimary }]}>Food Preferences</Text>
             <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
           </Pressable>
           <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
@@ -118,19 +120,19 @@ export default function Settings() {
             style={styles.navRow}
             onPress={() => router.push("/profile/settings/linked-accounts" as any)}
           >
-            <Text style={[styles.navLabel, { color: colors.textPrimary }]}>Linked Accounts</Text>
+            <Text style={[scaledTypography.body, { color: colors.textPrimary }]}>Linked Accounts</Text>
             <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
           </Pressable>
         </View>
 
         {/* DATA AND PRIVACY */}
-        <Text style={[styles.sectionHeader, { color: colors.textTertiary }]}>DATA AND PRIVACY</Text>
+        <Text style={[scaledTypography.caption, { color: colors.textTertiary }]}>DATA AND PRIVACY</Text>
         <View style={[styles.card, { backgroundColor: colors.backgroundElevated }]}>
           <Pressable
             style={styles.navRow}
             onPress={() => router.push("/profile/settings/privacy" as any)}
           >
-            <Text style={[styles.navLabel, { color: colors.textPrimary }]}>Privacy</Text>
+            <Text style={[scaledTypography.body, { color: colors.textPrimary }]}>Privacy</Text>
             <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
           </Pressable>
           <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
@@ -138,7 +140,7 @@ export default function Settings() {
             style={styles.navRow}
             onPress={() => router.push("/profile/settings/data-storage" as any)}
           >
-            <Text style={[styles.navLabel, { color: colors.textPrimary }]}>Data & Storage</Text>
+            <Text style={[scaledTypography.body, { color: colors.textPrimary }]}>Data & Storage</Text>
             <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
           </Pressable>
           <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
@@ -146,7 +148,7 @@ export default function Settings() {
             style={styles.navRow}
             onPress={() => router.push("/profile/settings/export-data" as any)}
           >
-            <Text style={[styles.navLabel, { color: colors.textPrimary }]}>Export My Data</Text>
+            <Text style={[scaledTypography.body, { color: colors.textPrimary }]}>Export My Data</Text>
             <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
           </Pressable>
           <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
@@ -154,7 +156,7 @@ export default function Settings() {
             style={styles.navRow}
             onPress={() => router.push("/profile/settings/terms" as any)}
           >
-            <Text style={[styles.navLabel, { color: colors.textPrimary }]}>Terms of Service</Text>
+            <Text style={[scaledTypography.body, { color: colors.textPrimary }]}>Terms of Service</Text>
             <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
           </Pressable>
           <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
@@ -162,19 +164,19 @@ export default function Settings() {
             style={styles.navRow}
             onPress={() => router.push("/profile/settings/privacy-policy" as any)}
           >
-            <Text style={[styles.navLabel, { color: colors.textPrimary }]}>Privacy Policy</Text>
+            <Text style={[scaledTypography.body, { color: colors.textPrimary }]}>Privacy Policy</Text>
             <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
           </Pressable>
         </View>
 
         {/* LEGAL AND RESOURCES */}
-        <Text style={[styles.sectionHeader, { color: colors.textTertiary }]}>LEGAL AND RESOURCES</Text>
+        <Text style={[scaledTypography.caption, { color: colors.textTertiary }]}>LEGAL AND RESOURCES</Text>
         <View style={[styles.card, { backgroundColor: colors.backgroundElevated }]}>
           <Pressable
             style={styles.navRow}
             onPress={() => router.push("/profile/settings/open-source-licenses" as any)}
           >
-            <Text style={[styles.navLabel, { color: colors.textPrimary }]}>Open Source Licenses</Text>
+            <Text style={[scaledTypography.body, { color: colors.textPrimary }]}>Open Source Licenses</Text>
             <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
           </Pressable>
           <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
@@ -182,7 +184,7 @@ export default function Settings() {
             style={styles.navRow}
             onPress={() => router.push("/profile/settings/help" as any)}
           >
-            <Text style={[styles.navLabel, { color: colors.textPrimary }]}>Help & Support</Text>
+            <Text style={[scaledTypography.body, { color: colors.textPrimary }]}>Help & Support</Text>
             <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
           </Pressable>
           <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
@@ -190,18 +192,18 @@ export default function Settings() {
             style={styles.navRow}
             onPress={() => router.push("/profile/settings/bug-report" as any)}
           >
-            <Text style={[styles.navLabel, { color: colors.textPrimary }]}>Report a Bug</Text>
+            <Text style={[scaledTypography.body, { color: colors.textPrimary }]}>Report a Bug</Text>
             <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
           </Pressable>
           <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
           <Pressable style={styles.navRow}>
-            <Text style={[styles.navLabel, { color: colors.textPrimary }]}>Cookie Policy</Text>
+            <Text style={[scaledTypography.body, { color: colors.textPrimary }]}>Cookie Policy</Text>
             <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
           </Pressable>
         </View>
 
         {/* FOLLOW US */}
-        <Text style={[styles.sectionHeader, { color: colors.textTertiary }]}>FOLLOW US</Text>
+        <Text style={[scaledTypography.caption, { color: colors.textTertiary }]}>FOLLOW US</Text>
         <View style={styles.socialRow}>
           <Pressable style={[styles.socialIcon, { backgroundColor: colors.backgroundElevated, borderColor: colors.border }]} onPress={() => openLink("https://instagram.com/betrfood")}>
             <Ionicons name="logo-instagram" size={22} color={colors.textPrimary} />
@@ -220,13 +222,13 @@ export default function Settings() {
         {/* Admin Panel Link */}
         {isAdminOrMod && (
           <>
-            <Text style={[styles.sectionHeader, { color: colors.textTertiary }]}>ADMIN</Text>
+            <Text style={[scaledTypography.caption, { color: colors.textTertiary }]}>ADMIN</Text>
             <View style={[styles.card, { backgroundColor: colors.backgroundElevated }]}>
               <Pressable
                 style={styles.navRow}
                 onPress={() => router.push('/admin' as any)}
               >
-                <Text style={[styles.navLabel, { color: '#22C55E', fontWeight: '600' }]}>Admin Panel</Text>
+                <Text style={[scaledTypography.body, { color: '#22C55E' }]}>Admin Panel</Text>
                 <Ionicons name="chevron-forward" size={18} color="#22C55E" />
               </Pressable>
             </View>
@@ -234,34 +236,34 @@ export default function Settings() {
         )}
 
         {/* ACCOUNT ACTIONS */}
-        <Text style={[styles.sectionHeader, { color: colors.textTertiary }]}>ACCOUNT</Text>
+        <Text style={[scaledTypography.caption, { color: colors.textTertiary }]}>ACCOUNT</Text>
         <View style={[styles.card, { backgroundColor: colors.backgroundElevated }]}>
           <Pressable
             style={styles.navRow}
             onPress={() => router.push("/profile/settings/blocked" as any)}
           >
-            <Text style={[styles.navLabel, { color: colors.textPrimary }]}>Blocked & Muted</Text>
+            <Text style={[scaledTypography.body, { color: colors.textPrimary }]}>Blocked & Muted</Text>
             <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
           </Pressable>
           <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
           <Pressable style={styles.navRow} onPress={handleLogout}>
-            <Text style={[styles.navLabel, { color: '#EF4444' }]}>Log Out</Text>
+            <Text style={[scaledTypography.body, { color: '#EF4444' }]}>Log Out</Text>
             <Ionicons name="log-out-outline" size={18} color="#EF4444" />
           </Pressable>
           <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
           <Pressable style={styles.navRow} onPress={handleDeleteAccount}>
-            <Text style={[styles.navLabel, { color: '#EF4444' }]}>Delete Account</Text>
+            <Text style={[scaledTypography.body, { color: '#EF4444' }]}>Delete Account</Text>
             <Ionicons name="trash-outline" size={18} color="#EF4444" />
           </Pressable>
         </View>
 
         {/* About Text */}
-        <Text style={[styles.aboutText, { color: colors.textSecondary }]}>
+        <Text style={[scaledTypography.body, { color: colors.textSecondary }]}>
           BetrFood is made with love to help you discover healthier food choices, share recipes with friends, and build better eating habits together.
         </Text>
 
         {/* Copyright */}
-        <Text style={[styles.copyright, { color: colors.textTertiary }]}>
+        <Text style={[scaledTypography.small, { color: colors.textTertiary }]}>
           {"©"} 2024 BetrFood, Inc. All rights reserved.
         </Text>
 
@@ -283,8 +285,8 @@ export default function Settings() {
             <View style={styles.modalIconRow}>
               <Ionicons name="warning-outline" size={32} color="#EF4444" />
             </View>
-            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Delete Account</Text>
-            <Text style={[styles.modalMessage, { color: colors.textSecondary }]}>
+            <Text style={[scaledTypography.label, { color: colors.textPrimary }]}>Delete Account</Text>
+            <Text style={[scaledTypography.body, { color: colors.textSecondary }]}>
               This action is permanent and cannot be undone. All your posts, comments, follows, and data will be permanently removed.
             </Text>
             <Pressable
@@ -292,7 +294,7 @@ export default function Settings() {
               onPress={confirmDeleteAccount}
               disabled={deleting}
             >
-              <Text style={styles.modalDeleteText}>
+              <Text style={[scaledTypography.body, { color: '#fff' }]}>
                 {deleting ? 'Deleting...' : 'Yes, Delete My Account'}
               </Text>
             </Pressable>
@@ -301,7 +303,7 @@ export default function Settings() {
               onPress={() => setDeleteModalVisible(false)}
               disabled={deleting}
             >
-              <Text style={[styles.modalCancelText, { color: colors.textPrimary }]}>Cancel</Text>
+              <Text style={[scaledTypography.body, { color: colors.textPrimary }]}>Cancel</Text>
             </Pressable>
           </Pressable>
         </Pressable>
@@ -351,19 +353,12 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   brandTitle: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#0F172A',
     marginBottom: 4,
   },
   brandSubtitle: {
-    fontSize: 13,
-    color: '#64748B',
+    marginBottom: 4,
   },
   sectionHeader: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#94A3B8',
     letterSpacing: 0.5,
     textTransform: 'uppercase',
     marginTop: 24,
@@ -383,11 +378,9 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   infoLabel: {
-    fontSize: 15,
     color: '#0F172A',
   },
   infoValue: {
-    fontSize: 15,
     color: '#64748B',
   },
   divider: {
@@ -403,7 +396,6 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   navLabel: {
-    fontSize: 15,
     color: '#0F172A',
   },
   socialRow: {
@@ -423,7 +415,6 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F0',
   },
   aboutText: {
-    fontSize: 13,
     color: '#64748B',
     textAlign: 'center',
     lineHeight: 20,
@@ -431,7 +422,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   copyright: {
-    fontSize: 12,
     color: '#94A3B8',
     textAlign: 'center',
     marginTop: 12,
@@ -455,14 +445,11 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   modalTitle: {
-    fontSize: 20,
-    fontWeight: '700',
     color: '#0F172A',
     textAlign: 'center',
     marginBottom: 10,
   },
   modalMessage: {
-    fontSize: 14,
     color: '#64748B',
     textAlign: 'center',
     lineHeight: 20,

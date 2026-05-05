@@ -22,6 +22,8 @@ import {
   clearAllNotifications,
   Notification,
 } from '../../../services/api';
+import { useScaledTypography } from '../../../hooks/useScaledTypography';
+import { useAppTheme } from '../../../context/ThemeContext';
 
 function getRelativeTime(dateString: string): string {
   const now = new Date();
@@ -98,6 +100,7 @@ function getNotificationMessage(notification: Notification): string {
 
 export default function NotificationsScreen() {
   const router = useRouter();
+  const scaledTypography = useScaledTypography();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -275,7 +278,7 @@ export default function NotificationsScreen() {
           <Ionicons name={icon.name as any} size={22} color={icon.color} />
         </View>
         <View style={styles.contentContainer}>
-          <Text style={[styles.messageText, !item.read && styles.unreadText]}>
+          <Text style={[styles.messageText, scaledTypography.body, !item.read && styles.unreadText]}>
             {message}
           </Text>
           {isFollowRequest && (
@@ -284,17 +287,17 @@ export default function NotificationsScreen() {
                 style={styles.acceptButton}
                 onPress={() => handleAcceptFollow(item)}
               >
-                <Text style={styles.acceptButtonText}>Accept</Text>
+                <Text style={[styles.acceptButtonText, scaledTypography.small]}>Accept</Text>
               </Pressable>
               <Pressable
                 style={styles.denyButton}
                 onPress={() => handleDenyFollow(item)}
               >
-                <Text style={styles.denyButtonText}>Deny</Text>
+                <Text style={[styles.denyButtonText, scaledTypography.small]}>Deny</Text>
               </Pressable>
             </View>
           )}
-          <Text style={styles.timeText}>{timeAgo}</Text>
+          <Text style={[styles.timeText, scaledTypography.small]}>{timeAgo}</Text>
         </View>
         {!item.read && <View style={styles.unreadDot} />}
       </Pressable>
@@ -306,8 +309,8 @@ export default function NotificationsScreen() {
     return (
       <View style={styles.emptyContainer}>
         <Ionicons name="notifications-off-outline" size={64} color="#CCC" />
-        <Text style={styles.emptyTitle}>No notifications yet</Text>
-        <Text style={styles.emptySubtitle}>
+        <Text style={[styles.emptyTitle, scaledTypography.title]}>No notifications yet</Text>
+        <Text style={[styles.emptySubtitle, scaledTypography.body]}>
           When someone interacts with you, you'll see it here
         </Text>
       </View>
@@ -325,7 +328,7 @@ export default function NotificationsScreen() {
               <View style={styles.headerActions}>
                 {hasUnread && (
                   <Pressable onPress={handleMarkAllRead} style={styles.markAllButton}>
-                    <Text style={styles.markAllText}>Mark all read</Text>
+                    <Text style={[styles.markAllText, scaledTypography.small]}>Mark all read</Text>
                   </Pressable>
                 )}
                 <Pressable onPress={handleClearAll} style={styles.markAllButton}>
@@ -395,7 +398,6 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   messageText: {
-    fontSize: 15,
     color: '#333333',
     lineHeight: 20,
   },
@@ -430,7 +432,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   timeText: {
-    fontSize: 13,
     color: '#999999',
     marginTop: 2,
   },
@@ -446,13 +447,10 @@ const styles = StyleSheet.create({
     paddingTop: 80,
   },
   emptyTitle: {
-    fontSize: 18,
-    fontWeight: '600',
     color: '#333333',
     marginTop: 16,
   },
   emptySubtitle: {
-    fontSize: 14,
     color: '#999999',
     marginTop: 8,
     textAlign: 'center',
@@ -472,8 +470,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   markAllText: {
-    fontSize: 14,
     color: '#22C55E',
-    fontWeight: '600',
   },
 });

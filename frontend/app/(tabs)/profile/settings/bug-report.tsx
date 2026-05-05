@@ -8,6 +8,8 @@ import {
 } from 'react-native';
 import { useState } from 'react';
 import { useNavigation } from '@react-navigation/native';
+import { useAppTheme } from '../../../../context/ThemeContext';
+import { useScaledTypography } from '../../../../hooks/useScaledTypography';
 import BugReportModal from '../../../../components/BugReportModal';
 import { colors, spacing } from '../../../../constants/theme';
 
@@ -15,6 +17,8 @@ export default function HelpSettings() {
   const [bugReportVisible, setBugReportVisible] = useState(false);
   const [lastBugReportRef, setLastBugReportRef] = useState<string | null>(null);
   const navigation = useNavigation();
+  const { colors: themeColors } = useAppTheme();
+  const scaledTypography = useScaledTypography();
 
   const handleBugReportSuccess = (bugReportId: string, reference: string) => {
     setLastBugReportRef(reference);
@@ -30,27 +34,27 @@ export default function HelpSettings() {
   };
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView style={[styles.container, { backgroundColor: themeColors.backgroundSecondary }]} showsVerticalScrollIndicator={false}>
       
         <View style={styles.supportBox}>
-          <Text style={styles.sectionTitle}>
+          <Text style={[scaledTypography.title, { color: themeColors.textPrimary }]}>
             Found something not working as expected? 
           </Text>
-          <Text style={styles.supportDescription}>
+          <Text style={[scaledTypography.body, { color: themeColors.textSecondary }]}>
             Help us improve the app by reporting bugs with
             screenshots and device information.</Text>
           <Pressable
             style={styles.reportButton}
             onPress={openBugReport}
           >
-            <Text style={styles.reportButtonText}>Report a Bug</Text>
+            <Text style={[scaledTypography.label, styles.reportButtonText]}>Report a Bug</Text>
           </Pressable>
         </View>
 
         {lastBugReportRef && (
           <View style={styles.lastReportBox}>
-            <Text style={styles.lastReportText}>
-              ✓ Last report reference: <Text style={styles.reference}>{lastBugReportRef}</Text>
+            <Text style={[scaledTypography.body, styles.lastReportText]}>
+              ✓ Last report reference: <Text style={[scaledTypography.small, styles.reference]}>{lastBugReportRef}</Text>
             </Text>
           </View>
         )}
@@ -75,14 +79,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
   },
-  sectionTitle: {
-    fontSize: 18,
-    textAlign: 'center',
-    fontWeight: '600',
-    marginBottom: spacing.md,
-    color: '#000',
-  },
-  // Support Styles
   supportBox: {
     backgroundColor: '#f0f8ff',
     padding: spacing.md,
@@ -91,24 +87,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e0f2fe',
   },
-  supportDescription: {
-    fontSize: 16,
-    textAlign: 'center',
-    color: '#666',
-    lineHeight: 18,
-    marginBottom: 50,
-  },
   reportButton: {
     backgroundColor: '#4CAF50',
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 6,
     alignItems: 'center',
+    marginTop: 50,
   },
   reportButtonText: {
     color: '#fff',
-    fontWeight: '600',
-    fontSize: 14,
   },
   lastReportBox: {
     backgroundColor: '#f0f8f0',
@@ -119,29 +107,9 @@ const styles = StyleSheet.create({
     borderColor: '#c8e6c9',
   },
   lastReportText: {
-    fontSize: 13,
     color: '#2e7d32',
   },
   reference: {
-    fontWeight: '600',
     fontFamily: 'monospace',
-  },
-  contactBox: {
-    backgroundColor: '#fff3e0',
-    padding: spacing.md,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#ffe0b2',
-  },
-  contactTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#e65100',
-    marginBottom: 6,
-  },
-  contactDescription: {
-    fontSize: 13,
-    color: '#bf360c',
-    lineHeight: 18,
   },
 });

@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { router } from 'expo-router';
 import { ThemeColors } from '../../../constants/theme';
+import { useScaledTypography } from '../../../hooks/useScaledTypography';
 import { useAppTheme } from '../../../context/ThemeContext';
 import {
   Conversation,
@@ -43,6 +44,7 @@ function formatRelativeTime(dateString: string) {
 
 export default function ChatHistoryScreen() {
   const { colors } = useAppTheme();
+  const scaledTypography = useScaledTypography();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -153,7 +155,7 @@ export default function ChatHistoryScreen() {
           <Ionicons name="chevron-back" size={20} color={colors.textPrimary} />
         </TouchableOpacity>
         <View style={styles.headerCopy}>
-          <Text style={styles.title}>History</Text>
+          <Text style={[styles.title, scaledTypography.title]}>History</Text>
         </View>
         <TouchableOpacity onPress={() => router.replace('/chat')} style={styles.iconButton}>
           <Ionicons name="create-outline" size={18} color={colors.textPrimary} />
@@ -186,7 +188,7 @@ export default function ChatHistoryScreen() {
                   onPress={() => handleDelete(item)}
                 >
                   <Ionicons name="trash-outline" size={20} color={colors.white} />
-                  <Text style={styles.swipeDeleteText}>Delete</Text>
+                  <Text style={[styles.swipeDeleteText, scaledTypography.small]}>Delete</Text>
                 </TouchableOpacity>
               )}
               rightThreshold={60}
@@ -205,15 +207,15 @@ export default function ChatHistoryScreen() {
                   <Ionicons name="sparkles" size={16} color={colors.white} />
                 </View>
                 <View style={styles.cardBody}>
-                  <Text style={styles.cardTitle} numberOfLines={1}>
+                  <Text style={[styles.cardTitle, scaledTypography.label]} numberOfLines={1}>
                     {item.title}
                   </Text>
                   {item.last_message_preview ? (
-                    <Text style={styles.cardPreview} numberOfLines={1}>
+                    <Text style={[styles.cardPreview, scaledTypography.caption]} numberOfLines={1}>
                       {item.last_message_preview}
                     </Text>
                   ) : null}
-                  <Text style={styles.cardMeta}>{formatRelativeTime(item.updated_at)}</Text>
+                  <Text style={[styles.cardMeta, scaledTypography.small]}>{formatRelativeTime(item.updated_at)}</Text>
                 </View>
                 <TouchableOpacity onPress={() => openRenamePrompt(item)} style={styles.inlineButton}>
                   <Ionicons name="pencil-outline" size={16} color={colors.textSecondary} />
@@ -227,7 +229,7 @@ export default function ChatHistoryScreen() {
           ListFooterComponent={
             <TouchableOpacity style={styles.clearAllButton} onPress={handleClearAll}>
               <Ionicons name="trash-outline" size={16} color="#DC2626" />
-              <Text style={styles.clearAllText}>Clear all chats</Text>
+              <Text style={[styles.clearAllText, scaledTypography.label]}>Clear all chats</Text>
             </TouchableOpacity>
           }
         />
@@ -274,8 +276,6 @@ function makeStyles(colors: ThemeColors) {
       flex: 1,
     },
     title: {
-      fontSize: 18,
-      fontWeight: '700',
       color: colors.textPrimary,
     },
     iconButton: {
@@ -316,17 +316,13 @@ function makeStyles(colors: ThemeColors) {
       gap: 2,
     },
     cardTitle: {
-      fontSize: 15,
-      fontWeight: '700',
       color: colors.textPrimary,
     },
     cardPreview: {
-      fontSize: 13,
       color: colors.textSecondary,
       lineHeight: 18,
     },
     cardMeta: {
-      fontSize: 12,
       color: colors.textSecondary,
     },
     inlineButton: {
@@ -348,8 +344,6 @@ function makeStyles(colors: ThemeColors) {
     },
     swipeDeleteText: {
       color: colors.white,
-      fontSize: 12,
-      fontWeight: '600',
     },
     clearAllButton: {
       flexDirection: 'row',
@@ -361,8 +355,6 @@ function makeStyles(colors: ThemeColors) {
       paddingVertical: 12,
     },
     clearAllText: {
-      fontSize: 14,
-      fontWeight: '600',
       color: '#DC2626',
     },
   });

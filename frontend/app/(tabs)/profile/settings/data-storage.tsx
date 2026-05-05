@@ -11,6 +11,8 @@ import {
   RefreshControl,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useAppTheme } from "../../../../context/ThemeContext";
+import { useScaledTypography } from "../../../../hooks/useScaledTypography";
 import { resetRecommendations } from "../../../../services/api";
 import {
   clearMediaCache,
@@ -28,23 +30,29 @@ function StorageBreakdownRow({
   icon,
   label,
   bytes,
+  scaledTypography,
+  colors,
 }: {
   icon: IoniconName;
   label: string;
   bytes: number;
+  scaledTypography: ReturnType<typeof useScaledTypography>;
+  colors: ReturnType<typeof useAppTheme>['colors'];
 }) {
   return (
     <View style={styles.storageRow}>
       <View style={styles.storageIcon}>
         <Ionicons name={icon} size={18} color="#475569" />
       </View>
-      <Text style={styles.storageLabel}>{label}</Text>
-      <Text style={styles.storageValue}>{formatCacheSize(bytes)}</Text>
+      <Text style={[scaledTypography.body, styles.storageLabel]}>{label}</Text>
+      <Text style={[scaledTypography.small, styles.storageValue]}>{formatCacheSize(bytes)}</Text>
     </View>
   );
 }
 
 export default function DataStorageScreen() {
+  const { colors } = useAppTheme();
+  const scaledTypography = useScaledTypography();
   const [confirmVisible, setConfirmVisible] = useState(false);
   const [resetting, setResetting] = useState(false);
 
@@ -154,11 +162,11 @@ export default function DataStorageScreen() {
           />
         }
       >
-        <Text style={styles.sectionHeader}>STORAGE USAGE</Text>
+        <Text style={[styles.sectionHeader, scaledTypography.caption]}>STORAGE USAGE</Text>
         <View style={styles.card}>
           <View style={styles.infoBlock}>
-            <Text style={styles.infoTitle}>On this device</Text>
-            <Text style={styles.infoDescription}>
+            <Text style={[styles.infoTitle, scaledTypography.label]}>On this device</Text>
+            <Text style={[styles.infoDescription, scaledTypography.small]}>
               How much space BetrFood is using on your phone. Pull down to recalculate.
             </Text>
           </View>
@@ -172,18 +180,21 @@ export default function DataStorageScreen() {
               <StorageBreakdownRow
                 icon="image-outline"
                 label="Cache"
+                scaledTypography={scaledTypography}
                 bytes={storage?.cacheBytes ?? 0}
               />
               <View style={styles.storageDivider} />
               <StorageBreakdownRow
                 icon="cloud-download-outline"
                 label="Downloads"
+                scaledTypography={scaledTypography}
                 bytes={storage?.downloadsBytes ?? 0}
               />
               <View style={styles.storageDivider} />
               <StorageBreakdownRow
                 icon="folder-outline"
                 label="App Data"
+                scaledTypography={scaledTypography}
                 bytes={storage?.appDataBytes ?? 0}
               />
               <View style={[styles.storageDivider, styles.storageTotalDivider]} />
@@ -197,21 +208,21 @@ export default function DataStorageScreen() {
           )}
         </View>
 
-        <Text style={styles.sectionHeader}>CACHE</Text>
+        <Text style={[styles.sectionHeader, scaledTypography.caption]}>CACHE</Text>
         <View style={styles.card}>
           <View style={styles.infoBlock}>
-            <Text style={styles.infoTitle}>Image & Video Cache</Text>
-            <Text style={styles.infoDescription}>
+            <Text style={[styles.infoTitle, scaledTypography.label]}>Image & Video Cache</Text>
+            <Text style={[styles.infoDescription, scaledTypography.small]}>
               Cached media that BetrFood has saved on this device to load faster. Clearing it
               frees up space; images and videos will re-download the next time you open them.
             </Text>
           </View>
           <View style={styles.cacheSizeRow}>
-            <Text style={styles.cacheSizeLabel}>Currently using</Text>
+            <Text style={[styles.cacheSizeLabel, scaledTypography.small]}>Currently using</Text>
             {calculatingCache ? (
               <ActivityIndicator size="small" color="#94A3B8" />
             ) : (
-              <Text style={styles.cacheSizeValue}>{cacheSizeLabel}</Text>
+              <Text style={[styles.cacheSizeValue, scaledTypography.body]}>{cacheSizeLabel}</Text>
             )}
           </View>
           <Pressable
@@ -220,15 +231,15 @@ export default function DataStorageScreen() {
             disabled={calculatingCache || clearingCache || cacheIsEmpty}
           >
             <Ionicons name="trash-outline" size={18} color="#EF4444" />
-            <Text style={styles.resetButtonText}>Clear Cache</Text>
+            <Text style={[styles.resetButtonText, scaledTypography.body]}>Clear Cache</Text>
           </Pressable>
         </View>
 
-        <Text style={styles.sectionHeader}>RECOMMENDATIONS</Text>
+        <Text style={[styles.sectionHeader, scaledTypography.caption]}>RECOMMENDATIONS</Text>
         <View style={styles.card}>
           <View style={styles.infoBlock}>
-            <Text style={styles.infoTitle}>Reset Recommendations</Text>
-            <Text style={styles.infoDescription}>
+            <Text style={[styles.infoTitle, scaledTypography.label]}>Reset Recommendations</Text>
+            <Text style={[styles.infoDescription, scaledTypography.small]}>
               Clear everything the For You feed has learned about you. This removes your view
               history, "not interested" feedback, and learned preferences. The feed will go back
               to showing non-personalized content until you interact with new posts.
@@ -240,7 +251,7 @@ export default function DataStorageScreen() {
             disabled={resetting}
           >
             <Ionicons name="refresh-outline" size={18} color="#EF4444" />
-            <Text style={styles.resetButtonText}>Reset Recommendations</Text>
+            <Text style={[styles.resetButtonText, scaledTypography.body]}>Reset Recommendations</Text>
           </Pressable>
         </View>
       </ScrollView>
@@ -285,7 +296,7 @@ export default function DataStorageScreen() {
               onPress={() => setConfirmVisible(false)}
               disabled={resetting}
             >
-              <Text style={styles.modalCancelText}>Cancel</Text>
+              <Text style={[styles.modalCancelText, scaledTypography.body]}>Cancel</Text>
             </Pressable>
           </Pressable>
         </Pressable>
@@ -348,8 +359,6 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   sectionHeader: {
-    fontSize: 12,
-    fontWeight: "700",
     color: "#94A3B8",
     letterSpacing: 0.5,
     textTransform: "uppercase",
@@ -366,13 +375,10 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   infoTitle: {
-    fontSize: 16,
-    fontWeight: "600",
     color: "#0F172A",
     marginBottom: 6,
   },
   infoDescription: {
-    fontSize: 13,
     color: "#64748B",
     lineHeight: 19,
   },
@@ -392,8 +398,6 @@ const styles = StyleSheet.create({
   },
   resetButtonText: {
     color: "#EF4444",
-    fontWeight: "600",
-    fontSize: 15,
   },
   cacheSizeRow: {
     flexDirection: "row",
@@ -406,13 +410,9 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   cacheSizeLabel: {
-    fontSize: 13,
     color: "#64748B",
-    fontWeight: "500",
   },
   cacheSizeValue: {
-    fontSize: 15,
-    fontWeight: "600",
     color: "#0F172A",
   },
   storageLoading: {
@@ -437,13 +437,10 @@ const styles = StyleSheet.create({
   storageLabel: {
     flex: 1,
     marginLeft: 8,
-    fontSize: 14,
     color: "#0F172A",
   },
   storageValue: {
-    fontSize: 14,
     color: "#475569",
-    fontWeight: "500",
   },
   storageDivider: {
     height: 1,
@@ -456,13 +453,9 @@ const styles = StyleSheet.create({
   },
   storageTotalLabel: {
     flex: 1,
-    fontSize: 15,
-    fontWeight: "700",
     color: "#0F172A",
   },
   storageTotalValue: {
-    fontSize: 15,
-    fontWeight: "700",
     color: "#0F172A",
   },
   modalOverlay: {
@@ -484,14 +477,11 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   modalTitle: {
-    fontSize: 20,
-    fontWeight: "700",
     color: "#0F172A",
     textAlign: "center",
     marginBottom: 10,
   },
   modalMessage: {
-    fontSize: 14,
     color: "#64748B",
     textAlign: "center",
     marginBottom: 10,
@@ -501,12 +491,10 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   bullet: {
-    fontSize: 14,
     color: "#0F172A",
     lineHeight: 22,
   },
   modalFootnote: {
-    fontSize: 12,
     color: "#94A3B8",
     textAlign: "center",
     marginBottom: 20,
@@ -520,8 +508,6 @@ const styles = StyleSheet.create({
   },
   modalConfirmText: {
     color: "#fff",
-    fontWeight: "700",
-    fontSize: 15,
   },
   modalCancelButton: {
     paddingVertical: 12,
@@ -529,7 +515,5 @@ const styles = StyleSheet.create({
   },
   modalCancelText: {
     color: "#64748B",
-    fontSize: 15,
-    fontWeight: "500",
   },
 });

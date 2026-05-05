@@ -12,11 +12,13 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppTheme } from '../../../../context/ThemeContext';
+import { useScaledTypography } from '../../../../hooks/useScaledTypography';
 import { requestDataExport, DataExportResult } from '../../../../services/api';
 
 export default function ExportDataScreen() {
   const router = useRouter();
   const { colors } = useAppTheme();
+  const scaledTypography = useScaledTypography();
 
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<DataExportResult | null>(null);
@@ -84,7 +86,7 @@ export default function ExportDataScreen() {
         <Pressable onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={22} color={colors.textPrimary} />
         </Pressable>
-        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Export My Data</Text>
+        <Text style={[styles.headerTitle, scaledTypography.title, { color: colors.textPrimary }]}>Export My Data</Text>
         <View style={styles.headerSpacer} />
       </View>
 
@@ -98,8 +100,8 @@ export default function ExportDataScreen() {
           <View style={styles.infoIconRow}>
             <Ionicons name="shield-checkmark-outline" size={28} color="#22C55E" />
           </View>
-          <Text style={[styles.infoTitle, { color: colors.textPrimary }]}>Your data, your rights</Text>
-          <Text style={[styles.infoBody, { color: colors.textSecondary }]}>
+          <Text style={[styles.infoTitle, scaledTypography.subtitle, { color: colors.textPrimary }]}>Your data, your rights</Text>
+          <Text style={[styles.infoBody, scaledTypography.body, { color: colors.textSecondary }]}>
             In accordance with GDPR, you can download a copy of all your personal data stored on BetrFood. Your export includes:
           </Text>
           <View style={styles.dataList}>
@@ -113,11 +115,11 @@ export default function ExportDataScreen() {
             ].map(item => (
               <View key={item} style={styles.dataListRow}>
                 <Ionicons name="checkmark" size={14} color="#22C55E" style={{ marginRight: 8 }} />
-                <Text style={[styles.dataListItem, { color: colors.textSecondary }]}>{item}</Text>
+                <Text style={[styles.dataListItem, scaledTypography.body, { color: colors.textSecondary }]}>{item}</Text>
               </View>
             ))}
           </View>
-          <Text style={[styles.infoFootnote, { color: colors.textTertiary }]}>
+          <Text style={[styles.infoFootnote, scaledTypography.small, { color: colors.textTertiary }]}>
             Export is provided as a JSON file. The download link expires after 24 hours.
           </Text>
         </View>
@@ -125,16 +127,16 @@ export default function ExportDataScreen() {
         {/* Result card — shown after successful export */}
         {result && (
           <>
-            <Text style={[styles.sectionHeader, { color: colors.textTertiary }]}>YOUR EXPORT</Text>
+            <Text style={[styles.sectionHeader, scaledTypography.caption, { color: colors.textTertiary }]}>YOUR EXPORT</Text>
             <View style={[styles.resultCard, { backgroundColor: colors.backgroundElevated }]}>
               <View style={styles.resultRow}>
                 <Ionicons name="checkmark-circle" size={20} color="#22C55E" style={{ marginRight: 10 }} />
-                <Text style={[styles.resultText, { color: colors.textPrimary }]}>Export ready</Text>
+                <Text style={[styles.resultText, scaledTypography.body, { color: colors.textPrimary }]}>Export ready</Text>
               </View>
               <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
               <View style={styles.resultRow}>
-                <Text style={[styles.resultLabel, { color: colors.textSecondary }]}>Link expires in</Text>
-                <Text style={[styles.resultValue, { color: countdown === 'Expired' ? '#EF4444' : '#22C55E', fontVariant: ['tabular-nums'] }]}>
+                <Text style={[styles.resultLabel, scaledTypography.body, { color: colors.textSecondary }]}>Link expires in</Text>
+                <Text style={[styles.resultValue, scaledTypography.body, { color: countdown === 'Expired' ? '#EF4444' : '#22C55E', fontVariant: ['tabular-nums'] }]}>
                   {countdown}
                 </Text>
               </View>
@@ -142,11 +144,11 @@ export default function ExportDataScreen() {
 
             <Pressable style={styles.downloadButton} onPress={handleDownload}>
               <Ionicons name="download-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
-              <Text style={styles.downloadButtonText}>Download My Data</Text>
+              <Text style={[styles.downloadButtonText, scaledTypography.body]}>Download My Data</Text>
             </Pressable>
 
             <Pressable style={styles.newExportButton} onPress={handleRequestExport} disabled={loading}>
-              <Text style={[styles.newExportText, { color: colors.textSecondary }]}>Generate new export</Text>
+              <Text style={[styles.newExportText, scaledTypography.body, { color: colors.textSecondary }]}>Generate new export</Text>
             </Pressable>
           </>
         )}
@@ -161,12 +163,12 @@ export default function ExportDataScreen() {
             {loading ? (
               <>
                 <ActivityIndicator size="small" color="#fff" style={{ marginRight: 8 }} />
-                <Text style={styles.requestButtonText}>Generating your export…</Text>
+                <Text style={[styles.requestButtonText, scaledTypography.body]}>Generating your export…</Text>
               </>
             ) : (
               <>
                 <Ionicons name="cloud-download-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
-                <Text style={styles.requestButtonText}>Export My Data</Text>
+                <Text style={[styles.requestButtonText, scaledTypography.body]}>Export My Data</Text>
               </>
             )}
           </Pressable>
@@ -188,7 +190,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   backButton: { width: 32 },
-  headerTitle: { fontSize: 18, fontWeight: '700' },
+  headerTitle: { },
   headerSpacer: { width: 32 },
   scrollView: { flex: 1 },
   scrollContent: { paddingHorizontal: 20, paddingTop: 8 },
@@ -198,15 +200,13 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   infoIconRow: { alignItems: 'center', marginBottom: 12 },
-  infoTitle: { fontSize: 17, fontWeight: '700', textAlign: 'center', marginBottom: 10 },
-  infoBody: { fontSize: 14, lineHeight: 20, marginBottom: 14 },
+  infoTitle: { textAlign: 'center', marginBottom: 10 },
+  infoBody: { lineHeight: 20, marginBottom: 14 },
   dataList: { marginBottom: 14 },
   dataListRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
-  dataListItem: { fontSize: 14 },
-  infoFootnote: { fontSize: 12, lineHeight: 18 },
+  dataListItem: { },
+  infoFootnote: { lineHeight: 18 },
   sectionHeader: {
-    fontSize: 12,
-    fontWeight: '700',
     letterSpacing: 0.5,
     textTransform: 'uppercase',
     marginTop: 24,
@@ -223,9 +223,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
   },
-  resultText: { fontSize: 15, fontWeight: '600' },
-  resultLabel: { fontSize: 15, flex: 1 },
-  resultValue: { fontSize: 14, fontWeight: '500' },
+  resultText: { fontWeight: '600' },
+  resultLabel: { flex: 1 },
+  resultValue: { fontWeight: '500' },
   divider: { height: 1, marginLeft: 16 },
   downloadButton: {
     flexDirection: 'row',
@@ -236,13 +236,13 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     marginTop: 16,
   },
-  downloadButtonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  downloadButtonText: { color: '#fff' },
   newExportButton: {
     alignItems: 'center',
     paddingVertical: 12,
     marginTop: 8,
   },
-  newExportText: { fontSize: 14 },
+  newExportText: { },
   requestButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -253,5 +253,5 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   requestButtonDisabled: { backgroundColor: '#86EFAC' },
-  requestButtonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  requestButtonText: { color: '#fff' },
 });
