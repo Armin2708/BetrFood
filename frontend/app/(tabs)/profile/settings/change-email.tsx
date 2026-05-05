@@ -11,10 +11,10 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useUser } from "@clerk/clerk-expo";
 import { router } from "expo-router";
+import { ThemeColors } from "../../../../constants/theme";
 import { useAppTheme } from "../../../../context/ThemeContext";
 import { useScaledTypography } from "../../../../hooks/useScaledTypography";
 import { confirmEmailChange, requestEmailChange } from "../../../../services/api";
@@ -35,14 +35,12 @@ export default function ChangeEmailScreen() {
 
   const [step, setStep] = useState<Step>("request");
 
-  // Step 1 fields
   const [newEmail, setNewEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [requestError, setRequestError] = useState("");
   const [requesting, setRequesting] = useState(false);
 
-  // Step 2 fields
   const [emailAddressId, setEmailAddressId] = useState("");
   const [code, setCode] = useState("");
   const [confirmError, setConfirmError] = useState("");
@@ -50,7 +48,6 @@ export default function ChangeEmailScreen() {
 
   const handleRequest = useCallback(async () => {
     setRequestError("");
-
     if (!newEmail.trim()) {
       setRequestError("Please enter your new email address.");
       return;
@@ -63,7 +60,6 @@ export default function ChangeEmailScreen() {
       setRequestError("Please enter your current password.");
       return;
     }
-
     setRequesting(true);
     try {
       const result = await requestEmailChange(newEmail.trim().toLowerCase(), password);
@@ -78,18 +74,16 @@ export default function ChangeEmailScreen() {
 
   const handleConfirm = useCallback(async () => {
     setConfirmError("");
-
     if (!code.trim()) {
       setConfirmError("Please enter the verification code.");
       return;
     }
-
     setConfirming(true);
     try {
       await confirmEmailChange(emailAddressId, code.trim());
       Alert.alert(
         "Email updated",
-        "Your email address has been changed successfully. You may need to sign in again.",
+        "Your email address has been changed. You may need to sign in again.",
         [{ text: "OK", onPress: () => router.back() }]
       );
     } catch (err) {
@@ -107,17 +101,7 @@ export default function ChangeEmailScreen() {
   }, []);
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top"]}>
-      <View style={styles.header}>
-        <Pressable style={styles.backButton} onPress={() => router.back()}>
-          <Ionicons name="chevron-back" size={22} color={colors.textPrimary} />
-        </Pressable>
-        <Text style={[styles.headerTitle, scaledTypography.label, { color: colors.textPrimary }]}>
-          Change Email
-        </Text>
-        <View style={styles.backButton} />
-      </View>
-
+    <View style={styles.container}>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -130,42 +114,44 @@ export default function ChangeEmailScreen() {
         >
           {step === "request" ? (
             <>
+              <Text style={[scaledTypography.caption, styles.sectionHeader, { color: colors.textTertiary }]}>
+                CURRENT EMAIL
+              </Text>
               <View style={[styles.card, { backgroundColor: colors.backgroundElevated }]}>
-                <Text style={[scaledTypography.caption, styles.fieldLabel, { color: colors.textTertiary }]}>
-                  CURRENT EMAIL
-                </Text>
                 <Text style={[scaledTypography.body, { color: colors.textSecondary }]}>
                   {currentEmail || "—"}
                 </Text>
               </View>
 
+              <Text style={[scaledTypography.caption, styles.sectionHeader, { color: colors.textTertiary }]}>
+                NEW EMAIL ADDRESS
+              </Text>
               <View style={[styles.card, { backgroundColor: colors.backgroundElevated }]}>
-                <Text style={[scaledTypography.caption, styles.fieldLabel, { color: colors.textTertiary }]}>
-                  NEW EMAIL ADDRESS
-                </Text>
                 <TextInput
-                  style={[styles.input, scaledTypography.body, { color: colors.textPrimary, borderColor: colors.border }]}
+                  style={[styles.input, scaledTypography.body, { color: colors.textPrimary, borderColor: colors.border, backgroundColor: colors.backgroundSecondary }]}
                   value={newEmail}
                   onChangeText={(t) => { setNewEmail(t); setRequestError(""); }}
-                  placeholder="Enter new email"
-                  placeholderTextColor={colors.textTertiary}
+                  placeholder="Enter new email address"
+                  placeholderTextColor={colors.placeholder}
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
                   autoComplete="email"
                   returnKeyType="next"
                 />
+              </View>
 
-                <Text style={[scaledTypography.caption, styles.fieldLabel, styles.fieldLabelSpaced, { color: colors.textTertiary }]}>
-                  CURRENT PASSWORD
-                </Text>
+              <Text style={[scaledTypography.caption, styles.sectionHeader, { color: colors.textTertiary }]}>
+                CURRENT PASSWORD
+              </Text>
+              <View style={[styles.card, { backgroundColor: colors.backgroundElevated }]}>
                 <View style={styles.passwordRow}>
                   <TextInput
-                    style={[styles.input, styles.passwordInput, scaledTypography.body, { color: colors.textPrimary, borderColor: colors.border }]}
+                    style={[styles.input, styles.passwordInput, scaledTypography.body, { color: colors.textPrimary, borderColor: colors.border, backgroundColor: colors.backgroundSecondary }]}
                     value={password}
                     onChangeText={(t) => { setPassword(t); setRequestError(""); }}
                     placeholder="Enter current password"
-                    placeholderTextColor={colors.textTertiary}
+                    placeholderTextColor={colors.placeholder}
                     secureTextEntry={!passwordVisible}
                     autoCapitalize="none"
                     autoCorrect={false}
@@ -176,6 +162,7 @@ export default function ChangeEmailScreen() {
                   <Pressable
                     style={styles.eyeButton}
                     onPress={() => setPasswordVisible((v) => !v)}
+                    hitSlop={8}
                   >
                     <Ionicons
                       name={passwordVisible ? "eye-off-outline" : "eye-outline"}
@@ -184,79 +171,88 @@ export default function ChangeEmailScreen() {
                     />
                   </Pressable>
                 </View>
-
-                {requestError ? (
-                  <Text style={[scaledTypography.small, styles.errorText]}>{requestError}</Text>
-                ) : null}
               </View>
 
+              {requestError ? (
+                <View style={[styles.errorCard, { backgroundColor: colors.backgroundElevated, borderColor: colors.error }]}>
+                  <Ionicons name="alert-circle-outline" size={16} color={colors.error} />
+                  <Text style={[scaledTypography.small, styles.errorText, { color: colors.error }]}>{requestError}</Text>
+                </View>
+              ) : null}
+
               <Pressable
-                style={[styles.primaryButton, requesting && styles.buttonDisabled]}
+                style={[styles.primaryButton, { backgroundColor: colors.primaryDark }, requesting && styles.buttonDisabled]}
                 onPress={handleRequest}
                 disabled={requesting}
               >
                 {requesting ? (
-                  <ActivityIndicator color="#fff" />
+                  <ActivityIndicator color={colors.white} />
                 ) : (
-                  <Text style={[scaledTypography.body, styles.primaryButtonText]}>
+                  <Text style={[scaledTypography.body, styles.primaryButtonText, { color: colors.white }]}>
                     Send Verification Code
                   </Text>
                 )}
               </Pressable>
 
               <Text style={[scaledTypography.small, styles.hint, { color: colors.textTertiary }]}>
-                A 6-digit verification code will be sent to your new email address. Your old email will also receive a security notification.
+                A 6-digit code will be sent to your new email. Your old email will also receive a security notification.
               </Text>
             </>
           ) : (
             <>
-              <View style={styles.verifyIconRow}>
-                <View style={[styles.verifyIconCircle, { backgroundColor: colors.backgroundElevated }]}>
-                  <Ionicons name="mail-outline" size={32} color={colors.primaryDark ?? "#2563EB"} />
+              <View style={styles.verifyHero}>
+                <View style={[styles.verifyIconCircle, { backgroundColor: colors.backgroundElevated, borderColor: colors.border }]}>
+                  <Ionicons name="mail-outline" size={32} color={colors.primaryDark} />
                 </View>
-                <Text style={[scaledTypography.label, styles.verifyTitle, { color: colors.textPrimary }]}>
+                <Text style={[scaledTypography.label, { color: colors.textPrimary, textAlign: "center" }]}>
                   Check your new inbox
                 </Text>
-                <Text style={[scaledTypography.body, styles.verifySubtitle, { color: colors.textSecondary }]}>
-                  We sent a 6-digit code to{"\n"}
+                <Text style={[scaledTypography.body, { color: colors.textSecondary, textAlign: "center", lineHeight: 22 }]}>
+                  {"We sent a 6-digit code to\n"}
                   <Text style={{ color: colors.textPrimary }}>{newEmail.trim().toLowerCase()}</Text>
                 </Text>
               </View>
 
+              <Text style={[scaledTypography.caption, styles.sectionHeader, { color: colors.textTertiary }]}>
+                VERIFICATION CODE
+              </Text>
               <View style={[styles.card, { backgroundColor: colors.backgroundElevated }]}>
-                <Text style={[scaledTypography.caption, styles.fieldLabel, { color: colors.textTertiary }]}>
-                  VERIFICATION CODE
-                </Text>
                 <TextInput
-                  style={[styles.input, styles.codeInput, scaledTypography.body, { color: colors.textPrimary, borderColor: colors.border }]}
+                  style={[styles.input, styles.codeInput, scaledTypography.body, { color: colors.textPrimary, borderColor: colors.border, backgroundColor: colors.backgroundSecondary }]}
                   value={code}
                   onChangeText={(t) => { setCode(t.replace(/\D/g, "").slice(0, 6)); setConfirmError(""); }}
-                  placeholder="______"
-                  placeholderTextColor={colors.textTertiary}
+                  placeholder="• • • • • •"
+                  placeholderTextColor={colors.placeholder}
                   keyboardType="number-pad"
                   returnKeyType="done"
                   onSubmitEditing={handleConfirm}
                   maxLength={6}
                 />
-                {confirmError ? (
-                  <Text style={[scaledTypography.small, styles.errorText]}>{confirmError}</Text>
-                ) : null}
               </View>
 
+              {confirmError ? (
+                <View style={[styles.errorCard, { backgroundColor: colors.backgroundElevated, borderColor: colors.error }]}>
+                  <Ionicons name="alert-circle-outline" size={16} color={colors.error} />
+                  <Text style={[scaledTypography.small, styles.errorText, { color: colors.error }]}>{confirmError}</Text>
+                </View>
+              ) : null}
+
               <Pressable
-                style={[styles.primaryButton, (confirming || code.length < 6) && styles.buttonDisabled]}
+                style={[styles.primaryButton, { backgroundColor: colors.primaryDark }, (confirming || code.length < 6) && styles.buttonDisabled]}
                 onPress={handleConfirm}
                 disabled={confirming || code.length < 6}
               >
                 {confirming ? (
-                  <ActivityIndicator color="#fff" />
+                  <ActivityIndicator color={colors.white} />
                 ) : (
-                  <Text style={[scaledTypography.body, styles.primaryButtonText]}>Confirm Change</Text>
+                  <Text style={[scaledTypography.body, styles.primaryButtonText, { color: colors.white }]}>
+                    Confirm Change
+                  </Text>
                 )}
               </Pressable>
 
               <Pressable style={styles.secondaryButton} onPress={handleBackToRequest} disabled={confirming}>
-                <Text style={[scaledTypography.body, styles.secondaryButtonText, { color: colors.textSecondary }]}>
+                <Text style={[scaledTypography.body, { color: colors.textSecondary }]}>
                   Use a different email
                 </Text>
               </Pressable>
@@ -264,66 +260,46 @@ export default function ChangeEmailScreen() {
           )}
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 
-function makeStyles(colors: ReturnType<typeof useAppTheme>["colors"]) {
+function makeStyles(colors: ThemeColors) {
   return StyleSheet.create({
-    safeArea: {
+    container: {
       flex: 1,
       backgroundColor: colors.backgroundSecondary,
     },
     flex: {
       flex: 1,
     },
-    header: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      paddingHorizontal: 16,
-      paddingVertical: 12,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: colors.border,
-      backgroundColor: colors.backgroundElevated,
-    },
-    backButton: {
-      width: 36,
-      height: 36,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    headerTitle: {
-      textAlign: "center",
-    },
     scrollContent: {
-      padding: 20,
+      paddingHorizontal: 20,
+      paddingTop: 16,
       paddingBottom: 48,
-      gap: 16,
+    },
+    sectionHeader: {
+      letterSpacing: 0.5,
+      textTransform: "uppercase",
+      marginTop: 24,
+      marginBottom: 8,
+      marginLeft: 4,
     },
     card: {
       borderRadius: 18,
       padding: 16,
     },
-    fieldLabel: {
-      letterSpacing: 0.4,
-      textTransform: "uppercase",
-      marginBottom: 8,
-    },
-    fieldLabelSpaced: {
-      marginTop: 16,
-    },
     input: {
       borderWidth: 1,
       borderRadius: 10,
       paddingHorizontal: 14,
-      paddingVertical: 11,
+      paddingVertical: 12,
     },
     passwordRow: {
       position: "relative",
     },
     passwordInput: {
-      paddingRight: 44,
+      paddingRight: 46,
     },
     eyeButton: {
       position: "absolute",
@@ -333,40 +309,49 @@ function makeStyles(colors: ReturnType<typeof useAppTheme>["colors"]) {
       justifyContent: "center",
     },
     codeInput: {
-      letterSpacing: 8,
       textAlign: "center",
+      letterSpacing: 12,
       fontSize: 22,
     },
-    errorText: {
-      color: "#EF4444",
+    errorCard: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
       marginTop: 8,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      borderRadius: 10,
+      borderWidth: 1,
+    },
+    errorText: {
+      flex: 1,
     },
     primaryButton: {
-      backgroundColor: "#2563EB",
+      marginTop: 24,
       paddingVertical: 14,
       borderRadius: 12,
       alignItems: "center",
       justifyContent: "center",
     },
     primaryButtonText: {
-      color: "#fff",
+      fontWeight: "600",
     },
     buttonDisabled: {
       opacity: 0.5,
     },
     secondaryButton: {
       alignItems: "center",
-      paddingVertical: 10,
+      paddingVertical: 14,
     },
-    secondaryButtonText: {},
     hint: {
       textAlign: "center",
       lineHeight: 18,
-      paddingHorizontal: 4,
+      marginTop: 12,
+      paddingHorizontal: 8,
     },
-    verifyIconRow: {
+    verifyHero: {
       alignItems: "center",
-      paddingTop: 16,
+      paddingTop: 24,
       paddingBottom: 8,
       gap: 12,
     },
@@ -376,13 +361,7 @@ function makeStyles(colors: ReturnType<typeof useAppTheme>["colors"]) {
       borderRadius: 36,
       alignItems: "center",
       justifyContent: "center",
-    },
-    verifyTitle: {
-      textAlign: "center",
-    },
-    verifySubtitle: {
-      textAlign: "center",
-      lineHeight: 22,
+      borderWidth: 1,
     },
   });
 }
