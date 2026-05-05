@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   ScrollView,
   TextInput,
   Linking,
+  RefreshControl,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -15,8 +16,8 @@ import {
   FAQ_CATEGORIES,
   FaqCategory,
   FaqItem,
-  getAllFaqItems,
 } from "../../../../../constants/faq";
+import { fetchFaq, recordFaqView } from "../../../../../services/api";
 import { colors } from "../../../../../constants/theme";
 
 const SUPPORT_EMAIL = "support@betrfood.com";
@@ -25,37 +26,80 @@ type FilteredCategory = FaqCategory & {
   matchedItems: FaqItem[];
 };
 
-function filterCategories(query: string): FilteredCategory[] {
+function filterCategories(
+  categories: FaqCategory[],
+  query: string
+): FilteredCategory[] {
   const normalized = query.trim().toLowerCase();
   if (!normalized) {
-    return FAQ_CATEGORIES.map((category) => ({
+    return categories.map((category) => ({
       ...category,
       matchedItems: category.items,
     }));
   }
-  return FAQ_CATEGORIES.map((category) => {
-    const matchedItems = category.items.filter((item) => {
-      const haystack = `${item.question} ${item.answer}`.toLowerCase();
-      return haystack.includes(normalized);
-    });
-    return { ...category, matchedItems };
-  }).filter((category) => category.matchedItems.length > 0);
+  return categories
+    .map((category) => {
+      const matchedItems = category.items.filter((item) => {
+        const haystack = `${item.question} ${item.answer}`.toLowerCase();
+        return haystack.includes(normalized);
+      });
+      return { ...category, matchedItems };
+    })
+    .filter((category) => category.matchedItems.length > 0);
 }
 
 export default function HelpAndFaqScreen() {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [categories, setCategories] = useState<FaqCategory[]>(FAQ_CATEGORIES);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const filtered = useMemo(() => filterCategories(query), [query]);
+  const loadFaq = async () => {
+    try {
+      const remote = await fetchFaq();
+      if (remote.length > 0) {
+        setCategories(remote);
+      }
+    } catch {
+      // Stay on the bundled fallback if the request fails (offline / server down).
+    }
+  };
+
+  useEffect(() => {
+    loadFaq();
+  }, []);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await loadFaq();
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const filtered = useMemo(
+    () => filterCategories(categories, query),
+    [categories, query]
+  );
   const totalMatches = useMemo(
     () => filtered.reduce((sum, c) => sum + c.matchedItems.length, 0),
     [filtered]
   );
-  const totalItems = useMemo(() => getAllFaqItems().length, []);
+  const totalItems = useMemo(
+    () => categories.reduce((sum, c) => sum + c.items.length, 0),
+    [categories]
+  );
 
   const toggle = (itemId: string) => {
-    setExpandedId((current) => (current === itemId ? null : itemId));
+    setExpandedId((current) => {
+      const next = current === itemId ? null : itemId;
+      if (next === itemId) {
+        recordFaqView(itemId).catch(() => {});
+      }
+      return next;
+    });
   };
 
   const openSupportEmail = () => {
@@ -71,6 +115,13 @@ export default function HelpAndFaqScreen() {
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={colors.textTertiary}
+          />
+        }
       >
         <View style={styles.heroSection}>
           <Text style={styles.heroTitle}>How can we help?</Text>

@@ -24,6 +24,7 @@ const blocksRouter = require("./routes/blocks");
 const notificationsRouter = require("./routes/notifications");
 const chatRouter = require('./routes/chat');
 const interactionsRouter = require('./routes/interactions');
+const faqRouter = require('./routes/faq');
 const { initializeScheduler } = require('./jobs/scheduler');
 
 const app = express();
@@ -92,6 +93,7 @@ app.use("/api/preferences", preferencesRouter);
 app.use("/api/notifications", notificationsRouter);
 app.use('/api/chat', chatRouter);
 app.use('/api/interactions', interactionsRouter);
+app.use('/api/faq', faqRouter);
 
 // Global error handler — catches multer errors and other unhandled middleware errors
 app.use((err, req, res, next) => {
