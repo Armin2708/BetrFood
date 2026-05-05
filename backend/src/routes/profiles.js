@@ -326,8 +326,9 @@ router.post('/me/complete-onboarding', requireAuth, async (req, res) => {
 // ── Email Change ───────────────────────────────────────────────────────────────
 
 // POST /api/profiles/me/email/request
-// Step 1: verify current password, add new unverified email to Clerk (triggers
-// verification email via Clerk), send security notification to old address.
+// Verifies the current password and sends a security notification to the old address.
+// Email address creation and verification are handled client-side via Clerk's frontend SDK
+// because prepare_verification / attempt_verification are Frontend API methods only.
 router.post('/me/email/request', requireAuth, async (req, res) => {
   const userId = req.userId;
   const { newEmail, currentPassword } = req.body;
@@ -339,7 +340,7 @@ router.post('/me/email/request', requireAuth, async (req, res) => {
     return res.status(400).json({ error: 'Current password is required.' });
   }
 
-  // 1. Verify current password via Clerk
+  // 1. Verify current password via Clerk Backend API
   let verifyResult;
   try {
     verifyResult = await clerkRequest('POST', `/v1/users/${userId}/verify_password`, { password: currentPassword });
@@ -356,123 +357,25 @@ router.post('/me/email/request', requireAuth, async (req, res) => {
     return res.status(401).json({ error: 'Incorrect password.' });
   }
 
-  // 2. Fetch current email for notification and duplicate check
+  // 2. Duplicate check
   const oldEmail = await getClerkUserEmail(userId);
   const normalizedNew = newEmail.trim().toLowerCase();
   if (oldEmail && oldEmail.toLowerCase() === normalizedNew) {
     return res.status(400).json({ error: 'This is already your current email address.' });
   }
 
-  // 3. Create unverified email address in Clerk
-  let createResult;
-  try {
-    createResult = await clerkRequest('POST', '/v1/email_addresses', {
-      user_id: userId,
-      email_address: normalizedNew,
-      verified: false,
-      primary: false,
-    });
-  } catch (err) {
-    console.error('[EMAIL CHANGE] create email_address error:', err.message);
-    return res.status(500).json({ error: 'Failed to register new email address.' });
-  }
-
-  if (createResult.status !== 200) {
-    const errMsg = createResult.data?.errors?.[0]?.long_message
-      || createResult.data?.errors?.[0]?.message
-      || 'Failed to add email address.';
-    return res.status(400).json({ error: errMsg });
-  }
-
-  const emailAddressId = createResult.data.id;
-
-  // 4. Prepare verification — Clerk sends a 6-digit code to the new address
-  let prepareResult;
-  try {
-    prepareResult = await clerkRequest('POST', `/v1/email_addresses/${emailAddressId}/prepare_verification`, {
-      strategy: 'email_code',
-    });
-  } catch (err) {
-    console.error('[EMAIL CHANGE] prepare_verification error:', err.message);
-    await clerkRequest('DELETE', `/v1/email_addresses/${emailAddressId}`).catch(() => {});
-    return res.status(500).json({ error: 'Failed to send verification email.' });
-  }
-
-  if (prepareResult.status !== 200) {
-    await clerkRequest('DELETE', `/v1/email_addresses/${emailAddressId}`).catch(() => {});
-    return res.status(500).json({ error: 'Failed to send verification email.' });
-  }
-
-  // 5. Security notification to old email (fire-and-forget)
+  // 3. Security notification to old email (fire-and-forget)
   if (oldEmail) {
     sendEmail({
       to: oldEmail,
       subject: 'Security Alert: Email Change Request — BetrFood',
-      text: `Hello,\n\nA request was made to change the email address on your BetrFood account to ${normalizedNew}.\n\nIf you made this request, please verify your new address using the code we sent to ${normalizedNew}.\n\nIf you did not make this request, please contact support immediately.\n\nThe BetrFood Team`,
-      html: `<p>Hello,</p><p>A request was made to change the email address on your BetrFood account to <strong>${normalizedNew}</strong>.</p><p>If you made this request, please verify your new address using the code we sent to <strong>${normalizedNew}</strong>.</p><p>If you did not make this request, please contact support immediately.</p><p>The BetrFood Team</p>`,
+      text: `Hello,\n\nA request was made to change the email address on your BetrFood account to ${normalizedNew}.\n\nIf you made this request, please verify your new address.\n\nIf you did not make this request, please contact support immediately.\n\nThe BetrFood Team`,
+      html: `<p>Hello,</p><p>A request was made to change the email address on your BetrFood account to <strong>${normalizedNew}</strong>.</p><p>If you did not make this request, please contact support immediately.</p><p>The BetrFood Team</p>`,
     }).catch((err) => console.error('[EMAIL CHANGE] Security notification failed:', err.message));
   }
 
-  console.log(`[EMAIL CHANGE] Verification code sent for user ${userId} → ${normalizedNew}`);
-  res.json({ emailAddressId, message: 'Verification code sent to your new email address.' });
-});
-
-// POST /api/profiles/me/email/confirm
-// Step 2: attempt code verification, set new email as primary, remove old addresses.
-router.post('/me/email/confirm', requireAuth, async (req, res) => {
-  const userId = req.userId;
-  const { emailAddressId, code } = req.body;
-
-  if (!emailAddressId || typeof emailAddressId !== 'string') {
-    return res.status(400).json({ error: 'emailAddressId is required.' });
-  }
-  if (!code || typeof code !== 'string' || !code.trim()) {
-    return res.status(400).json({ error: 'Verification code is required.' });
-  }
-
-  // 1. Attempt verification
-  let attemptResult;
-  try {
-    attemptResult = await clerkRequest('POST', `/v1/email_addresses/${emailAddressId}/attempt_verification`, {
-      code: code.trim(),
-    });
-  } catch (err) {
-    console.error('[EMAIL CHANGE] attempt_verification error:', err.message);
-    return res.status(500).json({ error: 'Unable to verify code. Please try again.' });
-  }
-
-  if (attemptResult.status !== 200 || attemptResult.data?.verification?.status !== 'verified') {
-    return res.status(400).json({ error: 'Invalid or expired verification code.' });
-  }
-
-  // 2. Set new address as primary
-  let updateResult;
-  try {
-    updateResult = await clerkRequest('PATCH', `/v1/users/${userId}`, {
-      primary_email_address_id: emailAddressId,
-    });
-  } catch (err) {
-    console.error('[EMAIL CHANGE] set primary error:', err.message);
-    return res.status(500).json({ error: 'Email verified but failed to set as primary. Please contact support.' });
-  }
-
-  if (updateResult.status !== 200) {
-    return res.status(500).json({ error: 'Email verified but failed to set as primary. Please contact support.' });
-  }
-
-  // 3. Remove old email addresses (best-effort)
-  clerkRequest('GET', `/v1/users/${userId}`).then((userResult) => {
-    if (userResult.status !== 200) return;
-    const addresses = userResult.data.email_addresses || [];
-    for (const addr of addresses) {
-      if (addr.id !== emailAddressId) {
-        clerkRequest('DELETE', `/v1/email_addresses/${addr.id}`).catch(() => {});
-      }
-    }
-  }).catch(() => {});
-
-  console.log(`[EMAIL CHANGE] Email updated for user ${userId}`);
-  res.json({ message: 'Email address updated successfully.' });
+  console.log(`[EMAIL CHANGE] Password verified for user ${userId}, client will handle Clerk email flow`);
+  res.json({ message: 'Password verified.' });
 });
 
 // ── Password Change ────────────────────────────────────────────────────────────

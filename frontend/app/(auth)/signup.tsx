@@ -196,15 +196,23 @@ function WebSignup() {
           />
         </View>
         <TouchableOpacity
-          style={styles.signUpButton}
+          style={[styles.signUpButton, loading && { opacity: 0.75 }]}
           onPress={handleVerify}
           disabled={loading}
+          activeOpacity={0.85}
         >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.signUpButtonText}>Verify</Text>
-          )}
+          <LinearGradient
+            colors={["#22C55E", "#10B981"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.signUpButtonGradient}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.signUpButtonText}>Verify</Text>
+            )}
+          </LinearGradient>
         </TouchableOpacity>
       </View>
     );
@@ -500,15 +508,23 @@ function NativeSignup() {
         </View>
 
         <TouchableOpacity
-          style={styles.signUpButton}
+          style={[styles.signUpButton, loading && { opacity: 0.75 }]}
           onPress={handleVerify}
           disabled={loading}
+          activeOpacity={0.85}
         >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.signUpButtonText}>Verify</Text>
-          )}
+          <LinearGradient
+            colors={["#22C55E", "#10B981"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.signUpButtonGradient}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.signUpButtonText}>Verify</Text>
+            )}
+          </LinearGradient>
         </TouchableOpacity>
       </View>
     );
