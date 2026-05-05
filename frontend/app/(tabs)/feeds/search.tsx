@@ -998,7 +998,7 @@ function makeStyles(colors: ThemeColors) {
       letterSpacing: 0.6,
       textTransform: 'uppercase',
     },
-    recentSearchesClearAll: { fontSize: 13, fontWeight: '600', color: '#e74c3c' },
+    recentSearchesClearAll: { fontSize: 13, fontWeight: '600', color: '#EF4444' },
     recentSearchRow: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -1014,7 +1014,7 @@ function makeStyles(colors: ThemeColors) {
     recentSearchText: { flex: 1, fontSize: 15, color: colors.textPrimary },
     recentSearchRemove: { padding: 4, marginLeft: 8 },
     swipeDeleteAction: {
-      backgroundColor: '#e74c3c',
+      backgroundColor: '#EF4444',
       justifyContent: 'center',
       alignItems: 'center',
       width: 72,
@@ -1050,9 +1050,8 @@ function makeStyles(colors: ThemeColors) {
     activeChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 14, borderWidth: 1 },
     activeChipText: { fontSize: 13, fontWeight: '600', color: '#fff' },
     clearAllChip: { paddingHorizontal: 10, paddingVertical: 5 },
-    clearAllText: { fontSize: 13, color: '#e74c3c', fontWeight: '600' },
+    clearAllText: { fontSize: 13, color: '#EF4444', fontWeight: '600' },
     centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    // Trending hashtags
     trendingSection: {
       paddingHorizontal: 16,
       paddingTop: 16,
@@ -1090,7 +1089,6 @@ function makeStyles(colors: ThemeColors) {
       color: colors.textTertiary,
       marginTop: 2,
     },
-
     emptyContainer: { alignItems: 'center', justifyContent: 'center', paddingTop: 80 },
     emptyTitle: { fontSize: 18, fontWeight: '600', color: colors.textPrimary, marginTop: 16 },
     emptySubtitle: { fontSize: 14, color: colors.textSecondary, marginTop: 8 },
@@ -1116,7 +1114,7 @@ function makeStyles(colors: ThemeColors) {
     modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
     modalHeaderRight: { flexDirection: 'row', alignItems: 'center' },
     modalTitle: { fontSize: 18, fontWeight: '700', color: colors.textPrimary },
-    clearText: { fontSize: 13, color: '#e74c3c', fontWeight: '600' },
+    clearText: { fontSize: 13, color: '#EF4444', fontWeight: '600' },
     filterSection: { marginBottom: 20 },
     filterSectionLabel: { fontSize: 12, fontWeight: '700', color: colors.textSecondary, letterSpacing: 0.8, marginBottom: 10 },
     chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },

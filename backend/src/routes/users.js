@@ -1,8 +1,29 @@
 const express = require("express");
+const https = require("https");
 const supabase = require("../db/supabase");
 const { requireAuth } = require("../middleware/auth");
 
 const router = express.Router();
+
+const CLERK_SECRET_KEY = process.env.CLERK_SECRET_KEY;
+
+function clerkDelete(userId) {
+  return new Promise((resolve, reject) => {
+    const req = https.request(
+      { hostname: "api.clerk.com", path: `/v1/users/${userId}`, method: "DELETE",
+        headers: { Authorization: "Bearer " + CLERK_SECRET_KEY, "Content-Length": 0 } },
+      (res) => {
+        let data = "";
+        res.on("data", (chunk) => { data += chunk; });
+        res.on("end", () => {
+          try { resolve(JSON.parse(data)); } catch { resolve({}); }
+        });
+      }
+    );
+    req.on("error", reject);
+    req.end();
+  });
+}
 
 // POST /api/users/me/reset-recommendations — clear recommendation-signal data for the current user
 // Deletes: post_impressions, post_negative_feedback, and user_preference_vectors rows for this user.
@@ -288,6 +309,9 @@ router.delete("/me", requireAuth, async (req, res) => {
 
     // 3. Delete profile last
     await supabase.from("user_profiles").delete().eq("id", userId);
+
+    // 4. Delete user from Clerk so they cannot log back in
+    await clerkDelete(userId);
 
     res.json({ message: "Account deleted successfully." });
   } catch (err) {

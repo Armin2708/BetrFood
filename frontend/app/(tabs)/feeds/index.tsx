@@ -384,7 +384,7 @@ function makeStyles(colors: ThemeColors) {
     },
     errorText: {
       fontSize: 16,
-      color: '#e74c3c',
+      color: '#EF4444',
       textAlign: 'center',
       marginBottom: 16,
     },

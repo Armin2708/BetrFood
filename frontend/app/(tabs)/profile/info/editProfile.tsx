@@ -171,7 +171,7 @@ export default function EditProfile() {
         {username.length >= 3 && username !== originalUsername && (
           <View style={styles.usernameStatus}>
             {checkingUsername ? (
-              <ActivityIndicator size="small" color="#007AFF" />
+              <ActivityIndicator size="small" color="#22C55E" />
             ) : usernameAvailable === true ? (
               <>
                 <Ionicons name="checkmark-circle" size={18} color="#4CAF50" />
@@ -179,7 +179,7 @@ export default function EditProfile() {
               </>
             ) : usernameAvailable === false ? (
               <>
-                <Ionicons name="close-circle" size={18} color="#e74c3c" />
+                <Ionicons name="close-circle" size={18} color="#EF4444" />
                 <Text style={styles.usernameTaken}>Taken</Text>
               </>
             ) : null}
@@ -296,7 +296,7 @@ const styles = StyleSheet.create({
   },
 
   usernameTaken: {
-    color: '#e74c3c',
+    color: '#EF4444',
     fontWeight: '500',
   },
 
