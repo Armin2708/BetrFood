@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useContext, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useContext, useRef, useEffect, useMemo } from 'react';
 import {
   View,
   FlatList,
@@ -17,6 +17,8 @@ import ExploreSections from '../../../components/ExploreSections';
 import { AuthContext } from '../../../context/AuthenticationContext';
 import { usePantry } from '../../../context/PantryContext';
 import { useScaledTypography } from '../../../hooks/useScaledTypography';
+import { ThemeColors } from '../../../constants/theme';
+import { useAppTheme } from '../../../context/ThemeContext';
 import { matchRecipeToPantry } from '../../../utils/pantryMatcher';
 import {
   fetchPosts,
@@ -43,6 +45,8 @@ type PostWithMatch = PostType & {
 };
 
 export default function HomeScreen() {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { user } = useContext(AuthContext);
   const { items: pantryItems } = usePantry();
   const scaledTypography = useScaledTypography();
@@ -369,35 +373,37 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFFFFF' },
-  center: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  errorText: {
-    fontSize: 16,
-    color: '#e74c3c',
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  retryButton: {
-    backgroundColor: '#22C55E',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  retryText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  footer: { paddingVertical: 20, alignItems: 'center' },
-  emptyContainer: { flex: 1, justifyContent: 'center', width: '100%' },
-  empty: { alignItems: 'center', padding: 40 },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#666',
-    marginBottom: 8,
-  },
-  emptyText: { fontSize: 16, color: '#999' },
-});
+function makeStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.backgroundPrimary },
+    center: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 20,
+    },
+    errorText: {
+      fontSize: 16,
+      color: '#e74c3c',
+      textAlign: 'center',
+      marginBottom: 16,
+    },
+    retryButton: {
+      backgroundColor: '#22C55E',
+      paddingHorizontal: 24,
+      paddingVertical: 12,
+      borderRadius: 8,
+    },
+    retryText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+    footer: { paddingVertical: 20, alignItems: 'center' },
+    emptyContainer: { flex: 1, justifyContent: 'center', width: '100%' },
+    empty: { alignItems: 'center', padding: 40 },
+    emptyTitle: {
+      fontSize: 20,
+      fontWeight: '600',
+      color: colors.textSecondary,
+      marginBottom: 8,
+    },
+    emptyText: { fontSize: 16, color: colors.textTertiary },
+  });
+}
