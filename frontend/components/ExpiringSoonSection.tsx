@@ -136,7 +136,7 @@ const styles = StyleSheet.create({
   expiredBadgeText: {
     fontSize: 12,
     fontWeight: '600',
-    color: colors.white,
+    color: '#FFFFFF',
   },
   list: {
     paddingHorizontal: 0,
@@ -183,6 +183,6 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 11,
     fontWeight: '600',
-    color: colors.white,
+    color: '#FFFFFF',
   },
 });
