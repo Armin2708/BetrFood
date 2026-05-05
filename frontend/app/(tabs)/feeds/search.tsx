@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useContext, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useContext, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -37,6 +37,8 @@ import {
 } from '../../../services/api';
 import { AuthContext } from '../../../context/AuthenticationContext';
 import Post from '../../../components/Post';
+import { ThemeColors } from '../../../constants/theme';
+import { useAppTheme } from '../../../context/ThemeContext';
 
 type SearchTab = 'posts' | 'users';
 type Difficulty = 'easy' | 'medium' | 'hard';
@@ -105,6 +107,8 @@ async function removeOneRecentSearch(query: string, current: string[]): Promise<
 // ── User row ──────────────────────────────────────────────────────────────────
 
 function UserRow({ item, onPress }: { item: SearchUserResult; onPress: (id: string) => void }) {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const scaledTypography = useScaledTypography();
   const avatarUri = getAvatarUrl(item.avatarUrl, item.displayName || item.username || item.id);
   const [avatarError, setAvatarError] = useState(false);
@@ -144,6 +148,9 @@ function UserRow({ item, onPress }: { item: SearchUserResult; onPress: (id: stri
 // ── Main screen ───────────────────────────────────────────────────────────────
 
 export default function SearchScreen() {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+
   const router = useRouter();
   const { user } = useContext(AuthContext);
   const scaledTypography = useScaledTypography();
@@ -466,7 +473,7 @@ export default function SearchScreen() {
         ) : (
           <View style={styles.trendingChipRow}>
             {trendingTags.map(tag => {
-              const color = TAG_TYPE_COLORS[tag.type] || '#999';
+              const color = TAG_TYPE_COLORS[tag.type] || colors.textSecondary;
               return (
                 <TouchableOpacity
                   key={tag.id}
@@ -564,14 +571,14 @@ export default function SearchScreen() {
               onPress={() => handleRecentSearchTap(item)}
               activeOpacity={0.7}
             >
-              <Ionicons name="time-outline" size={16} color="#94A3B8" style={styles.recentSearchIcon} />
+              <Ionicons name="time-outline" size={16} color={colors.textTertiary} style={styles.recentSearchIcon} />
               <Text style={[styles.recentSearchText, scaledTypography.body]} numberOfLines={1}>{item}</Text>
               <TouchableOpacity
                 onPress={() => handleRemoveRecentSearch(item)}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 style={styles.recentSearchRemove}
               >
-                <Ionicons name="close" size={16} color="#CBD5E1" />
+                <Ionicons name="close" size={16} color={colors.textTertiary} />
               </TouchableOpacity>
             </TouchableOpacity>
           </Swipeable>
@@ -594,7 +601,7 @@ export default function SearchScreen() {
         {selectedTagIds.map(id => {
           const tag = getTagById(id);
           if (!tag) return null;
-          const color = TAG_TYPE_COLORS[tag.type] || '#999';
+          const color = TAG_TYPE_COLORS[tag.type] || colors.textSecondary;
           return (
             <TouchableOpacity
               key={id}
@@ -642,8 +649,8 @@ export default function SearchScreen() {
         {suggestions.map((suggestion, index) => {
           const iconName = SUGGESTION_ICONS[suggestion.type] as any || 'search-outline';
           const iconColor = suggestion.type === 'tag' && suggestion.tagType
-            ? TAG_TYPE_COLORS[suggestion.tagType] || '#999'
-            : suggestion.type === 'trending' ? '#F59E0B' : '#94A3B8';
+            ? TAG_TYPE_COLORS[suggestion.tagType] || colors.textSecondary
+            : suggestion.type === 'trending' ? '#F59E0B' : colors.textTertiary;
           return (
             <TouchableOpacity
               key={`${suggestion.type}-${index}`}
@@ -654,11 +661,11 @@ export default function SearchScreen() {
               <Ionicons name={iconName} size={16} color={iconColor} style={styles.suggestionIcon} />
               <Text style={[styles.suggestionText, scaledTypography.body]} numberOfLines={1}>{suggestion.text}</Text>
               {suggestion.type === 'tag' && suggestion.tagType && (
-                <View style={[styles.suggestionBadge, { backgroundColor: TAG_TYPE_COLORS[suggestion.tagType] || '#999' }]}>
+                <View style={[styles.suggestionBadge, { backgroundColor: TAG_TYPE_COLORS[suggestion.tagType] || colors.textSecondary }]}>
                   <Text style={[styles.suggestionBadgeText, scaledTypography.caption]}>{suggestion.tagType}</Text>
                 </View>
               )}
-              <Ionicons name="arrow-back-outline" size={14} color="#CBD5E1" style={{ marginLeft: 'auto' }} />
+              <Ionicons name="arrow-back-outline" size={14} color={colors.textTertiary} style={{ marginLeft: 'auto' }} />
             </TouchableOpacity>
           );
         })}
@@ -705,7 +712,7 @@ export default function SearchScreen() {
                 </TouchableOpacity>
               )}
               <TouchableOpacity onPress={() => setFilterModalVisible(false)}>
-                <Ionicons name="close" size={22} color="#000" />
+                <Ionicons name="close" size={22} color={colors.textPrimary} />
               </TouchableOpacity>
             </View>
           </View>
@@ -748,7 +755,7 @@ export default function SearchScreen() {
               <ActivityIndicator size="small" color="#22C55E" style={{ marginVertical: 16 }} />
             ) : (
               Object.entries(tagsByType).map(([type, typeTags]) => {
-                const color = TAG_TYPE_COLORS[type] || '#999';
+                const color = TAG_TYPE_COLORS[type] || colors.textSecondary;
                 return (
                   <View key={type} style={styles.filterSection}>
                     <Text style={[styles.filterSectionLabel, scaledTypography.label]}>{type.toUpperCase()}</Text>
@@ -797,15 +804,15 @@ export default function SearchScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#000" />
+          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
         <View style={styles.searchBarContainer}>
-          <Ionicons name="search-outline" size={18} color="#999" />
+          <Ionicons name="search-outline" size={18} color={colors.textTertiary} />
           <TextInput
             ref={inputRef}
             style={styles.searchInput}
             placeholder={activeTab === 'posts' ? 'Search recipes, ingredients...' : 'Search users...'}
-            placeholderTextColor="#999"
+            placeholderTextColor={colors.textTertiary}
             value={query}
             onChangeText={handleSearch}
             autoFocus
@@ -827,13 +834,13 @@ export default function SearchScreen() {
               }}
               style={styles.clearButton}
             >
-              <Ionicons name="close-circle" size={18} color="#999" />
+              <Ionicons name="close-circle" size={18} color={colors.textTertiary} />
             </TouchableOpacity>
           )}
         </View>
         {activeTab === 'posts' && (
           <TouchableOpacity style={styles.filterButton} onPress={handleOpenModal}>
-            <Ionicons name="options-outline" size={22} color={activeFilterCount > 0 ? '#22C55E' : '#000'} />
+            <Ionicons name="options-outline" size={22} color={activeFilterCount > 0 ? '#22C55E' : colors.textPrimary} />
             {activeFilterCount > 0 && (
               <View style={styles.filterBadge}>
                 <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
@@ -931,182 +938,189 @@ export default function SearchScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFFFFF' },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingTop: Platform.OS === 'ios' ? 56 : 12,
-    paddingBottom: 12,
-    paddingHorizontal: 16,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#E5E5E5',
-    zIndex: 10,
-  },
-  backButton: { padding: 8, justifyContent: 'center', alignItems: 'center', marginRight: 8 },
-  searchBarContainer: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F2F2F7',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    height: 40,
-  },
-  searchInput: { flex: 1, fontSize: 16, color: '#000', paddingVertical: 0, marginLeft: 8 },
-  clearButton: { padding: 4 },
-  filterButton: { marginLeft: 12, padding: 4, position: 'relative' },
-  filterBadge: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: '#22C55E',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  filterBadgeText: { color: '#fff' },
-  recentSearchesPanel: {
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5E5',
-    zIndex: 9,
-  },
-  recentSearchesHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 6,
-  },
-  recentSearchesTitle: {
-    color: '#94A3B8',
-    letterSpacing: 0.6,
-    textTransform: 'uppercase',
-  },
-  recentSearchesClearAll: { color: '#EF4444' },
-  recentSearchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
-  },
-  recentSearchRowBorder: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#F1F5F9',
-  },
-  recentSearchIcon: { marginRight: 12, width: 16 },
-  recentSearchText: { flex: 1, color: '#0F172A' },
-  recentSearchRemove: { padding: 4, marginLeft: 8 },
-  swipeDeleteAction: {
-    backgroundColor: '#EF4444',
-    justifyContent: 'center',
-    alignItems: 'center',
-    width: 72,
-  },
-  autocompleteDropdown: {
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5E5',
-    zIndex: 9,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  suggestionRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12 },
-  suggestionRowBorder: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#F1F5F9' },
-  suggestionIcon: { marginRight: 12, width: 16 },
-  suggestionText: { flex: 1, color: '#0F172A' },
-  suggestionBadge: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 8, marginLeft: 8 },
-  suggestionBadgeText: { color: '#fff', textTransform: 'capitalize' },
-  tabBar: {
-    flexDirection: 'row',
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#E5E5E5',
-  },
-  tab: { flex: 1, paddingVertical: 12, alignItems: 'center' },
-  tabActive: { borderBottomWidth: 2, borderBottomColor: '#22C55E' },
-  tabText: { color: '#999' },
-  tabTextActive: { color: '#22C55E' },
-  activeFiltersRow: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E5E5E5' },
-  activeFiltersContent: { paddingHorizontal: 12, paddingVertical: 8, gap: 8, flexDirection: 'row', alignItems: 'center' },
-  activeChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 14, borderWidth: 1 },
-  activeChipText: { color: '#fff' },
-  clearAllChip: { paddingHorizontal: 10, paddingVertical: 5 },
-  clearAllText: { color: '#EF4444' },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  // Trending hashtags
-  trendingSection: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 8,
-  },
-  trendingSectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  trendingSectionTitle: {
-    color: '#0F172A',
-    marginLeft: 6,
-  },
-  trendingChipRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  trendingChip: {
-    borderWidth: 1,
-    borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: '#FAFAFA',
-  },
-  trendingChipName: {
-  },
-  trendingChipCount: {
-    color: '#94A3B8',
-    marginTop: 2,
-  },
-
-  emptyContainer: { alignItems: 'center', justifyContent: 'center', paddingTop: 80 },
-  emptyTitle: { color: '#333', marginTop: 16 },
-  emptySubtitle: { color: '#999', marginTop: 8 },
-  userRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#EEE',
-  },
-  avatar: { width: 50, height: 50, borderRadius: 25, marginRight: 12, backgroundColor: '#F0F0F0' },
-  avatarFallback: { backgroundColor: '#22C55E', justifyContent: 'center', alignItems: 'center' },
-  avatarFallbackText: { color: '#fff' },
-  userInfo: { flex: 1 },
-  nameRow: { flexDirection: 'row', alignItems: 'center' },
-  displayName: { color: '#000' },
-  username: { color: '#666', marginTop: 1 },
-  bio: { color: '#999', marginTop: 2 },
-  footer: { paddingVertical: 20, alignItems: 'center' },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, maxHeight: '80%' },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  modalHeaderRight: { flexDirection: 'row', alignItems: 'center' },
-  modalTitle: { color: '#000' },
-  clearText: { color: '#EF4444' },
-  filterSection: { marginBottom: 20 },
-  filterSectionLabel: { color: '#999', letterSpacing: 0.8, marginBottom: 10 },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  filterChip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 16, borderWidth: 1, borderColor: '#E0E0E0' },
-  filterChipText: { color: '#555' },
-  doneButton: { marginTop: 16, backgroundColor: '#22C55E', paddingVertical: 14, borderRadius: 12, alignItems: 'center' },
-  doneButtonText: { color: '#fff' },
-});
+function makeStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.backgroundPrimary },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingTop: Platform.OS === 'ios' ? 56 : 12,
+      paddingBottom: 12,
+      paddingHorizontal: 16,
+      backgroundColor: colors.backgroundPrimary,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.border,
+      zIndex: 10,
+    },
+    backButton: { padding: 8, justifyContent: 'center', alignItems: 'center', marginRight: 8 },
+    searchBarContainer: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.backgroundTertiary,
+      borderRadius: 12,
+      paddingHorizontal: 12,
+      height: 40,
+    },
+    searchInput: { flex: 1, fontSize: 16, color: colors.textPrimary, paddingVertical: 0, marginLeft: 8 },
+    clearButton: { padding: 4 },
+    filterButton: { marginLeft: 12, padding: 4, position: 'relative' },
+    filterBadge: {
+      position: 'absolute',
+      top: 0,
+      right: 0,
+      width: 16,
+      height: 16,
+      borderRadius: 8,
+      backgroundColor: '#22C55E',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    filterBadgeText: { fontSize: 10, fontWeight: '700', color: '#fff' },
+    recentSearchesPanel: {
+      backgroundColor: colors.backgroundPrimary,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+      zIndex: 9,
+    },
+    recentSearchesHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      paddingTop: 12,
+      paddingBottom: 6,
+    },
+    recentSearchesTitle: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: colors.textTertiary,
+      letterSpacing: 0.6,
+      textTransform: 'uppercase',
+    },
+    recentSearchesClearAll: { fontSize: 13, fontWeight: '600', color: '#EF4444' },
+    recentSearchRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      backgroundColor: colors.backgroundPrimary,
+    },
+    recentSearchRowBorder: {
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.borderLight,
+    },
+    recentSearchIcon: { marginRight: 12, width: 16 },
+    recentSearchText: { flex: 1, fontSize: 15, color: colors.textPrimary },
+    recentSearchRemove: { padding: 4, marginLeft: 8 },
+    swipeDeleteAction: {
+      backgroundColor: '#EF4444',
+      justifyContent: 'center',
+      alignItems: 'center',
+      width: 72,
+    },
+    autocompleteDropdown: {
+      backgroundColor: colors.backgroundPrimary,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+      zIndex: 9,
+      shadowColor: colors.textPrimary,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.06,
+      shadowRadius: 4,
+      elevation: 3,
+    },
+    suggestionRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12 },
+    suggestionRowBorder: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderLight },
+    suggestionIcon: { marginRight: 12, width: 16 },
+    suggestionText: { flex: 1, fontSize: 15, color: colors.textPrimary },
+    suggestionBadge: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 8, marginLeft: 8 },
+    suggestionBadgeText: { fontSize: 11, fontWeight: '600', color: '#fff', textTransform: 'capitalize' },
+    tabBar: {
+      flexDirection: 'row',
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.border,
+    },
+    tab: { flex: 1, paddingVertical: 12, alignItems: 'center' },
+    tabActive: { borderBottomWidth: 2, borderBottomColor: '#22C55E' },
+    tabText: { fontSize: 15, fontWeight: '500', color: colors.textSecondary },
+    tabTextActive: { color: '#22C55E', fontWeight: '600' },
+    activeFiltersRow: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
+    activeFiltersContent: { paddingHorizontal: 12, paddingVertical: 8, gap: 8, flexDirection: 'row', alignItems: 'center' },
+    activeChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 14, borderWidth: 1 },
+    activeChipText: { fontSize: 13, fontWeight: '600', color: '#fff' },
+    clearAllChip: { paddingHorizontal: 10, paddingVertical: 5 },
+    clearAllText: { fontSize: 13, color: '#EF4444', fontWeight: '600' },
+    centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    trendingSection: {
+      paddingHorizontal: 16,
+      paddingTop: 16,
+      paddingBottom: 8,
+    },
+    trendingSectionHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 12,
+    },
+    trendingSectionTitle: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: colors.textPrimary,
+      marginLeft: 6,
+    },
+    trendingChipRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+    },
+    trendingChip: {
+      borderWidth: 1,
+      borderRadius: 16,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      backgroundColor: colors.backgroundMuted,
+    },
+    trendingChipName: {
+      fontSize: 14,
+      fontWeight: '600',
+    },
+    trendingChipCount: {
+      fontSize: 11,
+      color: colors.textTertiary,
+      marginTop: 2,
+    },
+    emptyContainer: { alignItems: 'center', justifyContent: 'center', paddingTop: 80 },
+    emptyTitle: { fontSize: 18, fontWeight: '600', color: colors.textPrimary, marginTop: 16 },
+    emptySubtitle: { fontSize: 14, color: colors.textSecondary, marginTop: 8 },
+    userRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.border,
+    },
+    avatar: { width: 50, height: 50, borderRadius: 25, marginRight: 12, backgroundColor: colors.borderLight },
+    avatarFallback: { backgroundColor: '#22C55E', justifyContent: 'center', alignItems: 'center' },
+    avatarFallbackText: { fontSize: 20, fontWeight: 'bold', color: '#fff' },
+    userInfo: { flex: 1 },
+    nameRow: { flexDirection: 'row', alignItems: 'center' },
+    displayName: { fontSize: 16, fontWeight: '600', color: colors.textPrimary },
+    username: { fontSize: 14, color: colors.textSecondary, marginTop: 1 },
+    bio: { fontSize: 13, color: colors.textSecondary, marginTop: 2 },
+    footer: { paddingVertical: 20, alignItems: 'center' },
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
+    modalContent: { backgroundColor: colors.backgroundElevated, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, maxHeight: '80%' },
+    modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+    modalHeaderRight: { flexDirection: 'row', alignItems: 'center' },
+    modalTitle: { fontSize: 18, fontWeight: '700', color: colors.textPrimary },
+    clearText: { fontSize: 13, color: '#EF4444', fontWeight: '600' },
+    filterSection: { marginBottom: 20 },
+    filterSectionLabel: { fontSize: 12, fontWeight: '700', color: colors.textSecondary, letterSpacing: 0.8, marginBottom: 10 },
+    chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    filterChip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 16, borderWidth: 1, borderColor: colors.border },
+    filterChipText: { fontSize: 13, fontWeight: '500', color: colors.textPrimary },
+    doneButton: { marginTop: 16, backgroundColor: '#22C55E', paddingVertical: 14, borderRadius: 12, alignItems: 'center' },
+    doneButtonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  });
+}
