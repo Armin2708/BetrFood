@@ -40,7 +40,7 @@ export default function PostDetailScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="chevron-back" size={24} color={colors.white} />
+          <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>
           Post
@@ -95,18 +95,18 @@ function makeStyles(colors: ThemeColors) {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 8,
-      backgroundColor: colors.primary,
+      backgroundColor: colors.backgroundElevated,
       paddingHorizontal: 16,
       paddingVertical: 14,
-      borderBottomLeftRadius: 20,
-      borderBottomRightRadius: 20,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.border,
     },
     backButton: { padding: 4, marginRight: 4 },
     headerTitle: {
       flex: 1,
       fontSize: 18,
       fontWeight: '700',
-      color: colors.white,
+      color: colors.textPrimary,
     },
     headerRight: { width: 32 },
     centered: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12, paddingHorizontal: 32 },
