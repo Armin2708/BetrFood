@@ -55,6 +55,7 @@ export {
   requestDataExport,
   requestEmailChange,
   confirmEmailChange,
+  changePassword,
 } from './profiles';
 export type { UserProfile, SearchUserResult, DataExportResult } from './profiles';
 export { likePost, unlikePost } from './likes';

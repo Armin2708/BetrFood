@@ -248,6 +248,14 @@ export default function Settings() {
           <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
           <Pressable
             style={styles.navRow}
+            onPress={() => router.push("/profile/settings/change-password" as any)}
+          >
+            <Text style={[scaledTypography.body, { color: colors.textPrimary }]}>Change Password</Text>
+            <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+          </Pressable>
+          <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
+          <Pressable
+            style={styles.navRow}
             onPress={() => router.push("/profile/settings/blocked" as any)}
           >
             <Text style={[scaledTypography.body, { color: colors.textPrimary }]}>Blocked & Muted</Text>
