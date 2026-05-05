@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Recipe } from '../services/api';
-import { colors, DIFFICULTY_COLORS } from '../constants/theme';
+import { DIFFICULTY_COLORS, ThemeColors } from '../constants/theme';
+import { useAppTheme } from '../context/ThemeContext';
 import { useScaledTypography } from '../hooks/useScaledTypography';
 
 interface RecipeDisplayProps {
@@ -9,6 +10,8 @@ interface RecipeDisplayProps {
 }
 
 export default function RecipeDisplay({ recipe }: RecipeDisplayProps) {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [expanded, setExpanded] = useState(false);
   const scaledTypography = useScaledTypography();
 
@@ -17,8 +20,6 @@ export default function RecipeDisplay({ recipe }: RecipeDisplayProps) {
     medium: 'Medium',
     hard: 'Hard',
   };
-
-  const difficultyColor = DIFFICULTY_COLORS;
 
   return (
     <View style={styles.container}>
@@ -57,7 +58,7 @@ export default function RecipeDisplay({ recipe }: RecipeDisplayProps) {
                   style={[
                     styles.difficultyBadge,
                     scaledTypography.caption,
-                    { backgroundColor: difficultyColor[recipe.difficulty] },
+                    { backgroundColor: DIFFICULTY_COLORS[recipe.difficulty] },
                   ]}
                 >
                   {difficultyLabel[recipe.difficulty]}
@@ -72,7 +73,7 @@ export default function RecipeDisplay({ recipe }: RecipeDisplayProps) {
               <Text style={[styles.sectionTitle, scaledTypography.label]}>Ingredients</Text>
               {recipe.ingredients.map((ing, index) => (
                 <View key={ing.id || index} style={styles.ingredientRow}>
-                  <Text style={[styles.bullet, scaledTypography.body]}>{'\u2022'}</Text>
+                  <Text style={[styles.bullet, scaledTypography.body]}>{'•'}</Text>
                   <Text style={[styles.ingredientText, scaledTypography.body]}>
                     {ing.quantity ? `${ing.quantity} ` : ''}
                     {ing.unit ? `${ing.unit} ` : ''}
@@ -90,7 +91,7 @@ export default function RecipeDisplay({ recipe }: RecipeDisplayProps) {
               {recipe.steps.map((step, index) => (
                 <View key={step.id || index} style={styles.stepRow}>
                   <View style={styles.stepNumber}>
-                    <Text style={[styles.stepNumberText, scaledTypography.caption]}>{step.stepNumber}</Text>
+                    <Text style={[styles.stepNumberText, scaledTypography.small]}>{step.stepNumber}</Text>
                   </View>
                   <Text style={[styles.stepText, scaledTypography.body]}>{step.instruction}</Text>
                 </View>
@@ -103,101 +104,109 @@ export default function RecipeDisplay({ recipe }: RecipeDisplayProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    marginHorizontal: 10,
-    marginTop: 8,
-    marginBottom: 4,
-    borderRadius: 10,
-    backgroundColor: colors.recipeBackground,
-    borderWidth: 1,
-    borderColor: colors.recipeBorder,
-    overflow: 'hidden',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-  headerTitle: {
-    color: colors.primary,
-  },
-  expandIcon: {
-    color: colors.primary,
-  },
-  content: {
-    paddingHorizontal: 14,
-    paddingBottom: 14,
-  },
-  metaRow: {
-    flexDirection: 'row',
-    gap: 16,
-    marginBottom: 14,
-    flexWrap: 'wrap',
-  },
-  metaItem: {
-    alignItems: 'center',
-  },
-  metaLabel: {
-    color: colors.textQuaternary,
-    textTransform: 'uppercase',
-    marginBottom: 2,
-  },
-  metaValue: {
-    color: colors.textPrimary,
-  },
-  difficultyBadge: {
-    color: colors.white,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
-    overflow: 'hidden',
-  },
-  section: {
-    marginTop: 10,
-  },
-  sectionTitle: {
-    color: colors.textPrimary,
-    marginBottom: 8,
-  },
-  ingredientRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    paddingVertical: 3,
-  },
-  bullet: {
-    color: colors.primary,
-    marginRight: 8,
-    lineHeight: 20,
-  },
-  ingredientText: {
-    color: '#444',
-    flex: 1,
-    lineHeight: 20,
-  },
-  stepRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 10,
-  },
-  stepNumber: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
-    marginTop: 1,
-  },
-  stepNumberText: {
-    color: colors.white,
-  },
-  stepText: {
-    color: '#444',
-    flex: 1,
-    lineHeight: 20,
-  },
-});
+function makeStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    container: {
+      marginHorizontal: 10,
+      marginTop: 8,
+      marginBottom: 4,
+      borderRadius: 10,
+      backgroundColor: colors.backgroundSecondary,
+      borderWidth: 1,
+      borderColor: colors.border,
+      overflow: 'hidden',
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+    },
+    headerTitle: {
+      fontWeight: 'bold',
+      color: colors.primary,
+    },
+    expandIcon: {
+      fontWeight: 'bold',
+      color: colors.primary,
+    },
+    content: {
+      paddingHorizontal: 14,
+      paddingBottom: 14,
+    },
+    metaRow: {
+      flexDirection: 'row',
+      gap: 16,
+      marginBottom: 14,
+      flexWrap: 'wrap',
+    },
+    metaItem: {
+      alignItems: 'center',
+    },
+    metaLabel: {
+      color: colors.textQuaternary,
+      textTransform: 'uppercase',
+      marginBottom: 2,
+    },
+    metaValue: {
+      fontWeight: '600',
+      color: colors.textPrimary,
+    },
+    difficultyBadge: {
+      fontWeight: '600',
+      color: colors.white,
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: 4,
+      overflow: 'hidden',
+    },
+    section: {
+      marginTop: 10,
+    },
+    sectionTitle: {
+      fontWeight: 'bold',
+      color: colors.textPrimary,
+      marginBottom: 8,
+    },
+    ingredientRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      paddingVertical: 3,
+    },
+    bullet: {
+      color: colors.primary,
+      marginRight: 8,
+      lineHeight: 20,
+    },
+    ingredientText: {
+      color: colors.textSecondary,
+      flex: 1,
+      lineHeight: 20,
+    },
+    stepRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      marginBottom: 10,
+    },
+    stepNumber: {
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      backgroundColor: colors.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: 10,
+      marginTop: 1,
+    },
+    stepNumberText: {
+      fontWeight: 'bold',
+      color: colors.white,
+    },
+    stepText: {
+      color: colors.textSecondary,
+      flex: 1,
+      lineHeight: 20,
+    },
+  });
+}
