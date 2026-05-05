@@ -12,11 +12,11 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useUser } from "@clerk/clerk-expo";
 import { router } from "expo-router";
 import { ThemeColors } from "../../../../constants/theme";
 import { useAppTheme } from "../../../../context/ThemeContext";
 import { useScaledTypography } from "../../../../hooks/useScaledTypography";
-import { changePassword } from "../../../../services/api";
 
 // ── Password strength ─────────────────────────────────────────────────────────
 
@@ -65,6 +65,7 @@ export default function ChangePasswordScreen() {
   const { colors } = useAppTheme();
   const scaledTypography = useScaledTypography();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const { user } = useUser();
 
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
@@ -99,18 +100,19 @@ export default function ChangePasswordScreen() {
 
     setSubmitting(true);
     try {
-      await changePassword(current, next);
+      await user?.updatePassword({ currentPassword: current, newPassword: next, signOutOfOtherSessions: false });
       Alert.alert(
         "Password changed",
         "Your password has been updated. A confirmation has been sent to your email.",
         [{ text: "OK", onPress: () => router.back() }]
       );
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong.");
+    } catch (err: any) {
+      const clerkMsg = err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message;
+      setError(clerkMsg || (err instanceof Error ? err.message : "Something went wrong."));
     } finally {
       setSubmitting(false);
     }
-  }, [current, next, criteria.hasLength, passwordsMatch]);
+  }, [current, next, criteria.hasLength, passwordsMatch, user]);
 
   return (
     <View style={styles.container}>
