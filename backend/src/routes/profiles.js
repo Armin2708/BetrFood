@@ -41,6 +41,7 @@ const avatarUpload = multer({
 
 const CLERK_SECRET_KEY = process.env.CLERK_SECRET_KEY;
 const { sendEmail } = require('../utils/email');
+const { aggregateUserData } = require('../utils/exportUtils');
 
 /**
  * Generic Clerk Backend API request helper.
@@ -449,74 +450,28 @@ router.post('/me/password', requireAuth, async (req, res) => {
 
 // ── Data Export ────────────────────────────────────────────────────────────────
 
-/**
- * Aggregate all data for a user into a JSON object.
- */
-async function aggregateUserData(userId) {
-  const [
-    profileResult,
-    prefsResult,
-    postsResult,
-    pantryResult,
-    collectionsResult,
-    likesResult,
-    commentsResult,
-    followersResult,
-    followingResult,
-  ] = await Promise.allSettled([
-    supabase.from('user_profiles').select('*').eq('id', userId).maybeSingle(),
-    supabase.from('user_preferences').select('*').eq('user_id', userId).maybeSingle(),
-    supabase.from('posts').select('*, recipes(*, recipe_ingredients(*), recipe_steps(*)), post_tags(tags(*)), post_images(*)').eq('user_id', userId).order('created_at', { ascending: false }),
-    supabase.from('pantry_items').select('*').eq('user_id', userId),
-    supabase.from('collections').select('*, collection_posts(post_id)').eq('user_id', userId),
-    supabase.from('likes').select('post_id, created_at').eq('user_id', userId),
-    supabase.from('comments').select('id, post_id, content, created_at').eq('user_id', userId),
-    supabase.from('user_follows').select('follower_id').eq('following_id', userId),
-    supabase.from('user_follows').select('following_id').eq('follower_id', userId),
-  ]);
-
-  const get = (result) => result.status === 'fulfilled' ? (result.value.data || null) : null;
-
-  return {
-    exportedAt: new Date().toISOString(),
-    exportVersion: '1.0',
-    profile: get(profileResult),
-    preferences: get(prefsResult),
-    posts: get(postsResult) || [],
-    pantry: get(pantryResult) || [],
-    collections: get(collectionsResult) || [],
-    likes: get(likesResult) || [],
-    comments: get(commentsResult) || [],
-    followers: (get(followersResult) || []).map(f => f.follower_id),
-    following: (get(followingResult) || []).map(f => f.following_id),
-  };
-}
-
 // POST /api/profiles/me/export
-// Synchronously aggregates user data, uploads to Supabase Storage,
-// and returns a signed download URL immediately.
+// Aggregates user data, uploads to Supabase Storage, returns a signed download
+// URL, and sends the link to the user's email address.
 router.post('/me/export', requireAuth, async (req, res) => {
   try {
     const userId = req.userId;
     const exportId = uuidv4();
 
-    // Aggregate all user data
+    // 1. Aggregate all user data
     const userData = await aggregateUserData(userId);
 
-    // Upload JSON to Supabase Storage
+    // 2. Upload JSON to Supabase Storage
     const filename = `exports/${userId}/${exportId}.json`;
     const fileBuffer = Buffer.from(JSON.stringify(userData, null, 2), 'utf8');
 
     const { error: uploadError } = await supabase.storage
       .from('post-media')
-      .upload(filename, fileBuffer, {
-        contentType: 'application/json',
-        upsert: true,
-      });
+      .upload(filename, fileBuffer, { contentType: 'application/json', upsert: true });
 
     if (uploadError) throw new Error(`Storage upload failed: ${uploadError.message}`);
 
-    // Generate signed URL valid for 24 hours
+    // 3. Generate signed URL valid for 24 hours
     const expiresInSeconds = 60 * 60 * 24;
     const { data: signedData, error: signedError } = await supabase.storage
       .from('post-media')
@@ -524,15 +479,57 @@ router.post('/me/export', requireAuth, async (req, res) => {
 
     if (signedError) throw new Error(`Failed to create signed URL: ${signedError.message}`);
 
+    const downloadUrl = signedData.signedUrl;
     const expiresAt = new Date(Date.now() + expiresInSeconds * 1000).toISOString();
 
-    res.json({
-      status: 'ready',
-      downloadUrl: signedData.signedUrl,
-      expiresAt,
-    });
+    // 4. Send email notification (fire-and-forget)
+    getClerkUserEmail(userId)
+      .then((email) => {
+        if (!email) return;
+        const expiresDate = new Date(expiresAt).toLocaleString('en-US', {
+          dateStyle: 'medium',
+          timeStyle: 'short',
+        });
+        return sendEmail({
+          to: email,
+          subject: 'Your BetrFood Data Export is Ready',
+          text: [
+            'Your BetrFood data export is ready for download.',
+            '',
+            `Download link: ${downloadUrl}`,
+            '',
+            `This link expires on ${expiresDate}.`,
+            '',
+            'Your export includes your profile, posts, recipes, pantry, collections, likes, comments, and follow relationships in JSON format.',
+            '',
+            'The BetrFood Team',
+          ].join('\n'),
+          html: `
+            <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:24px">
+              <h2 style="color:#0F172A;margin-bottom:8px">Your data export is ready</h2>
+              <p style="color:#64748B;margin-bottom:24px">
+                Your BetrFood data export has been generated. Click the button below to download your data.
+              </p>
+              <a href="${downloadUrl}"
+                 style="display:inline-block;background:#22C55E;color:#fff;text-decoration:none;padding:14px 28px;border-radius:10px;font-weight:600;font-size:15px">
+                Download My Data
+              </a>
+              <p style="color:#94A3B8;font-size:13px;margin-top:20px">
+                This link expires on ${expiresDate}. Your export includes your profile, posts, recipes,
+                pantry items, collections, likes, comments, and follow relationships in JSON format.
+              </p>
+              <p style="color:#CBD5E1;font-size:12px;margin-top:16px">
+                You received this email because you requested a data export from BetrFood.
+              </p>
+            </div>`,
+        });
+      })
+      .catch((err) => console.error('[EXPORT] Email notification failed:', err.message));
+
+    console.log(`[EXPORT] Generated export ${exportId} for user ${userId}`);
+    res.json({ status: 'ready', downloadUrl, expiresAt });
   } catch (error) {
-    console.error('Error generating data export:', error);
+    console.error('[EXPORT] Error generating data export:', error);
     res.status(500).json({ error: 'Failed to generate data export.' });
   }
 });

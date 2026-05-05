@@ -394,3 +394,19 @@ CREATE TABLE IF NOT EXISTS support_tickets (
 );
 CREATE INDEX IF NOT EXISTS idx_support_tickets_user_id ON support_tickets(user_id);
 CREATE INDEX IF NOT EXISTS idx_support_tickets_created_at ON support_tickets(created_at DESC);
+
+-- ============================================================
+-- 22. Data Export Requests
+-- ============================================================
+CREATE TABLE IF NOT EXISTS data_export_requests (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id TEXT NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'ready', 'failed', 'expired')),
+  download_url TEXT,
+  expires_at TIMESTAMPTZ,
+  error_message TEXT,
+  requested_at TIMESTAMPTZ DEFAULT now(),
+  completed_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS idx_data_export_requests_user_id ON data_export_requests(user_id);
+CREATE INDEX IF NOT EXISTS idx_data_export_requests_status ON data_export_requests(status) WHERE status IN ('pending', 'processing');
