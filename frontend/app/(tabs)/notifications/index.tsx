@@ -3,6 +3,7 @@ import {
   Text,
   FlatList,
   Pressable,
+  Alert,
   StyleSheet,
   ActivityIndicator,
   RefreshControl,
@@ -104,6 +105,7 @@ export default function NotificationsScreen() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
 
   const loadNotifications = useCallback(async () => {
     try {
@@ -208,13 +210,26 @@ export default function NotificationsScreen() {
     }
   }, []);
 
-  const handleClearAll = useCallback(async () => {
-    try {
-      await clearAllNotifications();
-      setNotifications([]);
-    } catch (error) {
-      console.error('Failed to clear notifications:', error);
-    }
+  const handleClearAll = useCallback(() => {
+    Alert.alert(
+      'Clear Notifications',
+      'This will permanently remove all notifications. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Clear All',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await clearAllNotifications();
+              setNotifications([]);
+            } catch (error) {
+              console.error('Failed to clear notifications:', error);
+            }
+          },
+        },
+      ]
+    );
   }, []);
 
   const hasUnread = notifications.some((n) => !n.read);
@@ -239,27 +254,31 @@ export default function NotificationsScreen() {
   const handleAcceptFollow = useCallback(async (notification: Notification) => {
     const requesterId = notification.data?.requesterId;
     if (!requesterId) return;
+    setProcessingIds((prev) => new Set(prev).add(notification.id));
     try {
       await acceptFollowRequest(requesterId);
     } catch (error: any) {
-      // If 404, the request was already accepted — still convert the notification
       if (!error.message?.includes('not found')) {
         console.error('Failed to accept follow request:', error);
+        setProcessingIds((prev) => { const next = new Set(prev); next.delete(notification.id); return next; });
         return;
       }
     }
     try { await markNotificationRead(notification.id); } catch {}
+    setProcessingIds((prev) => { const next = new Set(prev); next.delete(notification.id); return next; });
     convertToFollower(notification.id);
   }, [convertToFollower]);
 
   const handleDenyFollow = useCallback(async (notification: Notification) => {
     const requesterId = notification.data?.requesterId;
     if (!requesterId) return;
+    setProcessingIds((prev) => new Set(prev).add(notification.id));
     try {
       await denyFollowRequest(requesterId);
       setNotifications(prev => prev.filter(n => n.id !== notification.id));
     } catch (error) {
       console.error('Failed to deny follow request:', error);
+      setProcessingIds((prev) => { const next = new Set(prev); next.delete(notification.id); return next; });
     }
   }, []);
 
@@ -268,6 +287,7 @@ export default function NotificationsScreen() {
     const message = getNotificationMessage(item);
     const timeAgo = getRelativeTime(item.createdAt);
     const isFollowRequest = item.type === 'follow_request';
+    const isProcessing = processingIds.has(item.id);
 
     return (
       <Pressable
@@ -284,14 +304,20 @@ export default function NotificationsScreen() {
           {isFollowRequest && (
             <View style={styles.followRequestActions}>
               <Pressable
-                style={styles.acceptButton}
+                style={[styles.acceptButton, isProcessing && { opacity: 0.5 }]}
                 onPress={() => handleAcceptFollow(item)}
+                disabled={isProcessing}
               >
-                <Text style={[styles.acceptButtonText, scaledTypography.small]}>Accept</Text>
+                {isProcessing ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={[styles.acceptButtonText, scaledTypography.small]}>Accept</Text>
+                )}
               </Pressable>
               <Pressable
-                style={styles.denyButton}
+                style={[styles.denyButton, isProcessing && { opacity: 0.5 }]}
                 onPress={() => handleDenyFollow(item)}
+                disabled={isProcessing}
               >
                 <Text style={[styles.denyButtonText, scaledTypography.small]}>Deny</Text>
               </Pressable>
@@ -383,7 +409,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#EEEEEE',
   },
   unreadItem: {
-    backgroundColor: '#FFF5F0',
+    backgroundColor: '#F0FDF4',
   },
   iconContainer: {
     width: 44,

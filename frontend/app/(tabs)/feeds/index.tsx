@@ -379,7 +379,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 16,
-    color: '#e74c3c',
+    color: '#EF4444',
     textAlign: 'center',
     marginBottom: 16,
   },

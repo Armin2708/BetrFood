@@ -99,12 +99,12 @@ export default function ProfileScreen() {
       {/* Top navigation bar */}
       <View style={styles.topBar}>
         <Pressable
-          onPress={() => {}}
+          onPress={() => router.push('/profile/info/editProfile')}
           style={styles.topBarButton}
           accessibilityRole="button"
-          accessibilityLabel="Menu"
+          accessibilityLabel="Edit profile"
         >
-          <Ionicons name="menu-outline" size={26} color={themeColors.textPrimary} />
+          <Ionicons name="create-outline" size={24} color={themeColors.textPrimary} />
         </Pressable>
         <View style={{ flex: 1 }} />
         <Pressable

@@ -314,8 +314,12 @@ export default function CreatePostScreen() {
             <TouchableOpacity onPress={saveDraft} style={styles.draftButton}>
               <Text style={[styles.draftButtonText, scaledTypography.body]}>Save Draft</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={submitPost} disabled={!!uploadStatus || images.length === 0}>
-              <Text style={[styles.postText, (images.length === 0 || !!uploadStatus) && styles.disabledText, scaledTypography.body]}>Post</Text>
+            <TouchableOpacity
+              onPress={submitPost}
+              disabled={!!uploadStatus || images.length === 0}
+              style={(images.length === 0 || !!uploadStatus) ? { opacity: 0.35 } : undefined}
+            >
+              <Text style={[styles.postText, scaledTypography.body]}>Post</Text>
             </TouchableOpacity>
           </View>
         </View>

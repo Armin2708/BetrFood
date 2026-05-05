@@ -988,7 +988,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
     textTransform: 'uppercase',
   },
-  recentSearchesClearAll: { color: '#e74c3c' },
+  recentSearchesClearAll: { color: '#EF4444' },
   recentSearchRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1004,7 +1004,7 @@ const styles = StyleSheet.create({
   recentSearchText: { flex: 1, color: '#0F172A' },
   recentSearchRemove: { padding: 4, marginLeft: 8 },
   swipeDeleteAction: {
-    backgroundColor: '#e74c3c',
+    backgroundColor: '#EF4444',
     justifyContent: 'center',
     alignItems: 'center',
     width: 72,
@@ -1040,7 +1040,7 @@ const styles = StyleSheet.create({
   activeChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 14, borderWidth: 1 },
   activeChipText: { color: '#fff' },
   clearAllChip: { paddingHorizontal: 10, paddingVertical: 5 },
-  clearAllText: { color: '#e74c3c' },
+  clearAllText: { color: '#EF4444' },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   // Trending hashtags
   trendingSection: {
@@ -1101,7 +1101,7 @@ const styles = StyleSheet.create({
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   modalHeaderRight: { flexDirection: 'row', alignItems: 'center' },
   modalTitle: { color: '#000' },
-  clearText: { color: '#e74c3c' },
+  clearText: { color: '#EF4444' },
   filterSection: { marginBottom: 20 },
   filterSectionLabel: { color: '#999', letterSpacing: 0.8, marginBottom: 10 },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
