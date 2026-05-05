@@ -68,3 +68,5 @@ export type { PantryItem, PantryItemInput, IdentifiedItem, SingleItemResult } fr
 export { sendChatMessage, fetchChatHistory } from './chat';
 export type { ChatMessage } from './chat';
 export { trackPostView, markPostNotInterested, removeNotInterestedFeedback, getNotInterestedPosts } from './interactions';
+export { fetchFaq, recordFaqView } from './faq';
+export type { FaqCategory, FaqItem } from './faq';
