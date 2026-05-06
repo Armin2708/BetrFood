@@ -40,34 +40,6 @@ const avatarUpload = multer({
 });
 
 const CLERK_SECRET_KEY = process.env.CLERK_SECRET_KEY;
-const { sendEmail } = require('../utils/email');
-const { aggregateUserData } = require('../utils/exportUtils');
-
-/**
- * Generic Clerk Backend API request helper.
- */
-function clerkRequest(method, path, body) {
-  return new Promise((resolve, reject) => {
-    const payload = body ? JSON.stringify(body) : null;
-    const headers = {
-      'Authorization': 'Bearer ' + CLERK_SECRET_KEY,
-      'Content-Type': 'application/json',
-    };
-    if (payload) headers['Content-Length'] = Buffer.byteLength(payload);
-
-    const req = https.request({ hostname: 'api.clerk.com', path, method, headers }, (res) => {
-      let b = '';
-      res.on('data', (chunk) => (b += chunk));
-      res.on('end', () => {
-        try { resolve({ status: res.statusCode, data: JSON.parse(b) }); }
-        catch { resolve({ status: res.statusCode, data: b }); }
-      });
-    });
-    req.on('error', reject);
-    if (payload) req.write(payload);
-    req.end();
-  });
-}
 
 /**
  * Delete a user from Clerk via Backend API.
@@ -324,154 +296,76 @@ router.post('/me/complete-onboarding', requireAuth, async (req, res) => {
   }
 });
 
-// ── Email Change ───────────────────────────────────────────────────────────────
-
-// POST /api/profiles/me/email/request
-// Verifies the current password and sends a security notification to the old address.
-// Email address creation and verification are handled client-side via Clerk's frontend SDK
-// because prepare_verification / attempt_verification are Frontend API methods only.
-router.post('/me/email/request', requireAuth, async (req, res) => {
-  const userId = req.userId;
-  const { newEmail, currentPassword } = req.body;
-
-  if (!newEmail || typeof newEmail !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail.trim())) {
-    return res.status(400).json({ error: 'A valid email address is required.' });
-  }
-  if (!currentPassword || typeof currentPassword !== 'string' || !currentPassword.trim()) {
-    return res.status(400).json({ error: 'Current password is required.' });
-  }
-
-  // 1. Verify current password via Clerk Backend API
-  let verifyResult;
-  try {
-    verifyResult = await clerkRequest('POST', `/v1/users/${userId}/verify_password`, { password: currentPassword });
-  } catch (err) {
-    console.error('[EMAIL CHANGE] verify_password error:', err.message);
-    return res.status(500).json({ error: 'Unable to verify password. Please try again.' });
-  }
-
-  if (verifyResult.status !== 200 || !verifyResult.data?.verified) {
-    const clerkCode = verifyResult.data?.errors?.[0]?.code || '';
-    if (clerkCode === 'form_password_not_enabled') {
-      return res.status(400).json({ error: 'Password sign-in is not enabled on this account. Change your email through your OAuth provider.' });
-    }
-    return res.status(401).json({ error: 'Incorrect password.' });
-  }
-
-  // 2. Duplicate check
-  const oldEmail = await getClerkUserEmail(userId);
-  const normalizedNew = newEmail.trim().toLowerCase();
-  if (oldEmail && oldEmail.toLowerCase() === normalizedNew) {
-    return res.status(400).json({ error: 'This is already your current email address.' });
-  }
-
-  // 3. Security notification to old email (fire-and-forget)
-  if (oldEmail) {
-    sendEmail({
-      to: oldEmail,
-      subject: 'Security Alert: Email Change Request — BetrFood',
-      text: `Hello,\n\nA request was made to change the email address on your BetrFood account to ${normalizedNew}.\n\nIf you made this request, please verify your new address.\n\nIf you did not make this request, please contact support immediately.\n\nThe BetrFood Team`,
-      html: `<p>Hello,</p><p>A request was made to change the email address on your BetrFood account to <strong>${normalizedNew}</strong>.</p><p>If you did not make this request, please contact support immediately.</p><p>The BetrFood Team</p>`,
-    }).catch((err) => console.error('[EMAIL CHANGE] Security notification failed:', err.message));
-  }
-
-  console.log(`[EMAIL CHANGE] Password verified for user ${userId}, client will handle Clerk email flow`);
-  res.json({ message: 'Password verified.' });
-});
-
-// ── Password Change ────────────────────────────────────────────────────────────
-
-// POST /api/profiles/me/password
-// Verifies current password, updates to new password in Clerk, sends confirmation email.
-router.post('/me/password', requireAuth, async (req, res) => {
-  const userId = req.userId;
-  const { currentPassword, newPassword } = req.body;
-
-  if (!currentPassword || typeof currentPassword !== 'string') {
-    return res.status(400).json({ error: 'Current password is required.' });
-  }
-  if (!newPassword || typeof newPassword !== 'string' || newPassword.length < 8) {
-    return res.status(400).json({ error: 'New password must be at least 8 characters.' });
-  }
-  if (currentPassword === newPassword) {
-    return res.status(400).json({ error: 'New password must be different from your current password.' });
-  }
-
-  // 1. Verify current password
-  let verifyResult;
-  try {
-    verifyResult = await clerkRequest('POST', `/v1/users/${userId}/verify_password`, { password: currentPassword });
-  } catch (err) {
-    console.error('[PASSWORD CHANGE] verify_password error:', err.message);
-    return res.status(500).json({ error: 'Unable to verify password. Please try again.' });
-  }
-
-  if (verifyResult.status !== 200 || !verifyResult.data?.verified) {
-    const clerkCode = verifyResult.data?.errors?.[0]?.code || '';
-    if (clerkCode === 'form_password_not_enabled') {
-      return res.status(400).json({ error: 'Password sign-in is not enabled on this account. Manage your password through your OAuth provider.' });
-    }
-    return res.status(401).json({ error: 'Incorrect current password.' });
-  }
-
-  // 2. Update password in Clerk
-  let updateResult;
-  try {
-    updateResult = await clerkRequest('PATCH', `/v1/users/${userId}`, {
-      password: newPassword,
-      skip_password_checks: false,
-    });
-  } catch (err) {
-    console.error('[PASSWORD CHANGE] update password error:', err.message);
-    return res.status(500).json({ error: 'Failed to update password. Please try again.' });
-  }
-
-  if (updateResult.status !== 200) {
-    const errMsg = updateResult.data?.errors?.[0]?.long_message
-      || updateResult.data?.errors?.[0]?.message
-      || 'Failed to update password.';
-    return res.status(400).json({ error: errMsg });
-  }
-
-  // 3. Send confirmation email (fire-and-forget)
-  getClerkUserEmail(userId).then((userEmail) => {
-    if (!userEmail) return;
-    sendEmail({
-      to: userEmail,
-      subject: 'Your BetrFood password has been changed',
-      text: `Hello,\n\nYour BetrFood account password was successfully changed.\n\nIf you did not make this change, please contact support immediately and reset your password.\n\nThe BetrFood Team`,
-      html: `<p>Hello,</p><p>Your BetrFood account password was successfully changed.</p><p>If you did not make this change, please contact support immediately and reset your password.</p><p>The BetrFood Team</p>`,
-    }).catch((err) => console.error('[PASSWORD CHANGE] Confirmation email failed:', err.message));
-  }).catch(() => {});
-
-  console.log(`[PASSWORD CHANGE] Password updated for user ${userId}`);
-  res.json({ message: 'Password updated successfully.' });
-});
-
 // ── Data Export ────────────────────────────────────────────────────────────────
 
+/**
+ * Aggregate all data for a user into a JSON object.
+ */
+async function aggregateUserData(userId) {
+  const [
+    profileResult,
+    prefsResult,
+    postsResult,
+    pantryResult,
+    collectionsResult,
+    likesResult,
+    commentsResult,
+    followersResult,
+    followingResult,
+  ] = await Promise.allSettled([
+    supabase.from('user_profiles').select('*').eq('id', userId).maybeSingle(),
+    supabase.from('user_preferences').select('*').eq('user_id', userId).maybeSingle(),
+    supabase.from('posts').select('*, recipes(*, recipe_ingredients(*), recipe_steps(*)), post_tags(tags(*)), post_images(*)').eq('user_id', userId).order('created_at', { ascending: false }),
+    supabase.from('pantry_items').select('*').eq('user_id', userId),
+    supabase.from('collections').select('*, collection_posts(post_id)').eq('user_id', userId),
+    supabase.from('likes').select('post_id, created_at').eq('user_id', userId),
+    supabase.from('comments').select('id, post_id, content, created_at').eq('user_id', userId),
+    supabase.from('user_follows').select('follower_id').eq('following_id', userId),
+    supabase.from('user_follows').select('following_id').eq('follower_id', userId),
+  ]);
+
+  const get = (result) => result.status === 'fulfilled' ? (result.value.data || null) : null;
+
+  return {
+    exportedAt: new Date().toISOString(),
+    exportVersion: '1.0',
+    profile: get(profileResult),
+    preferences: get(prefsResult),
+    posts: get(postsResult) || [],
+    pantry: get(pantryResult) || [],
+    collections: get(collectionsResult) || [],
+    likes: get(likesResult) || [],
+    comments: get(commentsResult) || [],
+    followers: (get(followersResult) || []).map(f => f.follower_id),
+    following: (get(followingResult) || []).map(f => f.following_id),
+  };
+}
+
 // POST /api/profiles/me/export
-// Aggregates user data, uploads to Supabase Storage, returns a signed download
-// URL, and sends the link to the user's email address.
+// Synchronously aggregates user data, uploads to Supabase Storage,
+// and returns a signed download URL immediately.
 router.post('/me/export', requireAuth, async (req, res) => {
   try {
     const userId = req.userId;
     const exportId = uuidv4();
 
-    // 1. Aggregate all user data
+    // Aggregate all user data
     const userData = await aggregateUserData(userId);
 
-    // 2. Upload JSON to Supabase Storage
+    // Upload JSON to Supabase Storage
     const filename = `exports/${userId}/${exportId}.json`;
     const fileBuffer = Buffer.from(JSON.stringify(userData, null, 2), 'utf8');
 
     const { error: uploadError } = await supabase.storage
       .from('post-media')
-      .upload(filename, fileBuffer, { contentType: 'application/json', upsert: true });
+      .upload(filename, fileBuffer, {
+        contentType: 'application/json',
+        upsert: true,
+      });
 
     if (uploadError) throw new Error(`Storage upload failed: ${uploadError.message}`);
 
-    // 3. Generate signed URL valid for 24 hours
+    // Generate signed URL valid for 24 hours
     const expiresInSeconds = 60 * 60 * 24;
     const { data: signedData, error: signedError } = await supabase.storage
       .from('post-media')
@@ -479,57 +373,15 @@ router.post('/me/export', requireAuth, async (req, res) => {
 
     if (signedError) throw new Error(`Failed to create signed URL: ${signedError.message}`);
 
-    const downloadUrl = signedData.signedUrl;
     const expiresAt = new Date(Date.now() + expiresInSeconds * 1000).toISOString();
 
-    // 4. Send email notification (fire-and-forget)
-    getClerkUserEmail(userId)
-      .then((email) => {
-        if (!email) return;
-        const expiresDate = new Date(expiresAt).toLocaleString('en-US', {
-          dateStyle: 'medium',
-          timeStyle: 'short',
-        });
-        return sendEmail({
-          to: email,
-          subject: 'Your BetrFood Data Export is Ready',
-          text: [
-            'Your BetrFood data export is ready for download.',
-            '',
-            `Download link: ${downloadUrl}`,
-            '',
-            `This link expires on ${expiresDate}.`,
-            '',
-            'Your export includes your profile, posts, recipes, pantry, collections, likes, comments, and follow relationships in JSON format.',
-            '',
-            'The BetrFood Team',
-          ].join('\n'),
-          html: `
-            <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:24px">
-              <h2 style="color:#0F172A;margin-bottom:8px">Your data export is ready</h2>
-              <p style="color:#64748B;margin-bottom:24px">
-                Your BetrFood data export has been generated. Click the button below to download your data.
-              </p>
-              <a href="${downloadUrl}"
-                 style="display:inline-block;background:#22C55E;color:#fff;text-decoration:none;padding:14px 28px;border-radius:10px;font-weight:600;font-size:15px">
-                Download My Data
-              </a>
-              <p style="color:#94A3B8;font-size:13px;margin-top:20px">
-                This link expires on ${expiresDate}. Your export includes your profile, posts, recipes,
-                pantry items, collections, likes, comments, and follow relationships in JSON format.
-              </p>
-              <p style="color:#CBD5E1;font-size:12px;margin-top:16px">
-                You received this email because you requested a data export from BetrFood.
-              </p>
-            </div>`,
-        });
-      })
-      .catch((err) => console.error('[EXPORT] Email notification failed:', err.message));
-
-    console.log(`[EXPORT] Generated export ${exportId} for user ${userId}`);
-    res.json({ status: 'ready', downloadUrl, expiresAt });
+    res.json({
+      status: 'ready',
+      downloadUrl: signedData.signedUrl,
+      expiresAt,
+    });
   } catch (error) {
-    console.error('[EXPORT] Error generating data export:', error);
+    console.error('Error generating data export:', error);
     res.status(500).json({ error: 'Failed to generate data export.' });
   }
 });
@@ -572,11 +424,7 @@ router.get('/search', optionalAuth, async (req, res) => {
         .map(p => p.user_id)
     );
 
-    // Always include the requesting user's own profile in results
-    // (so they can find themselves even if they opted out)
-    const filtered = data.filter(u =>
-      !optedOut.has(u.id) || u.id === req.userId
-    );
+    const filtered = data.filter(u => !optedOut.has(u.id));
 
     const users = filtered.slice(0, 20).map(u => ({
       id: u.id,
