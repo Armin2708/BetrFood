@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, Image, StyleSheet,
   Alert, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView,
@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createPostApi, RecipeInput, addTagsToPost } from '../services/api';
 import { useScaledTypography } from '../hooks/useScaledTypography';
+import { useAppTheme } from '../context/ThemeContext';
 import TagSelector from '../components/TagSelector';
 import VideoThumbnailView from '../components/VideoThumbnail';
 
@@ -47,6 +48,8 @@ export interface Draft {
 export default function CreatePostScreen() {
   const { draftId } = useLocalSearchParams<{ draftId?: string }>();
   const scaledTypography = useScaledTypography();
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [images, setImages] = useState<string[]>([]);
   const [mediaTypes, setMediaTypes] = useState<('image' | 'video')[]>([]);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
@@ -415,7 +418,7 @@ export default function CreatePostScreen() {
         <View style={styles.captionSection}>
           <TextInput
             style={[styles.captionInput, scaledTypography.small]} placeholder="Write a caption..."
-            placeholderTextColor="#999" multiline maxLength={MAX_CAPTION_LENGTH}
+            placeholderTextColor={colors.placeholder || colors.textTertiary} multiline maxLength={MAX_CAPTION_LENGTH}
             value={caption} onChangeText={setCaption}
           />
           <Text style={[styles.charCount, scaledTypography.small]}>{caption.length}/{MAX_CAPTION_LENGTH}</Text>
@@ -618,23 +621,25 @@ export default function CreatePostScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
+function makeStyles(colors: any) {
+  return StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.backgroundPrimary },
   scroll: { flexGrow: 1, paddingBottom: 40 },
   header: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingHorizontal: 16, paddingTop: 60, paddingBottom: 16,
-    borderBottomWidth: 1, borderColor: '#eee',
+    borderBottomWidth: 1, borderColor: colors.border,
+    backgroundColor: colors.backgroundPrimary,
   },
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
   },
-  cancelText: { color: '#666' },
-  title: { },
+  cancelText: { color: colors.textSecondary },
+  title: { color: colors.textPrimary },
   postText: { color: '#22C55E' },
-  disabledText: { color: '#ccc' },
+  disabledText: { color: colors.textTertiary },
   draftButton: {
     paddingHorizontal: 10,
     paddingVertical: 4,
@@ -642,44 +647,27 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#22C55E',
   },
-  draftButtonText: {
-    color: '#22C55E',
-  },
-  draftsLink: {
-    alignSelf: 'flex-end',
-    paddingHorizontal: 16,
-    paddingTop: 8,
-  },
-  draftsLinkText: {
-    color: '#22C55E',
-  },
+  draftButtonText: { color: '#22C55E' },
+  draftsLink: { alignSelf: 'flex-end', paddingHorizontal: 16, paddingTop: 8 },
+  draftsLinkText: { color: '#22C55E' },
   imageSection: { paddingVertical: 20 },
   mainPreviewContainer: { marginHorizontal: 16, position: 'relative', alignItems: 'center' },
-  mainPreviewImage: { width: (SCREEN_WIDTH - 32) * 0.5, height: (SCREEN_WIDTH - 32) * 0.5, borderRadius: 12, backgroundColor: '#eee' },
+  mainPreviewImage: { width: (SCREEN_WIDTH - 32) * 0.5, height: (SCREEN_WIDTH - 32) * 0.5, borderRadius: 12, backgroundColor: colors.borderLight },
   removeImageButton: { position: 'absolute', top: 8, right: 8, zIndex: 2 },
   videoOverlay: { ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center', zIndex: 1 },
-  thumbnailGrid: {
-    flexDirection: 'row', flexWrap: 'wrap',
-    marginTop: 10, paddingHorizontal: 16, gap: 8,
-  },
-  thumbnailWrapper: {
-    width: 72, height: 72, borderRadius: 8, overflow: 'hidden',
-    borderWidth: 2, borderColor: 'transparent',
-  },
+  thumbnailGrid: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 10, paddingHorizontal: 16, gap: 8 },
+  thumbnailWrapper: { width: 72, height: 72, borderRadius: 8, overflow: 'hidden', borderWidth: 2, borderColor: 'transparent' },
   thumbnailWrapperSelected: { borderColor: '#22C55E' },
   thumbnail: { width: '100%', height: '100%' },
-  thumbnailVideoOverlay: {
-    ...StyleSheet.absoluteFillObject, justifyContent: 'center',
-    alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.2)',
-  },
-  imageCounter: { textAlign: 'center', color: '#666', marginTop: 8 },
+  thumbnailVideoOverlay: { ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.2)' },
+  imageCounter: { textAlign: 'center', color: colors.textSecondary, marginTop: 8 },
   addMoreRow: { flexDirection: 'row', justifyContent: 'center', gap: 16, marginTop: 12 },
   addMoreButton: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: '#22C55E' },
   addMoreText: { color: '#22C55E' },
-  imageHint: { color: '#999', marginTop: 8 },
+  imageHint: { color: colors.textTertiary, marginTop: 8 },
   imagePlaceholder: {
     width: 300, height: 300, borderRadius: 12, borderWidth: 2,
-    borderColor: '#ddd', borderStyle: 'dashed', justifyContent: 'center',
+    borderColor: colors.border, borderStyle: 'dashed', justifyContent: 'center',
     alignItems: 'center', gap: 16, alignSelf: 'center',
   },
   imageButton: { backgroundColor: '#22C55E', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 },
@@ -687,224 +675,78 @@ const styles = StyleSheet.create({
   captionSection: { paddingHorizontal: 16, paddingVertical: 12 },
   captionInput: {
     fontSize: 16, minHeight: 100, textAlignVertical: 'top',
-    borderWidth: 1, borderColor: '#eee', borderRadius: 8, padding: 12,
+    borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 12,
+    color: colors.textPrimary, backgroundColor: colors.backgroundSecondary,
   },
-  charCount: { textAlign: 'right', color: '#999', marginTop: 4 },
+  charCount: { textAlign: 'right', color: colors.textTertiary, marginTop: 4 },
   uploadOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#fff',
+    backgroundColor: colors.backgroundPrimary,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 100,
   },
-  uploadContent: {
-    alignItems: 'center',
-    paddingHorizontal: 40,
-  },
+  uploadContent: { alignItems: 'center', paddingHorizontal: 40 },
   uploadIconCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#4CAF50',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 20,
+    width: 80, height: 80, borderRadius: 40, backgroundColor: '#4CAF50',
+    justifyContent: 'center', alignItems: 'center', marginBottom: 20,
   },
-  uploadIconError: {
-    backgroundColor: '#e74c3c',
-  },
-  uploadTitle: {
-    color: '#111',
-    marginTop: 16,
-    textAlign: 'center',
-  },
-  uploadSubtitle: {
-    color: '#666',
-    marginTop: 8,
-    textAlign: 'center',
-    lineHeight: 22,
-  },
-  retryButton: {
-    marginTop: 28,
-    backgroundColor: '#22C55E',
-    paddingHorizontal: 32,
-    paddingVertical: 14,
-    borderRadius: 10,
-  },
-  retryButtonText: {
-    color: '#fff',
-  },
-  retryButtonOutline: {
-    marginTop: 12,
-    paddingHorizontal: 32,
-    paddingVertical: 14,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: '#22C55E',
-  },
-  retryButtonOutlineText: {
-    color: '#22C55E',
-  },
+  uploadIconError: { backgroundColor: '#e74c3c' },
+  uploadTitle: { color: colors.textPrimary, marginTop: 16, textAlign: 'center' },
+  uploadSubtitle: { color: colors.textSecondary, marginTop: 8, textAlign: 'center', lineHeight: 22 },
+  retryButton: { marginTop: 28, backgroundColor: '#22C55E', paddingHorizontal: 32, paddingVertical: 14, borderRadius: 10 },
+  retryButtonText: { color: '#fff' },
+  retryButtonOutline: { marginTop: 12, paddingHorizontal: 32, paddingVertical: 14, borderRadius: 10, borderWidth: 1.5, borderColor: '#22C55E' },
+  retryButtonOutlineText: { color: '#22C55E' },
   toast: {
-    position: 'absolute',
-    bottom: 50,
-    left: 24,
-    right: 24,
-    backgroundColor: '#333',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderRadius: 10,
-    alignItems: 'center',
+    position: 'absolute', bottom: 50, left: 24, right: 24,
+    backgroundColor: colors.backgroundElevated, paddingHorizontal: 20,
+    paddingVertical: 14, borderRadius: 10, alignItems: 'center',
   },
-  toastText: {
-    color: '#fff',
-  },
-
-  // Recipe toggle
+  toastText: { color: colors.textPrimary },
   recipeToggle: {
-    marginHorizontal: 16,
-    marginTop: 8,
-    paddingVertical: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#22C55E',
-    alignItems: 'center',
+    marginHorizontal: 16, marginTop: 8, paddingVertical: 12,
+    borderRadius: 8, borderWidth: 1, borderColor: '#22C55E', alignItems: 'center',
   },
-  recipeToggleActive: {
-    backgroundColor: '#FFF0E8',
-  },
-  recipeToggleText: {
-    color: '#22C55E',
-  },
-  recipeToggleTextActive: {
-    color: '#CC4400',
-  },
-
-  // Recipe form
+  recipeToggleActive: { backgroundColor: colors.backgroundSecondary },
+  recipeToggleText: { color: '#22C55E' },
+  recipeToggleTextActive: { color: '#22C55E' },
   recipeForm: {
-    marginHorizontal: 16,
-    marginTop: 12,
-    padding: 14,
-    backgroundColor: '#FFF8F0',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#FFE0C2',
+    marginHorizontal: 16, marginTop: 12, padding: 14,
+    backgroundColor: colors.backgroundSecondary,
+    borderRadius: 10, borderWidth: 1, borderColor: colors.border,
   },
-  recipeTitle: {
-    fontSize: 17,
-    fontWeight: 'bold',
-    color: '#22C55E',
-    marginBottom: 12,
-  },
-  recipeRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 12,
-  },
-  recipeField: {
-    flex: 1,
-  },
-  fieldLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#666',
-    marginBottom: 4,
-  },
+  recipeTitle: { fontSize: 17, fontWeight: 'bold', color: '#22C55E', marginBottom: 12 },
+  recipeRow: { flexDirection: 'row', gap: 12, marginBottom: 12 },
+  recipeField: { flex: 1 },
+  fieldLabel: { fontSize: 13, fontWeight: '600', color: colors.textSecondary, marginBottom: 4 },
   fieldInput: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    fontSize: 15,
-    backgroundColor: '#fff',
+    borderWidth: 1, borderColor: colors.border, borderRadius: 6,
+    paddingHorizontal: 10, paddingVertical: 8, fontSize: 15,
+    backgroundColor: colors.backgroundPrimary, color: colors.textPrimary,
   },
-  difficultyRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 14,
-    marginTop: 4,
-  },
+  difficultyRow: { flexDirection: 'row', gap: 8, marginBottom: 14, marginTop: 4 },
   difficultyOption: {
-    flex: 1,
-    paddingVertical: 8,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    alignItems: 'center',
-    backgroundColor: '#fff',
+    flex: 1, paddingVertical: 8, borderRadius: 6, borderWidth: 1,
+    borderColor: colors.border, alignItems: 'center', backgroundColor: colors.backgroundPrimary,
   },
-  difficultyOptionActive: {
-    borderColor: '#22C55E',
-    backgroundColor: '#22C55E',
-  },
-  difficultyText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
-  },
-  difficultyTextActive: {
-    color: '#fff',
-  },
-  sectionLabel: {
-    fontSize: 15,
-    fontWeight: 'bold',
-    color: '#333',
-    marginTop: 8,
-    marginBottom: 8,
-  },
-
-  // Ingredients
-  ingredientRow: {
-    flexDirection: 'row',
-    gap: 6,
-    marginBottom: 8,
-    alignItems: 'center',
-  },
+  difficultyOptionActive: { borderColor: '#22C55E', backgroundColor: '#22C55E' },
+  difficultyText: { fontSize: 14, fontWeight: '600', color: colors.textSecondary },
+  difficultyTextActive: { color: '#fff' },
+  sectionLabel: { fontSize: 15, fontWeight: 'bold', color: colors.textPrimary, marginTop: 8, marginBottom: 8 },
+  ingredientRow: { flexDirection: 'row', gap: 6, marginBottom: 8, alignItems: 'center' },
   ingredientName: { flex: 3 },
   ingredientQty: { flex: 1 },
   ingredientUnit: { flex: 1.5 },
-
-  // Steps
-  stepRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 8,
-    gap: 6,
-  },
-  stepNumber: {
-    fontSize: 15,
-    fontWeight: 'bold',
-    color: '#22C55E',
-    marginTop: 10,
-    width: 20,
-  },
+  stepRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 8, gap: 6 },
+  stepNumber: { fontSize: 15, fontWeight: 'bold', color: '#22C55E', marginTop: 10, width: 20 },
   stepInput: { flex: 1, minHeight: 44 },
-
-  // Add/Remove buttons
-  addButton: {
-    alignSelf: 'flex-start',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    marginBottom: 8,
-  },
-  addButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#22C55E',
-  },
+  addButton: { alignSelf: 'flex-start', paddingVertical: 6, paddingHorizontal: 12, marginBottom: 8 },
+  addButtonText: { fontSize: 14, fontWeight: '600', color: '#22C55E' },
   removeButton: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#eee',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 6,
+    width: 28, height: 28, borderRadius: 14, backgroundColor: colors.backgroundTertiary,
+    justifyContent: 'center', alignItems: 'center', marginTop: 6,
   },
-  removeButtonText: {
-    fontSize: 13,
-    fontWeight: 'bold',
-    color: '#999',
-  },
-});
+  removeButtonText: { fontSize: 13, fontWeight: 'bold', color: colors.textSecondary },
+  });
+}

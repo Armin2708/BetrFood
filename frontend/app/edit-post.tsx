@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -28,6 +28,7 @@ export default function EditPostScreen() {
   const { postId } = useLocalSearchParams<{ postId: string }>();
   const scaledTypography = useScaledTypography();
   const { colors } = useAppTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const [caption, setCaption] = useState('');
   const [imagePath, setImagePath] = useState('');
@@ -277,37 +278,38 @@ export default function EditPostScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
+function makeStyles(colors: any) {
+  return StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.backgroundPrimary },
   scrollContent: { padding: 16 },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  title: { marginBottom: 16, color: '#333' },
-  image: { width: '100%', height: 250, borderRadius: 12, backgroundColor: '#eee', marginBottom: 16 },
-  label: { color: '#333', marginBottom: 8 },
-  captionInput: { borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 12, fontSize: 16, minHeight: 100, textAlignVertical: 'top', color: '#333' },
-  charCount: { alignSelf: 'flex-end', color: '#999', marginTop: 4, marginBottom: 16 },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.backgroundPrimary },
+  title: { marginBottom: 16, color: colors.textPrimary },
+  image: { width: '100%', height: 250, borderRadius: 12, backgroundColor: colors.borderLight, marginBottom: 16 },
+  label: { color: colors.textPrimary, marginBottom: 8 },
+  captionInput: { borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 12, fontSize: 16, minHeight: 100, textAlignVertical: 'top', color: colors.textPrimary, backgroundColor: colors.backgroundSecondary },
+  charCount: { alignSelf: 'flex-end', color: colors.textTertiary, marginTop: 4, marginBottom: 16 },
   buttonRow: { flexDirection: 'row', gap: 12 },
-  cancelButton: { flex: 1, padding: 14, borderRadius: 8, borderWidth: 1, borderColor: '#ddd', alignItems: 'center' },
-  cancelButtonText: { color: '#666' },
+  cancelButton: { flex: 1, padding: 14, borderRadius: 8, borderWidth: 1, borderColor: colors.border, alignItems: 'center' },
+  cancelButtonText: { color: colors.textSecondary },
   saveButton: { flex: 1, padding: 14, borderRadius: 8, backgroundColor: '#2ecc71', alignItems: 'center' },
   saveButtonText: { color: '#fff' },
   buttonDisabled: { opacity: 0.6 },
   recipeToggle: { marginBottom: 16, paddingVertical: 12, borderRadius: 8, borderWidth: 1, borderColor: '#22C55E', alignItems: 'center' },
-  recipeToggleActive: { backgroundColor: '#FFF0E8' },
+  recipeToggleActive: { backgroundColor: colors.backgroundSecondary },
   recipeToggleText: { color: '#22C55E' },
-  recipeToggleTextActive: { color: '#CC4400' },
-  recipeForm: { marginBottom: 16, padding: 14, backgroundColor: '#FFF8F0', borderRadius: 10, borderWidth: 1, borderColor: '#FFE0C2' },
+  recipeToggleTextActive: { color: '#22C55E' },
+  recipeForm: { marginBottom: 16, padding: 14, backgroundColor: colors.backgroundSecondary, borderRadius: 10, borderWidth: 1, borderColor: colors.border },
   recipeTitle: { color: '#22C55E', marginBottom: 12 },
   recipeRow: { flexDirection: 'row', gap: 12, marginBottom: 12 },
   recipeField: { flex: 1 },
-  fieldLabel: { color: '#666', marginBottom: 4 },
-  fieldInput: { borderWidth: 1, borderColor: '#ddd', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 8, fontSize: 15, backgroundColor: '#fff' },
+  fieldLabel: { color: colors.textSecondary, marginBottom: 4 },
+  fieldInput: { borderWidth: 1, borderColor: colors.border, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 8, fontSize: 15, backgroundColor: colors.backgroundPrimary, color: colors.textPrimary },
   difficultyRow: { flexDirection: 'row', gap: 8, marginBottom: 14, marginTop: 4 },
-  difficultyOption: { flex: 1, paddingVertical: 8, borderRadius: 6, borderWidth: 1, borderColor: '#ddd', alignItems: 'center', backgroundColor: '#fff' },
+  difficultyOption: { flex: 1, paddingVertical: 8, borderRadius: 6, borderWidth: 1, borderColor: colors.border, alignItems: 'center', backgroundColor: colors.backgroundPrimary },
   difficultyOptionActive: { borderColor: '#22C55E', backgroundColor: '#22C55E' },
-  difficultyText: { color: '#666' },
+  difficultyText: { color: colors.textSecondary },
   difficultyTextActive: { color: '#fff' },
-  sectionLabel: { color: '#333', marginTop: 8, marginBottom: 8 },
+  sectionLabel: { color: colors.textPrimary, marginTop: 8, marginBottom: 8 },
   ingredientRow: { flexDirection: 'row', gap: 6, marginBottom: 8, alignItems: 'center' },
   ingredientName: { flex: 3 },
   ingredientQty: { flex: 1 },
@@ -317,6 +319,7 @@ const styles = StyleSheet.create({
   stepInput: { flex: 1, minHeight: 44 },
   addButton: { alignSelf: 'flex-start', paddingVertical: 6, paddingHorizontal: 12, marginBottom: 8 },
   addButtonText: { color: '#22C55E' },
-  removeButton: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#eee', justifyContent: 'center', alignItems: 'center', marginTop: 6 },
-  removeButtonText: { color: '#999' },
-});
+  removeButton: { width: 28, height: 28, borderRadius: 14, backgroundColor: colors.backgroundTertiary, justifyContent: 'center', alignItems: 'center', marginTop: 6 },
+  removeButtonText: { color: colors.textSecondary },
+  });
+}
