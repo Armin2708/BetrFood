@@ -9,7 +9,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useFocusEffect, router } from 'expo-router';
-import { feedEvents } from '../../../utils/feedEvents';
+import { feedEvents, likeEvents } from '../../../utils/feedEvents';
 import Post from '../../../components/Post';
 import PostSkeleton from '../../../components/PostSkeleton';
 import FeedHeader from '../../../components/FeedHeader';
@@ -42,6 +42,7 @@ type PostWithMatch = PostType & {
   _matchedCount?: number;
   _missingCount?: number;
   _isMatch?: boolean;
+  _missingIngredients?: string[];
 };
 
 export default function HomeScreen() {
@@ -78,12 +79,22 @@ export default function HomeScreen() {
             const recipe = post.recipe ?? (await fetchRecipe(post.id));
             const ingredientNames = (recipe?.ingredients ?? []).map((i) => i.name);
             const result = matchRecipeToPantry(ingredientNames, pantryItems);
+
+            // Compute which ingredient names are missing from the pantry
+            const pantryNameSet = new Set(
+              pantryItems.map((p) => p.name.toLowerCase().trim())
+            );
+            const missingIngredients = ingredientNames.filter(
+              (name) => !pantryNameSet.has(name.toLowerCase().trim())
+            );
+
             return {
               ...post,
               _recipe: recipe,
               _matchedCount: result.matched,
               _missingCount: result.missing,
               _isMatch: result.isMatch,
+              _missingIngredients: missingIngredients,
             };
           } catch {
             return post;
@@ -176,6 +187,16 @@ export default function HomeScreen() {
 
   const hasLoadedRef = useRef(false);
   const flatListRef = useRef<FlatList>(null);
+  const enrichRef = useRef(enrichWithPantryMatch);
+  useEffect(() => { enrichRef.current = enrichWithPantryMatch; }, [enrichWithPantryMatch]);
+
+  // Re-enrich posts when pantry items load after the feed
+  useEffect(() => {
+    if (posts.length === 0 || pantryItems.length === 0) return;
+    const needsEnrichment = posts.some(p => p._isMatch === undefined && (p.recipeId || (p as any).recipe));
+    if (!needsEnrichment) return;
+    enrichRef.current(posts).then(setPosts);
+  }, [pantryItems.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useFocusEffect(
     useCallback(() => {
@@ -193,6 +214,16 @@ export default function HomeScreen() {
     });
     return unsub;
   }, [loadPosts, selectedTagIds, feedType]);
+
+  // Update like state in-place when a post is liked/unliked anywhere in the app
+  useEffect(() => {
+    const unsub = likeEvents.onLikeUpdate((postId, liked, likeCount) => {
+      setPosts(prev => prev.map(p =>
+        p.id === postId ? { ...p, liked, likeCount } : p
+      ));
+    });
+    return unsub;
+  }, []);
 
   const handleEndReached = useCallback(() => {
     if (!loadingMore && hasMore) loadMore();
@@ -338,6 +369,7 @@ export default function HomeScreen() {
             pantryMatchedCount={item._matchedCount}
             pantryMissingCount={item._missingCount}
             isPantryMatch={item._isMatch}
+            pantryMissingIngredients={item._missingIngredients}
           />
         )}
         ListFooterComponent={

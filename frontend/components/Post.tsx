@@ -4,7 +4,7 @@ import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
 import { Collection, useCollections } from "../context/CollectionsContext";
 import { Tag, Recipe, Comment, deletePost, fetchRecipe, likePost, unlikePost, reportContent, fetchComments, createComment, deleteComment, checkSaveStatus, blockUser, unblockUser, muteUser, unmuteUser, checkBlockStatus, checkMuteStatus, markPostNotInterested } from '../services/api';
-import { feedEvents, collectionEvents } from '../utils/feedEvents';
+import { feedEvents, collectionEvents, likeEvents } from '../utils/feedEvents';
 import { usePostViewTracking } from '../hooks/usePostViewTracking';
 import { useScaledTypography } from '../hooks/useScaledTypography';
 import TagDisplay from './TagDisplay';
@@ -13,6 +13,7 @@ import { useVideoPlayer, VideoView } from 'expo-video';
 import { ThemeColors } from '../constants/theme';
 import { useAppTheme } from '../context/ThemeContext';
 import { AuthContext } from '../context/AuthenticationContext';
+import { usePantry } from '../context/PantryContext';
 import {
   View,
   Text,
@@ -56,6 +57,7 @@ interface PostProps {
   isPantryMatch?: boolean;
   pantryMatchedCount?: number;
   pantryMissingCount?: number;
+  pantryMissingIngredients?: string[];
 }
 
 export default function Post({
@@ -80,11 +82,16 @@ export default function Post({
   isPantryMatch,
   pantryMatchedCount,
   pantryMissingCount,
+  pantryMissingIngredients = [],
 }: PostProps) {
   const scaledTypography = useScaledTypography();
   const [liked, setLiked] = useState(initialLiked);
   const [likeCount, setLikeCount] = useState(initialLikes);
   const [likeLoading, setLikeLoading] = useState(false);
+
+  // Sync when parent feed updates like state (e.g. liked from another screen)
+  useEffect(() => { setLiked(initialLiked); }, [initialLiked]);
+  useEffect(() => { setLikeCount(initialLikes); }, [initialLikes]);
   const [saved, setSaved] = useState(false);
   const [savedInCollections, setSavedInCollections] = useState<Collection[]>([]);
   const [collectionModalVisible, setCollectionModalVisible] = useState(false);
@@ -113,11 +120,13 @@ export default function Post({
   const menuSlideAnim = useRef(new Animated.Value(Dimensions.get('window').height)).current;
   const commentInputRef = useRef<TextInput>(null);
   const { user } = useContext(AuthContext);
+  const { items: pantryItems } = usePantry();
   const { colors } = useAppTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [isBlocked, setIsBlocked] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [isNotInterested, setIsNotInterested] = useState(false);
+  const [pantryModalVisible, setPantryModalVisible] = useState(false);
   const [confirmModal, setConfirmModal] = useState<{
     visible: boolean;
     title: string;
@@ -366,6 +375,7 @@ export default function Post({
     try {
       const data = newLiked ? await likePost(id) : await unlikePost(id);
       setLikeCount(data.likes);
+      likeEvents.emitLikeUpdate(id, newLiked, data.likes);
     } catch {
       setLiked(prevLiked);
       setLikeCount(prevCount);
@@ -626,11 +636,56 @@ export default function Post({
     });
   };
 
-  // Only show pantry badge when we have match data
-  const showPantryBadge =
-    isPantryMatch !== undefined &&
-    pantryMatchedCount !== undefined &&
-    pantryMissingCount !== undefined;
+  // ── Pantry match — computed locally from recipe + pantry items ────────────
+  // Fuzzy matching strips cooking adjectives and normalises plurals so
+  // "Chopped Green Onion" matches "Green Onions".
+  const localPantryMatch = useMemo(() => {
+    if (!recipe || pantryItems.length === 0) return null;
+    const ingredients = recipe.ingredients ?? [];
+    if (ingredients.length === 0) return null;
+
+    // Words to strip before comparing
+    const COOKING_WORDS = /\b(chopped|sliced|diced|minced|grated|shredded|cooked|raw|fresh|dried|frozen|canned|whole|ground|crushed|peeled|pitted|boneless|skinless|large|medium|small|extra|toasted|roasted|boiled|fried|steamed|1|2|3|4|5|6|7|8|9|0)\b/gi;
+
+    const normalize = (s: string) =>
+      s.toLowerCase()
+       .replace(COOKING_WORDS, '')
+       .replace(/s\b/g, '')   // strip trailing 's' for plurals
+       .replace(/\s+/g, ' ')
+       .trim();
+
+    const pantryNormalized = pantryItems.map(p => normalize(p.name));
+
+    const missing: string[] = [];
+
+    for (const ing of ingredients) {
+      const ingNorm = normalize(ing.name);
+      const isMatched = pantryNormalized.some(pNorm =>
+        ingNorm.includes(pNorm) || pNorm.includes(ingNorm)
+      );
+      if (!isMatched) missing.push(ing.name);
+    }
+
+    return {
+      matchedCount: ingredients.length - missing.length,
+      missingCount: missing.length,
+      missingIngredients: missing,
+      isMatch: missing.length === 0,
+    };
+  }, [recipe, pantryItems]);
+
+  // Use locally computed values, falling back to props if recipe not loaded yet
+  const effectivePantryMatch = localPantryMatch ?? (
+    isPantryMatch !== undefined ? {
+      matchedCount: pantryMatchedCount ?? 0,
+      missingCount: pantryMissingCount ?? 0,
+      missingIngredients: pantryMissingIngredients,
+      isMatch: isPantryMatch,
+    } : null
+  );
+
+  // Show badge whenever we have a recipe and pantry items
+  const showPantryBadge = effectivePantryMatch !== null;
 
   return (
     <View style={styles.outerContainer}>
@@ -773,42 +828,84 @@ export default function Post({
         {likeCount} {likeCount === 1 ? 'like' : 'likes'}
       </Text>
 
-      <Text style={[styles.caption, scaledTypography.body]}>
-        <Text style={[styles.captionUsername, scaledTypography.body]}>{username} </Text>{caption}
-      </Text>
+        <Text style={[styles.caption, scaledTypography.body]}>{caption}</Text>
 
       {tags && tags.length > 0 && <TagDisplay tags={tags} />}
 
       {/* ── Pantry match badge ─────────────────────────────────────────── */}
-      {showPantryBadge && (
-        <View
+      {showPantryBadge && effectivePantryMatch && (
+        <TouchableOpacity
           style={[
             styles.pantryBadge,
-            isPantryMatch ? styles.pantryBadgeMatch : styles.pantryBadgePartial,
+            effectivePantryMatch.isMatch ? styles.pantryBadgeMatch : styles.pantryBadgePartial,
           ]}
+          onPress={() => setPantryModalVisible(true)}
+          activeOpacity={0.7}
           accessible
+          accessibilityRole="button"
           accessibilityLabel={
-            isPantryMatch
-              ? `Pantry match: ${pantryMatchedCount} ingredients in your pantry, ${pantryMissingCount} needed`
-              : `Partial match: ${pantryMatchedCount} ingredients in your pantry, ${pantryMissingCount} missing`
+            effectivePantryMatch.isMatch
+              ? `Pantry match: all ingredients in your pantry`
+              : `Partial match: ${effectivePantryMatch.matchedCount} in pantry, ${effectivePantryMatch.missingCount} missing`
           }
         >
           <Ionicons
-            name={isPantryMatch ? 'checkmark-circle' : 'basket-outline'}
+            name={effectivePantryMatch.isMatch ? 'checkmark-circle' : 'basket-outline'}
             size={14}
-            color={isPantryMatch ? '#16A34A' : '#92400E'}
+            color={effectivePantryMatch.isMatch ? '#16A34A' : '#92400E'}
           />
           <Text style={[styles.pantryBadgeText, scaledTypography.caption,
-              isPantryMatch ? styles.pantryBadgeTextMatch : styles.pantryBadgeTextPartial,
+              effectivePantryMatch.isMatch ? styles.pantryBadgeTextMatch : styles.pantryBadgeTextPartial,
             ]}>
-            {isPantryMatch ? '✓ Pantry match · ' : ''}
-            {pantryMatchedCount} in pantry
-            {(pantryMissingCount ?? 0) > 0
-              ? ` · ${pantryMissingCount} needed`
+            {effectivePantryMatch.isMatch ? '✓ Pantry match · ' : ''}
+            {effectivePantryMatch.matchedCount} in pantry
+            {effectivePantryMatch.missingCount > 0
+              ? ` · ${effectivePantryMatch.missingCount} needed`
               : ''}
           </Text>
-        </View>
+        </TouchableOpacity>
       )}
+
+      {/* ── Pantry missing ingredients modal ──────────────────────────── */}
+      <Modal
+        visible={pantryModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPantryModalVisible(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setPantryModalVisible(false)}>
+          <Pressable style={styles.modalBox} onPress={e => e.stopPropagation()}>
+            <Text style={styles.modalTitle}>
+              {(effectivePantryMatch?.missingCount ?? 0) === 0 ? 'Pantry Match!' : 'Missing Ingredients'}
+            </Text>
+            {(effectivePantryMatch?.missingCount ?? 0) === 0 ? (
+              <Text style={styles.modalMessage}>
+                You have all the ingredients for this recipe in your pantry!
+              </Text>
+            ) : (
+              <>
+                <Text style={styles.modalMessage}>
+                  You're missing {effectivePantryMatch?.missingCount} ingredient{effectivePantryMatch?.missingCount === 1 ? '' : 's'} for this recipe:
+                </Text>
+                {(effectivePantryMatch?.missingIngredients ?? []).map((ingredient, index) => (
+                  <View key={index} style={styles.missingIngredientRow}>
+                    <Ionicons name="close-circle-outline" size={16} color="#EF4444" style={{ marginRight: 8 }} />
+                    <Text style={styles.missingIngredientText}>{ingredient}</Text>
+                  </View>
+                ))}
+              </>
+            )}
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.modalCancelButton}
+                onPress={() => setPantryModalVisible(false)}
+              >
+                <Text style={styles.modalCancelText}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       {recipe && <RecipeDisplay recipe={recipe} />}
 
@@ -1302,12 +1399,23 @@ function makeStyles(colors: ThemeColors) {
     alignItems: 'center',
   },
   modalBox: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.backgroundElevated,
     borderRadius: 14,
     padding: 24,
     width: 300,
-    boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
     elevation: 8,
+  },
+  missingIngredientRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.borderLight,
+  },
+  missingIngredientText: {
+    fontSize: 14,
+    color: colors.textPrimary,
+    flex: 1,
   },
   modalTitle: {
     fontSize: 18,

@@ -872,8 +872,21 @@ function makeMarkdownStyles(colors: ThemeColors) {
     lineHeight: 26,
     color: colors.textPrimary,
   },
+  text: {
+    color: colors.textPrimary,
+    fontSize: 15,
+    lineHeight: 26,
+  },
+  paragraph: {
+    marginVertical: 2,
+    color: colors.textPrimary,
+  },
   strong: {
     fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  em: {
+    color: colors.textPrimary,
   },
   bullet_list: {
     marginVertical: 4,
@@ -883,12 +896,17 @@ function makeMarkdownStyles(colors: ThemeColors) {
   },
   list_item: {
     marginVertical: 2,
+    color: colors.textPrimary,
   },
-  paragraph: {
-    marginVertical: 2,
+  bullet_list_icon: {
+    color: colors.textPrimary,
+  },
+  ordered_list_icon: {
+    color: colors.textPrimary,
   },
   code_inline: {
     backgroundColor: colors.backgroundTertiary,
+    color: colors.textPrimary,
     borderRadius: 4,
     paddingHorizontal: 4,
     fontSize: 13,
@@ -896,6 +914,7 @@ function makeMarkdownStyles(colors: ThemeColors) {
   },
   fence: {
     backgroundColor: colors.backgroundTertiary,
+    color: colors.textPrimary,
     borderRadius: 10,
     padding: 10,
     fontSize: 13,
@@ -1278,9 +1297,9 @@ function makeStyles(colors: ThemeColors) {
     borderRadius: 18,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    backgroundColor: '#E7F6EA',
+    backgroundColor: colors.backgroundSecondary,
     borderWidth: 1,
-    borderColor: '#C6E7CF',
+    borderColor: colors.border,
     gap: 4,
   },
   postContextHeader: {

@@ -1,7 +1,7 @@
 import { View, Text, TextInput, StyleSheet, Pressable, ActivityIndicator, Alert, Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import * as ImagePicker from 'expo-image-picker';
 import { fetchMyProfile, updateMyProfile, uploadAvatar, getAvatarUrl, checkUsername, UserProfile } from "../../../../services/api";
 import { colors, spacing } from "../../../../constants/theme";
@@ -11,6 +11,8 @@ import { useAppTheme } from "../../../../context/ThemeContext";
 export default function EditProfile() {
   const router = useRouter();
   const scaledTypography = useScaledTypography();
+  const { colors: themeColors } = useAppTheme();
+  const styles = useMemo(() => makeStyles(themeColors), [themeColors]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -121,7 +123,7 @@ export default function EditProfile() {
   if (loading) {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color={colors.primary} />
+        <ActivityIndicator size="large" color={themeColors.primary} />
       </View>
     );
   }
@@ -134,7 +136,7 @@ export default function EditProfile() {
           <Image source={{ uri: avatarChanged ? avatarUrl : getAvatarUrl(avatarUrl, displayName || username) }} style={styles.avatarImage} />
         ) : (
           <View style={styles.avatarPlaceholder}>
-            <Ionicons name="person" size={44} color={colors.textQuaternary} />
+            <Ionicons name="person" size={44} color={themeColors.textTertiary} />
           </View>
         )}
         <View style={styles.changePhoto}>
@@ -213,25 +215,23 @@ export default function EditProfile() {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: any) {
+  return StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.backgroundPrimary,
     padding: spacing.xl,
   },
-
   avatarSection: {
     alignItems: "center",
     marginBottom: 30,
     minHeight: 44,
   },
-
   avatarImage: {
     width: 100,
     height: 100,
     borderRadius: 50,
   },
-
   avatarPlaceholder: {
     width: 100,
     height: 100,
@@ -240,28 +240,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-
   changePhoto: {
     marginTop: spacing.sm,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.lg,
   },
-
   changePhotoText: {
     color: colors.primary,
     fontWeight: "600",
   },
-
   inputGroup: {
     marginBottom: spacing.xl,
   },
-
   label: {
     fontWeight: "600",
     color: colors.textPrimary,
     marginBottom: 6,
   },
-
   input: {
     borderWidth: 1,
     borderColor: colors.border,
@@ -269,37 +264,31 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     fontSize: 16,
     color: colors.textPrimary,
-    backgroundColor: colors.backgroundMuted,
+    backgroundColor: colors.backgroundSecondary,
   },
-
   bio: {
     height: 80,
     textAlignVertical: "top",
   },
-
   charCount: {
-    color: colors.textQuaternary,
+    color: colors.textTertiary,
     textAlign: 'right',
     marginTop: spacing.xs,
   },
-
   usernameStatus: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 6,
     gap: 4,
   },
-
   usernameAvailable: {
     color: '#4CAF50',
     fontWeight: '500',
   },
-
   usernameTaken: {
     color: '#EF4444',
     fontWeight: '500',
   },
-
   saveButton: {
     backgroundColor: colors.primary,
     paddingVertical: 14,
@@ -309,13 +298,12 @@ const styles = StyleSheet.create({
     minHeight: 48,
     justifyContent: 'center',
   },
-
   saveButtonDisabled: {
     opacity: 0.5,
   },
-
   saveText: {
     color: colors.white,
     fontWeight: "600",
   },
-});
+  });
+}
