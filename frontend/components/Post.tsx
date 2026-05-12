@@ -633,6 +633,7 @@ export default function Post({
     pantryMissingCount !== undefined;
 
   return (
+    <View style={styles.outerContainer}>
     <View style={styles.container} accessible={true} accessibilityLabel={`Post by ${username}`}>
       <View style={styles.header}>
         <TouchableOpacity
@@ -1188,6 +1189,7 @@ export default function Post({
         </Pressable>
       </Modal>
     </View>
+    </View>
   );
 }
 
@@ -1210,11 +1212,17 @@ function PostVideo({ uri }: { uri: string }) {
 
 function makeStyles(colors: ThemeColors) {
   return StyleSheet.create({
+  outerContainer: {
+    width: '100%',
+    alignItems: Platform.OS === 'web' ? 'center' : 'stretch',
+    backgroundColor: colors.backgroundPrimary,
+  },
   container: {
     marginVertical: 10,
     backgroundColor: colors.backgroundPrimary,
     borderBottomWidth: 1,
     borderColor: colors.border,
+    width: Platform.OS === 'web' ? '50%' : '100%',
   },
   header: { flexDirection: 'row', alignItems: 'center', padding: 10 },
   headerUserInfo: { flexDirection: 'row', alignItems: 'center', flex: 1 },
@@ -1229,7 +1237,7 @@ function makeStyles(colors: ThemeColors) {
     fontWeight: 'bold',
     color: colors.white,
   },
-  username: { fontWeight: 'bold', fontSize: 16, flex: 1 },
+  username: { fontWeight: 'bold', fontSize: 16, flex: 1, color: colors.textPrimary },
   menuButton: { padding: 8 },
   postImage: { width: '100%', aspectRatio: 4 / 3, backgroundColor: colors.borderLight },
   actions: { flexDirection: 'row', paddingHorizontal: 10, paddingTop: 10, gap: 16 },
