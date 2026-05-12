@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, ActivityIndicator, Image,
 } from 'react-native';
@@ -7,6 +7,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useScaledTypography } from '../hooks/useScaledTypography';
+import { useAppTheme } from '../context/ThemeContext';
 import type { Draft } from './create-post';
 
 const DRAFTS_STORAGE_KEY = 'drafts';
@@ -15,6 +16,8 @@ export default function DraftsScreen() {
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [loading, setLoading] = useState(true);
   const scaledTypography = useScaledTypography();
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const loadDrafts = useCallback(async () => {
     try {
@@ -82,7 +85,7 @@ export default function DraftsScreen() {
           <Image source={{ uri: item.imageUri }} style={styles.draftThumbnail} />
         ) : (
           <View style={[styles.draftThumbnail, styles.draftThumbnailPlaceholder]}>
-            <Ionicons name="image-outline" size={20} color="#ccc" />
+            <Ionicons name="image-outline" size={20} color={colors.textTertiary} />
           </View>
         )}
         <View style={styles.draftContent}>
@@ -111,7 +114,7 @@ export default function DraftsScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="#333" />
+          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
         <Text style={[styles.title, scaledTypography.title]}>Drafts</Text>
         <View style={{ width: 24 }} />
@@ -124,7 +127,7 @@ export default function DraftsScreen() {
         contentContainerStyle={drafts.length === 0 ? styles.emptyContainer : styles.list}
         ListEmptyComponent={
           <View style={styles.emptyState}>
-            <Ionicons name="document-text-outline" size={48} color="#ccc" />
+            <Ionicons name="document-text-outline" size={48} color={colors.textTertiary} />
             <Text style={[styles.emptyTitle, scaledTypography.label]}>No drafts saved</Text>
             <Text style={[styles.emptySubtitle, scaledTypography.label]}>
               Drafts you save while creating a post will appear here.
@@ -136,15 +139,10 @@ export default function DraftsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  centered: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+function makeStyles(colors: any) {
+  return StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.backgroundPrimary },
+  centered: { justifyContent: 'center', alignItems: 'center' },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -153,21 +151,19 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderColor: '#eee',
+    borderColor: colors.border,
+    backgroundColor: colors.backgroundPrimary,
   },
-  title: {
-  },
-  list: {
-    padding: 16,
-  },
+  title: { color: colors.textPrimary },
+  list: { padding: 16 },
   draftItem: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 14,
     borderRadius: 10,
-    backgroundColor: '#f9f9f9',
+    backgroundColor: colors.backgroundSecondary,
     borderWidth: 1,
-    borderColor: '#eee',
+    borderColor: colors.border,
     marginBottom: 10,
   },
   draftThumbnail: {
@@ -175,50 +171,23 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 8,
     marginRight: 12,
-    backgroundColor: '#eee',
+    backgroundColor: colors.borderLight,
   },
   draftThumbnailPlaceholder: {
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: colors.border,
     borderStyle: 'dashed',
   },
-  draftContent: {
-    flex: 1,
-  },
-  draftPreview: {
-    color: '#333',
-  },
-  draftDetails: {
-    color: '#22C55E',
-    marginTop: 4,
-  },
-  draftDate: {
-    color: '#999',
-    marginTop: 4,
-  },
-  deleteButton: {
-    padding: 8,
-    marginLeft: 8,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  emptyState: {
-    alignItems: 'center',
-    padding: 40,
-  },
-  emptyTitle: {
-    color: '#666',
-    marginTop: 12,
-  },
-  emptySubtitle: {
-    color: '#999',
-    textAlign: 'center',
-    marginTop: 8,
-    paddingHorizontal: 20,
-  },
-});
+  draftContent: { flex: 1 },
+  draftPreview: { color: colors.textPrimary },
+  draftDetails: { color: '#22C55E', marginTop: 4 },
+  draftDate: { color: colors.textTertiary, marginTop: 4 },
+  deleteButton: { padding: 8, marginLeft: 8 },
+  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  emptyState: { alignItems: 'center', padding: 40 },
+  emptyTitle: { color: colors.textSecondary, marginTop: 12 },
+  emptySubtitle: { color: colors.textTertiary, textAlign: 'center', marginTop: 8, paddingHorizontal: 20 },
+  });
+}

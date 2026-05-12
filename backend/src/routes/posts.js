@@ -1134,7 +1134,8 @@ router.get('/:id', optionalAuth, async (req, res) => {
     const [withCount] = await enrichPostsWithCommentCounts([withTags]);
     const [withImages] = await enrichPostsWithImages([withCount]);
     const [withRecipe] = await enrichPostsWithRecipes([withImages]);
-    res.json(mapPost(withRecipe));
+    const [withLikes] = await enrichPostsWithLikes([withRecipe], req.userId);
+    res.json(mapPost(withLikes));
   } catch (error) {
     console.error('Error fetching post:', error);
     res.status(500).json({ error: 'Failed to fetch post.' });

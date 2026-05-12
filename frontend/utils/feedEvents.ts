@@ -29,3 +29,19 @@ export const collectionEvents = {
     saveStatusListeners.forEach(l => l(postId));
   },
 };
+
+// Event emitter for like state changes — updates feed in-place without full reload
+type LikeUpdateListener = (postId: string, liked: boolean, likeCount: number) => void;
+const likeUpdateListeners = new Set<LikeUpdateListener>();
+
+export const likeEvents = {
+  onLikeUpdate(listener: LikeUpdateListener) {
+    likeUpdateListeners.add(listener);
+    return () => {
+      likeUpdateListeners.delete(listener);
+    };
+  },
+  emitLikeUpdate(postId: string, liked: boolean, likeCount: number) {
+    likeUpdateListeners.forEach(l => l(postId, liked, likeCount));
+  },
+};
