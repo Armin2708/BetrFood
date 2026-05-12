@@ -34,7 +34,7 @@ function RootNavigator() {
 
   return (
     <NavigationThemeProvider value={navigationTheme}>
-      <StatusBar style={isDark ? 'light' : 'dark'} />
+      <StatusBar style={isDark ? 'light' : 'dark'} backgroundColor={colors.backgroundPrimary} />
       <SafeAreaView
         style={{ flex: 1, overflow: 'hidden', backgroundColor: colors.backgroundPrimary }}
         edges={["top"]}
@@ -49,7 +49,7 @@ export default function RootLayout() {
   useFonts({ ...Ionicons.font });
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#0F172A' }}>
       <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
         <ClerkLoaded>
           <SafeAreaProvider>

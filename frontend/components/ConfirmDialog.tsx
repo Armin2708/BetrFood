@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { colors, radius } from '../constants/theme';
+import { useAppTheme } from '../context/ThemeContext';
 import { useScaledTypography } from '../hooks/useScaledTypography';
 import BaseModal from './BaseModal';
 
@@ -26,13 +27,14 @@ export default function ConfirmDialog({
   onCancel,
 }: ConfirmDialogProps) {
   const scaledTypography = useScaledTypography();
+  const { colors: themeColors } = useAppTheme();
   return (
     <BaseModal visible={visible} onClose={onCancel}>
-      <Text style={[styles.title, scaledTypography.subtitle]}>{title}</Text>
-      <Text style={[styles.message, scaledTypography.body]}>{message}</Text>
+      <Text style={[styles.title, scaledTypography.subtitle, { color: themeColors.textPrimary }]}>{title}</Text>
+      <Text style={[styles.message, scaledTypography.body, { color: themeColors.textSecondary }]}>{message}</Text>
       <View style={styles.buttons}>
-        <TouchableOpacity style={styles.cancelBtn} onPress={onCancel}>
-          <Text style={[styles.cancelText, scaledTypography.body]}>{cancelLabel}</Text>
+        <TouchableOpacity style={[styles.cancelBtn, { borderColor: themeColors.border }]} onPress={onCancel}>
+          <Text style={[styles.cancelText, scaledTypography.body, { color: themeColors.textSecondary }]}>{cancelLabel}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.confirmBtn, destructive && styles.confirmBtnDestructive]}

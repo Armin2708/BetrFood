@@ -190,7 +190,7 @@ export default function ProfileScreen() {
           >
             <View style={[
               styles.tabIconContainer,
-              activeTab === tab.key && styles.tabIconContainerActive,
+              activeTab === tab.key && { backgroundColor: themeColors.backgroundSecondary },
             ]}>
               <Ionicons
                 name={tab.icon}
@@ -390,7 +390,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   followCount: {
-    color: '#000000',
+    color: '#0F172A',
   },
   followLabel: {
     color: '#64748B',
