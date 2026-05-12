@@ -1175,7 +1175,7 @@ function makeStyles(colors: ThemeColors) {
     paddingHorizontal: 12,
     paddingTop: 0,
     paddingBottom: 0,
-    backgroundColor: colors.backgroundElevated,
+    backgroundColor: colors.backgroundPrimary,
   },
   attachmentPreviewCard: {
     alignSelf: 'flex-end',

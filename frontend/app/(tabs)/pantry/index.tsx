@@ -49,12 +49,13 @@ function PantryItemModal({
   onSave,
 }: {
   visible: boolean;
-  item: PantryItem | null; // null => add mode, non-null => edit mode
+  item: PantryItem | null;
   onClose: () => void;
   onAdd: (item: PantryItemInput) => Promise<void>;
   onSave: (id: string, updates: Partial<PantryItemInput>) => Promise<void>;
 }) {
   const isEdit = !!item;
+  const { colors: themeColors } = useAppTheme();
 
   const [name, setName] = useState('');
   const [quantity, setQuantity] = useState('');
@@ -137,14 +138,15 @@ function PantryItemModal({
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.modalOverlay}
         >
-          <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
-            <Text style={styles.sheetTitle} accessibilityRole="header">
+          <Pressable style={[styles.sheet, { backgroundColor: themeColors.backgroundPrimary }]} onPress={(e) => e.stopPropagation()}>
+            <Text style={[styles.sheetTitle, { color: themeColors.textPrimary }]} accessibilityRole="header">
               {isEdit ? 'Edit Item' : 'Add Pantry Item'}
             </Text>
 
             <TextInput
-              style={styles.input}
+              style={[styles.input, { borderColor: themeColors.border, color: themeColors.textPrimary, backgroundColor: themeColors.backgroundSecondary }]}
               placeholder="Item name *"
+              placeholderTextColor={themeColors.placeholder}
               value={name}
               onChangeText={setName}
               accessibilityLabel="Item name"
@@ -153,23 +155,25 @@ function PantryItemModal({
 
             <View style={styles.row}>
               <TextInput
-                style={[styles.input, styles.inputFlex]}
+                style={[styles.input, styles.inputFlex, { borderColor: themeColors.border, color: themeColors.textPrimary, backgroundColor: themeColors.backgroundSecondary }]}
                 placeholder="Qty *"
+                placeholderTextColor={themeColors.placeholder}
                 value={quantity}
                 onChangeText={setQuantity}
                 keyboardType="decimal-pad"
                 accessibilityLabel="Quantity"
               />
               <TextInput
-                style={[styles.input, styles.inputFlex]}
+                style={[styles.input, styles.inputFlex, { borderColor: themeColors.border, color: themeColors.textPrimary, backgroundColor: themeColors.backgroundSecondary }]}
                 placeholder="Unit * (e.g. cups)"
+                placeholderTextColor={themeColors.placeholder}
                 value={unit}
                 onChangeText={setUnit}
                 accessibilityLabel="Unit"
               />
             </View>
 
-            <Text style={styles.fieldLabel}>Category</Text>
+            <Text style={[styles.fieldLabel, { color: themeColors.textSecondary }]}>Category</Text>
             <View style={styles.chipRow}>
               {CATEGORIES.map((cat) => (
                 <TouchableOpacity
@@ -180,19 +184,18 @@ function PantryItemModal({
                   accessibilityState={{ selected: category === cat }}
                   accessibilityLabel={cat}
                 >
-                  <Text style={[styles.chipText, category === cat && styles.chipTextSelected]}>
+                  <Text style={[styles.chipText, { color: themeColors.textSecondary }, category === cat && styles.chipTextSelected]}>
                     {cat}
                   </Text>
                 </TouchableOpacity>
               ))}
             </View>
 
-            <Text style={styles.fieldLabel}>Expiration Date (optional)</Text>
+            <Text style={[styles.fieldLabel, { color: themeColors.textSecondary }]}>Expiration Date (optional)</Text>
             <TouchableOpacity
-              style={styles.dateButton}
+              style={[styles.dateButton, { backgroundColor: themeColors.backgroundSecondary, borderColor: themeColors.border }]}
               onPress={() => {
                 if (!expirationDate) {
-                  // Default to tomorrow
                   const tomorrow = new Date();
                   tomorrow.setDate(tomorrow.getDate() + 1);
                   setExpirationDate(tomorrow);
@@ -202,8 +205,8 @@ function PantryItemModal({
               accessibilityLabel="Select expiration date"
               accessibilityRole="button"
             >
-              <Ionicons name="calendar-outline" size={20} color={expirationDate ? colors.primary : '#999'} />
-              <Text style={[styles.dateButtonText, expirationDate && styles.dateButtonTextActive]}>
+              <Ionicons name="calendar-outline" size={20} color={expirationDate ? themeColors.primary : themeColors.textTertiary} />
+              <Text style={[styles.dateButtonText, { color: themeColors.textTertiary }, expirationDate && { color: themeColors.textPrimary, fontWeight: '500' }]}>
                 {expirationDate
                   ? expirationDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
                   : 'Select date'}
@@ -237,11 +240,11 @@ function PantryItemModal({
                     padding: 12,
                     fontSize: 16,
                     borderRadius: 10,
-                    border: '1px solid #E5E5EA',
-                    backgroundColor: '#F9F9F9',
+                    border: `1px solid ${themeColors.border}`,
+                    backgroundColor: themeColors.backgroundSecondary,
                     marginTop: 8,
                     fontFamily: 'inherit',
-                    color: '#333',
+                    color: themeColors.textPrimary,
                   }}
                 />
               ) : (
@@ -299,10 +302,11 @@ function CategoryHeader({
   category: string; count: number; collapsed: boolean; onToggle: () => void;
 }) {
   const scaledTypography = useScaledTypography();
+  const { colors: themeColors } = useAppTheme();
   
   return (
     <TouchableOpacity
-      style={styles.sectionHeader}
+      style={[styles.sectionHeader, { backgroundColor: themeColors.backgroundSecondary, borderColor: themeColors.borderLight }]}
       onPress={onToggle}
       activeOpacity={0.7}
       accessibilityRole="button"
@@ -310,12 +314,12 @@ function CategoryHeader({
       accessibilityState={{ expanded: !collapsed }}
     >
       <View style={styles.sectionHeaderLeft}>
-        <Text style={[styles.sectionHeaderText, scaledTypography.label]}>{category}</Text>
-        <View style={styles.countBadge}>
-          <Text style={[styles.countBadgeText, scaledTypography.caption]}>{count}</Text>
+        <Text style={[styles.sectionHeaderText, scaledTypography.label, { color: themeColors.textSecondary }]}>{category}</Text>
+        <View style={[styles.countBadge, { backgroundColor: themeColors.backgroundTertiary }]}>
+          <Text style={[styles.countBadgeText, scaledTypography.caption, { color: themeColors.textSecondary }]}>{count}</Text>
         </View>
       </View>
-      <Ionicons name={collapsed ? 'chevron-forward' : 'chevron-down'} size={16} color={colors.textTertiary} />
+      <Ionicons name={collapsed ? 'chevron-forward' : 'chevron-down'} size={16} color={themeColors.textTertiary} />
     </TouchableOpacity>
   );
 }
@@ -323,28 +327,29 @@ function CategoryHeader({
 // ─── View Toggle ───────────────────────────────────────────────────────────────
 
 function ViewToggle({ grouped, onToggle }: { grouped: boolean; onToggle: () => void }) {
+  const { colors: themeColors } = useAppTheme();
   return (
-    <View style={styles.toggleBar}>
+    <View style={[styles.toggleBar, { backgroundColor: themeColors.backgroundPrimary, borderColor: themeColors.borderLight }]}>
       <TouchableOpacity
-        style={[styles.toggleButton, !grouped && styles.toggleButtonActive]}
+        style={[styles.toggleButton, { borderColor: themeColors.borderLight }, !grouped && { borderColor: themeColors.primary, backgroundColor: themeColors.backgroundSecondary }]}
         onPress={() => grouped && onToggle()}
         accessibilityRole="button"
         accessibilityLabel="Flat list view"
         accessibilityState={{ selected: !grouped }}
       >
-        <Ionicons name="list-outline" size={16} color={!grouped ? colors.primary : colors.textTertiary} />
-        <Text style={[styles.toggleLabel, !grouped && styles.toggleLabelActive]}>List</Text>
+        <Ionicons name="list-outline" size={16} color={!grouped ? themeColors.primary : themeColors.textTertiary} />
+        <Text style={[styles.toggleLabel, { color: themeColors.textTertiary }, !grouped && { color: themeColors.primary, fontWeight: '600' }]}>List</Text>
       </TouchableOpacity>
 
       <TouchableOpacity
-        style={[styles.toggleButton, grouped && styles.toggleButtonActive]}
+        style={[styles.toggleButton, { borderColor: themeColors.borderLight }, grouped && { borderColor: themeColors.primary, backgroundColor: themeColors.backgroundSecondary }]}
         onPress={() => !grouped && onToggle()}
         accessibilityRole="button"
         accessibilityLabel="Category grouped view"
         accessibilityState={{ selected: grouped }}
       >
-        <Ionicons name="grid-outline" size={16} color={grouped ? colors.primary : colors.textTertiary} />
-        <Text style={[styles.toggleLabel, grouped && styles.toggleLabelActive]}>By Category</Text>
+        <Ionicons name="grid-outline" size={16} color={grouped ? themeColors.primary : themeColors.textTertiary} />
+        <Text style={[styles.toggleLabel, { color: themeColors.textTertiary }, grouped && { color: themeColors.primary, fontWeight: '600' }]}>By Category</Text>
       </TouchableOpacity>
     </View>
   );
@@ -357,13 +362,14 @@ function SearchBar({
 }: {
   value: string; onChangeText: (text: string) => void; onClear: () => void;
 }) {
+  const { colors: themeColors } = useAppTheme();
   return (
-    <View style={styles.searchContainer}>
-      <Ionicons name="search-outline" size={16} color={colors.textTertiary} style={styles.searchIcon} />
+    <View style={[styles.searchContainer, { backgroundColor: themeColors.backgroundSecondary, borderColor: themeColors.borderLight }]}>
+      <Ionicons name="search-outline" size={16} color={themeColors.textTertiary} style={styles.searchIcon} />
       <TextInput
-        style={styles.searchInput}
+        style={[styles.searchInput, { color: themeColors.textPrimary }]}
         placeholder="Search by name or category..."
-        placeholderTextColor={colors.placeholder}
+        placeholderTextColor={themeColors.placeholder}
         value={value}
         onChangeText={onChangeText}
         returnKeyType="search"
@@ -373,7 +379,7 @@ function SearchBar({
       />
       {value.length > 0 && (
         <TouchableOpacity onPress={onClear} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel="Clear search">
-          <Ionicons name="close-circle" size={16} color={colors.textTertiary} />
+          <Ionicons name="close-circle" size={16} color={themeColors.textTertiary} />
         </TouchableOpacity>
       )}
     </View>
